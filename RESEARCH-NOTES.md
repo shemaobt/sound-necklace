@@ -42,6 +42,27 @@ durable findings (not narration) at iteration end. Delete entries that stop bein
   not check `pendingStart`; guided flow reaches Mapeamento with zero phrases;
   return-import does not warn on manifest mismatch (only delivery does).
 
+## Determinismo numérico JS (verificado 2026-07-09, ENG-214)
+
+- `pnpm` pode não estar no PATH do Node do fnm — usar
+  `fnm exec --using=22 -- corepack pnpm <script>` (corepack resolve o pnpm
+  pinado em `packageManager`).
+- FNV-1a em JS exige `Math.imul` (o `*` ingênuo excede 2^53 e erra SILENCIOSAMENTE
+  — passa em vetores curtos tipo `""`/`"a"` e falha em `"b"`/`"foobar"`).
+  `^`/`Math.imul` são int32 por spec; `>>> 0` a cada passo (como a referência) ou
+  só no final são equivalentes.
+- `Math.round`: empate para +∞ (`-0.5 → -0`, `-1.5 → -1`) — spec-mandado; NÃO é
+  `Math.floor(x+0.5)` em geral (duplo arredondamento). Vetores hand-computed em
+  Python com `floor(x+0.5)` só valem quando o produto é um double EXATO
+  (ex.: amostras float32 × 32767 — mantissa ≤ 39 bits).
+- Float64→Float32Array = roundTiesToEven por spec (= `Math.fround` = `struct` do
+  Python). `toFixed` e o formato de número do `JSON.stringify` (shortest
+  round-trip) são determinísticos; Node e Chromium compartilham V8 ⇒ bytes iguais.
+- Vetores de hash comitados em `domain/hash.test.ts` foram computados por
+  emulação Python independente (script no comentário do teste) + goldens da
+  referência (`manifest-only` → `fnv1a32:5a1b22f1`, `partial-bead` →
+  `fnv1a32:1a884f38`).
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.

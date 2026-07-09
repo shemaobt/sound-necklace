@@ -6,7 +6,7 @@ Path: @/
 
 - Colar de Sons is an ear-first web app: a facilitator and a listener from an oral culture segment a recorded oral story (a "necklace" of audio beads) into scenes and phrases, classify scenes against the Ruth ontology, answer meaning questions by voice, and export artifacts consumed by a downstream pipeline ("o Compilador").
 - This is a complete from-scratch v2 implementation. The v1 prototype at @/docs/reference/index.html is the **executable behavioral reference** — read it to resolve behavior doubts, never modify it.
-- The repo is currently a **skeleton**: layer structure, CI quality gates, and conventions exist; feature modules arrive incrementally via Linear issues (project "Sound Necklace", milestone MVP) executed by an autonomous loop.
+- The repo is being built up incrementally via Linear issues (project "Sound Necklace", milestone MVP) executed by an autonomous loop. Layer structure, CI quality gates, the golden harness (@/tests/golden), Shemá design tokens (@/ui/tokens), and the first `domain/` modules (grid/hash/ids — see @/domain/docs.md) exist; the remaining feature modules land issue by issue.
 
 ### How it fits into the larger codebase
 
@@ -41,7 +41,7 @@ ui/ ──▶ adapters/ ──▶ contracts/ ──▶ domain/
 
 ### Things to Know
 
-- **The golden harness (@/tests/golden) is the supreme merge gate.** Currently a green placeholder with a loud warning; once real, it can never be weakened. If your change breaks it, your change is wrong.
+- **The golden harness (@/tests/golden) is the supreme merge gate.** Live since ENG-212: it byte-diffs artifacts replayed through `domain/`+`contracts/` against goldens generated from the reference; cases without a registered replayer pass as PENDENTE (with a warning) until ENG-238 flips strict mode. It can never be weakened. If your change breaks it, your change is wrong.
 - **Frozen layers:** @/domain and @/contracts are `contract-critical` — PRs touching them stop for human review. @/ui and @/adapters (fixture-safe) may merge autonomously on green.
 - Anti-gaming rules bind autonomous sessions: never lower a threshold, delete/skip a failing test, or add ignore-comments; a bug fix starts with the failing test that proves it.
 - Loop contract: one issue = one branch (`feat/<issue-id>-<slug>`) = one small PR; the issue body is the complete brief; stay strictly in the issue's file scope. Integration points are **add-a-file** by design (three `import.meta.glob` registries, see @/docs/architecture.md) so parallel issues never edit the same file.
