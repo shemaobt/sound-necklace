@@ -1,0 +1,8 @@
+# Documentos do usuário e a referência executável — NUNCA reformatar.
+# docs/reference/index.html é contrato congelado byte a byte (CLAUDE.md);
+# os PRDs/plano/CLAUDE.md são documentos de autoria humana.
+docs/
+CLAUDE.md
+
+# Lockfile: formato pertence ao pnpm, não ao prettier.
+pnpm-lock.yaml
