@@ -63,6 +63,36 @@ durable findings (not narration) at iteration end. Delete entries that stop bein
   referência (`manifest-only` → `fnv1a32:5a1b22f1`, `partial-bead` →
   `fnv1a32:1a884f38`).
 
+## UI atoms / camada visual (verificado 2026-07-09, ENG-215)
+
+- **Protótipos normativos**: todo o estilo vive em objetos inline no
+  `<script data-dc-script>` (classe `Component`) dos `.dc.html`. Para pearls/cord/
+  head-glow/trail, "Ouvir no colar" é o arquivo autoritativo (o "Protótipo" é mais
+  antigo: sem keyframes de glow, sem flag `reduced`, sem cord-fill).
+- Fórmula da pérola: `radial-gradient(circle at 34% 30%, lit 0%, base 70%)`;
+  head = `scale(1.18)` + anel `box-shadow` + `csHeadGlow 1.6s ease-in-out infinite`;
+  dim = `opacity:.18`; scene-end = fill chato `deep`, `border-radius: 28%·size`,
+  `scale(1.05)`. Easing da casa: `cubic-bezier(.2,.8,.25,1)` (micro-motion .12–.16s).
+- **Divergência tokens×protótipos**: os protótipos usam `lit`/`deep` próprios por
+  matiz (ex.: telha lit `#E8813E`, deep `#8F3701`), mas ui/tokens (ENG-213, congelado)
+  fixou `lit = base`, `deep = darken30(base)` (≠ nos dois casos). Átomos só consomem
+  o `PaletteEntry` recebido — resolver na camada tokens se o visual "flat" incomodar.
+- Convenções de teste adotadas p/ atoms (projeto `dom`, jsdom): variantes/estados
+  como `data-variant`/`data-state` (convenção Radix; asserção estável sem classe
+  hasheada); sem `@testing-library/jest-dom` no repo — usar `getAttribute`/
+  `textContent`; guarda anti-dígitos = `expect(container.textContent).not.toMatch(/\d/)`.
+- **prefers-reduced-motion em jsdom**: jsdom não tem `matchMedia` nem avalia media
+  queries — a guarda vai no CSS (opt-in: animações decorativas SÓ dentro de
+  `@media (prefers-reduced-motion: no-preference)`) e o teste importa o css com
+  `?raw` (projeto `dom` já tem `css: true`) e afirma que `animation`/`@keyframes`
+  só ocorrem dentro do bloco guardado.
+- Custom properties por instância (`style={{'--cds-…': v}}`): `React.CSSProperties`
+  rejeita `--*` por design — augmentation restrita ao namespace `--cds-` num
+  `.d.ts` de módulo (ui/atoms/cds-css-props.d.ts) resolve sem cast.
+- Glifos: play/pause dos protótipos são SVG inline viewBox 24 (`M8 5v14l11-7z`;
+  pause = 2 rects rx 1.4), nunca unicode. Glifo decorativo: `aria-hidden`; forma
+  com significado (disco de confiança): `role="img"` + `aria-label`.
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.
