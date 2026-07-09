@@ -1,0 +1,19 @@
+/*
+ * Banner de revisão (PRD §8.10): faixa quente e calma abaixo do fio de contas,
+ * com a ação de destravar à direita. Tons de aviso dos tokens Shemá (§4.4).
+ */
+.cds-review-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px clamp(16px, 5vw, 48px);
+  background: var(--cds-warning-bg);
+  color: var(--cds-warning-ink);
+  font-family: var(--cds-font-load-bearing);
+  font-size: 14px;
+}
+
+.cds-review-banner-text {
+  line-height: 1.4;
+}

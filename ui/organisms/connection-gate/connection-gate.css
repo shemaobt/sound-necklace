@@ -1,0 +1,35 @@
+/*
+ * Gate online-only (PRD §7.3/§13): faixa de aviso quente no topo e uma cobertura
+ * translúcida que sela a superfície de edição enquanto offline. Cores de aviso
+ * dos tokens Shemá (§4.4); sem movimento decorativo.
+ */
+.cds-connection-gate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.cds-connection-gate-banner {
+  padding: 12px clamp(16px, 4vw, 40px);
+  background: var(--cds-warning-bg);
+  color: var(--cds-warning-ink);
+  font-family: var(--cds-font-load-bearing);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.cds-connection-gate-content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* sela a edição: intercepta o ponteiro sobre o conteúdo (o playback vive fora). */
+.cds-connection-gate-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(63, 62, 32, 0.06);
+  cursor: not-allowed;
+  z-index: 2;
+}

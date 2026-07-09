@@ -275,6 +275,45 @@ scene_kind_confidence}` (conf ∈ alta|média|baixa, **U+00E9** em `média`); no
   passo `triagemDone` = assert gate habilitado + `setMode("segmentacao")`. O replay passa a
   parar pendente em `phraseSelect` (index 8) — atualizar `registry.test.ts` (era `triage`/5).
 
+## App shell / rotas / player itinerante / gates de UI (verificado 2026-07-09, ENG-224)
+
+- **Referência confirma (grep + linhas):** o "traveling player" é UM nó `#player`
+  movido por `mountPlayer(hostId)` (L981: `host.appendChild(p)` só se `p.parentNode!==host`)
+  entre `hostOuvir`/`hostCenas`/`hostFrases`; `setMode` (L998–1001) escolhe o host e
+  **sempre** chama `stopPlayback()` (L639) logo após — Triagem/Mapeamento NÃO recebem
+  mountPlayer (usam play inline). Abas = indicador de progresso: `updateModeLocks`
+  (L1018–1026) só habilita passo já alcançado; clicáveis mas `disabled` fora do gate.
+  Banner de review (L246) copy completa: "🔒 Modo de revisão — a segmentação está
+  travada. Toque ▶ em cada segmento…" + `unlockBtn` "Destravar para editar"; `setReview`
+  (L964) troca hint/esconde confirmar; **review é maquinário DORMENTE na referência**
+  (`setReview(true)` nunca é chamado) ⇒ o gatilho ON é v2 (§7.3: abrir sessão concluída),
+  SEM restrição golden. **Sound toggle e connection/online gate NÃO existem na
+  referência** (grep 0) ⇒ v2-only, livres de golden. Header (L203–212): ícone Shemá +
+  eyebrow "Arquivo Oral · Tripod" + h1 "Colar de Sons" + subtítulo. A issue ENG-224 usa
+  a copy curta §8.10 do brief para o banner.
+- **Router sem react-router** (`package.json` fora do escopo): History API + `useSyncExternalStore`.
+  `pushState`/`replaceState` NÃO disparam `popstate` (spec/browsers/jsdom) ⇒ `navigate()`
+  precisa `notify()` os subscribers à mão; `subscribe` também ouve `popstate` (voltar/avançar).
+  `getSnapshot` deve devolver PRIMITIVO (`location.pathname`), não objeto fresco (compara
+  por `Object.is`, senão "getSnapshot should be cached"/loop). jsdom tem `pushState` e o
+  construtor `PopStateEvent`; testes disparam `new PopStateEvent('popstate')` e resetam
+  `history.replaceState({},'', '/')` no `beforeEach` (uma window por arquivo).
+- **Portal itinerante (react#12247, ainda vale no 19):** trocar o `container` de
+  `createPortal` REMONTA a subárvore (perde estado/efeitos). Padrão correto: portal para
+  UM nó destacado persistente (`holderRef = document.createElement('div')` criado uma vez)
+  e mover ESSE nó entre hosts com `appendChild` num `useLayoutEffect` (append move, não
+  clona; container do portal nunca muda ⇒ sem remount). `useLayoutEffect` (não `useEffect`)
+  p/ não piscar na origem; limpar `holder.remove()` no unmount; bubbling segue a árvore React.
+- **Zustand headless:** `createStore` de `zustand/vanilla` (getState/setState/subscribe/
+  getInitialState) — testar sem componente; reset = recriar no `beforeEach` ou
+  `setState(getInitialState(), true)`. `useShallow` é só p/ hook React com seletor que
+  devolve objeto fresco (um nível). Fábrica `createSessionStore(deps)` injeta a porta
+  autosave (no-op default até ENG-240).
+- **`import.meta.glob({eager:true})`**: zero matches ⇒ `{}` (nunca lança); padrão/opções
+  DEVEM ser literais estáticos no top-level (senão Vite gera `{}` silencioso). Registry
+  injetável = fábrica `build(mods = globbed)` com o mapa de módulos como parâmetro default;
+  testes passam um mapa falso. Vale nos 3 projects do Vitest (transform do Vite).
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.

@@ -1,0 +1,14 @@
+/*
+ * Fio de contas abaixo do cabeçalho (redesign §5.1): fita fina e calma, fora do
+ * conteúdo. Uma linha horizontal de contas-etapa; sem números.
+ */
+.cds-stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(16px, 4vw, 44px);
+  margin: 0;
+  padding: 12px clamp(16px, 5vw, 48px);
+  list-style: none;
+  border-bottom: 1px solid var(--cds-hairline);
+  background: var(--cds-cream);
+}
