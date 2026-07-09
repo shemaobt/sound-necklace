@@ -240,6 +240,41 @@ durable findings (not narration) at iteration end. Delete entries that stop bein
   não o palco inteiro — a cópia da pergunta pode legitimamente conter dígitos. Movimento decorativo
   (pulso do mic idle) só sob `@media (prefers-reduced-motion: no-preference)`; guia estático sem movimento.
 
+## Triagem / scene kinds / gates (verificado 2026-07-09, ENG-219)
+
+- **Port é do reference in-repo** (`docs/reference/index.html`) + PRD §8.0/§8.5 — não há
+  dependência externa a pesquisar; a "pesquisa" é ler a referência e o PRD (ambos no repo).
+- `SCENE_KINDS` (L355–366): 27 kinds — **19 ALTA + 8 comum** (ordem exata verbatim;
+  NÃO editar à mão, gerado de `_spec/scene-kind-palette.json` pin 5314907). `SK_PT`
+  (L1194–1206) cobre os 27 (rótulos PT-BR SÓ exibição; o valor inglês é contrato).
+  `skEnShort` = `v.replace(/_SCENE$/,"").replace(/_/g," ").toLowerCase().replace(/^./,upper)`;
+  `skShort(v)=SK_PT[v]||skEnShort(v)` (bytes do relatório dependem disso — ENG-233).
+- Triagem mutations (picker L1258–1266): tagged → `{tag_state:"tagged", scene_kind,
+scene_kind_confidence}` (conf ∈ alta|média|baixa, **U+00E9** em `média`); none_fit →
+  `{tag_state:"none_fit", scene_kind:null, scene_kind_confidence:null}`. Reabrir mantém tags.
+- **Selectors** `lockedParts()` (L1190 = `locked&&span`) e `productiveScenes()` (L394 =
+  `locked&&span&&tag_state==="tagged"&&scene_kind`) vivem em `domain/triagem.ts` (usados
+  por coverage e gates; sem ciclo — a UI compõe, o domínio não chama render).
+- Coverage (renderCoverage L1272–1308): firme = tagged com conf **alta|média**; hesitante =
+  **baixa**; `T_TARGET={ALTA:1,comum:3}` (ALTA exibe "1–2"); status por kind:
+  fv≥alvo→coberto, senão fv>0||hv>0→parcial, senão aberto; **candidato a ausência** =
+  `tier==="ALTA" && firm===0`; all-none-fit = `parts>0 && triaged===parts && productive===0`.
+- Gates (1:1): `updateTriagemDone` L1176–1184 (enabled ⇔ parts>0 && todos não-pending &&
+  productive>0; copy §8.5 com aspas curvas `“ ”` U+201C/U+201D e travessão `—` U+2014).
+  `updateModeLocks` L1018–1026 (escuta sempre; triagem ⇔ partsConfirmed; segmentação ⇔
+  productive>0; mapeamento ⇔ productive>0 **E** ≥1 frase locked com span).
+  `setMode` redirect L983–984: (segmentacao|mapeamento) && productive===0 → triagem —
+  **só checa productive, NÃO frases** ⇒ o fluxo guiado ALCANÇA mapeamento com zero frases
+  (a trava de aba é mais estrita que o redirect; espelhar exato). Efeito L1005: entrar em
+  segmentacao com lockedParts seta `partsConfirmed=true`. `setMode` sempre derruba review.
+- Fluxo guiado (§8.0): confirmParts→triagem (já em scenes.ts/ENG-216), triagemDone→
+  segmentacao (gate+setMode), última cena→mapeamento (setMode em ENG-223). Não precisa de
+  nova abstração — as transições são `setMode(alvo)` nos gatilhos.
+- Golden case 2 (`minimal-flow.json`): passos `triage` usam **`partIndex`** (índice em
+  lockedParts, = state.parts pós-confirmParts) com `kind`+`confidence` ou `none_fit:true`;
+  passo `triagemDone` = assert gate habilitado + `setMode("segmentacao")`. O replay passa a
+  parar pendente em `phraseSelect` (index 8) — atualizar `registry.test.ts` (era `triage`/5).
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.

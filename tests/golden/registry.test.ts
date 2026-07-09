@@ -14,13 +14,13 @@ function minimalFlow(): GoldenCase {
   ) as GoldenCase;
 }
 
-describe('replaySessionSteps — passos de cena do golden case 2 (ENG-216)', () => {
-  it('replaya o prefixo de cenas do minimal-flow e para pendente na triagem (ENG-219)', () => {
+describe('replaySessionSteps — passos de cena + triagem do golden case 2 (ENG-216/219)', () => {
+  it('replaya cenas + triagem do minimal-flow e para pendente na frase (ENG-223)', () => {
     const { steps } = minimalFlow();
     const r = replaySessionSteps(steps);
 
-    // status documentado: tudo até confirmParts consumido, triage pendente
-    expect(r.pendingAt).toEqual({ index: 5, type: 'triage' });
+    // status documentado: cenas + triagem consumidos; frase (ENG-223) pendente
+    expect(r.pendingAt).toEqual({ index: 8, type: 'phraseSelect' });
 
     // 96000 amostras / 8000 Hz = 12 s a 0.5 s/conta → 24 contas
     expect(r.state.totalBeads).toBe(24);
@@ -30,7 +30,21 @@ describe('replaySessionSteps — passos de cena do golden case 2 (ENG-216)', () 
       { id: 'PT2', span: { s: 10, e: 23 }, locked: true },
     ]);
     expect(r.state.partsConfirmed).toBe(true);
-    expect(r.state.mode).toBe('triagem');
+
+    // triagem: PT1 = GLEANING alta (produtiva); PT2 = nenhum se encaixa
+    expect(r.state.parts[0]).toMatchObject({
+      tag_state: 'tagged',
+      scene_kind: 'GLEANING_SCENE',
+      scene_kind_confidence: 'alta',
+    });
+    expect(r.state.parts[1]).toMatchObject({
+      tag_state: 'none_fit',
+      scene_kind: null,
+      scene_kind_confidence: null,
+    });
+
+    // triagemDone → o fluxo guiado avançou para a Segmentação
+    expect(r.state.mode).toBe('segmentacao');
   });
 
   it('reopenScene destrava em cascata e o re-corte preserva os PT#s', () => {
