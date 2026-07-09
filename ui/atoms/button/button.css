@@ -1,0 +1,76 @@
+/*
+ * Botões dos protótipos: pílula Montserrat 700, sentence case.
+ * Hover/press/foco do primário escurecem para o telha-profundo (§4.1) —
+ * paridade de teclado via :focus-visible (o anel global vem de base.css).
+ */
+.cds-button {
+  border: 1.5px solid transparent;
+  border-radius: var(--cds-radius-pill, 999px);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color var(--cds-motion-duration, 220ms) var(--cds-motion-easing, ease-out);
+}
+
+.cds-button[data-size='lg'] {
+  padding: 13px 30px;
+  font-size: 15px;
+}
+
+.cds-button[data-size='sm'] {
+  padding: 9px 18px;
+  font-size: 13px;
+}
+
+.cds-button[data-variant='primary'] {
+  background: var(--cds-telha);
+  color: var(--cds-cream);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--cds-telha) 28%, transparent);
+}
+
+.cds-button[data-variant='primary']:hover:enabled,
+.cds-button[data-variant='primary']:active:enabled,
+.cds-button[data-variant='primary']:focus-visible:enabled {
+  background: var(--cds-telha-deep);
+}
+
+.cds-button[data-variant='dark'] {
+  background: var(--cds-olive);
+  color: var(--cds-cream);
+  letter-spacing: 0.03em;
+}
+
+.cds-button[data-variant='dark']:hover:enabled,
+.cds-button[data-variant='dark']:active:enabled,
+.cds-button[data-variant='dark']:focus-visible:enabled {
+  background: color-mix(in srgb, var(--cds-olive) 80%, black);
+}
+
+.cds-button[data-variant='ghost'] {
+  background: transparent;
+  border-color: var(--cds-hairline);
+  color: var(--cds-olive);
+  letter-spacing: 0.03em;
+}
+
+.cds-button[data-variant='ghost']:hover:enabled,
+.cds-button[data-variant='ghost']:active:enabled,
+.cds-button[data-variant='ghost']:focus-visible:enabled {
+  background: color-mix(in srgb, var(--cds-olive) 6%, transparent);
+}
+
+.cds-button:disabled {
+  cursor: default;
+}
+
+/* primário inelegível: telha lavado no creme (protótipo confirmSceneBg) */
+.cds-button[data-variant='primary']:disabled {
+  background: color-mix(in srgb, var(--cds-telha) 45%, var(--cds-cream));
+  box-shadow: none;
+}
+
+.cds-button[data-variant='dark']:disabled,
+.cds-button[data-variant='ghost']:disabled {
+  opacity: 0.55;
+}

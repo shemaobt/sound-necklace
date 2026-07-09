@@ -1,0 +1,97 @@
+/*
+ * Pérola — gradiente e sombras do protótipo "Ouvir no colar" (_bead/_pearl).
+ * Tint por custom property com fallback nos tokens de pérola-aveia; os rgba()
+ * de sombra/anel vêm verbatim do protótipo (tinta e brilho não tokenizados).
+ */
+.cds-pearl {
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--cds-pearl-size, 26px);
+  height: var(--cds-pearl-size, 26px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 34% 30%,
+    var(--cds-pearl-lit, var(--cds-pearl-highlight)) 0%,
+    var(--cds-pearl-base, var(--cds-pearl)) 70%
+  );
+  transition:
+    transform 120ms cubic-bezier(0.2, 0.8, 0.25, 1),
+    box-shadow 120ms;
+}
+
+.cds-pearl[data-state='unplayed'],
+.cds-pearl[data-state='dim'] {
+  border: 1px solid var(--cds-hairline);
+}
+
+.cds-pearl[data-state='lit'] {
+  box-shadow: 0 1px 3px rgba(10, 7, 3, 0.2);
+}
+
+.cds-pearl[data-state='head'] {
+  position: relative;
+  z-index: 3;
+  transform: scale(1.18);
+  box-shadow:
+    0 0 0 2.5px rgba(246, 245, 235, 0.95),
+    0 2px 6px rgba(10, 7, 3, 0.28);
+}
+
+.cds-pearl[data-state='dim'] {
+  opacity: 0.18;
+}
+
+/* fim de cena: quadrada no fio, preenchimento chato no tom profundo */
+.cds-pearl[data-scene-end='true'] {
+  border-radius: 28%;
+  background: var(--cds-pearl-deep, var(--cds-olive));
+  transform: scale(1.05);
+  box-shadow: 0 1px 4px rgba(10, 7, 3, 0.28);
+}
+
+/* cabeça sobre a conta final: mantém a forma quadrada e o tom profundo,
+   mas recupera a escala e o anel de destaque da cabeça */
+.cds-pearl[data-state='head'][data-scene-end='true'] {
+  transform: scale(1.18);
+  box-shadow:
+    0 0 0 2.5px rgba(246, 245, 235, 0.95),
+    0 2px 6px rgba(10, 7, 3, 0.28);
+}
+
+/* motion decorativo é opt-in: quem prefere menos movimento nunca o recebe (§4.5) */
+@media (prefers-reduced-motion: no-preference) {
+  .cds-pearl[data-state='head'] {
+    animation: cds-head-glow 1.6s ease-in-out infinite;
+  }
+
+  .cds-pearl[data-ping='true'] {
+    animation: cds-pearl-ping 300ms cubic-bezier(0.2, 0.8, 0.25, 1);
+  }
+
+  @keyframes cds-head-glow {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 2.5px rgba(246, 245, 235, 0.95),
+        0 0 0 5px color-mix(in srgb, var(--cds-telha) 22%, transparent),
+        0 2px 6px rgba(10, 7, 3, 0.28);
+    }
+    50% {
+      box-shadow:
+        0 0 0 2.5px rgba(246, 245, 235, 0.95),
+        0 0 0 12px color-mix(in srgb, var(--cds-telha) 0%, transparent),
+        0 2px 6px rgba(10, 7, 3, 0.28);
+    }
+  }
+
+  @keyframes cds-pearl-ping {
+    0% {
+      transform: scale(1.35);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+}

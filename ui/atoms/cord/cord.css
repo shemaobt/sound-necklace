@@ -1,0 +1,7 @@
+.cds-cord {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--cds-hairline);
+  pointer-events: none;
+}
