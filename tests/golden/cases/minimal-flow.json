@@ -1,0 +1,53 @@
+{
+  "name": "minimal-flow",
+  "description": "Fluxo mínimo completo: 2 cenas (1 GLEANING alta + 1 none_fit), 1 frase, 1 flag NEEDS_REVIEW, respostas com e sem texto → os três artefatos.",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "fluxo-minimo",
+      "audioFilename": "fluxo-minimo.wav",
+      "pcm": { "seed": 12345, "sampleRate": 8000, "samples": 96000, "channels": 1 }
+    },
+    { "type": "confirmWhole" },
+    { "type": "cutScene", "endBead": 9 },
+    { "type": "cutScene", "endBead": 23 },
+    { "type": "confirmParts" },
+    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triage", "partIndex": 1, "none_fit": true },
+    { "type": "triagemDone" },
+    { "type": "phraseSelect", "s": 0, "e": 4 },
+    { "type": "confirmPhrase" },
+    { "type": "toggleFlag", "index": 0 },
+    { "type": "sceneDone" },
+    {
+      "type": "answer",
+      "level": 1,
+      "key": "recontar",
+      "text": "Uma história sobre respiga e retorno ao lar."
+    },
+    { "type": "answer", "level": 1, "key": "tempo", "text": "" },
+    {
+      "type": "answer",
+      "level": 2,
+      "partId": "PT1",
+      "key": "quem",
+      "text": "Duas mulheres e os ceifeiros."
+    },
+    {
+      "type": "answer",
+      "level": 2,
+      "partId": "PT2",
+      "key": "descrever",
+      "text": "Um trecho que não se encaixa nos tipos."
+    },
+    {
+      "type": "answer",
+      "level": 3,
+      "propId": "P1",
+      "key": "oque",
+      "text": "A chegada ao campo — com acentos: coração, você, média."
+    },
+    { "type": "export", "artifacts": ["manifesto", "retorno", "relatorio"] }
+  ]
+}

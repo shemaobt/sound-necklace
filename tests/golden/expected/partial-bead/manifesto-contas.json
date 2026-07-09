@@ -1,0 +1,183 @@
+{
+  "manifest_id": "fnv1a32:1a884f38",
+  "audio_filename": "conta-parcial.wav",
+  "bead_duration_sec": 0.3,
+  "total_beads": 35,
+  "beads": [
+    {
+      "index": 0,
+      "startTime": 0,
+      "endTime": 0.3
+    },
+    {
+      "index": 1,
+      "startTime": 0.3,
+      "endTime": 0.6
+    },
+    {
+      "index": 2,
+      "startTime": 0.6,
+      "endTime": 0.9
+    },
+    {
+      "index": 3,
+      "startTime": 0.9,
+      "endTime": 1.2
+    },
+    {
+      "index": 4,
+      "startTime": 1.2,
+      "endTime": 1.5
+    },
+    {
+      "index": 5,
+      "startTime": 1.5,
+      "endTime": 1.8
+    },
+    {
+      "index": 6,
+      "startTime": 1.8,
+      "endTime": 2.1
+    },
+    {
+      "index": 7,
+      "startTime": 2.1,
+      "endTime": 2.4
+    },
+    {
+      "index": 8,
+      "startTime": 2.4,
+      "endTime": 2.7
+    },
+    {
+      "index": 9,
+      "startTime": 2.7,
+      "endTime": 3
+    },
+    {
+      "index": 10,
+      "startTime": 3,
+      "endTime": 3.3
+    },
+    {
+      "index": 11,
+      "startTime": 3.3,
+      "endTime": 3.6
+    },
+    {
+      "index": 12,
+      "startTime": 3.6,
+      "endTime": 3.9
+    },
+    {
+      "index": 13,
+      "startTime": 3.9,
+      "endTime": 4.2
+    },
+    {
+      "index": 14,
+      "startTime": 4.2,
+      "endTime": 4.5
+    },
+    {
+      "index": 15,
+      "startTime": 4.5,
+      "endTime": 4.8
+    },
+    {
+      "index": 16,
+      "startTime": 4.8,
+      "endTime": 5.1
+    },
+    {
+      "index": 17,
+      "startTime": 5.1,
+      "endTime": 5.4
+    },
+    {
+      "index": 18,
+      "startTime": 5.4,
+      "endTime": 5.7
+    },
+    {
+      "index": 19,
+      "startTime": 5.7,
+      "endTime": 6
+    },
+    {
+      "index": 20,
+      "startTime": 6,
+      "endTime": 6.3
+    },
+    {
+      "index": 21,
+      "startTime": 6.3,
+      "endTime": 6.6
+    },
+    {
+      "index": 22,
+      "startTime": 6.6,
+      "endTime": 6.9
+    },
+    {
+      "index": 23,
+      "startTime": 6.9,
+      "endTime": 7.2
+    },
+    {
+      "index": 24,
+      "startTime": 7.2,
+      "endTime": 7.5
+    },
+    {
+      "index": 25,
+      "startTime": 7.5,
+      "endTime": 7.8
+    },
+    {
+      "index": 26,
+      "startTime": 7.8,
+      "endTime": 8.1
+    },
+    {
+      "index": 27,
+      "startTime": 8.1,
+      "endTime": 8.4
+    },
+    {
+      "index": 28,
+      "startTime": 8.4,
+      "endTime": 8.7
+    },
+    {
+      "index": 29,
+      "startTime": 8.7,
+      "endTime": 9
+    },
+    {
+      "index": 30,
+      "startTime": 9,
+      "endTime": 9.3
+    },
+    {
+      "index": 31,
+      "startTime": 9.3,
+      "endTime": 9.6
+    },
+    {
+      "index": 32,
+      "startTime": 9.6,
+      "endTime": 9.9
+    },
+    {
+      "index": 33,
+      "startTime": 9.9,
+      "endTime": 10.2
+    },
+    {
+      "index": 34,
+      "startTime": 10.2,
+      "endTime": 10.31746
+    }
+  ]
+}

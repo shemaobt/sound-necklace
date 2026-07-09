@@ -6,3 +6,6 @@ CLAUDE.md
 
 # Lockfile: formato pertence ao pnpm, não ao prettier.
 pnpm-lock.yaml
+
+# goldens são BYTES CONTRATUAIS gerados da referência — nunca reformatar
+tests/golden/expected/

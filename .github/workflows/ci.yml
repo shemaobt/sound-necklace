@@ -15,9 +15,6 @@ jobs:
   golden-harness:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # ENG-212 substitui o placeholder pelo runner real e DEVE adicionar aqui:
-    #   - run: pnpm exec playwright install --with-deps chromium
-    # (o driver de goldens dirige a referência em Chromium headless)
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -27,7 +24,11 @@ jobs:
         with:
           node-version: 22
       - run: pnpm install --frozen-lockfile
+      # runner: replay via domain/contracts vs goldens comitados (byte a byte)
       - run: pnpm golden
+      # verify: regenera da referência intocada e prova goldens ≡ referência
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm golden:verify
 
   typecheck:
     runs-on: ubuntu-latest
