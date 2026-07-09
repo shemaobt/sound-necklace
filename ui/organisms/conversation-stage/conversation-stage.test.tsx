@@ -65,6 +65,24 @@ describe('ConversationStage — "Ouvir a pergunta" condicional', () => {
   });
 });
 
+/**
+ * Canal digitado (§8.7): opcional e sempre acompanhado da cópia contratual — a
+ * facilitadora escreve depois, "nunca por você". Só aparece quando há o slot.
+ */
+describe('ConversationStage — canal digitado opcional', () => {
+  it('mostra o slot e a cópia "nunca por você" só quando typedAnswer é fornecido', () => {
+    const hint = 'A facilitadora pode escrever depois — nunca por você.';
+    const { rerender } = render(<ConversationStage {...baseProps()} />);
+    expect(screen.queryByText(hint)).toBeNull();
+
+    rerender(
+      <ConversationStage {...baseProps({ typedAnswer: <textarea aria-label="observação" /> })} />,
+    );
+    expect(screen.getByText(hint)).toBeTruthy();
+    expect(screen.getByLabelText('observação')).toBeTruthy();
+  });
+});
+
 describe('ConversationStage — movimento respeita prefers-reduced-motion (§4.5)', () => {
   it('nenhuma animação vive fora da guarda de movimento', () => {
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;

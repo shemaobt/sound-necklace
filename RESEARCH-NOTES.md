@@ -222,9 +222,9 @@ durable findings (not narration) at iteration end. Delete entries that stop bein
   `WaveformBar` (níveis via prop `height`), `Button` (`dark`/`ghost`, size `sm`). Só o glifo de
   microfone é SVG inline local (não há átomo de mic — extrair para `ui/atoms` só se um 2º uso surgir).
 - **Máquina de estados do gravador dirigida por props** (`recorderState: 'idle'|'recording'|'recorded'`
-  + `levels[]`), callbacks para fora (`onRecord/onStop/onPlay/onRerecord`, `onPrev/onNext`,
-  `onSpeakQuestion`). O `MediaRecorder` NÃO vive no organismo — fica no adapter (ENG-244), ligado
-  pela estação (ENG-249). Precedência de estado da conta: `current` vence `answered` (revisitada = `head`).
+  - `levels[]`), callbacks para fora (`onRecord/onStop/onPlay/onRerecord`, `onPrev/onNext`,
+    `onSpeakQuestion`). O `MediaRecorder` NÃO vive no organismo — fica no adapter (ENG-244), ligado
+    pela estação (ENG-249). Precedência de estado da conta: `current` vence `answered` (revisitada = `head`).
 - **Padrão de variante por glob dentro de um componente** (doc de arquitetura §4, espelha as 3
   registries do shell mas escopado): `index.tsx` lê `import.meta.glob('./variants/*.tsx', {eager:true})`
   e um helper puro `pickVariantPath()` prefere `animated` sobre `static`, ANCORADO no basename
