@@ -1,0 +1,194 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import type { Player } from '../../../adapters/audio';
+import {
+  activeAnchor,
+  clickBead,
+  confirmPart,
+  confirmParts,
+  reopenPart,
+  type ScenePart,
+  setMode,
+} from '../../../domain';
+import { Button } from '../../atoms';
+import { Necklace, type NecklaceSegment } from '../../organisms';
+import { sessionStore, useSessionStore } from '../../state';
+import { playActionOn, sceneColor, sceneLabel } from './cutting';
+import { ScenePhraseChip } from '../../molecules';
+import './escuta2.css';
+
+/**
+ * Escuta 2 — o corte de cenas (PRD v2 §8.4, redesign §6.3): palco creme, o colar
+ * com ancoragem ativa e a instrução única "Toque no colar onde ESTA CENA TERMINA.
+ * O começo já está costurado." O usuário decide só o FIM — o início vem
+ * pré-ancorado na emenda pelo domínio (`primePart`). Cada clique dá áudio na hora
+ * (§8.2): a conta, o intervalo ou só a janela da fronteira ajustada.
+ *
+ * Camada de wiring: o modelo de clique delega ao redutor `clickBead`; travar
+ * (`confirmPart`), reabrir em cascata (`reopenPart`), confirmar tudo
+ * (`confirmParts` → Triagem) e voltar (história reaberta, cenas preservadas) são
+ * decisões puras do domínio aplicadas pelo `sessionStore`. O áudio chega por prop.
+ */
+export interface Escuta2Props {
+  player?: Player | null;
+}
+
+export function Escuta2({ player = null }: Escuta2Props) {
+  const session = useSessionStore((s) => s.session);
+  const [head, setHead] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const parts = session?.parts ?? null;
+  const segments = useMemo<NecklaceSegment[]>(
+    () =>
+      (parts ?? []).flatMap((p, i) =>
+        p.locked && p.span ? [{ span: p.span, tint: sceneColor(i) }] : [],
+      ),
+    [parts],
+  );
+  const lockedEndBeads = useMemo<number[]>(
+    () => (parts ?? []).flatMap((p) => (p.locked && p.span ? [p.span.e] : [])),
+    [parts],
+  );
+
+  useEffect(() => {
+    if (!player) return;
+    return player.onHead(setHead);
+  }, [player]);
+
+  useEffect(() => {
+    if (!player) return;
+    return () => player.stop();
+  }, [player]);
+
+  if (!session) return null;
+
+  const anchor = activeAnchor(session);
+  const lockedIndexes = session.parts.flatMap((p, i) => (p.locked && p.span ? [i] : []));
+  const hasLocked = lockedIndexes.length > 0;
+
+  const onBead = (bead: number): void => {
+    const s = sessionStore.getState().session;
+    if (!s) return;
+    const { state, play } = clickBead(s, bead);
+    sessionStore.getState().apply(() => state);
+    if (play && player) playActionOn(player, play);
+  };
+
+  const onEdgeHover = (edge: number): void => {
+    if (player) player.playEdge(edge);
+  };
+
+  const confirmScene = (): void => {
+    const s = sessionStore.getState().session;
+    if (!s || s.current.layer !== 'parts' || s.current.index < 0) return;
+    const result = confirmPart(s, s.current.index);
+    if (!result.ok) {
+      setError(result.error.message);
+      return;
+    }
+    setError(null);
+    sessionStore.getState().apply(() => result.state);
+  };
+
+  const confirmAll = (): void => {
+    const s = sessionStore.getState().session;
+    if (!s) return;
+    const result = confirmParts(s);
+    if (!result.ok) {
+      setError(result.error.message);
+      return;
+    }
+    setError(null);
+    sessionStore.getState().apply(() => result.state);
+  };
+
+  const back = (): void => {
+    setError(null);
+    sessionStore
+      .getState()
+      .apply((s) => setMode({ ...s, whole: { ...s.whole, confirmed: false } }, 'escuta'));
+  };
+
+  const reopen = (i: number): void => {
+    setError(null);
+    sessionStore.getState().apply((s) => reopenPart(s, i));
+  };
+
+  const playScene = (pt: ScenePart): void => {
+    if (player && pt.span) player.toggle(pt.part_id, pt.span.s, pt.span.e);
+  };
+
+  return (
+    <section className="cds-escuta2">
+      <p className="cds-escuta2-instruction" data-role="instruction">
+        Toque no colar onde <span className="cds-escuta2-emph">esta cena termina</span>. O começo já
+        está costurado.
+      </p>
+
+      <div className="cds-escuta2-stage">
+        <Necklace
+          totalBeads={session.totalBeads}
+          beadSec={session.beadSec}
+          segments={segments}
+          lockedEndBeads={lockedEndBeads}
+          selection={session.selection}
+          pendingStart={session.pendingStart}
+          playbackHead={head}
+          onBeadPointerDown={onBead}
+          onEdgeHover={onEdgeHover}
+        />
+      </div>
+
+      {hasLocked ? (
+        <ul className="cds-escuta2-chips">
+          {lockedIndexes.map((i) => {
+            const pt = session.parts[i]!;
+            return (
+              <li key={pt.part_id}>
+                <ScenePhraseChip
+                  label={sceneLabel(i)}
+                  swatch={sceneColor(i)}
+                  onPlay={() => playScene(pt)}
+                  actions={
+                    <Button variant="ghost" size="sm" onClick={() => reopen(i)}>
+                      Reabrir
+                    </Button>
+                  }
+                />
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      <div className="cds-escuta2-controls">
+        <Button variant="ghost" size="sm" onClick={back}>
+          ← Voltar
+        </Button>
+
+        {anchor ? (
+          <div className="cds-escuta2-confirm-scene" data-role="primary-action">
+            <Button variant="primary" onClick={confirmScene}>
+              ✓ Confirmar esta cena
+            </Button>
+          </div>
+        ) : null}
+
+        {hasLocked ? (
+          <Button variant="dark" onClick={confirmAll}>
+            Confirmar as cenas →
+          </Button>
+        ) : null}
+      </div>
+
+      {error ? (
+        <p className="cds-escuta2-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+export default Escuta2;
