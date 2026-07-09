@@ -5,11 +5,19 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Required checks (CLAUDE.md "Quality gates"): golden-harness, typecheck, lint,
 # depcruise, test. Nomes de job = nomes dos required status checks — não renomear.
 jobs:
   golden-harness:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # ENG-212 substitui o placeholder pelo runner real e DEVE adicionar aqui:
+    #   - run: pnpm exec playwright install --with-deps chromium
+    # (o driver de goldens dirige a referência em Chromium headless)
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -23,6 +31,7 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -36,6 +45,7 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -49,6 +59,7 @@ jobs:
 
   depcruise:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -62,6 +73,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -72,5 +84,6 @@ jobs:
           node-version: 22
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+      - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:browser

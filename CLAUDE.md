@@ -7,13 +7,12 @@ Colar de Sons is an ear-first web app where a facilitator + a listener from an o
 All specs live in `docs/`:
 
 - `docs/PRD-colar-de-sons-v2.md` — **the product spec.** Behavior, rules, gates, thresholds, data contracts. Section references in issues (e.g. "§8.5") point here.
-- `docs/PRD-colar-de-sons-as-built.md` — code-level description of the v1 prototype (how the reference behaves).
-- `docs/PRD-redesign-v2.md` — the visual/interaction design spec (Shemá system).
+- `docs/PRD-colar-de-sons-as-built.md` — code-level description of the v1 prototype. **Not committed to this repo**: treat any citation of it as a pointer to the executable reference below, which is the authoritative behavior source.
+- `docs/PRD-redesign.md` — the visual/interaction design spec (Shemá system, v2).
 - `docs/plano-de-acao-mvp.md` — MVP scope cut, acceptance criteria, sacrifice order.
 - `docs/reference/index.html` — **the executable reference.** The v1 prototype. Read its code to resolve any behavior/contract doubt. NEVER modify this file.
 
 **Precedence rules (memorize):**
-
 1. Behavior, data, rules → **PRD v2 wins**; in any remaining doubt, `docs/reference/index.html` behavior wins.
 2. Look, layout, motion → **the Claude Design prototypes win** (listed in redesign PRD §11).
 3. MVP scope doubts → `plano-de-acao-mvp.md` §2 (in) / §2.5 (out) / §4 (later).
@@ -31,7 +30,7 @@ We follow a **clean architecture in the general sense** — dependencies always 
   - `ui/molecules/` — bead row, selection band + edge beads, scene/phrase chip, confidence trio, question card, document card, stepper station.
   - `ui/organisms/` — the necklace (rendering + interaction), the "fio de contas" stepper, the Triagem picker, the coverage drawer, the seam modal, the conversation stage (guide + mic + thread), the dashboard session list.
   - `ui/templates/` + `ui/pages/` — station layouts and the wired screens (Setup, Escuta 1/2, Triagem, Segmentação, Mapeamento, Export, Dashboard, Login).
-  - Dependency rule inside ui/: atoms and molecules are **purely presentational** (props in, events out — no domain or adapter imports); organisms may consume domain state via props/hooks; only pages/templates wire adapters. `ui/` may be merged autonomously when tests pass.
+  - Dependency rule inside ui/: atoms and molecules are **purely presentational** (props in, events out — no domain or adapter imports); organisms may consume domain state via props/hooks; only pages/templates/`ui/app` (the wiring layer / composition root) wire adapters. `ui/` may be merged autonomously when tests pass.
 
 Stubs behind interfaces (do not hardcode): `GranularityResolver` (acousteme → bead duration; rule pending O8 — use fixture values, medium ≈ 0.25 s), auth mechanism (follows the shared API standard), bucket access.
 
@@ -46,7 +45,7 @@ Stubs behind interfaces (do not hardcode): `GranularityResolver` (acousteme → 
 - IDs: `PT#` scenes (stable, lowest free), `P#` phrases (lowest free), `S#` sequential reassigned on export.
 - `scene_kind` values are **English** (27 kinds, generated list — never hand-edit); PT-BR labels display-only.
 - Confidence stored as `alta`/`média`/`baixa`; tag states `pending`/`tagged`/`none_fit`.
-- Frontier: sequential locking; reopening item _i_ unlocks _i_ and everything after; first phrase may back-reach to previous scene's start; seam-move threshold `max(3, 25% of scene)`; two-productive-scenes escalation.
+- Frontier: sequential locking; reopening item *i* unlocks *i* and everything after; first phrase may back-reach to previous scene's start; seam-move threshold `max(3, 25% of scene)`; two-productive-scenes escalation.
 - Gates: whole story → scenes → (all triaged + ≥1 productive) → segmentação → (+ ≥1 phrase) → mapeamento. All-none-fit locks downstream.
 - Mapeamento scripts: 11 L1 + 5 L2 per locked scene (incl. none_fit) + 5 L3 per phrase in productive scenes — exact order/wording; voice answers `respostas/level{1,2,3}/.../<k>.webm`.
 
@@ -63,7 +62,7 @@ Required checks on every PR, in order of importance:
 
 1. **Golden harness** (see above) — the only gate that can never be relaxed, ever.
 2. **Typecheck + lint** — zero errors; TS `strict: true`.
-3. **Dependency direction** — enforced mechanically (dependency-cruiser or eslint-plugin-boundaries), not by convention: `domain/` imports nothing from contracts/adapters/ui; `contracts/` imports only `domain/`; `ui/atoms` and `ui/molecules` import no domain or adapters; only `ui/pages`/`ui/templates` import adapters. A PR that violates a boundary fails CI — no exceptions list.
+3. **Dependency direction** — enforced mechanically (dependency-cruiser or eslint-plugin-boundaries), not by convention: `domain/` imports nothing from contracts/adapters/ui; `contracts/` imports only `domain/`; `ui/atoms` and `ui/molecules` import no domain or adapters; only `ui/pages`/`ui/templates`/`ui/app` import adapters. A PR that violates a boundary fails CI — no exceptions list.
 4. **Coverage, per layer (not global):** `domain/` ≥ 90% line+branch (this is the frozen core — every rule in PRD §11 gets an explicit test, including the edge thresholds: seam-move `max(3, 25%)`, partial bead, back-reach, reopen cascade); `contracts/` ≥ 90% (every schema has valid/invalid fixtures); `adapters/` tested against their fixtures; `ui/` has **no numeric threshold** — instead, interaction tests are mandatory for the interaction-critical organisms only (necklace click model, seam modal, conversation recorder). No global coverage number: it invites padding.
 5. **Complexity — warn, don't block.** Cyclomatic complexity > 15 emits a lint warning to flag for review. Not an error: the domain port mirrors reference logic 1:1, and mechanically splitting a faithful port to satisfy a number is worse than the number.
 
@@ -81,7 +80,7 @@ Anti-gaming rules (for autonomous sessions): never lower a threshold, delete a f
 
 Feature work runs as an autonomous loop. Each iteration starts with fresh context, so obey this every time:
 
-1. **Pick** the highest-priority _eligible_ Linear issue in the MVP milestone. Eligible = all `blockedBy` are Done, and the issue carries neither `blocked-O8` nor `needs-human`. Never start an ineligible issue.
+1. **Pick** the highest-priority *eligible* Linear issue in the MVP milestone. Eligible = all `blockedBy` are Done, and the issue carries neither `blocked-O8` nor `needs-human`. Never start an ineligible issue.
 2. **Read** this file + the issue body (it is the complete brief) + the `docs/` sections it cites. Do not rely on prior-iteration memory.
 3. **Stay in scope.** Touch only the files the issue's "Scope" lists. If you discover you must change another module, do NOT — open a follow-up issue and note it.
 4. **Verify against the Definition of Done.** Every DoD checkbox must pass by running a command (tests, golden harness, typecheck, lint, dependency-cruiser, coverage). Do not mark done on judgment.

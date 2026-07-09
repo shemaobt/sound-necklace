@@ -22,6 +22,9 @@ export default defineConfig({
         test: {
           name: 'dom',
           environment: 'jsdom',
+          // globals ligado para a auto-limpeza do Testing Library (afterEach cleanup);
+          // sem isso, múltiplos render() no mesmo arquivo acumulam DOM e geram flakes.
+          globals: true,
           include: ['ui/**/*.test.{ts,tsx}'],
           exclude: ['ui/**/*.browser.test.{ts,tsx}'],
         },
@@ -29,6 +32,9 @@ export default defineConfig({
       {
         test: {
           name: 'browser',
+          // retry único: a 1ª execução em cache frio pode recarregar por
+          // otimização de deps do Vite; as asserções não mudam.
+          retry: 1,
           include: ['ui/**/*.browser.test.{ts,tsx}'],
           browser: {
             enabled: true,

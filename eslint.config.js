@@ -40,9 +40,11 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          paths: [
-            { name: 'zod/v3', message: 'Importe de "zod" (raiz, v4).' },
-            { name: 'zod/v4', message: 'Importe de "zod" (raiz, v4).' },
+          patterns: [
+            {
+              group: ['zod/v3', 'zod/v3/*', 'zod/v4', 'zod/v4/*', 'zod/mini'],
+              message: 'Importe de "zod" (raiz, v4) — subpaths misturam eras silenciosamente.',
+            },
           ],
         },
       ],

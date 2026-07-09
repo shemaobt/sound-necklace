@@ -22,7 +22,9 @@
 
 **Alternative considered and rejected:** SolidJS 1.9 + Valibot — technically elegant for thousands of fine-grained bead updates, but Solid 2.0's in-flight breaking changes plus much lower agent familiarity made it strictly worse for a 2-day autonomous build. Decision recorded 2026-07-08.
 
-Local dev note: Node **≥ 22.12** is required (jsdom 29 uses `require(esm)`; Vite 8 engine floor). With `fnm`: `fnm use 22`.
+Local dev note: Node **≥ 22.12** is required (jsdom 29 uses `require(esm)`; Vite 8 engine floor) — `.npmrc` sets `engine-strict=true` so a too-old Node fails at install with a clear message. With `fnm`: `fnm use 22`.
+
+Deliberate strictness beyond the mandate: `noUncheckedIndexedAccess` is ON in tsconfig. The domain port is index-heavy (bead arrays, spans) and unchecked indexing is exactly where silent porting bugs live. Do not turn it off to ease a port — write the guard.
 
 ---
 
@@ -120,7 +122,7 @@ Every adapter ships a **fixture implementation that is the default**; the real i
 
 Same additive pattern inside components where an upgrade is planned: the storyteller guide reads `variants/*` and prefers `animated` when the file exists (ENG-232 adds one file, edits none).
 
-Rationale: `0.md` forbids two `loop-ready` issues from declaring the same file — these registries turn every integration point into an **add-a-file** operation.
+Rationale: the planning contract forbids two `loop-ready` issues from declaring the same file in their Scope — these registries turn every integration point into an **add-a-file** operation.
 
 ---
 
