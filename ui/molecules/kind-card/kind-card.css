@@ -1,0 +1,46 @@
+/*
+ * Cartão grande de tipo (protótipo "Mais comuns"): ponto de cor + rótulo, fundo
+ * branco sobre creme; selecionado ganha o anel telha; none-fit é tracejado.
+ */
+.cds-kind-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border: 1.5px solid transparent;
+  border-radius: var(--cds-radius-card, 20px);
+  background: white;
+  box-shadow: 0 2px 6px rgba(63, 62, 32, 0.08);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--cds-olive);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    box-shadow 160ms,
+    border-color 160ms,
+    transform 160ms;
+}
+
+.cds-kind-card:hover {
+  box-shadow: 0 4px 12px rgba(63, 62, 32, 0.16);
+  transform: translateY(-1px);
+}
+
+.cds-kind-card[data-selected='true'] {
+  border-color: var(--cds-telha);
+  background: color-mix(in srgb, var(--cds-telha) 6%, white);
+}
+
+.cds-kind-card[data-variant='none-fit'] {
+  border: 1.5px dashed var(--cds-hairline);
+  background: var(--cds-cream);
+  box-shadow: none;
+  color: var(--cds-warning-ink);
+}
+
+.cds-kind-card[data-variant='none-fit'][data-selected='true'] {
+  border-color: var(--cds-telha);
+  background: color-mix(in srgb, var(--cds-telha) 6%, white);
+}

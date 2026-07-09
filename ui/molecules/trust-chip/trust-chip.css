@@ -1,0 +1,22 @@
+/*
+ * Chip de confiança (protótipo Setup): pílula quieta cinza-creme, cadeado em
+ * oliva-sálvia, texto denso permitido (tela da facilitadora).
+ */
+.cds-trust-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cds-olive) 6%, var(--cds-cream));
+  font-family: var(--cds-font-load-bearing);
+  font-size: 15px;
+  color: var(--cds-olive);
+}
+
+.cds-trust-chip-glyph {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--cds-confidence-filled);
+}

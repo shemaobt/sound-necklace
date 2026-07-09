@@ -1,0 +1,43 @@
+/*
+ * Banda de seleção do protótipo (accBand + selEdge): um trilho suave no tom do
+ * segmento sob as contas do intervalo; as contas de borda ganham o anel telha
+ * (rgba verbatim do protótipo — tinta não tokenizada).
+ */
+.cds-selection-band {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cds-selection-band-row {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* o trilho suave por baixo das contas desta linha */
+.cds-selection-band-fill {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 50%;
+  height: 60%;
+  transform: translateY(-50%);
+  border-radius: var(--cds-radius-pill, 999px);
+  background: color-mix(in srgb, var(--cds-telha) 12%, transparent);
+  z-index: 0;
+}
+
+.cds-selection-band-bead {
+  position: relative;
+  z-index: 1;
+  display: block;
+  border-radius: 50%;
+}
+
+/* contas de borda: anel telha destacado (protótipo selEdge) */
+.cds-selection-band-bead[data-edge='true'] {
+  box-shadow: 0 0 0 2.5px var(--cds-telha);
+}
