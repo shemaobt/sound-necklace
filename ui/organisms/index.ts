@@ -4,4 +4,11 @@
  * adapters (dependency-cruiser garante). Consumidores (pages/templates) importam
  * DESTE barrel; irmãos importam-se por caminho direto.
  */
+export {
+  ConversationStage,
+  type ConversationProgress,
+  type ConversationStageProps,
+  type RecorderState,
+} from './conversation-stage/conversation-stage';
 export { Necklace, type NecklaceProps, type NecklaceSegment } from './necklace/necklace';
+export { StorytellerGuide, type GuideVariantProps } from './storyteller-guide';

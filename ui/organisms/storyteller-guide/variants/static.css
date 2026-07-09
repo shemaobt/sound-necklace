@@ -1,0 +1,33 @@
+/*
+ * A figura humana calorosa do guia (redesign §6.6, §9.7). Tons terrosos do
+ * sistema Shemá sobre o palco oliva; sem movimento — a variante animada (E4)
+ * traz respiração/piscar/lip-sync no seu próprio arquivo.
+ */
+.cds-guide-figure {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.cds-guide-skin {
+  fill: #e2b78f;
+}
+
+.cds-guide-hair {
+  fill: #4a3728;
+}
+
+.cds-guide-body {
+  fill: var(--cds-telha, #be4a01);
+}
+
+.cds-guide-eye {
+  fill: #2c2416;
+}
+
+.cds-guide-line {
+  fill: none;
+  stroke: #2c2416;
+  stroke-width: 3;
+  stroke-linecap: round;
+}

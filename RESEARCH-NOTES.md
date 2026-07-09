@@ -213,6 +213,33 @@ durable findings (not narration) at iteration end. Delete entries that stop bein
   `ui/organisms/index.ts`, `docs.md` e `minimalism.test.tsx` (§9.2: sem dígitos em texto/aria/title;
   `data-idx` interno é permitido). Augmentation `--cds-*` é global (não recriar).
 
+## UI organisms — palco da conversa / guia (verificado 2026-07-09, ENG-221)
+
+- **Reuso é a regra**: `conversation-stage` compõe moléculas/átomos existentes em vez de
+  re-implementar — `QuestionCard` (pergunta em Merriweather + marcador de papel `role="img"`
+  sem palavras + botão "Ouvir a pergunta" condicional ao `onListen`/`onSpeakQuestion` + slot
+  `children`), `BeadRow` (fio de progresso: 1 `Pearl` por pergunta, `head`/`lit`/`unplayed`),
+  `WaveformBar` (níveis via prop `height`), `Button` (`dark`/`ghost`, size `sm`). Só o glifo de
+  microfone é SVG inline local (não há átomo de mic — extrair para `ui/atoms` só se um 2º uso surgir).
+- **Máquina de estados do gravador dirigida por props** (`recorderState: 'idle'|'recording'|'recorded'`
+  + `levels[]`), callbacks para fora (`onRecord/onStop/onPlay/onRerecord`, `onPrev/onNext`,
+  `onSpeakQuestion`). O `MediaRecorder` NÃO vive no organismo — fica no adapter (ENG-244), ligado
+  pela estação (ENG-249). Precedência de estado da conta: `current` vence `answered` (revisitada = `head`).
+- **Padrão de variante por glob dentro de um componente** (doc de arquitetura §4, espelha as 3
+  registries do shell mas escopado): `index.tsx` lê `import.meta.glob('./variants/*.tsx', {eager:true})`
+  e um helper puro `pickVariantPath()` prefere `animated` sobre `static`, ANCORADO no basename
+  (`/\/animated\.tsx$/`) — substring solto pega `*.test.tsx` por engano. Esta issue traz só
+  `variants/static.tsx`; a ENG-232 acrescenta `animated.tsx` sem tocar nada. `import.meta.glob`
+  é transformado pelo Vite em TODOS os projects do Vitest (unit/dom/browser) e o typing vem de
+  `vite/client` (já em `tsconfig.types`).
+- **Gravador é interaction-critical** (uma das 3 do CLAUDE.md) → teste de fluxo obrigatório em
+  `*.browser.test.tsx` (Chromium real). Sem `vitest-browser-react`: `createRoot`/`flushSync` para
+  render/re-render + `button.click()` nativo (o React 19 ouve na raiz, o click nativo borbulha e
+  dispara o `onClick`). Botões do átomo `Button` não repassam props → alvo por texto no teste.
+- **Guarda de digit-free escopada** (§9.2): o check "sem dígitos" cobre SÓ `.cds-conversation-stage-progress`,
+  não o palco inteiro — a cópia da pergunta pode legitimamente conter dígitos. Movimento decorativo
+  (pulso do mic idle) só sob `@media (prefers-reduced-motion: no-preference)`; guia estático sem movimento.
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.
