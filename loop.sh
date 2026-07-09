@@ -7,10 +7,16 @@
 #   pnpm install && pnpm exec playwright install chromium
 # Para voltar ao profile normal depois: nori-skillsets switch high-autonomy
 #
-# Uso: ./loop.sh [flags extras do claude, ex.: --dangerously-skip-permissions]
-# Pare com Ctrl-C entre iterações. Cada iteração roda num worktree NOVO a partir
-# de origin/main (o skillset exige começar fora de branch protegida) e o agente
-# renomeia o branch para o nome sugerido pelo Linear.
+# Uso: ./loop.sh [flags extras do claude]
+#   - Roda em modo HEADLESS (claude -p): cada iteração termina sozinha ao fim
+#     do turno — sem Ctrl-C.
+#   - Permissões: --dangerously-skip-permissions é o DEFAULT (é um loop
+#     autônomo; os guardrails reais são a branch protection + required checks
+#     + a regra contract-critical-não-mergeia). Para rodar COM prompts de
+#     autorização (primeira rodada supervisionada): LOOP_SAFE=1 ./loop.sh
+# Pare com Ctrl-C entre iterações. Cada iteração roda num worktree NOVO a
+# partir de origin/main (o skillset exige começar fora de branch protegida) e
+# o agente renomeia o branch para o nome sugerido pelo Linear.
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -20,6 +26,12 @@ if [ "$(nori-skillsets current 2>/dev/null)" != "loop" ]; then
   exit 1
 fi
 
+perm_flags=(--dangerously-skip-permissions)
+if [ "${LOOP_SAFE:-0}" = "1" ]; then
+  perm_flags=()
+  echo "--- LOOP_SAFE=1: rodando COM prompts de permissão ---"
+fi
+
 while :; do
   git fetch origin main
   ts="$(date +%Y%m%d-%H%M%S)"
@@ -27,7 +39,9 @@ while :; do
   git worktree add "$wt" -b "loop-bootstrap-$ts" origin/main
   (
     cd "$wt"
-    cat PROMPT.md | claude "$@" || true
+    # -p (headless): o processo ENCERRA ao fim do turno; --verbose mostra o
+    # progresso (turnos/ferramentas) no terminal em vez de só o texto final.
+    claude -p --verbose "${perm_flags[@]}" "$@" <PROMPT.md || true
   )
   # Remove o worktree APENAS se não houver commits não enviados nem sujeira —
   # nunca perder trabalho de uma iteração interrompida antes do push.
