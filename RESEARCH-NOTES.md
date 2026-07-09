@@ -93,6 +93,40 @@ durable findings (not narration) at iteration end. Delete entries that stop bein
   pause = 2 rects rx 1.4), nunca unicode. Glifo decorativo: `aria-hidden`; forma
   com significado (disco de confiança): `role="img"` + `aria-label`.
 
+## Web Audio / engine de áudio (verificado 2026-07-09, ENG-217)
+
+- `decodeAudioData` DESTACA o ArrayBuffer de entrada (passo do spec) — passar cópia
+  (`bytes.slice(0)`) quando os bytes forem reutilizados; é por isso que a referência
+  faz `arr.slice(0)`. Bytes corrompidos ⇒ DOMException `EncodingError`; buffer já
+  destacado ⇒ `DataCloneError`.
+- `AudioBufferSourceNode` é one-shot: segundo `start()` lança `InvalidStateError` —
+  um nó novo por playback. `stop()` também dispara `onended`; a referência guarda
+  `state.playing===src` dentro do onended para ignorar o evento do nó descartado.
+- `ctx.currentTime` congela durante `suspend()` ⇒ progresso `t0 + (now() − ctxStart)`
+  permanece correto através de pause/resume sem contabilidade extra; avança em
+  quanta de 128 frames (~2,9 ms @ 44,1 kHz).
+- `resume()` pode resolver a promise antes do relógio voltar a andar (Chromium bug 41302928) — smoke test deve observar `currentTime` avançando, não só o await.
+- Chromium lançado pelo Playwright nasce com AudioContext `"running"` (autoplay
+  policy não aplicada; Playwright #33590) — smoke headless funciona sem gesto.
+- jsdom/node: sem `AudioContext` (jsdom #2900). jsdom TEM rAF (Vitest liga
+  `pretendToBeVisual`); o projeto `unit` (node) NÃO tem rAF global — o engine
+  injeta um transport `{now, requestFrame, cancelFrame, suspend, resume, start}` e a
+  fixture avança tempo/frames manualmente. Mocks npm de Web Audio: mortos
+  (web-audio-test-api arquivado) ou acoplados a standardized-audio-context — hand-roll.
+- Vitest 4: `it.skipIf(cond)` aparece como skipped (↓) no reporter mas sem razão —
+  razão visível vai no NOME do teste. Fake timers mockam rAF por default
+  (`vi.advanceTimersToNextFrame()`), desnecessário com transport injetado.
+- Semântica da referência portada na ENG-217 (call sites verificados): `playRange`
+  NÃO seta `playingKey` — cliques de conta (`playRange(b,b)`) e `playEdge` tocam sem
+  affordance de pausa; `setMode` (L1001) e `setReview` (L973) chamam `stopPlayback`
+  ("mudar de modo para a reprodução"); `stopPlayback` durante pausa deixa o ctx
+  suspenso — o `resume()` incondicional de `playRange` conserta no play seguinte;
+  piso de duração `Math.max(0.02, t1−t0)`; após fim natural (onended), o mesmo key
+  recomeça do início (o guard `playingKey===key && state.playing` falha).
+- Depcruise: nenhuma regra proíbe `adapters/` → `tests/golden/pcm.ts` (só domain/
+  contracts são banidos de tests/) — o brief da ENG-217 cita esse import de
+  propósito para a fixture sintetizar o PCM dourado.
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.

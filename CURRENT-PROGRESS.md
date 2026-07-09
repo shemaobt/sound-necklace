@@ -12,3 +12,4 @@ Linear. One line per loop iteration, newest last:
 - 2026-07-09 · (pre-loop) · Planning session complete: 47 issues ENG-212…ENG-258 created; repo skeleton + CI gates + docs/architecture.md delivered · PR #1 (skeleton, awaiting human merge)
 - 2026-07-09 03:55 · ENG-214 · in-review (contract-critical: domain grid/hash/ids + golden cases 1 e 3 byte-idênticos; aguarda revisão humana) · PR #6
 - 2026-07-09 10:20 · ENG-215 · merged (ui/atoms: 7 átomos Shemá, 45 testes dom, guarda reduced-motion + minimalismo §9.2) · PR #11
+- 2026-07-09 10:55 · ENG-217 · merged (adapters/audio: porta AudioEngine + núcleo de playback 1:1 da referência com transport injetado; fixture LCG headless; Web Audio real com smoke skipIf; 31 testes) · PR #12
