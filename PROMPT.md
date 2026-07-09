@@ -17,4 +17,8 @@ You are already inside a fresh git worktree on a disposable bootstrap branch
    opening the PR). contract-critical → PR + comment + In Review + STOP (no merge).
 5. Append durable findings to RESEARCH-NOTES.md (same commit as your work).
 6. If nothing is eligible (all remaining issues blocked/needs-human/in review):
-   say so explicitly and end the iteration without inventing work.
+   say so explicitly, do NOT update memory files about it (one idle note is
+   enough; repeated recounts are noise), and end the iteration without
+   inventing work — with the literal marker `[LOOP-IDLE]` as the last line of
+   your final message (the outer loop reads it to back off instead of
+   re-scanning every few minutes).
