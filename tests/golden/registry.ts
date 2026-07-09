@@ -10,7 +10,18 @@
  * Contrato: um replayer recebe os passos do caso e devolve os artefatos como
  * strings byte-exatas (mesma serialização da referência).
  */
-import { buildBeads, hashPCM } from '../../domain';
+import {
+  buildBeads,
+  confirmPart,
+  confirmParts,
+  confirmWhole,
+  createSession,
+  frontier,
+  hashPCM,
+  reopenPart,
+  type SceneResult,
+  type SessionState,
+} from '../../domain';
 
 import { makePcm, type PcmSpec } from './pcm';
 
@@ -90,6 +101,89 @@ const manifestReplayer: Replayer = (steps) => {
   }
   return out;
 };
+
+/**
+ * ENG-216: replay dos passos de sessão/cena (segment → confirmWhole → cutScene
+ * → reopenScene → confirmParts) através dos reducers de domain/. Passos de
+ * issues posteriores (triage, phraseSelect, answer, export…) param o replay e
+ * são reportados em `pendingAt` — o caso minimal-flow segue PENDENTE no
+ * harness até a ENG-219+ registrarem seus passos e o export real (ENG-227/233).
+ */
+export interface SessionReplay {
+  state: SessionState;
+  /** primeiro passo ainda sem replayer de domínio, ou null se consumiu tudo */
+  pendingAt: { index: number; type: string } | null;
+}
+
+interface CutSceneStep extends GoldenStep {
+  endBead: number;
+}
+
+interface ReopenSceneStep extends GoldenStep {
+  index: number;
+}
+
+function unwrap(r: SceneResult): SessionState {
+  if (!r.ok) throw new Error(`replay recusado pelo domínio — ${r.error.code}: ${r.error.message}`);
+  return r.state;
+}
+
+export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
+  let state: SessionState | null = null;
+  const must = (): SessionState => {
+    if (!state) throw new Error('passo de sessão antes do segment');
+    return state;
+  };
+  for (const [i, step] of steps.entries()) {
+    switch (step.type) {
+      case 'segment': {
+        const { beadSec, audioFilename, slug, pcm } = step as SegmentStep;
+        const data = makePcm(pcm.seed, pcm.samples);
+        const dur = pcm.samples / pcm.sampleRate;
+        state = createSession({
+          durationSec: dur,
+          beadSec,
+          beads: buildBeads(dur, beadSec),
+          manifestId: hashPCM(
+            {
+              numberOfChannels: pcm.channels,
+              sampleRate: pcm.sampleRate,
+              getChannelData: () => data,
+            },
+            beadSec,
+          ),
+          audioFilename,
+          slug,
+        });
+        break;
+      }
+      case 'confirmWhole':
+        state = unwrap(confirmWhole(must()));
+        break;
+      case 'cutScene': {
+        // driver da referência (generate.mjs L103–109): simula o 2º clique
+        // (seleção {fronteira, endBead}) e confirma a cena corrente
+        const st = must();
+        const sel = {
+          ...st,
+          selection: { s: frontier(st, 'parts'), e: (step as CutSceneStep).endBead },
+          pendingStart: null,
+        };
+        state = unwrap(confirmPart(sel, sel.current.index));
+        break;
+      }
+      case 'reopenScene':
+        state = reopenPart(must(), (step as ReopenSceneStep).index);
+        break;
+      case 'confirmParts':
+        state = unwrap(confirmParts(must()));
+        break;
+      default:
+        return { state: must(), pendingAt: { index: i, type: step.type } };
+    }
+  }
+  return { state: must(), pendingAt: null };
+}
 
 export const replayers: Record<string, Replayer> = {
   'manifest-only': manifestReplayer,

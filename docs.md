@@ -6,7 +6,7 @@ Path: @/
 
 - Colar de Sons is an ear-first web app: a facilitator and a listener from an oral culture segment a recorded oral story (a "necklace" of audio beads) into scenes and phrases, classify scenes against the Ruth ontology, answer meaning questions by voice, and export artifacts consumed by a downstream pipeline ("o Compilador").
 - This is a complete from-scratch v2 implementation. The v1 prototype at @/docs/reference/index.html is the **executable behavioral reference** — read it to resolve behavior doubts, never modify it.
-- The repo is being built up incrementally via Linear issues (project "Sound Necklace", milestone MVP) executed by an autonomous loop. Layer structure, CI quality gates, the golden harness (@/tests/golden), Shemá design tokens (@/ui/tokens) and atoms (@/ui/atoms), and the first `domain/` modules (grid/hash/ids — see @/domain/docs.md) exist; the remaining feature modules land issue by issue.
+- The repo is being built up incrementally via Linear issues (project "Sound Necklace", milestone MVP) executed by an autonomous loop. Layer structure, CI quality gates, the golden harness (@/tests/golden), Shemá design tokens (@/ui/tokens) and atoms (@/ui/atoms), the audio engine adapter (@/adapters/audio), and the `domain/` core through the session/scene reducers (see @/domain/docs.md) exist; the remaining feature modules land issue by issue.
 
 ### How it fits into the larger codebase
 

@@ -63,6 +63,30 @@ durable findings (not narration) at iteration end. Delete entries that stop bein
   referência (`manifest-only` → `fnv1a32:5a1b22f1`, `partial-bead` →
   `fnv1a32:1a884f38`).
 
+## Estado de sessão / cenas (verificado 2026-07-09, ENG-216)
+
+- Quirks da referência que o domain espelha: `enterLayer` (L930–935) escolhe o
+  **último** índice destravado (`lu=k` sem break); reabrir a história (L677–680)
+  limpa `confirmed`+`partsConfirmed`+`current` mas **NÃO** limpa
+  `selection`/`pendingStart`; `confirmWhole` → `setMode("escuta")` →
+  `enterLayer("parts")` → auto-`addPart` primado (afeta alocação de PT#);
+  `confirmParts` seta `mode="triagem"` direto (gates de modo são ENG-219).
+- `primePart` deixa `pendingStart=f` E `selection={s:f,e:f}` — o próximo clique
+  cai no ramo de 2º clique (normaliza o range e zera `pendingStart`).
+- Erros de validação no domain: códigos tipados + cópia PT-BR contratual
+  (`{ code, message }`, mensagens em tabela `as const`) — o PRD v2 NÃO define
+  códigos (grep confirmado), só as strings; a issue ENG-216 manda códigos
+  tipados com a cópia como constante. Não usar throw para validação de fluxo.
+- Efeito-como-valor: reducer de seleção retorna `{ state, play }` com
+  discriminated union (`single-bead` | `range` | `edge` | `transport`) — padrão
+  Elm/effects-as-data; o intérprete (Web Audio) fica nos adapters.
+- Vitest 4 + V8: branches implícitos (`?.`, `??`, default params, `if` sem else,
+  cada `case`) contam; cobrir os dois lados com testes; preferir eliminar
+  código defensivo que o tipo já prova impossível a deixar branch morto.
+- PRD §8.2 acrescenta à referência: sem ancoragem ativa o toque é transporte
+  (tocar a partir da conta) — na referência o pointerdown só retorna; o reducer
+  comunica isso com a ação `transport` e não muda o estado.
+
 ## UI atoms / camada visual (verificado 2026-07-09, ENG-215)
 
 - **Protótipos normativos**: todo o estilo vive em objetos inline no
