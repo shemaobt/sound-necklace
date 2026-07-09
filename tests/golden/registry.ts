@@ -18,7 +18,13 @@ import {
   createSession,
   frontier,
   hashPCM,
+  lockedParts,
+  markNoneFit,
   reopenPart,
+  setMode,
+  tagScene,
+  triagemDone,
+  type Confidence,
   type SceneResult,
   type SessionState,
 } from '../../domain';
@@ -123,6 +129,13 @@ interface ReopenSceneStep extends GoldenStep {
   index: number;
 }
 
+interface TriageStep extends GoldenStep {
+  partIndex: number;
+  kind?: string;
+  confidence?: Confidence;
+  none_fit?: boolean;
+}
+
 function unwrap(r: SceneResult): SessionState {
   if (!r.ok) throw new Error(`replay recusado pelo domínio — ${r.error.code}: ${r.error.message}`);
   return r.state;
@@ -178,6 +191,26 @@ export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
       case 'confirmParts':
         state = unwrap(confirmParts(must()));
         break;
+      case 'triage': {
+        // o picker (referência L1258–1266) opera sobre lockedParts; o passo
+        // indexa essa vista e classifica a cena alvo por part_id
+        const st = must();
+        const ts = step as TriageStep;
+        const target = lockedParts(st)[ts.partIndex];
+        if (!target) throw new Error(`triage: partIndex ${ts.partIndex} fora de lockedParts`);
+        state = ts.none_fit
+          ? markNoneFit(st, target.part_id)
+          : tagScene(st, target.part_id, ts.kind as string, ts.confidence as Confidence);
+        break;
+      }
+      case 'triagemDone': {
+        // botão "Já classifiquei todas as cenas →" (L1185): só segue com o gate
+        // habilitado; a referência então setMode("segmentacao")
+        const st = must();
+        if (!triagemDone(st).enabled) throw new Error('triagemDone: gate desabilitado');
+        state = setMode(st, 'segmentacao');
+        break;
+      }
       default:
         return { state: must(), pendingAt: { index: i, type: step.type } };
     }

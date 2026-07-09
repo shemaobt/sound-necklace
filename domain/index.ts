@@ -40,3 +40,22 @@ export {
   type SceneErrorCode,
   type SceneResult,
 } from './scenes';
+export {
+  SCENE_KINDS,
+  SK_PT,
+  skEnShort,
+  skShort,
+  T_TARGET,
+  type SceneKind,
+  type Tier,
+} from './scene-kinds';
+export { lockedParts, markNoneFit, productiveScenes, tagScene } from './triagem';
+export { computeCoverage, type Coverage, type CoverageStatus, type KindCoverage } from './coverage';
+export {
+  modeLocks,
+  resolveMode,
+  setMode,
+  triagemDone,
+  type ModeLocks,
+  type TriagemDone,
+} from './gates';
