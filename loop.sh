@@ -47,10 +47,15 @@ while :; do
   )
   # Remove o worktree APENAS se não houver commits não enviados nem sujeira —
   # nunca perder trabalho de uma iteração interrompida antes do push.
-  unpushed="$(git -C "$wt" log --branches --not --remotes --oneline 2>/dev/null | wc -l | tr -d ' ')"
+  # Conta só commits DESTE worktree à frente de origin/main (`--branches` aqui
+  # olharia o repo inteiro — worktrees compartilham refs — e branches antigas
+  # squash-mergeadas "não enviadas" impediriam a limpeza para sempre).
+  unpushed="$(git -C "$wt" log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')"
   dirty="$(git -C "$wt" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
   if [ "$unpushed" = "0" ] && [ "$dirty" = "0" ]; then
+    branch="$(git -C "$wt" branch --show-current)"
     git worktree remove "$wt" --force 2>/dev/null || true
+    [ -n "$branch" ] && git branch -D "$branch" 2>/dev/null || true
   else
     echo "--- worktree $wt preservado ($unpushed commits não enviados, $dirty arquivos sujos) ---"
   fi
