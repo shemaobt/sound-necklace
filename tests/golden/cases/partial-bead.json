@@ -1,0 +1,14 @@
+{
+  "name": "partial-bead",
+  "description": "Duração não múltipla de beadSec (conta parcial) + artefatos de float do toFixed(6) com beadSec 0.3 (0.8999… → 0.9).",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.3,
+      "slug": "conta-parcial",
+      "audioFilename": "conta-parcial.wav",
+      "pcm": { "seed": 7, "sampleRate": 44100, "samples": 455000, "channels": 1 }
+    },
+    { "type": "export", "artifacts": ["manifesto"] }
+  ]
+}

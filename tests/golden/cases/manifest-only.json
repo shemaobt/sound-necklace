@@ -1,0 +1,14 @@
+{
+  "name": "manifest-only",
+  "description": "Grid + manifest apenas: 10s exatos (sem conta parcial), N=441000 > 100k (stride 4 no hash).",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.25,
+      "slug": "historia-teste",
+      "audioFilename": "historia-teste.wav",
+      "pcm": { "seed": 42, "sampleRate": 44100, "samples": 441000, "channels": 1 }
+    },
+    { "type": "export", "artifacts": ["manifesto"] }
+  ]
+}
