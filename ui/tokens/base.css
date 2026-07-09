@@ -1,0 +1,43 @@
+/* Estilos base do Colar de Sons — piso de acessibilidade do PRD §13 e a
+   tipografia/fundos do redesign §4.1. Importado uma vez pelo shell. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+  font-family: var(--cds-font-load-bearing);
+  /* tamanho de texto confortável para a UI da facilitadora (PRD §13) */
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* foco SEMPRE visível: 3px telha (redesign §4.5, PRD §13) */
+:focus-visible {
+  outline: 3px solid var(--cds-telha);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* loops decorativos desligam sob prefers-reduced-motion (PRD §13) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

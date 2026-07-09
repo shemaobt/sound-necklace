@@ -25,6 +25,9 @@ export default defineConfig({
           // globals ligado para a auto-limpeza do Testing Library (afterEach cleanup);
           // sem isso, múltiplos render() no mesmo arquivo acumulam DOM e geram flakes.
           globals: true,
+          // css processado: sem isto, imports de .css (mesmo ?raw/?inline)
+          // viram string vazia e testes de conteúdo de token não funcionam.
+          css: true,
           include: ['ui/**/*.test.{ts,tsx}'],
           exclude: ['ui/**/*.browser.test.{ts,tsx}'],
         },

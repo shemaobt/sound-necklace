@@ -1,0 +1,36 @@
+/* Tokens Shemá como custom properties — espelho 1:1 de tokens.ts (o teste
+   colocalizado congela os valores). Prefixo --cds- = Colar de Sons. */
+:root {
+  /* fundos e acento (§4.1) */
+  --cds-cream: #f6f5eb;
+  --cds-olive: #3f3e20;
+  --cds-telha: #be4a01;
+  --cds-telha-deep: #8f3701;
+
+  /* intenções (§4.4) */
+  --cds-confidence-filled: #777d45;
+  --cds-confidence-half: #9a7b2e;
+  --cds-warning-bg: #f5e9d2;
+  --cds-warning-ink: #755c20;
+  --cds-error: #8f3701;
+
+  /* pérolas (§4.2) */
+  --cds-pearl: #e7e3d3;
+  --cds-pearl-highlight: #fbfaf3;
+
+  /* hairlines quase nunca; quando sim, verde a ~16% (§4.1) */
+  --cds-hairline: rgba(63, 62, 32, 0.16);
+
+  /* tipografia (§4.1) */
+  --cds-font-load-bearing: 'Montserrat', system-ui, sans-serif;
+  --cds-font-quiet-voice: 'Merriweather', Georgia, serif;
+
+  /* raios generosos e sombras baixas e quentes (§4.1) */
+  --cds-radius-card: 20px;
+  --cds-radius-pill: 999px;
+  --cds-shadow-card: 0 8px 26px -12px rgba(10, 7, 3, 0.22);
+
+  /* movimento (§4.5) */
+  --cds-motion-duration: 220ms;
+  --cds-motion-easing: ease-out;
+}
