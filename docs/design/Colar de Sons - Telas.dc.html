@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<style>
+@font-face{font-family:'Montserrat';src:url('assets/fonts/Montserrat-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:'Montserrat';src:url('assets/fonts/Montserrat-SemiBold.ttf') format('truetype');font-weight:600;font-display:swap}
+@font-face{font-family:'Montserrat';src:url('assets/fonts/Montserrat-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
+@font-face{font-family:'Montserrat';src:url('assets/fonts/Montserrat-Black.ttf') format('truetype');font-weight:900;font-display:swap}
+@font-face{font-family:'Merriweather';src:url('assets/fonts/Merriweather-Italic.ttf') format('truetype');font-weight:400;font-style:italic;font-display:swap}
+body{margin:0;background:#EDEBE0;font-family:'Montserrat',system-ui,sans-serif}
+.pg{display:grid;grid-template-columns:repeat(2,720px);gap:40px 44px;padding:56px 64px 80px;width:max-content}
+.card{scroll-margin-top:20px}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 10px;background:#BE4A01;color:#F6F5EB;font-weight:700;font-size:15px;border-radius:9px;letter-spacing:.02em}
+.frame{width:720px;border-radius:16px;overflow:hidden;border:1px solid rgba(63,62,32,.14);box-shadow:0 8px 30px -10px rgba(10,7,3,.22);background:#3F3E20}
+.frame img{display:block;width:100%;height:auto}
+.cap{display:flex;align-items:baseline;gap:12px;margin:0 0 14px}
+.name{font-weight:700;font-size:18px;color:#0A0703}
+.sub{font-family:'Merriweather',Georgia,serif;font-style:italic;font-size:14px;color:#5A5A3E}
+.card:target .badge{background:#3F3E20}
+</style>
+</helmet>
+<div style="padding:56px 64px 8px;width:max-content">
+  <div style="display:flex;align-items:center;gap:14px">
+    <img src="assets/icon-telha.svg" alt="" style="height:34px">
+    <div>
+      <div style="font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#8A8970">Colar de Sons · protótipo</div>
+      <div style="font-size:34px;font-weight:700;color:#0A0703;letter-spacing:-.01em">Panorama das telas</div>
+    </div>
+  </div>
+  <div style="font-family:'Merriweather',Georgia,serif;font-style:italic;font-size:16px;color:#5A5A3E;margin-top:10px;max-width:760px">Cada tela tem uma etiqueta (p1…p12). Use o número para comentar — ex.: "em p7, aumente as contas" ou "p9, o guia deveria olhar mais pra baixo".</div>
+</div>
+<div class="pg">
+
+  <div class="card" id="p1"><div class="cap"><span class="badge">p1</span><span class="name">Setup — Carregue o áudio</span></div><div class="frame"><img src="screenshots/proto/01-s.png" alt="Setup"></div><div class="sub" style="margin-top:8px">Tela da facilitadora · três portas de entrada · privacidade como âncora</div></div>
+
+  <div class="card" id="p2"><div class="cap"><span class="badge">p2</span><span class="name">Escuta — Ouça a história</span></div><div class="frame"><img src="screenshots/proto/02-s.png" alt="Ouvir"></div><div class="sub" style="margin-top:8px">Abertura cerimonial · o colar acende · uma única decisão</div></div>
+
+  <div class="card" id="p3"><div class="cap"><span class="badge">p3</span><span class="name">Escuta — Corte em cenas</span></div><div class="frame"><img src="screenshots/proto/03-s.png" alt="Cenas"></div><div class="sub" style="margin-top:8px">Fronteira travada · você só decide o fim · costura pré-ancorada</div></div>
+
+  <div class="card" id="p4"><div class="cap"><span class="badge">p4</span><span class="name">Triagem — escolha o grupo</span></div><div class="frame"><img src="screenshots/proto/04-s.png" alt="Triagem grupo"></div><div class="sub" style="margin-top:8px">Áudio-first · poucos cartões por vez · gaveta de cobertura</div></div>
+
+  <div class="card" id="p5"><div class="cap"><span class="badge">p5</span><span class="name">Triagem — escolha o tipo</span></div><div class="frame"><img src="screenshots/proto/05-s.png" alt="Triagem tipo"></div><div class="sub" style="margin-top:8px">Passo 2 · os 27 tipos, alcançáveis em 2 toques · rótulos PT-BR</div></div>
+
+  <div class="card" id="p6"><div class="cap"><span class="badge">p6</span><span class="name">Triagem — a confiança</span></div><div class="frame"><img src="screenshots/proto/06-s.png" alt="Confiança"></div><div class="sub" style="margin-top:8px">Cheia / meia / vazia · o formato carrega o sentido · alta·média·baixa</div></div>
+
+  <div class="card" id="p7"><div class="cap"><span class="badge">p7</span><span class="name">Segmentação — janela da cena</span></div><div class="frame"><img src="screenshots/proto/07-s.png" alt="Segmentação"></div><div class="sub" style="margin-top:8px">O colar vira janela · o resto adormece · frases em tons claros</div></div>
+
+  <div class="card" id="p8"><div class="cap"><span class="badge">p8</span><span class="name">Segmentação — a costura desliza</span></div><div class="frame"><img src="screenshots/proto/08-s.png" alt="Costura"></div><div class="sub" style="margin-top:8px">A frase passou da borda · o colar mostra a borda se movendo, sem texto de aviso</div></div>
+
+  <div class="card" id="p9"><div class="cap"><span class="badge">p9</span><span class="name">Mapeamento — o guia fala</span></div><div class="frame"><img src="screenshots/proto/09-s.png" alt="Mapeamento guia"></div><div class="sub" style="margin-top:8px">Rosto renderizado · respiração, piscar, boca · resposta por voz</div></div>
+
+  <div class="card" id="p10"><div class="cap"><span class="badge">p10</span><span class="name">Mapeamento — gravando a voz</span></div><div class="frame"><img src="screenshots/proto/10-s.png" alt="Gravando"></div><div class="sub" style="margin-top:8px">Waveform ao vivo · cronômetro · ouvir / gravar de novo</div></div>
+
+  <div class="card" id="p11"><div class="cap"><span class="badge">p11</span><span class="name">Relatório — a conversa reunida</span></div><div class="frame"><img src="screenshots/proto/11-s.png" alt="Relatório"></div><div class="sub" style="margin-top:8px">Respostas em voz referenciadas · texto opcional · contrato do Compilador</div></div>
+
+  <div class="card" id="p12"><div class="cap"><span class="badge">p12</span><span class="name">Export — o colar inteiro</span></div><div class="frame"><img src="screenshots/proto/12-s.png" alt="Export"></div><div class="sub" style="margin-top:8px">Colar totalmente enfiado · três documentos explicados · downloads reais</div></div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

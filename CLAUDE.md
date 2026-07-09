@@ -14,7 +14,7 @@ All specs live in `docs/`:
 
 **Precedence rules (memorize):**
 1. Behavior, data, rules → **PRD v2 wins**; in any remaining doubt, `docs/reference/index.html` behavior wins.
-2. Look, layout, motion → **the Claude Design prototypes win** (listed in redesign PRD §11).
+2. Look, layout, motion → **the Claude Design prototypes win** (listed in redesign PRD §11; imported to `docs/design/` — see its README).
 3. MVP scope doubts → `plano-de-acao-mvp.md` §2 (in) / §2.5 (out) / §4 (later).
 
 ## Architecture (clean, ports & adapters)
