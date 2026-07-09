@@ -16,12 +16,17 @@ describe('station-registry', () => {
   });
 });
 
-describe('adapter-registry (descoberta real via glob)', () => {
-  it('descobre os register.ts existentes e indexa por porta', () => {
-    const registry = buildAdapterRegistry();
-    expect(Object.keys(registry)).toContain('audio');
-    expect(Object.keys(registry)).toContain('connectivity');
-    expect(typeof registry.connectivity!.fixture).toBe('function');
+describe('adapter-registry', () => {
+  it('descobre os register.ts existentes via glob real', () => {
+    expect(Object.keys(buildAdapterRegistry())).toEqual(
+      expect.arrayContaining(['audio', 'connectivity']),
+    );
+  });
+
+  it('indexa cada registro pela sua porta', () => {
+    const foo = { port: 'foo', fixture: () => 'F', real: () => 'R' };
+    const registry = buildAdapterRegistry({ '/adapters/foo/register.ts': { default: foo } });
+    expect(registry.foo).toBe(foo);
   });
 });
 
