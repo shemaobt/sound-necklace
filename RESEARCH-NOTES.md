@@ -356,6 +356,42 @@ scene_kind_confidence}` (conf ∈ alta|média|baixa, **U+00E9** em `média`); no
   render confirmando as classes aplicadas (tokens.css/`computed-style` não existem
   isolados — só `main.tsx` os carrega; um teste de página não).
 
+## UI pages / estação Escuta 2 — corte de cenas (verificado 2026-07-09, ENG-230)
+
+- **Estado da estação**: renderizada quando `mode==='escuta' && whole.confirmed`
+  (`stepper-model.ts` `currentIndex` → 1; `KEY_TO_MODE.escuta2='escuta'`). Após
+  `confirmWhole`, `enterPartsLayer` já deixa um part destravado primado
+  (`pendingStart=frontier`, `selection={f,f}`) ⇒ há SEMPRE `activeAnchor` na Escuta 2.
+- **Colar com ancoragem ativa** (≠ `transportOnly` da Escuta 1): passa `segments`
+  (locked parts → `{span, tint: sceneColor(i)}`), `lockedEndBeads` (conta quadrada),
+  `selection`/`pendingStart`. Memoizar `segments`/`lockedEndBeads` por `session.parts`
+  para o update por-frame do `playbackHead` NÃO recomputar props estruturais (senão
+  perde a iluminação imperativa sem-rerender do organismo).
+- **Modelo de clique**: `onBeadPointerDown` lê `sessionStore.getState().session`
+  (fresco, não o snapshot do React — cliques encadeados), roda `clickBead` (domain),
+  `apply(() => state)` e toca a `PlayAction` por `playActionOn` puro (single-bead/range
+  → `player.play(s,e)`; edge → `player.playEdge(edge)`). `onEdgeHover` → `player.playEdge`.
+  O browser test parte de `selection=null` (não primado) p/ exercitar os 3 ramos
+  single-bead→range→edge que a DoD enumera; a Escuta 2 real chega primada (1º clique
+  já cai no ramo range) — os dois são válidos, o teste prova a fiação §8.2.
+- **Ações**: dominante "✓ Confirmar esta cena" = `confirmPart(s, current.index)`
+  (trava, quadra o fim, auto-abre a próxima na emenda via primePart/addPart), marcada
+  `data-role="primary-action"` (exatamente 1, guard §9.2). "Confirmar as cenas →"
+  (dark) só com ≥1 travada → `confirmParts` → Triagem (descarta a cena aberta do fim).
+  "← Voltar" = port do `cenasBack` da referência (L903): `setMode({...s,whole:{...,
+confirmed:false}},'escuta')` — DISTINTO do `reopenWhole` da Escuta 1 (que também zera
+  `partsConfirmed`/`current`); ambos preservam `parts`. Chips `ScenePhraseChip` (grupo
+  `role=group` + botões-irmãos): Reabrir → `reopenPart(s,i)` destrava i..fim (cascata).
+- **Digit-free (§9.2)**: a tela do ouvinte não mostra dígitos; o redesign pede "Cena N"
+  ⇒ `sceneLabel(i)` numera por EXTENSO (cardinais PT-BR um..noventa e nove; >99 → "Cena"
+  só). O `data-idx` do colar é atributo (não textContent/aria/title) ⇒ não viola o guard.
+  Precedência: §9.2 (regra PRD v2, DoD) vence "Cena N" numeral (look do redesign).
+- **Erros**: as DUAS cópias do confirmar-cena vêm verbatim do domínio
+  (`SELECTION_INCOMPLETE`, `SCENE_BEFORE_FRONTIER`) — `SCENE_BEFORE_FRONTIER` só
+  alcançável por estado forjado (primePart normalmente impede s<frontier); testar
+  forjando `selection.s < frontier`. `NO_LOCKED_SCENE` não surge: o botão é escondido
+  sem ≥1 travada (gate por presença, não por mensagem).
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.
