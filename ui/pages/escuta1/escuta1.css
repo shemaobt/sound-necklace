@@ -1,0 +1,78 @@
+/* Escuta 1 — tratamento cerimonial full-bleed (redesign §6.2): olive profundo, a
+   tagline grande em Merriweather itálico, o ícone da marca em marca-d'água fraca.
+   O movimento decorativo (subida da tagline) fica sob a guarda de reduced-motion
+   (§4.5); a iluminação do colar vive nos átomos (Pearl), já guardada lá. */
+
+.cds-escuta1 {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.25rem;
+  min-height: 72vh;
+  padding: clamp(2rem, 6vh, 4rem) 1.5rem;
+  background: var(--cds-olive);
+  color: var(--cds-cream);
+  text-align: center;
+  overflow: hidden;
+}
+
+.cds-escuta1-watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.cds-escuta1-tagline {
+  position: relative;
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  line-height: 1.1;
+  color: var(--cds-cream);
+}
+
+.cds-escuta1-stage {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+}
+
+.cds-escuta1-controls {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.cds-escuta1-error {
+  margin: 0;
+  max-width: 32ch;
+  font-family: var(--cds-font-load-bearing);
+  color: var(--cds-cream);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-escuta1-tagline {
+    animation: cds-escuta1-rise 0.9s var(--cds-motion-easing) both;
+  }
+
+  @keyframes cds-escuta1-rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

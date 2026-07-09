@@ -314,6 +314,48 @@ scene_kind_confidence}` (conf ∈ alta|média|baixa, **U+00E9** em `média`); no
   injetável = fábrica `build(mods = globbed)` com o mapa de módulos como parâmetro default;
   testes passam um mapa falso. Vale nos 3 projects do Vitest (transform do Vite).
 
+## UI pages / estação Escuta 1 (verificado 2026-07-09, ENG-229)
+
+- **Primeira estação em `ui/pages/`** (estava vazio). O `index.tsx` DEVE ter
+  `export default` do componente — é o valor que a station-registry (glob
+  `/ui/pages/*/index.tsx`) guarda. Nome do diretório = chave; `KEY_TO_MODE` em
+  `ui/app/App.tsx` mapeia `escuta1`→`'escuta'`. `StationHost` renderiza
+  `<Station/>` SEM props ⇒ o default export resolve tudo por dentro (sessão via
+  `useSessionStore` singleton).
+- **Áudio é INJETADO por prop `player` (default `null`)** — não construído na
+  estação. Em runtime o áudio só liga pelo Setup (ENG-243) + Dashboard cria/carrega
+  a sessão; hoje a estação roda essencialmente sob teste (App mostra "carregando a
+  sessão…" sem sessão). A grade do player (`beadSec`/`decoded.duration`) tem de
+  casar com a da sessão (`totalBeads`/`beadSec`). Sem player, o colar renderiza sem
+  playback (degradação esperada).
+- **Colar-como-transporte (§8.2) SOBREPÕE a referência** (que dá `return` em toque
+  sem ancoragem, L563): botão grande = `toggle('historia',0,N-1)` (2º toque pausa);
+  toque de conta = `toggle` com **chave nova por toque** (reinicia sempre — resolve
+  o bug de "re-tocar conta atrás da cabeça pausaria" se a chave fosse fixa);
+  `onHead` re-alterna o último `{key,s,e}` ⇒ pausa/retoma (o colar dispara
+  `onHeadTap` só quando `bead===playbackHead`). Lógica pura em `transport.ts`.
+- **`playbackHead`**: o `Player` só empurra por `onHead` (sem getter síncrono) ⇒
+  `useEffect`+`useState` (não `useSyncExternalStore`); efeito de cleanup SEPARADO
+  chama `player.stop()` no unmount. `react-hooks/set-state-in-effect` (lint erro,
+  não warning) proíbe `setState` síncrono no corpo do efeito — não resetar o head
+  ali; o estado inicial `null` basta (player estável em runtime).
+- **`confirmWhole` retorna `SceneResult` (`ok|error`)**, mas `sessionStore.apply` só
+  aceita `reducer→SessionState`: computar o result do `session` atual; se ok
+  `apply(() => result.state)`, se erro `setError(result.error.message)`. O erro
+  `WHOLE_SPAN_INCOMPLETE` só é alcançável por sessão forjada (`createSession` nasce
+  sempre com span completo 0…N−1) — o teste constrói o span parcial.
+- **Testes**: `ui/pages/**/*.test.tsx` → projeto `dom` (jsdom) automático;
+  `*.browser.test.tsx` → chromium. Geometria degenerada no jsdom
+  (`getBoundingClientRect`=0) ⇒ toque-por-coordenada vai p/ browser test (espelha
+  `necklace.browser.test.tsx`: `createRoot`+`flushSync`, `PointerEvent` nativo,
+  `beadPosition`; player de fixture dirigido por `engine.transport.advance`;
+  `vi.waitFor` p/ o `setState`→`data-play` propagar antes do head-tap). Minimalismo
+  de página (§9.2): dígitos em `textContent`/aria/title; ≤1 `[data-role="instruction"]`,
+  1 `[data-role="primary-action"]` (o átomo `Button` não repassa props arbitrárias ⇒
+  marcar via wrapper). Cerimonial por css `?raw` ancorado NA regra da classe +
+  render confirmando as classes aplicadas (tokens.css/`computed-style` não existem
+  isolados — só `main.tsx` os carrega; um teste de página não).
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.
