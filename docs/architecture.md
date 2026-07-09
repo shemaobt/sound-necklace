@@ -161,3 +161,18 @@ Render beads as **React-managed DOM** (structure changes are infrequent); drive 
 | acceptance (E6)       | Playwright E2E (`tests/e2e/`, fixture mode)            | one spec per plano §3 criterion + §9.2 scan                                          |
 
 Anti-gaming rules from CLAUDE.md apply verbatim (never lower thresholds, never skip failing tests, snapshot ≠ coverage).
+
+---
+
+## 8. Component library policy — Radix primitives, selectively (decided 2026-07-09)
+
+**Policy:** hand-build all visual atoms/molecules on `ui/tokens` (a pearl is three lines of CSS — a library saves nothing and fights the Shemá look). Adopt **Radix Primitives** ONLY for overlay/behavior components where accessibility plumbing is genuinely hard: focus trap, ESC/overlay dismissal, aria wiring, roving focus.
+
+| Where | Package | Issue |
+| --- | --- | --- |
+| Seam modal (dialog shell) | `@radix-ui/react-dialog` | ENG-228 |
+| Coverage drawer (sheet) | `@radix-ui/react-dialog` | ENG-225 |
+| Tutorial popup (anchor) | `@radix-ui/react-popover` | ENG-231 |
+| Setup entry doors + granularity cards | `@radix-ui/react-radio-group` | ENG-243 |
+
+Rules: per-component packages only (no meta-kit, no shadcn/MUI/Chakra — styled kits fight the byte-specific Shemá design and the listener-minimalism rules); Radix contributes **behavior only** — every visible pixel still comes from `ui/tokens`; each issue adds its own dependency; atoms/molecules stay library-free (they remain purely presentational, and depcruise keeps banning domain/adapters there — npm UI primitives are allowed by the boundary rules but the POLICY restricts them to the table above).
