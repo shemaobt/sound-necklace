@@ -14,7 +14,10 @@ Do NOT derive the next task from this file. The backlog is in **Linear**:
 
 1. Use the Linear MCP tools. Project **Sound Necklace**, milestone **MVP**, team ENG.
 2. Pick the **highest-priority eligible** issue: status `Todo`, ALL `blockedBy` issues
-   `Done`, and carrying neither the `blocked-O8` nor the `needs-human` label.
+   `Done`, and carrying none of the labels `blocked-O8`, `needs-human`, or
+   **`tripod-api`** (those belong to the shared-API repository
+   `shemaobt/tripod-api` — a different codebase this loop must NEVER work on,
+   even though they live in the same MVP milestone).
 3. **The issue body is the complete brief** (Goal, Context & specs, Scope, DoD,
    Out of scope). Read it plus the `docs/` sections it cites. Touch ONLY the files in
    its Scope.
