@@ -7,6 +7,8 @@ import 'react';
 
 declare module 'react' {
   interface CSSProperties {
-    [key: `--cds-${string}`]: string | number | undefined;
+    // só string: React NÃO acrescenta px a custom properties — um number
+    // renderizaria `26` sem unidade e o var() ficaria inválido.
+    [key: `--cds-${string}`]: string | undefined;
   }
 }

@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { parseRules } from '../testing/css';
 import { Button } from './button';
 import buttonCss from './button.css?raw';
 
@@ -59,24 +60,26 @@ describe('Button — ação Shemá (redesign §4.1)', () => {
 });
 
 describe('Button — o press escurece, nunca clareia (§4.1)', () => {
-  it('hover, press e foco de teclado do primário mudam o fundo para o telha-escuro', () => {
-    const rules = parseRules(buttonCss).filter(
-      (r) => r.selector.includes("data-variant='primary'") || r.selector.includes('primary'),
+  const rules = parseRules(buttonCss);
+
+  it.each(['primary', 'dark', 'ghost'] as const)(
+    'hover, press e foco de teclado da variante %s escurecem o fundo',
+    (variant) => {
+      const ofVariant = rules.filter((r) => r.selector.includes(`data-variant='${variant}'`));
+      for (const pseudo of [':hover', ':active', ':focus-visible']) {
+        const rule = ofVariant.find((r) => r.selector.includes(pseudo));
+        expect(rule, `regra de ${variant} para ${pseudo}`).toBeDefined();
+        expect(rule?.body).toContain('background');
+      }
+    },
+  );
+
+  it('o primário escurece exatamente para o telha-escuro', () => {
+    const press = rules.filter(
+      (r) => r.selector.includes("data-variant='primary'") && r.selector.includes(':'),
     );
-    for (const pseudo of [':hover', ':active', ':focus-visible']) {
-      const rule = rules.find((r) => r.selector.includes(pseudo));
-      expect(rule, `regra do primário para ${pseudo}`).toBeDefined();
-      expect(rule?.body).toContain('--cds-telha-deep');
+    for (const rule of press.filter((r) => /:hover|:active|:focus-visible/.test(r.selector))) {
+      expect(rule.body).toContain('--cds-telha-deep');
     }
   });
 });
-
-/** Parser mínimo de regras planas `seletor { corpo }` (ignora blocos @). */
-function parseRules(css: string): { selector: string; body: string }[] {
-  const rules: { selector: string; body: string }[] = [];
-  const re = /([^{}@]+)\{([^{}]*)\}/g;
-  for (const m of css.matchAll(re)) {
-    rules.push({ selector: (m[1] ?? '').trim(), body: m[2] ?? '' });
-  }
-  return rules;
-}

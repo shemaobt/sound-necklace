@@ -5,7 +5,6 @@
   height: var(--cds-bar-height, 8px);
   border-radius: 3px;
   background: var(--cds-hairline);
-  transform-origin: bottom;
   transition:
     height 100ms var(--cds-motion-easing, ease-out),
     background-color 100ms;

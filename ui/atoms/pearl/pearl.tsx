@@ -22,7 +22,11 @@ export function Pearl({
   size?: number;
   /** conta final da cena rende quadrada no fio (§4.3) */
   sceneEnd?: boolean;
-  /** pulso curto de escala (referência .pearl.ping) */
+  /**
+   * Pulso curto de escala (referência .pearl.ping). One-shot: quem chama deve
+   * voltar a `false` após o pulso — animações css só reiniciam no off→on, e
+   * enquanto `true` numa cabeça o pulso substitui o glow (mesma shorthand).
+   */
   ping?: boolean;
 }) {
   return (

@@ -9,14 +9,18 @@ import './chip.css';
 export function Chip({
   label,
   swatch,
-  selected = false,
+  selected,
   dashed = false,
   onClick,
 }: {
   label: string;
   /** cor do segmento — presente, mostra o swatch-pérola */
   swatch?: PaletteEntry;
-  /** chip do segmento em reprodução */
+  /**
+   * Chip selecionável (ex.: segmento em reprodução). Só passe a prop em chips
+   * que alternam: com ela o chip anuncia-se como toggle (aria-pressed);
+   * omitida, é botão de ação simples.
+   */
   selected?: boolean;
   /** "nenhum se encaixa": tracejado, sem cor */
   dashed?: boolean;

@@ -50,6 +50,15 @@
   box-shadow: 0 1px 4px rgba(10, 7, 3, 0.28);
 }
 
+/* cabeça sobre a conta final: mantém a forma quadrada e o tom profundo,
+   mas recupera a escala e o anel de destaque da cabeça */
+.cds-pearl[data-state='head'][data-scene-end='true'] {
+  transform: scale(1.18);
+  box-shadow:
+    0 0 0 2.5px rgba(246, 245, 235, 0.95),
+    0 2px 6px rgba(10, 7, 3, 0.28);
+}
+
 /* motion decorativo é opt-in: quem prefere menos movimento nunca o recebe (§4.5) */
 @media (prefers-reduced-motion: no-preference) {
   .cds-pearl[data-state='head'] {

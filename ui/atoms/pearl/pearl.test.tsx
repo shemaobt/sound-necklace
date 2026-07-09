@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { parseRules, splitByGuard } from '../testing/css';
 import { Pearl } from './pearl';
 import pearlCss from './pearl.css?raw';
 
@@ -71,6 +72,8 @@ describe('Pearl — estados do vocabulário do colar (redesign §4.3)', () => {
 describe('Pearl — motion decorativo atrás de prefers-reduced-motion (§4.5)', () => {
   const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
 
+  // Nota: `transition` fica fora da guarda de propósito — base.css já zera
+  // toda transition/animation globalmente sob `prefers-reduced-motion: reduce`.
   it('toda animação/keyframes do css vive dentro da guarda de opt-in', () => {
     expect(pearlCss).toMatch(guard);
     expect(splitByGuard(pearlCss, guard).outside).not.toMatch(/animation|@keyframes/);
@@ -83,23 +86,13 @@ describe('Pearl — motion decorativo atrás de prefers-reduced-motion (§4.5)',
   });
 });
 
-/** Separa o css em conteúdo dentro/fora dos blocos `@media <guard> { … }` (chaves balanceadas). */
-function splitByGuard(css: string, guard: RegExp): { inside: string; outside: string } {
-  let outside = css;
-  let inside = '';
-  let match = outside.match(guard);
-  while (match?.index !== undefined) {
-    const open = outside.indexOf('{', match.index);
-    let depth = 1;
-    let i = open + 1;
-    while (i < outside.length && depth > 0) {
-      if (outside[i] === '{') depth += 1;
-      if (outside[i] === '}') depth -= 1;
-      i += 1;
-    }
-    inside += outside.slice(open + 1, i);
-    outside = outside.slice(0, match.index) + outside.slice(i);
-    match = outside.match(guard);
-  }
-  return { inside, outside };
-}
+describe('Pearl — a cabeça sobre a conta final mantém o destaque (cascade)', () => {
+  it('a regra combinada head+fim-de-cena preserva a escala e o anel da cabeça', () => {
+    const rule = parseRules(pearlCss).find(
+      (r) => r.selector.includes("data-state='head'") && r.selector.includes('data-scene-end'),
+    );
+    expect(rule, 'regra combinada head + scene-end').toBeDefined();
+    expect(rule?.body).toContain('scale(1.18)');
+    expect(rule?.body).toContain('box-shadow');
+  });
+});

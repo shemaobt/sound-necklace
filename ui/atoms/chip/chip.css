@@ -37,3 +37,9 @@
   background: var(--cds-cream);
   box-shadow: none;
 }
+
+/* "nenhum se encaixa" selecionado: continua tracejado, mas sinaliza em telha */
+.cds-chip[data-variant='dashed'][data-selected='true'] {
+  border-color: var(--cds-telha);
+  background: color-mix(in srgb, var(--cds-telha) 6%, white);
+}
