@@ -1,0 +1,3863 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Colar de Sons — Arquivo Oral</title>
+
+<style>
+  :root {
+    --paper: #e9dec9;
+    --paper-deep: #e0d2b8;
+    --panel: #f4eddd;
+    --ink: #382c24;
+    --ink-soft: #6e5c4d;
+    --line: #cdbc9c;
+    --cord: #6b5444;
+    --pearl: #f6efde;
+    --pearl-edge: #d6c5a6;
+    --clay: #b5683e;
+    --clay-band: rgba(181, 104, 62, 0.3);
+    --green: #4f6b43;
+    --error: #9b3d2e;
+    --lock: #8c6d3f;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    margin: 0;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    padding: 28px 18px 80px;
+  }
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  header.top {
+    margin-bottom: 22px;
+  }
+  header.top h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 30px;
+    letter-spacing: 0.2px;
+    margin: 0 0 4px;
+  }
+  header.top p.subtitle {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--clay);
+    margin: 0 0 8px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 18px 16px;
+    margin: 14px 0;
+  }
+  .card h2 {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card h2 .num {
+    display: none;
+  }
+  .card .sub {
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.45;
+    margin: 0 0 14px;
+  }
+  .card.locked {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  #cordCard {
+    position: sticky;
+    top: 8px;
+    z-index: 20;
+    box-shadow: 0 8px 20px -12px rgba(60, 40, 25, 0.55);
+  }
+
+  label.field {
+    display: block;
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  label.field span {
+    display: block;
+    margin-bottom: 4px;
+  }
+  input[type='text'],
+  input[type='number'],
+  select {
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 10px;
+  }
+  input[type='file'] {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .row > * {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+  .row .grow0 {
+    flex: 0 0 auto;
+  }
+
+  button {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid var(--cord);
+    background: var(--cord);
+    color: #fbf6ea;
+    border-radius: 7px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #5a4639;
+  }
+  button.ghost {
+    background: transparent;
+    color: var(--cord);
+  }
+  button.ghost:hover {
+    background: rgba(107, 84, 68, 0.08);
+  }
+  button.clay {
+    background: var(--clay);
+    border-color: var(--clay);
+    color: #fdf3ea;
+  }
+  button.clay:hover {
+    background: #a25a32;
+  }
+  button.go {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  button.go:hover {
+    background: #42583a;
+  }
+  button.sm {
+    padding: 5px 10px;
+    font-size: 13px;
+  }
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  button:focus-visible,
+  a:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2.5px solid var(--clay);
+    outline-offset: 2px;
+  }
+  .btnrow {
+    display: flex;
+    gap: 9px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 6px;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+  .muted {
+    color: var(--ink-soft);
+  }
+  .mono {
+    font-family: var(--mono);
+  }
+  .note {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    border-left: 2px solid var(--line);
+    padding: 2px 0 2px 12px;
+    margin: 12px 0 0;
+  }
+  .err {
+    color: var(--error);
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .ok {
+    color: var(--green);
+    font-size: 13px;
+  }
+
+  /* ---------- o colar de contas ---------- */
+  .cordwrap {
+    margin: 6px 0 4px;
+    max-height: 30vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+  }
+  .cord-track {
+    position: relative;
+    height: 120px;
+    width: 100%;
+    user-select: none;
+    cursor: pointer;
+  }
+  .rowline {
+    position: absolute;
+    height: 2px;
+    transform: translateY(-50%);
+    background: var(--line);
+    pointer-events: none;
+  }
+  .pearl {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 34% 30%,
+      #fffaf0 0%,
+      var(--pearl) 46%,
+      var(--pearl-edge) 100%
+    );
+    box-shadow:
+      0 2px 3px rgba(60, 40, 25, 0.28),
+      inset 0 -2px 3px rgba(120, 90, 55, 0.18);
+    pointer-events: none;
+  }
+  .pearl.played {
+    background: radial-gradient(
+      circle at 34% 30%,
+      #f7dcc1 0%,
+      var(--clay) 68%,
+      #8c4d28 100%
+    ) !important;
+    box-shadow:
+      0 0 0 1px rgba(140, 77, 40, 0.5),
+      0 2px 4px rgba(60, 40, 25, 0.32) !important;
+  }
+  .pearl.trecho-end {
+    border-radius: 3px;
+    box-shadow:
+      0 0 0 2px var(--cord),
+      0 1px 3px rgba(60, 40, 25, 0.35);
+    z-index: 2;
+  }
+  .pearl.dim {
+    opacity: 0.28;
+  }
+  #player {
+    position: sticky;
+    top: 8px;
+    z-index: 15;
+    background: var(--panel);
+    border-radius: 9px;
+    padding: 2px 2px 6px;
+  }
+  .playerHost {
+    margin: 0 0 4px;
+  }
+  .sizesel,
+  #cordHint,
+  #readout,
+  .cardtoggle,
+  .card h2 .num {
+    display: none !important;
+  } /* minimalismo p/ cultura oral: sem contagem/orientação/botões extra */
+  .band {
+    position: absolute;
+    background: var(--clay-band);
+    border: 1.5px solid var(--clay);
+    border-radius: 7px;
+    pointer-events: none;
+  }
+  .sizesel {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .sizesel button.active {
+    background: var(--cord);
+    color: #fbf6ea;
+    border-color: var(--cord);
+  }
+
+  .readout {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .readout b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .item {
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 12px 12px 10px;
+    margin: 10px 0;
+    background: #fff;
+  }
+  .item.current {
+    border-color: var(--clay);
+    box-shadow: 0 0 0 2px var(--clay-band);
+  }
+  .item.locked-item {
+    background: #fbf7ee;
+  }
+  .item .head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 8px;
+  }
+  .swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+  }
+  .item .pid {
+    font-weight: 600;
+  }
+  .item .span {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-left: auto;
+  }
+  .item .span.unset {
+    color: var(--clay);
+  }
+  .item .partlink {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: #fbf6ea;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 1px 8px;
+  }
+  .qa {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+    padding-left: 2px;
+  }
+  .qa div {
+    margin: 1px 0;
+  }
+  .statement {
+    font-size: 13.5px;
+    color: var(--ink);
+    margin: 0 0 8px;
+    padding-left: 2px;
+  }
+
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+  }
+  .pill.done {
+    color: var(--green);
+    border-color: var(--green);
+  }
+  .flag-tag {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--error);
+  }
+  .pill.anchoring {
+    color: var(--clay);
+    border-color: var(--clay);
+  }
+  .cardsum {
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-left: auto;
+  }
+  .cardtoggle {
+    flex: 0 0 auto;
+  }
+  .anchorbar {
+    margin-top: 12px;
+  }
+  .anchorbar button {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px 14px;
+  }
+  #anchorMsg {
+    margin-top: 8px;
+  }
+  #reviewBanner {
+    background: var(--clay-band);
+    border: 1.5px solid var(--clay);
+    border-radius: 9px;
+    padding: 10px 14px;
+    margin: 0 0 16px;
+    font-size: 14.5px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  #reviewBanner button {
+    margin-left: auto;
+  }
+  body.review {
+    background: #fff;
+  }
+  body.review .cordwrap {
+    max-height: 18vh;
+  }
+
+  /* ---------- seletor de modos ---------- */
+  #modeBar {
+    display: flex;
+    gap: 0;
+    margin: 0 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  #modeBar button {
+    flex: 1;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 14px;
+    padding: 10px 8px;
+    border-right: 1px solid var(--line);
+  }
+  #modeBar button:last-child {
+    border-right: 0;
+  }
+  #modeBar button.active {
+    background: var(--cord);
+    color: #fbf6ea;
+  }
+  #modeBar button:hover:not(.active) {
+    background: rgba(107, 84, 68, 0.08);
+  }
+
+  /* ---------- triagem ---------- */
+  #triagemView .nudge {
+    background: var(--clay-band);
+    border: 1.5px solid var(--clay);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13.5px;
+    color: #6e3b22;
+    margin: 0 0 14px;
+  }
+  .tcols {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .tcols > div:nth-child(2) {
+    display: none;
+  } /* esconde a coluna de cobertura (contagens) — minimalismo */
+  .scene-row {
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 11px 12px;
+    margin: 9px 0;
+    background: #fff;
+  }
+  .scene-row.open {
+    border-color: var(--clay);
+    box-shadow: 0 0 0 2px var(--clay-band);
+  }
+  .scene-row .top {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+  }
+  .tagshow {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .tagshow .none {
+    color: var(--clay);
+  }
+  .tagshow .pend {
+    color: var(--ink-soft);
+  }
+  .conf-alta {
+    color: var(--green);
+  }
+  .conf-media {
+    color: var(--lock);
+  }
+  .conf-baixa {
+    color: var(--clay);
+  }
+  .picker {
+    margin-top: 10px;
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
+  }
+  .picker .filter {
+    width: 100%;
+    font-size: 13px;
+    padding: 6px 9px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .lab {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 6px 0 5px;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .chip:hover {
+    border-color: var(--cord);
+  }
+  .chip.rara {
+    border-color: var(--clay);
+    color: #6e3b22;
+    background: #fbeee6;
+  }
+  .chip.sel {
+    background: var(--cord);
+    color: #fbf6ea;
+    border-color: var(--cord);
+  }
+  .chip.nofit {
+    border-style: dashed;
+    color: var(--clay);
+  }
+  .confrow {
+    margin-top: 9px;
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  #triagemCoverage table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12.5px;
+  }
+  #triagemCoverage th,
+  #triagemCoverage td {
+    text-align: left;
+    padding: 4px 7px;
+    border-bottom: 1px solid var(--line);
+  }
+  #triagemCoverage th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  #triagemCoverage td.num {
+    font-family: var(--mono);
+    text-align: center;
+  }
+  #triagemCoverage tr.tierhead td {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--clay);
+    padding-top: 10px;
+    border-bottom: 1.5px solid var(--clay);
+  }
+  #triagemCoverage tr.open-rara {
+    background: #fbeee6;
+  }
+  .st-cob {
+    color: var(--green);
+    font-weight: 600;
+  }
+  .st-par {
+    color: var(--lock);
+  }
+  .st-ab {
+    color: var(--clay);
+    font-weight: 600;
+  }
+  .tsummary {
+    font-size: 13.5px;
+    margin: 0 0 10px;
+    padding: 9px 11px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .tsummary b {
+    font-size: 16px;
+  }
+
+  /* ---------- régua de cenas (Segmentação escopada) ---------- */
+  #sceneStrip {
+    margin: 0 0 12px;
+  }
+  .walkhead {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 6px;
+  }
+  .walknum {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .walkkind {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--clay);
+  }
+  .walkdots {
+    display: flex;
+    gap: 5px;
+    margin: 0 0 6px;
+  }
+  .walkdot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--line);
+  }
+  .walkdot.cur {
+    background: var(--clay);
+  }
+  .walkdot.done {
+    background: var(--green);
+  }
+  .striplab {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 6px;
+  }
+  .scenechips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .scenechip {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 4px 9px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button.scenechip:hover {
+    border-color: var(--cord);
+  }
+  .scenechip.active {
+    background: var(--cord);
+    color: #fbf6ea;
+    border-color: var(--cord);
+  }
+  .scenechip.ctx {
+    background: transparent;
+    color: var(--ink-soft);
+    border-style: dashed;
+    cursor: default;
+    opacity: 0.75;
+  }
+  .borderoffer {
+    background: var(--clay-band);
+    border: 1.5px solid var(--clay);
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    color: #6e3b22;
+  }
+  .borderoffer .btnrow {
+    margin-top: 9px;
+  }
+  .borderoffer .esc {
+    margin-top: 6px;
+    color: var(--error);
+    font-weight: 500;
+  }
+  .scene-band {
+    position: absolute;
+    background: rgba(107, 84, 68, 0.07);
+    border: 1.5px dashed var(--cord);
+    border-radius: 8px;
+    pointer-events: none;
+  }
+
+  /* ---------- fase 4: Mapeamento ---------- */
+  .mapsteps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 14px;
+  }
+  .mapstep {
+    font-size: 13px;
+    padding: 6px 11px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .mapstep:hover {
+    border-color: var(--cord);
+  }
+  .mapstep.active {
+    background: var(--cord);
+    color: #fbf6ea;
+    border-color: var(--cord);
+  }
+  .map-q {
+    border: 1px solid var(--clay);
+    border-radius: 10px;
+    padding: 14px 15px;
+    margin: 10px 0;
+    background: #fff;
+    box-shadow: 0 0 0 2px var(--clay-band);
+  }
+  .map-qnum {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--clay);
+    margin: 0 0 6px;
+  }
+  .map-qtext {
+    font-size: 14.5px;
+    color: var(--ink);
+    margin: 0 0 8px;
+  }
+  .map-qnote {
+    font-size: 12px;
+    color: var(--error);
+  }
+  .map-field {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .map-ta {
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 10px;
+    resize: vertical;
+    min-height: 42px;
+  }
+  .map-ta:focus {
+    outline: 2px solid var(--clay);
+    outline-offset: 1px;
+  }
+  .map-scene {
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 12px 13px;
+    margin: 10px 0;
+    background: #fbf7ee;
+  }
+  .map-scenehead {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    margin: 0 0 6px;
+  }
+  .map-kind {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--clay);
+  }
+  .map-scenehead2 {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 12px 0 4px;
+  }
+  .map-qrow {
+    margin: 0 0 10px;
+  }
+  .map-qrow .map-qtext {
+    margin: 0 0 4px;
+    font-size: 13.5px;
+  }
+  .map-frase {
+    border-left: 2px solid var(--line);
+    padding: 2px 0 2px 12px;
+    margin: 8px 0;
+  }
+  .map-frasehead {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 600;
+    font-size: 13.5px;
+    margin: 0 0 5px;
+  }
+  .map-rep {
+    margin: 0 0 18px;
+  }
+  .map-reph {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    margin: 14px 0 8px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 4px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    body {
+      transition: background-color 0.45s ease;
+    }
+    .pearl {
+      transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease;
+    }
+    .pearl.ping {
+      transform: translate(-50%, -50%) scale(1.35);
+    }
+    .item {
+      transition:
+        box-shadow 0.15s ease,
+        border-color 0.15s ease;
+    }
+  }
+  @media (max-width: 560px) {
+    header.top h1 {
+      font-size: 24px;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <svg
+        viewBox="0 0 1000 1000"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label="Shema"
+        style="height: 56px; width: 56px; flex: 0 0 auto; color: var(--ink)"
+      >
+        <g fill="currentColor">
+          <path
+            d="M900,451.61V151.07H700a278.79,278.79,0,0,0-83.83,12.66c-71,22.3-116.17,92-116.17,92h0s-45-69.59-116.17-92A278.79,278.79,0,0,0,300,151.07H100V749H300a279.12,279.12,0,0,1,83.83,12.65C455,784,500,848.93,500,848.93h0s39.71-57.16,103.18-82.68c-.33-5.73-.52-11.49-.52-17.31C602.66,585,736.05,451.61,900,451.61Z"
+          />
+          <path d="M827.11,748.94H900V675.57C859.81,675.57,827.11,708.49,827.11,748.94Z" />
+          <path
+            d="M734.56,748.94h53.22c0-62.14,50.34-112.71,112.22-112.71V583.5C808.77,583.5,734.56,657.72,734.56,748.94Z"
+          />
+          <path
+            d="M642,748.94q0,3,.08,6A281.75,281.75,0,0,1,695.22,749v-.1C695.22,636,787.08,544.16,900,544.16V490.94C757.74,490.94,642,606.68,642,748.94Z"
+          />
+        </g>
+      </svg>
+      <div>
+        <p class="eyebrow">Arquivo Oral · Tripod</p>
+        <h1>Colar de Sons</h1>
+        <p class="subtitle">Mapeando as histórias do arquivo oral.</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- 1. SETUP -->
+  <section class="card" id="setupCard">
+    <h2>
+      <span class="num">1</span> Carregue o áudio<span
+        id="setupSummary"
+        class="muted"
+        style="font-weight: 400; font-size: 13px; margin-left: auto"
+      ></span
+      ><button id="setupToggle" class="ghost sm hidden" style="margin-left: 8px">editar</button>
+    </h2>
+    <div id="setupBody">
+      <p class="sub">Escolha o áudio e o tamanho da conta. Nada sai do seu navegador.</p>
+      <div class="row">
+        <label class="field" style="flex: 2 1 280px"
+          ><span>Arquivo de áudio (WAV recomendado)</span>
+          <input type="file" id="audioFile" accept="audio/*"
+        /></label>
+        <label class="field grow0" style="flex: 0 0 150px"
+          ><span>Segundos por conta</span>
+          <input type="number" id="beadSec" value="0.25" step="0.05" min="0.05"
+        /></label>
+      </div>
+      <div class="row">
+        <label class="field" style="flex: 2 1 280px"
+          ><span>Título / nome curto do colar</span>
+          <input type="text" id="slug" placeholder="ex.: jesus-mienoi"
+        /></label>
+        <div class="grow0" style="flex: 0 0 auto; align-self: flex-end">
+          <button id="segBtn" class="clay">Segmentar em contas</button>
+        </div>
+      </div>
+      <div id="setupMsg"></div>
+      <p class="note">
+        Trave o tamanho da conta antes de ancorar. Mudá-lo depois desloca as fronteiras. Opcional:
+        <button class="ghost sm" id="loadEntregaBtn">Carregar entrega do projeto (.json)</button>
+        <button class="ghost sm" id="resumeBtn">Retomar retorno salvo (.json)</button>
+        <input type="file" id="entregaFile" accept=".json,application/json" class="hidden" />
+        <input type="file" id="resumeFile" accept=".json,application/json" class="hidden" />
+      </p>
+    </div>
+  </section>
+
+  <div id="modeBar" class="hidden">
+    <button id="mode-escuta">Escuta</button>
+    <button id="mode-triagem">Triagem</button>
+    <button id="mode-segmentacao">Segmentação</button>
+    <button id="mode-mapeamento">Mapeamento</button>
+  </div>
+
+  <div id="reviewBanner" class="hidden">
+    🔒 Modo de revisão — a segmentação está travada. Toque ▶ em cada segmento para ouvi-lo e
+    responder às perguntas. <button id="unlockBtn" class="ghost sm">Destravar para editar</button>
+  </div>
+
+  <!-- THE BEAD COLLAR -->
+  <section class="card hidden" id="cordCard">
+    <h2>
+      <span class="num">♪</span> Ouça a história.<span class="cardsum hidden"></span
+      ><button class="ghost sm cardtoggle hidden" data-card="cordCard">recolher</button>
+    </h2>
+    <div class="cardbody">
+      <div class="playerHost" id="hostOuvir">
+        <div id="player">
+          <p class="sub" id="cordHint">Ouça a história completa, uma ou mais vezes.</p>
+          <div class="sizesel">
+            Tamanho das contas:
+            <button id="szS" class="ghost sm">Pequeno</button>
+            <button id="szM" class="ghost sm">Médio</button>
+            <button id="szG" class="ghost sm">Grande</button>
+          </div>
+          <div class="cordwrap"><div class="cord-track" id="track"></div></div>
+          <div class="btnrow">
+            <button id="playSel" class="go sm" data-playkey="sel" data-plabel="tocar este pedaço">
+              ▶ tocar este pedaço
+            </button>
+            <button id="playAll" class="go sm" data-playkey="all" data-plabel="ouvir a história">
+              ▶ ouvir a história
+            </button>
+          </div>
+          <div class="readout" id="readout"></div>
+          <div class="anchorbar">
+            <button id="confirmHere" class="go hidden">✓ Confirmar</button>
+            <div id="anchorMsg"></div>
+          </div>
+        </div>
+      </div>
+      <div id="wholeBlock">
+        <div id="wholeRow"></div>
+        <div id="wholeMsg"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAYER 2: AS CENAS -->
+  <section class="card hidden locked" id="partsCard">
+    <h2>
+      <span class="num">3</span> Corte a história em cenas.<span class="cardsum hidden"></span
+      ><button class="ghost sm cardtoggle hidden" data-card="partsCard">recolher</button>
+    </h2>
+    <div class="cardbody">
+      <div class="playerHost" id="hostCenas"></div>
+      <div id="partsList"></div>
+      <div class="btnrow">
+        <button id="cenasBack" class="ghost sm">← Voltar</button>
+        <button id="confirmParts" class="go">Confirmar as cenas →</button>
+      </div>
+      <div id="partsMsg"></div>
+    </div>
+  </section>
+
+  <!-- LAYER 3: AS FRASES -->
+  <section class="card hidden locked" id="frasesCard">
+    <h2 id="frasesTitle">Cena</h2>
+    <div class="cardbody">
+      <p class="sub">Corte a cena em frases.</p>
+      <div id="sceneStrip"></div>
+      <div class="playerHost" id="hostFrases"></div>
+      <div id="frasesList"></div>
+      <div class="btnrow">
+        <button id="frasesBack" class="ghost sm">← Voltar</button
+        ><button id="confirmFrases" class="go">Pronto com esta cena →</button>
+      </div>
+      <div id="frasesMsg"></div>
+    </div>
+  </section>
+
+  <!-- EXPORT -->
+  <section class="card hidden" id="exportCard">
+    <h2>
+      <span class="num">5</span> Salvar os Documentos<span class="cardsum hidden"></span
+      ><button class="ghost sm cardtoggle hidden" data-card="exportCard">recolher</button>
+    </h2>
+    <div class="cardbody">
+      <p class="sub">Pronto — o colar inteiro está segmentado. Salve o seu trabalho.</p>
+      <div class="btnrow">
+        <button id="dlReturn" class="go sm">Baixar retorno-ancoragem.json</button>
+        <button id="dlManifest" class="ghost sm">Baixar manifesto-contas.json</button>
+      </div>
+      <div id="exportMsg"></div>
+    </div>
+  </section>
+
+  <!-- TRIAGEM (modo separado) -->
+  <section class="card hidden" id="triagemView">
+    <h2>Essa cena é sobre o que? Escolha uma opção.</h2>
+    <div class="tcols">
+      <div>
+        <h3 style="font-family: var(--serif); font-size: 16px; font-weight: 600; margin: 0 0 6px">
+          As cenas
+          <span class="muted" id="tSceneCount" style="font-size: 13px; font-weight: 400"></span>
+        </h3>
+        <div id="triagemScenes"></div>
+      </div>
+      <div>
+        <h3 style="font-family: var(--serif); font-size: 16px; font-weight: 600; margin: 0 0 6px">
+          Cobertura
+          <span class="muted" style="font-size: 13px; font-weight: 400"
+            >· firme vs hesitante · alvo por tipo de cena</span
+          >
+        </h3>
+        <div class="tsummary" id="tSummary"></div>
+        <div id="triagemCoverage"></div>
+        <div id="tNofit" style="margin-top: 12px"></div>
+        <p class="note">
+          Alvo por tipo de cena: <b>raro 1–2</b> · <b>comum 3</b>. O destaque de tipo raro em aberto
+          e o achado de ausência leem só a coluna <b>firme</b>.
+        </p>
+      </div>
+    </div>
+    <div class="btnrow" style="margin-top: 16px">
+      <button id="triagemBack" class="ghost sm">← Voltar (cortar cenas)</button>
+      <button id="triagemDone" class="go" disabled>Já classifiquei todas as cenas →</button>
+    </div>
+    <div id="triagemDoneMsg" class="note"></div>
+  </section>
+
+  <!-- MAPEAMENTO (fase 4) -->
+  <section class="card hidden" id="mapeamentoView">
+    <h2 id="mapeamentoTitle">Responda as perguntas sobre a história.</h2>
+    <div id="mapBody"></div>
+  </section>
+</div>
+
+<script>
+  'use strict';
+
+  var ctx = null;
+  var PALETTE = [
+    '#B5683E',
+    '#7A8B5A',
+    '#C9A24B',
+    '#5E8079',
+    '#9A6B7B',
+    '#A8602F',
+    '#6E7F4E',
+    '#8C6D3F',
+  ];
+  var PALETTE_PT = [
+    '#5E8079',
+    '#9A6B7B',
+    '#7A8B5A',
+    '#C9A24B',
+    '#8C6D3F',
+    '#6E7F4E',
+    '#A8602F',
+    '#B5683E',
+  ];
+  /* Paleta de scene_kind da Camada de Triagem de Rute.
+   GERADA de _spec/scene-kind-palette.json — pin do Compilador 5314907 (eixo scene_kind).
+   NAO editar a mao; regerar via ferramentas/gen-scene-kind-palette.py. tier "ALTA" = raras (1x em Rute). */
+  var SCENE_KINDS = [
+    { value: 'BIRTH_SCENE', tier: 'ALTA' },
+    { value: 'CONSENT_SCENE', tier: 'ALTA' },
+    { value: 'DEPARTURE_SCENE', tier: 'ALTA' },
+    { value: 'GATE_COURT_CONVENING_SCENE', tier: 'ALTA' },
+    { value: 'GENEALOGY_SCENE', tier: 'ALTA' },
+    { value: 'GLEANING_SCENE', tier: 'ALTA' },
+    { value: 'INITIATIVE_SCENE', tier: 'ALTA' },
+    { value: 'LAMENT_SCENE', tier: 'ALTA' },
+    { value: 'MARRIAGE_SCENE', tier: 'ALTA' },
+    { value: 'MEAL_SCENE', tier: 'ALTA' },
+    { value: 'NAMING_SCENE', tier: 'ALTA' },
+    { value: 'NARRATOR_INTRODUCTION_SCENE', tier: 'ALTA' },
+    { value: 'NIGHT_APPROACH_SCENE', tier: 'ALTA' },
+    { value: 'OPENING_CHRONICLE_SCENE', tier: 'ALTA' },
+    { value: 'PROVISION_HOMECOMING_SCENE', tier: 'ALTA' },
+    { value: 'REDEEMER_RECOGNITION_SCENE', tier: 'ALTA' },
+    { value: 'REDEMPTION_DECLINE_SCENE', tier: 'ALTA' },
+    { value: 'REDEMPTION_OFFER_SCENE', tier: 'ALTA' },
+    { value: 'VOW_SCENE', tier: 'ALTA' },
+    { value: 'APPEAL_SCENE', tier: 'comum' },
+    { value: 'BLESSING_SCENE', tier: 'comum' },
+    { value: 'INSTRUCTION_SCENE', tier: 'comum' },
+    { value: 'RATIFICATION_SCENE', tier: 'comum' },
+    { value: 'ARRIVAL_SCENE', tier: 'comum' },
+    { value: 'BEREAVEMENT_SCENE', tier: 'comum' },
+    { value: 'NARRATOR_FRAMING_CLOSE_SCENE', tier: 'comum' },
+    { value: 'REPORT_SCENE', tier: 'comum' },
+  ];
+  var state = {
+    audioBuffer: null,
+    durationSec: 0,
+    beadSec: 0.5,
+    totalBeads: 0,
+    beads: [],
+    manifestId: null,
+    audioFilename: '',
+    slug: '',
+    whole: { id: 'S1', label: 'O colar', span: null, confirmed: false },
+    parts: [], // {part_id, span, color, locked}     -> "Trechos"
+    partsConfirmed: false,
+    frases: [], // {prop_id, statement_pt, qa, span, part_link, color, locked, flagged}
+    current: { layer: 'whole', index: -1 },
+    activeSceneId: null, // cena produtiva sendo fraseada na Segmentação (PLANO §4.1)
+    mapStep: 'n1',
+    mapN1i: 0,
+    mapN2i: 0,
+    mapN3i: 0,
+    mapping: null, // fase 4 — andaime de perguntas, uma por tela
+    selection: null,
+    playing: null,
+    beadSize: 'M',
+    pendingStart: null,
+    dlRet: false,
+    dlMan: false,
+    paused: false,
+    review: false,
+    mode: 'escuta',
+  };
+  var rafId = null;
+  var playingKey = null;
+  var triagemUI = { openId: null, pend: null, filter: '' };
+
+  function $(id) {
+    return document.getElementById(id);
+  }
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+  function fmtTime(t) {
+    var m = Math.floor(t / 60),
+      s = t - 60 * m;
+    return m > 0 ? m + ':' + s.toFixed(1).padStart(4, '0') : s.toFixed(2) + 's';
+  }
+  function beadStart(i) {
+    return state.beads[i].startTime;
+  }
+  function beadEnd(i) {
+    return state.beads[i].endTime;
+  }
+  function spanDur(s, e) {
+    return beadEnd(e) - beadStart(s);
+  }
+  function beadAtTime(t) {
+    var i = Math.floor(t / state.beadSec + 1e-9);
+    return Math.max(0, Math.min(state.totalBeads - 1, i));
+  }
+
+  /* ---- a fronteira travada (camadas 2 e 3) ---- */
+  /* ---- cena produtiva ativa (Segmentação escopada — PLANO §4.1) ---- */
+  function productiveScenes() {
+    return state.parts.filter(function (p) {
+      return p.locked && p.span && p.tag_state === 'tagged' && p.scene_kind;
+    });
+  }
+  function activeScene() {
+    var ps = productiveScenes();
+    if (!ps.length) return null;
+    var a = null;
+    ps.forEach(function (p) {
+      if (p.part_id === state.activeSceneId) a = p;
+    });
+    return a || ps[0];
+  }
+  function sceneIndexOf(id) {
+    var ps = productiveScenes();
+    for (var i = 0; i < ps.length; i++) {
+      if (ps[i].part_id === id) return i;
+    }
+    return -1;
+  }
+  function prevNeighbor(sc) {
+    var best = null;
+    state.parts.forEach(function (p) {
+      if (p.locked && p.span && p.part_id !== sc.part_id && p.span.e < sc.span.s) {
+        if (!best || p.span.e > best.span.e) best = p;
+      }
+    });
+    return best;
+  }
+  function nextNeighbor(sc) {
+    var best = null;
+    state.parts.forEach(function (p) {
+      if (p.locked && p.span && p.part_id !== sc.part_id && p.span.s > sc.span.e) {
+        if (!best || p.span.s < best.span.s) best = p;
+      }
+    });
+    return best;
+  }
+  function sceneHasFrases(sc) {
+    return (
+      !!sc &&
+      state.frases.some(function (fr) {
+        return fr.locked && fr.span && fr.part_link === sc.part_id;
+      })
+    );
+  }
+  function frontier(layer) {
+    if (layer === 'frases') {
+      var sc = activeScene();
+      if (sc) {
+        var maxEnd = -1;
+        state.frases.forEach(function (fr) {
+          if (fr.locked && fr.span && fr.part_link === sc.part_id && fr.span.e > maxEnd)
+            maxEnd = fr.span.e;
+        });
+        if (maxEnd >= 0) return maxEnd + 1; // avança a partir da última frase travada na cena
+        var pv = prevNeighbor(sc); // 1ª frase: pode recuar à vizinha anterior (teste de início — PLANO §4.2)
+        return pv ? pv.span.s : sc.span.s;
+      }
+    }
+    var arr = layer === 'parts' ? state.parts : state.frases;
+    var f = layer === 'frases' && state.whole.span ? state.whole.span.s : 0;
+    arr.forEach(function (it) {
+      if (it.locked && it.span && it.span.e + 1 > f) f = it.span.e + 1;
+    });
+    return Math.min(f, state.totalBeads - 1);
+  }
+  function activeAnchor() {
+    var L = state.current.layer,
+      i = state.current.index;
+    if ((L === 'parts' || L === 'frases') && i >= 0) {
+      var it = (L === 'parts' ? state.parts : state.frases)[i];
+      if (it && !it.locked) return { layer: L, item: it, start: frontier(L) };
+    }
+    return null;
+  }
+
+  /* ---------------- segmentar ---------------- */
+  function ensureCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return ctx;
+  }
+  function hashPCM(buf, beadSec) {
+    var data = buf.getChannelData(0),
+      N = data.length;
+    var h = 0x811c9dc5 >>> 0;
+    function mix(x) {
+      h ^= x & 0xff;
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    [
+      buf.numberOfChannels,
+      buf.sampleRate & 0xff,
+      (buf.sampleRate >> 8) & 0xff,
+      N & 0xff,
+      (N >> 8) & 0xff,
+      (N >> 16) & 0xff,
+      (N >> 24) & 0xff,
+    ].forEach(mix);
+    var stride = Math.max(1, Math.floor(N / 100000));
+    for (var i = 0; i < N; i += stride) {
+      var q = Math.max(-32768, Math.min(32767, Math.round(data[i] * 32767)));
+      mix(q & 0xff);
+      mix((q >> 8) & 0xff);
+    }
+    var bs = Math.round(beadSec * 1000);
+    mix(bs & 0xff);
+    mix((bs >> 8) & 0xff);
+    mix((bs >> 16) & 0xff);
+    return 'fnv1a32:' + (h >>> 0).toString(16).padStart(8, '0');
+  }
+  function buildBeads(dur, beadSec) {
+    var total = Math.floor(dur / beadSec + 1e-9);
+    if (dur - total * beadSec > 1e-9) total += 1;
+    var beads = [];
+    for (var i = 0; i < total; i++) {
+      beads.push({
+        index: i,
+        startTime: +(i * beadSec).toFixed(6),
+        endTime: +Math.min((i + 1) * beadSec, dur).toFixed(6),
+      });
+    }
+    return beads;
+  }
+  async function segment() {
+    var f = $('audioFile').files[0];
+    var msg = $('setupMsg');
+    msg.innerHTML = '';
+    if (!f) {
+      msg.innerHTML = '<div class="err">Escolha um arquivo de áudio primeiro.</div>';
+      return;
+    }
+    var beadSec = parseFloat($('beadSec').value);
+    if (!(beadSec > 0)) {
+      msg.innerHTML = '<div class="err">Segundos por conta precisa ser maior que zero.</div>';
+      return;
+    }
+    msg.innerHTML = '<div class="muted">Decodificando o áudio…</div>';
+    try {
+      var arr = await f.arrayBuffer();
+      var buf = await ensureCtx().decodeAudioData(arr.slice(0));
+      state.audioBuffer = buf;
+      state.durationSec = buf.duration;
+      state.beadSec = beadSec;
+      state.beads = buildBeads(buf.duration, beadSec);
+      state.totalBeads = state.beads.length;
+      state.manifestId = hashPCM(buf, beadSec);
+      state.audioFilename = f.name;
+      state.slug = $('slug').value.trim() || f.name.replace(/\.[^.]+$/, '') || 'colar';
+      state.whole.span = { s: 0, e: state.totalBeads - 1 };
+      state.whole.confirmed = false;
+      state.parts = [];
+      state.partsConfirmed = false;
+      state.frases = [];
+      state.activeSceneId = null;
+      state.mapping = null;
+      state.mapStep = 'n1';
+      state.mapN1i = 0;
+      state.mapN2i = 0;
+      state.mapN3i = 0;
+      state.selection = null;
+      state.pendingStart = null;
+      state.current = { layer: 'whole', index: -1 };
+      state.dlRet = false;
+      state.dlMan = false;
+      state.paused = false;
+      state.review = false;
+      state.mode = 'escuta';
+      document.body.classList.remove('review');
+      $('reviewBanner').classList.add('hidden');
+      $('confirmParts').classList.remove('hidden');
+      $('confirmFrases').classList.remove('hidden');
+      ['cordCard', 'partsCard', 'frasesCard', 'exportCard'].forEach(expandCard);
+      msg.innerHTML =
+        '<div class="ok">✓ ' +
+        state.totalBeads +
+        ' contas · ' +
+        fmtTime(buf.duration) +
+        ' · ' +
+        beadSec +
+        's/conta</div>' +
+        '<div class="readout"><span class="mono">' +
+        state.manifestId +
+        '</span></div>';
+      $('setupBody').classList.add('hidden');
+      $('setupSummary').textContent = '';
+      $('setupToggle').classList.add('hidden');
+      revealAll();
+      $('partsCard').classList.add('locked');
+      $('frasesCard').classList.add('locked');
+      renderCord();
+      renderWhole();
+      renderParts();
+      renderFrases();
+      setMode('escuta'); // abas escondidas — fluxo guiado leva sozinho
+    } catch (e) {
+      msg.innerHTML =
+        '<div class="err">Não consegui decodificar este áudio (' +
+        ((e && e.message) || e) +
+        '). Tente um WAV PCM.</div>';
+    }
+  }
+  function revealAll() {
+    ['cordCard', 'partsCard', 'frasesCard', 'exportCard'].forEach(function (id) {
+      $(id).classList.remove('hidden');
+    });
+    Array.prototype.slice.call(document.querySelectorAll('.cardtoggle')).forEach(function (t) {
+      t.classList.remove('hidden');
+    });
+  }
+
+  /* ---------------- o colar ---------------- */
+  function beadColorMap() {
+    var map = {},
+      layer = state.current.layer;
+    if (layer === 'parts') {
+      state.parts.forEach(function (pt) {
+        if (pt.span) for (var i = pt.span.s; i <= pt.span.e; i++) map[i] = pt.color;
+      });
+    } else if (layer === 'frases') {
+      state.frases.forEach(function (fr) {
+        if (fr.span) for (var i = fr.span.s; i <= fr.span.e; i++) map[i] = fr.color;
+      });
+    }
+    return map;
+  }
+  var SIZES = {
+    S: { slot: 17, bead: 12, row: 23 },
+    M: { slot: 25, bead: 18, row: 31 },
+    G: { slot: 36, bead: 27, row: 42 },
+  };
+  function drawBand(s, e, cls, pad) {
+    var track = $('track');
+    if (e < s) return;
+    var Z = state._Z,
+      bpr = state._bpr,
+      winS = state._winS || 0;
+    var ls = s - winS,
+      le = e - winS,
+      rs = Math.floor(ls / bpr),
+      re = Math.floor(le / bpr);
+    for (var r = rs; r <= re; r++) {
+      var cS = r === rs ? ls % bpr : 0,
+        cE = r === re ? le % bpr : bpr - 1;
+      var bd = el('div', cls);
+      bd.style.left = cS * Z.slot + (Z.slot - Z.bead) / 2 - pad + 'px';
+      bd.style.width = (cE - cS + 1) * Z.slot - (Z.slot - Z.bead) + 2 * pad + 'px';
+      bd.style.top = 6 + r * Z.row + (Z.row - Z.bead) / 2 - pad + 'px';
+      bd.style.height = Z.bead + 2 * pad + 'px';
+      track.appendChild(bd);
+    }
+  }
+  function renderCord() {
+    var track = $('track');
+    if (!track) return;
+    Array.prototype.slice
+      .call(track.querySelectorAll('.pearl,.band,.rowline,.scene-band'))
+      .forEach(function (n) {
+        n.remove();
+      });
+    if (!state.totalBeads) return;
+    var total = state.totalBeads,
+      cmap = beadColorMap();
+    var Z = SIZES[state.beadSize] || SIZES.M,
+      W = track.clientWidth || 900;
+    var bpr = Math.max(1, Math.floor(W / Z.slot));
+    // janela (item 4): na segmentação, só a cena ativa + uma margem p/ ajustar bordas; senão, a história toda
+    var asc = state.mode === 'segmentacao' ? activeScene() : null;
+    var winS = 0,
+      winE = total - 1;
+    if (asc && asc.span) {
+      var M = Math.max(3, Math.round(2 / state.beadSec));
+      winS = Math.max(0, asc.span.s - M);
+      winE = Math.min(total - 1, asc.span.e + M);
+    }
+    state._Z = Z;
+    state._bpr = bpr;
+    state._winS = winS;
+    state._winE = winE;
+    var count = winE - winS + 1,
+      rows = Math.ceil(count / bpr);
+    track.style.height = rows * Z.row + 12 + 'px';
+    for (var r = 0; r < rows; r++) {
+      var n = r < rows - 1 ? bpr : count - r * bpr;
+      var ln = el('div', 'rowline');
+      ln.style.left = Z.slot / 2 + 'px';
+      ln.style.width = Math.max(0, (n - 1) * Z.slot) + 'px';
+      ln.style.top = 6 + r * Z.row + Z.row / 2 + 'px';
+      track.appendChild(ln);
+    }
+    var endSet = {};
+    state.parts.forEach(function (pt) {
+      if (pt.locked && pt.span) endSet[pt.span.e] = 1;
+    });
+    for (var i = winS; i <= winE; i++) {
+      var local = i - winS,
+        row = Math.floor(local / bpr),
+        col = local % bpr,
+        isEnd = endSet[i];
+      var dim = asc && asc.span && (i < asc.span.s || i > asc.span.e);
+      var pe = el('div', 'pearl' + (isEnd ? ' trecho-end' : '') + (dim ? ' dim' : ''));
+      pe.style.width = pe.style.height = (isEnd ? Z.bead + 3 : Z.bead) + 'px';
+      pe.style.left = col * Z.slot + Z.slot / 2 + 'px';
+      pe.style.top = 6 + row * Z.row + Z.row / 2 + 'px';
+      if (cmap[i]) {
+        pe.style.background =
+          'radial-gradient(circle at 34% 30%, #fff8ec 0%, ' +
+          cmap[i] +
+          ' 60%, ' +
+          shade(cmap[i]) +
+          ' 100%)';
+      }
+      pe.dataset.idx = i;
+      track.appendChild(pe);
+    }
+    if (asc && asc.span)
+      drawBand(Math.max(winS, asc.span.s), Math.min(winE, asc.span.e), 'scene-band', 4);
+    if (state.selection)
+      drawBand(Math.max(winS, state.selection.s), Math.min(winE, state.selection.e), 'band', 3);
+    renderReadout();
+    updateAnchorBar();
+  }
+  function shade(hex) {
+    var n = parseInt(hex.slice(1), 16),
+      r = (n >> 16) & 255,
+      g = (n >> 8) & 255,
+      b = n & 255;
+    r = Math.round(r * 0.7);
+    g = Math.round(g * 0.7);
+    b = Math.round(b * 0.7);
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+  function renderReadout() {
+    var r = $('readout');
+    if (!r) return;
+    if (!activeAnchor()) {
+      r.innerHTML = '';
+      return;
+    } // ouvindo a história inteira: sem leitura de seleção
+    if (
+      state.pendingStart !== null &&
+      state.selection &&
+      state.selection.s === state.selection.e &&
+      state.selection.s === state.pendingStart
+    ) {
+      var w = state.current.layer === 'frases' ? 'a frase' : 'a cena';
+      r.innerHTML =
+        '<span>Início na conta <b>' +
+        state.pendingStart +
+        '</b></span><span class="muted">clique onde ' +
+        w +
+        ' termina</span>';
+      return;
+    }
+    if (!state.selection) {
+      r.innerHTML = '<span class="muted">Nenhuma seleção.</span>';
+      return;
+    }
+    var s = state.selection.s,
+      e = state.selection.e,
+      ctxt;
+    if (state.current.layer === 'frases' && state.current.index >= 0)
+      ctxt = 'ancorando Frase ' + (state.current.index + 1);
+    else if (state.current.layer === 'parts' && state.current.index >= 0)
+      ctxt = 'ancorando Cena ' + (state.current.index + 1);
+    else ctxt = 'editando o colar';
+    r.innerHTML =
+      '<span>Seleção: <b>contas ' +
+      s +
+      '–' +
+      e +
+      '</b></span><span>Duração: <b>' +
+      fmtTime(spanDur(s, e)) +
+      '</b></span><span class="muted">' +
+      ctxt +
+      '</span>';
+  }
+
+  /* ---- interação no colar (clique 2D) ---- */
+  (function cordInteraction() {
+    var track = $('track');
+    function beadAtXY(cx, cy) {
+      var rect = track.getBoundingClientRect(),
+        Z = state._Z || { slot: 25, row: 31 },
+        bpr = state._bpr || 1;
+      var winS = state._winS || 0,
+        winE = state._winE != null ? state._winE : state.totalBeads - 1;
+      var col = Math.max(0, Math.min(bpr - 1, Math.floor((cx - rect.left) / Z.slot)));
+      var row = Math.max(0, Math.floor((cy - rect.top - 6) / Z.row));
+      return Math.max(winS, Math.min(winE, winS + row * bpr + col));
+    }
+    track.addEventListener('pointerdown', function (ev) {
+      if (!state.totalBeads || state.review) return;
+      var aa = activeAnchor();
+      if (!aa) return; // sem ancoragem ativa = ouvindo a história inteira; não seleciona partes (Escuta = ouvir o todo)
+      var floor = aa.start,
+        ceil = state.whole.span.e;
+      var b = Math.max(floor, Math.min(ceil, beadAtXY(ev.clientX, ev.clientY)));
+      if (state.selection === null) {
+        state.pendingStart = b;
+        state.selection = { s: b, e: b };
+        renderCord();
+        pingBead(b);
+        playRange(b, b);
+      } else if (state.pendingStart !== null) {
+        var s = Math.min(state.pendingStart, b),
+          e = Math.max(state.pendingStart, b);
+        state.selection = { s: s, e: e };
+        state.pendingStart = null;
+        renderCord();
+        playRange(s, e);
+      } else {
+        var sel = state.selection,
+          moved;
+        if (b <= sel.s) {
+          sel.s = b;
+          moved = sel.s;
+        } else if (b >= sel.e) {
+          sel.e = b;
+          moved = sel.e;
+        } else if (b - sel.s <= sel.e - b) {
+          sel.s = b;
+          moved = sel.s;
+        } else {
+          sel.e = b;
+          moved = sel.e;
+        }
+        renderCord();
+        playEdge(moved); // toca só a fronteira ajustada, não a cena inteira
+      }
+      ev.preventDefault();
+    });
+    // hover na fronteira: ouve só aquele trecho, sem mexer na seleção (sugestão da Marcia)
+    var hoverEdge = null,
+      hoverTimer = null;
+    function nearEdge(b, edge) {
+      return b === edge || b === edge - 1 || b === edge + 1;
+    }
+    track.addEventListener('pointermove', function (ev) {
+      if (ev.pointerType === 'touch') return; // hover só no mouse
+      if (!state.totalBeads || state.review || !state.selection || !activeAnchor()) {
+        if (hoverTimer) clearTimeout(hoverTimer);
+        hoverEdge = null;
+        return;
+      }
+      var b = beadAtXY(ev.clientX, ev.clientY),
+        sel = state.selection;
+      var edge = nearEdge(b, sel.s) ? sel.s : nearEdge(b, sel.e) ? sel.e : null;
+      if (edge === null) {
+        if (hoverTimer) clearTimeout(hoverTimer);
+        hoverEdge = null;
+        return;
+      }
+      if (edge === hoverEdge) return; // já agendado/tocado nesta fronteira
+      hoverEdge = edge;
+      if (hoverTimer) clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(function () {
+        if (hoverEdge === edge && state.selection) playEdge(edge);
+      }, 280); // dwell, p/ não disparar de passagem
+    });
+    track.addEventListener('pointerleave', function () {
+      if (hoverTimer) clearTimeout(hoverTimer);
+      hoverEdge = null;
+    });
+  })();
+  /* toca uma janela curta em torno de uma fronteira (~1s de cada lado) — checar a borda sem ouvir a cena toda */
+  function playEdge(edgeBead) {
+    if (!state.audioBuffer || !state.totalBeads) return;
+    var half = Math.max(1, Math.round(1.0 / state.beadSec));
+    var a = Math.max(0, edgeBead - half),
+      b = Math.min(state.totalBeads - 1, edgeBead + half);
+    playRange(a, b);
+  }
+  function pingBead(i) {
+    var pe = $('track').querySelector('.pearl[data-idx="' + i + '"]');
+    if (pe) {
+      pe.classList.add('ping');
+      setTimeout(function () {
+        pe.classList.remove('ping');
+      }, 140);
+    }
+  }
+
+  /* ---------------- tocar + progresso ---------------- */
+  function clearProgress() {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    var track = $('track');
+    if (!track) return;
+    Array.prototype.slice.call(track.querySelectorAll('.pearl.played')).forEach(function (n) {
+      n.classList.remove('played');
+    });
+  }
+  function startProgress(s, e, ctxStart) {
+    var track = $('track');
+    function frame() {
+      if (!state.playing) {
+        clearProgress();
+        return;
+      }
+      var now = beadStart(s) + (ctx.currentTime - ctxStart);
+      if (now >= beadEnd(e)) {
+        clearProgress();
+        return;
+      }
+      var cur = beadAtTime(now);
+      for (var i = s; i <= cur; i++) {
+        var pe = track.querySelector('.pearl[data-idx="' + i + '"]');
+        if (pe && !pe.classList.contains('played')) pe.classList.add('played');
+      }
+      rafId = requestAnimationFrame(frame);
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+  /* todo play vira toggle play/pause; um único botão por trecho (data-playkey) */
+  function refreshPlayUI() {
+    Array.prototype.slice.call(document.querySelectorAll('[data-playkey]')).forEach(function (b) {
+      var key = b.getAttribute('data-playkey'),
+        base = b.getAttribute('data-plabel') || 'ouvir';
+      b.textContent =
+        playingKey === key && state.playing
+          ? state.paused
+            ? '▶ continuar'
+            : '⏸ pausar'
+          : '▶ ' + base;
+    });
+  }
+  function mkPlay(key, s, e, base) {
+    var b = el('button', 'go sm', null);
+    b.setAttribute('data-playkey', key);
+    b.setAttribute('data-plabel', base || 'ouvir');
+    b.textContent =
+      playingKey === key && state.playing
+        ? state.paused
+          ? '▶ continuar'
+          : '⏸ pausar'
+        : '▶ ' + (base || 'ouvir');
+    b.onclick = function () {
+      togglePlay(key, s, e);
+    };
+    return b;
+  }
+  function stopPlayback() {
+    if (state.playing) {
+      try {
+        state.playing.stop();
+      } catch (e) {}
+      state.playing = null;
+    }
+    state.paused = false;
+    clearProgress();
+    playingKey = null;
+    refreshPlayUI();
+  }
+  function playRange(s, e) {
+    if (!state.audioBuffer) return;
+    stopPlayback();
+    ensureCtx().resume();
+    var t0 = beadStart(s),
+      t1 = beadEnd(e),
+      src = ctx.createBufferSource();
+    src.buffer = state.audioBuffer;
+    src.connect(ctx.destination);
+    var ctxStart = ctx.currentTime;
+    src.start(0, t0, Math.max(0.02, t1 - t0));
+    src.onended = function () {
+      if (state.playing === src) {
+        state.playing = null;
+        state.paused = false;
+        clearProgress();
+        playingKey = null;
+        refreshPlayUI();
+      }
+    };
+    state.playing = src;
+    startProgress(s, e, ctxStart);
+  }
+  function togglePlay(key, s, e) {
+    if (playingKey === key && state.playing) {
+      if (state.paused) {
+        ctx.resume();
+        state.paused = false;
+      } else {
+        ctx.suspend();
+        state.paused = true;
+      }
+      refreshPlayUI();
+      return;
+    }
+    if (s == null || e == null) return;
+    playRange(s, e);
+    playingKey = key;
+    refreshPlayUI();
+  }
+  $('playSel').onclick = function () {
+    if (state.selection) togglePlay('sel', state.selection.s, state.selection.e);
+  };
+  $('playAll').onclick = function () {
+    var sc = state.mode === 'segmentacao' ? activeScene() : null;
+    if (sc && sc.span) togglePlay('all', sc.span.s, sc.span.e);
+    else if (state.totalBeads) togglePlay('all', 0, state.totalBeads - 1);
+  };
+  function playItem(it, key) {
+    var sp = !it.locked && state.selection ? state.selection : it.span;
+    if (sp) togglePlay(key, sp.s, sp.e);
+  }
+  window.addEventListener('resize', function () {
+    if (state.totalBeads) renderCord();
+  });
+  function setSize(sz) {
+    state.beadSize = sz;
+    ['S', 'M', 'G'].forEach(function (k) {
+      var b = $('sz' + k);
+      if (b) b.classList.toggle('active', k === sz);
+    });
+    if (state.totalBeads) renderCord();
+  }
+  $('szS').onclick = function () {
+    setSize('S');
+  };
+  $('szM').onclick = function () {
+    setSize('M');
+  };
+  $('szG').onclick = function () {
+    setSize('G');
+  };
+  setSize('M');
+
+  /* ---------------- camada 1: o colar ---------------- */
+  function renderWhole() {
+    var box = $('wholeRow');
+    if (!box) return;
+    box.innerHTML = '';
+    var w = state.whole;
+    var btns = el('div', 'btnrow');
+    if (!w.confirmed) {
+      var bConf = el('button', 'go sm', null);
+      bConf.textContent = 'Já ouvi a história completa';
+      bConf.onclick = confirmWhole;
+      btns.appendChild(bConf);
+    } else {
+      btns.appendChild(el('span', 'pill done', '✓ história ouvida'));
+      if (!state.review) {
+        var bReopen = el('button', 'ghost sm', null);
+        bReopen.textContent = 'Reabrir';
+        bReopen.onclick = function () {
+          w.confirmed = false;
+          state.partsConfirmed = false;
+          $('partsCard').classList.add('locked');
+          $('partsCard').classList.add('hidden');
+          $('frasesCard').classList.add('locked');
+          state.current = { layer: 'whole', index: -1 };
+          renderWhole();
+          renderParts();
+        };
+        btns.appendChild(bReopen);
+      }
+    }
+    box.appendChild(btns);
+  }
+  function confirmWhole() {
+    var msg = $('wholeMsg');
+    if (msg) msg.innerHTML = '';
+    var sp = state.whole.span;
+    if (!sp || sp.s !== 0 || sp.e !== state.totalBeads - 1) {
+      if (msg)
+        msg.innerHTML =
+          '<div class="err">O áudio precisa cobrir a história inteira — da conta 0 à conta ' +
+          (state.totalBeads - 1) +
+          '.</div>';
+      return;
+    }
+    state.whole.confirmed = true;
+    $('partsCard').classList.remove('locked');
+    setMode('escuta'); // vira o passo "As Cenas": a Camada 1 recolhe e o player desce para a Camada 2
+    setTimeout(scrollToActive, 80);
+  }
+
+  /* ---------------- camada 2: os trechos ---------------- */
+  function nextPartId() {
+    var n = 1,
+      used = {};
+    state.parts.forEach(function (p) {
+      used[p.part_id] = 1;
+    });
+    while (used['PT' + n]) n++;
+    return 'PT' + n;
+  }
+  function primePart() {
+    // pré-ancora o início da cena atual na emenda (fim da anterior +1) — completou um bloco, o próximo já começa aqui
+    if (state.current.layer !== 'parts' || state.current.index < 0) return;
+    var pt = state.parts[state.current.index];
+    if (!pt || pt.locked) return;
+    var f = frontier('parts');
+    state.pendingStart = f;
+    state.selection = { s: f, e: f };
+  }
+  function addPart() {
+    if (activeAnchor()) {
+      return;
+    }
+    var idx = state.parts.length;
+    state.parts.push({
+      part_id: nextPartId(),
+      span: null,
+      color: PALETTE[idx % PALETTE.length],
+      locked: false,
+      scene_kind: null,
+      scene_kind_confidence: null,
+      tag_state: 'pending',
+    });
+    state.current = { layer: 'parts', index: state.parts.length - 1 };
+    primePart();
+    renderParts();
+    renderCord();
+  }
+  function confirmPart(i) {
+    showAnchorMsg('');
+    var pt = state.parts[i];
+    if (!pt || pt.locked) return;
+    if (!state.selection || state.pendingStart !== null) {
+      showAnchorMsg('<div class="err">Clique onde a cena termina, no colar.</div>');
+      return;
+    }
+    var fl = frontier('parts');
+    if (state.selection.s < fl) {
+      showAnchorMsg('<div class="err">A cena não pode começar antes da conta ' + fl + '.</div>');
+      return;
+    }
+    pt.span = { s: state.selection.s, e: state.selection.e };
+    pt.locked = true;
+    state.selection = null;
+    state.pendingStart = null;
+    // completou o bloco: vai imediatamente para o próximo, já com o início na emenda
+    var next = -1;
+    for (var k = 0; k < state.parts.length; k++) {
+      if (!state.parts[k].locked) {
+        next = k;
+        break;
+      }
+    }
+    if (next >= 0) {
+      state.current = { layer: 'parts', index: next };
+      primePart();
+      renderParts();
+      renderCord();
+    } else {
+      state.current = { layer: 'parts', index: -1 };
+      addPart();
+    }
+  }
+  function reopenPart(i) {
+    for (var k = i; k < state.parts.length; k++) state.parts[k].locked = false;
+    state.current = { layer: 'parts', index: i };
+    state.selection = state.parts[i].span
+      ? { s: state.parts[i].span.s, e: state.parts[i].span.e }
+      : null;
+    state.pendingStart = null;
+    renderParts();
+    renderCord();
+  }
+  function renderParts() {
+    var list = $('partsList');
+    list.innerHTML = '';
+    if (state.parts.length === 0) {
+      list.appendChild(el('p', 'muted', 'Nenhuma cena ainda.'));
+    }
+    state.parts.forEach(function (pt, i) {
+      if (state.mode !== 'escuta' && !pt.locked) return;
+      var isCur = state.current.layer === 'parts' && state.current.index === i;
+      var box = el('div', 'item' + (isCur ? ' current' : '') + (pt.locked ? ' locked-item' : ''));
+      var head = el('div', 'head');
+      var sw = el('span', 'swatch');
+      sw.style.background = pt.color;
+      head.appendChild(sw);
+      head.appendChild(el('span', 'pid', 'Cena ' + (i + 1)));
+      box.appendChild(head);
+      var btns = el('div', 'btnrow');
+      if (pt.locked) {
+        btns.appendChild(mkPlay(pt.part_id, pt.span.s, pt.span.e, 'ouvir'));
+        if (state.mode === 'escuta') {
+          btns.appendChild(el('span', 'pill done', '✓ pronto'));
+          var bRe = el('button', 'ghost sm', null);
+          bRe.textContent = 'Reabrir';
+          bRe.onclick = function () {
+            reopenPart(i);
+          };
+          btns.appendChild(bRe);
+        }
+      } else {
+        btns.appendChild(el('span', 'pill anchoring', 'ancorando — confirme no colar acima ↑'));
+      }
+      box.appendChild(btns);
+      list.appendChild(box);
+    });
+  }
+  function confirmParts() {
+    var msg = $('partsMsg');
+    msg.innerHTML = '';
+    if (!state.whole.confirmed) {
+      msg.innerHTML = '<div class="err">Ouça a história completa primeiro.</div>';
+      return;
+    }
+    var locked = state.parts.filter(function (p) {
+      return p.locked && p.span;
+    });
+    if (locked.length === 0) {
+      msg.innerHTML = '<div class="err">Confirme ao menos uma cena.</div>';
+      return;
+    }
+    // descarta qualquer cena aberta/vazia que sobrou no fim
+    state.parts = locked;
+    state.current = { layer: 'parts', index: -1 };
+    state.selection = null;
+    state.pendingStart = null;
+    state.partsConfirmed = true;
+    $('frasesCard').classList.remove('locked');
+    setMode('triagem'); // confirmou as cenas -> vai sozinho para a Triagem (PLANO-FLUXO-GUIADO §3)
+  }
+
+  /* ---------------- camada 3: as frases ---------------- */
+  function nextPid() {
+    var n = 1,
+      used = {};
+    state.frases.forEach(function (p) {
+      used[p.prop_id] = 1;
+    });
+    while (used['P' + n]) n++;
+    return 'P' + n;
+  }
+  function partForBead(i) {
+    for (var k = 0; k < state.parts.length; k++) {
+      var pt = state.parts[k];
+      if (pt.span && i >= pt.span.s && i <= pt.span.e) return pt.part_id;
+    }
+    return null;
+  }
+  function addFrase() {
+    if (activeAnchor()) {
+      return;
+    }
+    var idx = state.frases.length;
+    state.frases.push({
+      prop_id: nextPid(),
+      statement_pt: '',
+      qa: [],
+      span: null,
+      part_link: null,
+      color: PALETTE_PT[idx % PALETTE_PT.length],
+      locked: false,
+      flagged: false,
+    });
+    state.current = { layer: 'frases', index: state.frases.length - 1 };
+    state.selection = null;
+    state.pendingStart = null;
+    renderFrases();
+    renderCord();
+  }
+  function confirmFrase(i) {
+    showAnchorMsg('');
+    var fr = state.frases[i];
+    if (!fr || fr.locked) return;
+    if (!state.partsConfirmed) {
+      showAnchorMsg('<div class="err">Confirme as cenas primeiro.</div>');
+      return;
+    }
+    if (!state.selection) {
+      showAnchorMsg('<div class="err">Clique o início e o fim da frase no colar.</div>');
+      return;
+    }
+    var sc = activeScene();
+    if (!sc) {
+      showAnchorMsg('<div class="err">Nenhuma cena produtiva para frasear.</div>');
+      return;
+    }
+    var sel = { s: state.selection.s, e: state.selection.e },
+      fl = frontier('frases');
+    if (sel.s < fl) {
+      showAnchorMsg('<div class="err">A frase não pode começar antes da conta ' + fl + '.</div>');
+      return;
+    }
+    if (sel.e > state.whole.span.e) {
+      showAnchorMsg('<div class="err">A frase precisa terminar dentro do colar.</div>');
+      return;
+    }
+    var crossStart = sel.s < sc.span.s,
+      crossEnd = sel.e > sc.span.e;
+    if (crossStart || crossEnd) {
+      offerBorderMove(i, sc, sel, crossStart, crossEnd);
+      return;
+    } // PLANO §4.2 — guiar, não travar
+    lockFrase(fr, sel, sc.part_id);
+  }
+  function lockFrase(fr, sel, sceneId) {
+    fr.span = { s: sel.s, e: sel.e };
+    fr.locked = true;
+    fr.part_link = sceneId;
+    state.selection = null;
+    state.pendingStart = null;
+    var next = -1;
+    for (var k = 0; k < state.frases.length; k++) {
+      if (!state.frases[k].locked) {
+        next = k;
+        break;
+      }
+    }
+    if (next >= 0) {
+      state.current = { layer: 'frases', index: next };
+      renderFrases();
+      renderCord();
+    } else {
+      state.current = { layer: 'frases', index: -1 };
+      addFrase();
+    }
+  }
+  /* a frase invade a vizinha: avisa e oferece — o ouvido decide (PLANO §1, §4.2, §4.3) */
+  function offerBorderMove(i, sc, sel, crossStart, crossEnd) {
+    var nb = crossEnd ? nextNeighbor(sc) : prevNeighbor(sc);
+    var delta = crossEnd ? sel.e - sc.span.e : sc.span.s - sel.s;
+    var sceneSpan = sc.span.e - sc.span.s + 1;
+    var thr = Math.max(3, Math.round(0.25 * sceneSpan)); // proporção principal, piso absoluto (PLANO §4.3)
+    var consumed = nb ? (crossEnd ? sel.e >= nb.span.e : sel.s <= nb.span.s) : false;
+    var twoProd = nb && nb.tag_state === 'tagged' && nb.scene_kind && sceneHasFrases(nb);
+    var dir = crossEnd ? 'o fim' : 'o começo';
+    var W = el('div', 'borderoffer');
+    W.appendChild(
+      el(
+        'div',
+        null,
+        'Esta frase passa ' +
+          dir +
+          ' da cena (<b>' +
+          skShort(sc.scene_kind) +
+          '</b>). O tipo continua aqui?',
+      ),
+    );
+    var row = el('div', 'btnrow');
+    function reanchor() {
+      var b = el('button', 'ghost sm', null);
+      b.textContent = 'Reancorar dentro da cena';
+      b.onclick = function () {
+        state.selection = null;
+        state.pendingStart = null;
+        showAnchorMsg('');
+        renderCord();
+      };
+      return b;
+    }
+    function triagem(label) {
+      var b = el('button', 'clay sm', null);
+      b.textContent = label;
+      b.onclick = function () {
+        setMode('triagem');
+      };
+      return b;
+    }
+    function doMove() {
+      slideSeam(sc, crossStart ? sel.s : null, crossEnd ? sel.e : null);
+      lockFrase(state.frases[i], sel, sc.part_id);
+      showAnchorMsg('<div class="ok">✓ Borda movida; a costura deslizou.</div>');
+    }
+    if (twoProd) {
+      W.appendChild(
+        el(
+          'div',
+          'esc',
+          '⚑ A cena vizinha é produtiva e já tem frases — mover a borda mexe em duas cenas. Trate na Triagem, não aqui.',
+        ),
+      );
+      row.appendChild(triagem('Voltar à Triagem'));
+      row.appendChild(reanchor());
+    } else if (consumed || delta > thr) {
+      var why = consumed
+        ? 'engole a cena vizinha inteira'
+        : 'são ' + delta + ' contas, acima do limiar de ' + thr;
+      W.appendChild(
+        el(
+          'div',
+          'esc',
+          '⚑ Ajuste grande (' +
+            why +
+            ') — parece re-corte de cena, não borda. O certo é re-olhar na Triagem.',
+        ),
+      );
+      row.appendChild(triagem('Voltar à Triagem'));
+      if (!consumed) {
+        var bm = el('button', 'ghost sm', null);
+        bm.textContent = 'Mover mesmo assim';
+        bm.onclick = doMove;
+        row.appendChild(bm);
+      }
+      row.appendChild(reanchor());
+    } else {
+      var bok = el('button', 'clay sm', null);
+      bok.textContent = 'Mover a borda até aqui';
+      bok.onclick = doMove;
+      row.appendChild(bok);
+      row.appendChild(reanchor());
+    }
+    W.appendChild(row);
+    var m = $('anchorMsg');
+    if (m) {
+      m.innerHTML = '';
+      m.appendChild(W);
+    }
+  }
+  /* desliza a costura compartilhada: a cena cresce, a vizinha imediata encolhe (PLANO §4.2, §4.5) */
+  function slideSeam(sc, newStart, newEnd) {
+    if (newEnd != null && newEnd > sc.span.e) {
+      var nb = nextNeighbor(sc);
+      if (nb && nb.span.s <= newEnd) nb.span.s = newEnd + 1;
+      sc.span.e = newEnd;
+    }
+    if (newStart != null && newStart < sc.span.s) {
+      var pb = prevNeighbor(sc);
+      if (pb && pb.span.e >= newStart) pb.span.e = newStart - 1;
+      sc.span.s = newStart;
+    }
+  }
+  /* entra numa cena produtiva para frasear */
+  function enterScene(sceneId) {
+    state.activeSceneId = sceneId;
+    state.selection = null;
+    state.pendingStart = null;
+    showAnchorMsg('');
+    var lu = -1;
+    for (var k = 0; k < state.frases.length; k++) {
+      if (!state.frases[k].locked) {
+        lu = k;
+        break;
+      }
+    }
+    if (lu >= 0) {
+      state.current = { layer: 'frases', index: lu };
+      renderSceneStrip();
+      renderFrases();
+      renderCord();
+    } else {
+      state.current = { layer: 'frases', index: -1 };
+      addFrase();
+      renderSceneStrip();
+    }
+  }
+  function reopenFrase(i) {
+    for (var k = i; k < state.frases.length; k++) state.frases[k].locked = false;
+    state.current = { layer: 'frases', index: i };
+    state.selection = state.frases[i].span
+      ? { s: state.frases[i].span.s, e: state.frases[i].span.e }
+      : null;
+    state.pendingStart = null;
+    renderFrases();
+    renderCord();
+  }
+  function removeFrase(i) {
+    state.frases.splice(i, 1);
+    state.selection = null;
+    state.pendingStart = null;
+    var lu = -1;
+    for (var k = 0; k < state.frases.length; k++) {
+      if (!state.frases[k].locked) lu = k;
+    }
+    if (lu >= 0) {
+      state.current = { layer: 'frases', index: lu };
+      renderFrases();
+      renderCord();
+    } else {
+      state.current = { layer: 'frases', index: -1 };
+      addFrase();
+    }
+  }
+  function renderSceneStrip() {
+    var strip = $('sceneStrip');
+    if (strip) strip.innerHTML = '';
+    var ps = productiveScenes();
+    if (!ps.length) return;
+    var act = activeScene();
+    var idx = sceneIndexOf(act ? act.part_id : null);
+    if (idx < 0) idx = 0;
+    // título do passo: "Cena # · nome" na mesma linha (item 3)
+    var t = $('frasesTitle');
+    if (t) t.textContent = 'Cena ' + (idx + 1) + ' · ' + skShort(ps[idx].scene_kind);
+    var cf = $('confirmFrases');
+    if (cf)
+      cf.textContent =
+        idx >= ps.length - 1 ? 'Já segmentei todas as cenas →' : 'Pronto com esta cena →';
+  }
+  function renderFrases() {
+    renderSceneStrip();
+    var list = $('frasesList');
+    list.innerHTML = '';
+    var sc = activeScene(),
+      shownCount = 0;
+    state.frases.forEach(function (fr, i) {
+      if (fr.locked && (!sc || fr.part_link !== sc.part_id)) return; // só as frases travadas da cena ativa (+ o slot aberto)
+      shownCount++;
+      var n = shownCount;
+      var isCur = state.current.layer === 'frases' && state.current.index === i;
+      var box = el('div', 'item' + (isCur ? ' current' : '') + (fr.locked ? ' locked-item' : ''));
+      var head = el('div', 'head');
+      var sw = el('span', 'swatch');
+      sw.style.background = fr.color;
+      head.appendChild(sw);
+      head.appendChild(el('span', 'pid', 'Frase ' + n));
+      box.appendChild(head);
+      if (fr.statement_pt) {
+        box.appendChild(el('div', 'statement', fr.statement_pt));
+      }
+      if (fr.qa && fr.qa.length) {
+        var qa = el('div', 'qa');
+        fr.qa.forEach(function (q) {
+          qa.appendChild(el('div', null, '• ' + q));
+        });
+        box.appendChild(qa);
+      }
+      var btns = el('div', 'btnrow');
+      if (fr.locked) {
+        btns.appendChild(mkPlay(fr.prop_id, fr.span.s, fr.span.e, 'ouvir'));
+        btns.appendChild(el('span', 'pill done', '✓ pronto'));
+        var bRe = el('button', 'ghost sm', null);
+        bRe.textContent = 'Reabrir';
+        bRe.onclick = function () {
+          reopenFrase(i);
+        };
+        btns.appendChild(bRe);
+        var bFlag = el('button', 'ghost sm', null);
+        bFlag.textContent = fr.flagged ? '⚑ marcada' : '⚑ revisar';
+        bFlag.onclick = function () {
+          fr.flagged = !fr.flagged;
+          renderFrases();
+        };
+        btns.appendChild(bFlag);
+        var bDel = el('button', 'ghost sm', null);
+        bDel.textContent = 'Remover';
+        bDel.onclick = function () {
+          removeFrase(i);
+        };
+        btns.appendChild(bDel);
+      } else {
+        btns.appendChild(el('span', 'pill anchoring', 'ancorando — confirme no colar acima ↑'));
+      }
+      box.appendChild(btns);
+      if (fr.flagged) {
+        box.appendChild(
+          el('div', 'flag-tag', '⚑ marcada para revisão — descreva o ajuste no chat'),
+        );
+      }
+      list.appendChild(box);
+    });
+    if (shownCount === 0) {
+      list.appendChild(el('p', 'muted', 'Nenhuma frase nesta cena ainda.'));
+    }
+  }
+
+  $('confirmParts').onclick = confirmParts;
+  if ($('addPart'))
+    $('addPart').onclick = function () {
+      addPart();
+    };
+  $('confirmFrases').onclick = confirmFrasesDone;
+  $('frasesBack').onclick = function () {
+    var ps = productiveScenes(),
+      act = activeScene(),
+      idx = sceneIndexOf(act ? act.part_id : null);
+    if (idx > 0) {
+      enterScene(ps[idx - 1].part_id);
+      setTimeout(scrollToActive, 80);
+    } // cena anterior
+    else {
+      setMode('triagem');
+    } // primeira cena -> volta à Triagem
+  };
+  $('cenasBack').onclick = function () {
+    state.whole.confirmed = false;
+    setMode('escuta');
+  }; // Cenas -> Ouvir (cenas preservadas)
+  $('confirmHere').onclick = function () {
+    var aa = activeAnchor();
+    if (!aa) return;
+    if (aa.layer === 'parts') confirmPart(state.current.index);
+    else confirmFrase(state.current.index);
+  };
+  function showAnchorMsg(html) {
+    var m = $('anchorMsg');
+    if (m) m.innerHTML = html || '';
+  }
+  function updateAnchorBar() {
+    var aa = state.review ? null : activeAnchor();
+    var b = $('confirmHere');
+    if (b) {
+      if (!aa) {
+        b.classList.add('hidden');
+      } else {
+        b.classList.remove('hidden');
+        b.textContent = aa.layer === 'parts' ? '✓ Confirmar esta cena' : '✓ Confirmar esta frase';
+      }
+    }
+    // controles de seleção só existem quando se está cortando (ancoragem ativa). Ouvindo o todo, só dá pra ouvir o colar inteiro.
+    var sel = $('playSel'),
+      clr = $('clearSel');
+    if (sel) sel.classList.toggle('hidden', !aa);
+    if (clr) clr.classList.toggle('hidden', !aa);
+    var all = $('playAll');
+    if (all) {
+      all.classList.toggle('go', !aa);
+      all.classList.toggle('ghost', !!aa);
+      all.setAttribute(
+        'data-plabel',
+        state.mode === 'segmentacao' ? 'ouvir a cena' : 'ouvir a história',
+      );
+    } // no passo das frases, toca só a cena
+    refreshPlayUI();
+  }
+  var warnedEmptyScene = null;
+  function confirmFrasesDone() {
+    if (state.review) return;
+    var msg = $('frasesMsg');
+    if (msg) msg.innerHTML = '';
+    var sc = activeScene();
+    if (!sc) {
+      setMode('mapeamento');
+      return;
+    }
+    var n = state.frases.filter(function (f) {
+      return f.locked && f.span && f.part_link === sc.part_id;
+    }).length;
+    if (n === 0 && warnedEmptyScene !== sc.part_id) {
+      // aviso leve, mas deixa seguir (decisão 3)
+      warnedEmptyScene = sc.part_id;
+      if (msg)
+        msg.innerHTML =
+          '<div class="err">Esta cena ficou sem frases. Clique de novo para seguir mesmo assim.</div>';
+      return;
+    }
+    warnedEmptyScene = null;
+    var ps = productiveScenes(),
+      idx = sceneIndexOf(sc.part_id);
+    if (idx >= 0 && idx < ps.length - 1) {
+      enterScene(ps[idx + 1].part_id);
+      setTimeout(scrollToActive, 80);
+    } // próxima cena
+    else {
+      setMode('mapeamento');
+    } // última -> Mapeamento
+  }
+  function enterLayer(layer) {
+    var arr = layer === 'parts' ? state.parts : state.frases;
+    var lu = -1;
+    for (var k = 0; k < arr.length; k++) {
+      if (!arr[k].locked) lu = k;
+    }
+    state.selection = null;
+    state.pendingStart = null;
+    if (lu >= 0) {
+      state.current = { layer: layer, index: lu };
+      if (layer === 'parts') primePart();
+      renderParts();
+      renderFrases();
+      renderCord();
+    } else if (layer === 'parts' && state.partsConfirmed) {
+      state.current = { layer: 'parts', index: -1 };
+      renderParts();
+      renderCord();
+    } else {
+      state.current = { layer: layer, index: -1 };
+      if (layer === 'parts') addPart();
+      else addFrase();
+    }
+  }
+  function collapseCard(id, summary) {
+    var c = $(id);
+    if (!c) return;
+    var body = c.querySelector('.cardbody'),
+      sum = c.querySelector('.cardsum'),
+      tog = c.querySelector('.cardtoggle');
+    if (body) body.classList.add('hidden');
+    if (sum) {
+      if (summary != null) sum.textContent = summary;
+      sum.classList.remove('hidden');
+    }
+    if (tog) {
+      tog.textContent = state.review ? 'ver' : 'editar';
+      tog.classList.remove('hidden');
+    }
+  }
+  function expandCard(id) {
+    var c = $(id);
+    if (!c) return;
+    var body = c.querySelector('.cardbody'),
+      sum = c.querySelector('.cardsum'),
+      tog = c.querySelector('.cardtoggle');
+    if (body) body.classList.remove('hidden');
+    if (sum) sum.classList.add('hidden');
+    if (tog) tog.textContent = 'recolher';
+  }
+  function cardSummary(id) {
+    if (id === 'cordCard') return state.totalBeads ? state.totalBeads + ' contas' : '';
+    if (id === 'partsCard') {
+      var np = state.parts.filter(function (p) {
+        return p.locked && p.span;
+      }).length;
+      return np + ' cena' + (np === 1 ? '' : 's');
+    }
+    if (id === 'frasesCard') {
+      var nf = state.frases.filter(function (p) {
+        return p.locked && p.span;
+      }).length;
+      return nf + ' frase' + (nf === 1 ? '' : 's');
+    }
+    if (id === 'exportCard') return 'documentos salvos';
+    return '';
+  }
+  function wireCollapsibles() {
+    Array.prototype.slice.call(document.querySelectorAll('.cardtoggle')).forEach(function (tog) {
+      var id = tog.getAttribute('data-card');
+      tog.onclick = function () {
+        var c = $(id),
+          body = c.querySelector('.cardbody');
+        if (body.classList.contains('hidden')) {
+          expandCard(id);
+          if (!state.review && id === 'partsCard' && state.whole.confirmed) enterLayer('parts');
+          else if (!state.review && id === 'frasesCard' && state.partsConfirmed)
+            enterLayer('frases');
+        } else {
+          collapseCard(id, cardSummary(id));
+        }
+      };
+    });
+  }
+  wireCollapsibles();
+  function refreshToggleLabels() {
+    Array.prototype.slice.call(document.querySelectorAll('.cardtoggle')).forEach(function (tog) {
+      var id = tog.getAttribute('data-card'),
+        body = $(id).querySelector('.cardbody');
+      tog.textContent = body.classList.contains('hidden')
+        ? state.review
+          ? 'ver'
+          : 'editar'
+        : 'recolher';
+    });
+  }
+  function setReview(on) {
+    state.review = on;
+    document.body.classList.toggle('review', on);
+    $('reviewBanner').classList.toggle('hidden', !on);
+    $('confirmParts').classList.toggle('hidden', on);
+    $('confirmFrases').classList.toggle('hidden', on);
+    $('cordHint').textContent = on
+      ? 'Modo de revisão — toque ▶ em cada segmento para ouvi-lo.'
+      : 'Ouça a história completa. Para ouvir um pedaço, clique em duas contas — o início e o fim. Para ajustar uma borda, clique onde ela deve ficar.';
+    if (on) {
+      state.current = { layer: 'frases', index: -1 };
+      state.selection = null;
+      state.pendingStart = null;
+      stopPlayback();
+    }
+    refreshToggleLabels();
+    renderWhole();
+    renderParts();
+    renderFrases();
+    renderCord();
+  }
+  $('unlockBtn').onclick = function () {
+    setReview(false);
+  };
+
+  /* ---------------- modos: Segmentar / Triagem / Revisão ---------------- */
+  function mountPlayer(hostId) {
+    var host = $(hostId),
+      p = $('player');
+    if (host && p && p.parentNode !== host) host.appendChild(p);
+  }
+  function setMode(mode) {
+    var prod = lockedParts().filter(function (p) {
+      return p.tag_state === 'tagged' && p.scene_kind;
+    }).length;
+    if ((mode === 'segmentacao' || mode === 'mapeamento') && prod === 0) {
+      mode = 'triagem';
+    }
+    state.mode = mode;
+    state.review = false;
+    document.body.classList.remove('review');
+    $('reviewBanner').classList.add('hidden');
+    ['escuta', 'triagem', 'segmentacao', 'mapeamento'].forEach(function (m) {
+      var b = $('mode-' + m);
+      if (b) b.classList.toggle('active', m === mode);
+    });
+    var ouvir = mode === 'escuta' && !state.whole.confirmed; // passo 1
+    var cenas = mode === 'escuta' && state.whole.confirmed; // passo 2
+    var show = {
+      setupCard: false,
+      cordCard: ouvir,
+      partsCard: cenas,
+      frasesCard: mode === 'segmentacao',
+      exportCard: false,
+      triagemView: mode === 'triagem',
+      mapeamentoView: mode === 'mapeamento',
+    };
+    Object.keys(show).forEach(function (id) {
+      var c = $(id);
+      if (c) c.classList.toggle('hidden', !show[id]);
+    });
+    // o player único se move para o encaixe do passo ativo (PLANO-FLUXO-GUIADO §2)
+    if (ouvir) mountPlayer('hostOuvir');
+    else if (cenas) mountPlayer('hostCenas');
+    else if (mode === 'segmentacao') mountPlayer('hostFrases');
+    stopPlayback();
+    if (mode === 'triagem') {
+      renderTriagem();
+    } else if (mode === 'segmentacao') {
+      $('frasesCard').classList.remove('locked');
+      if (lockedParts().length && !state.partsConfirmed) {
+        state.partsConfirmed = true;
+      }
+      var ps = productiveScenes();
+      if (ps.length) {
+        if (sceneIndexOf(state.activeSceneId) < 0) state.activeSceneId = ps[0].part_id;
+        enterScene(state.activeSceneId);
+      } else {
+        enterLayer('frases');
+      }
+      renderParts();
+    } else if (mode === 'mapeamento') {
+      renderMapeamento();
+    } else {
+      /* escuta */
+      if (state.whole.confirmed) {
+        $('partsCard').classList.remove('locked');
+        renderWhole();
+        enterLayer('parts');
+      } else {
+        state.current = { layer: 'whole', index: -1 };
+        renderWhole();
+        renderParts();
+        renderCord();
+      }
+    }
+    updateModeLocks();
+  }
+  function updateModeLocks() {
+    // abas = indicador de progresso: só habilita um passo já alcançado (PLANO-FLUXO-GUIADO §4.1)
+    var prod = lockedParts().filter(function (p) {
+      return p.tag_state === 'tagged' && p.scene_kind;
+    }).length;
+    var nFrases = state.frases.filter(function (f) {
+      return f.locked && f.span;
+    }).length;
+    if ($('mode-escuta')) $('mode-escuta').disabled = false;
+    if ($('mode-triagem')) $('mode-triagem').disabled = !state.partsConfirmed;
+    if ($('mode-segmentacao')) $('mode-segmentacao').disabled = prod === 0;
+    if ($('mode-mapeamento')) $('mode-mapeamento').disabled = prod === 0 || nFrases === 0;
+  }
+  /* ===== Fase 4 — Mapeamento: andaime de perguntas padrão + relatório (PLANO-MAPEAMENTO-NO-APP) =====
+   O app coleta TEXTO LIVRE; não classifica vocabulário, não preenche ausência, não gera o mapa.
+   Roteiros: docs/scripts/nivel-1-holistico.md e nivel-2-partes.md. */
+  var L1_Q = [
+    {
+      k: 'recontar',
+      field: 'whole',
+      q: 'Conte essa história com as suas palavras, como se fosse para alguém que nunca ouviu.',
+    },
+    { k: 'arco_inicio_fim', field: 'arc', q: 'Como a história começa? E como ela termina?' },
+    {
+      k: 'arco_muda',
+      field: 'arc',
+      q: 'O que muda do começo para o fim? A história deixa as coisas diferentes de como começou?',
+    },
+    { k: 'lugar', field: 'context', q: 'Onde essa história acontece?' },
+    {
+      k: 'tempo',
+      field: 'context',
+      q: 'Tem um tempo, uma época em que ela acontece? Ou a história não marca isso?',
+      note: 'permita “não tem”',
+    },
+    {
+      k: 'saber_antes',
+      field: 'context',
+      q: 'Tem alguma coisa que quem escuta já precisa saber de antemão para a história fazer sentido?',
+    },
+    {
+      k: 'sentimento',
+      field: 'tone',
+      q: 'Que sentimento essa história passa enquanto você escuta? Muda em algum momento?',
+    },
+    {
+      k: 'ritmo',
+      field: 'pace',
+      q: 'A história corre rápida ou devagar? Tem parte que demora mais que as outras?',
+    },
+    {
+      k: 'funcao',
+      field: 'function',
+      q: 'Para que serve essa história? O que ela quer fazer com quem escuta — ensinar, abrir um assunto, avisar, plantar uma ideia?',
+    },
+    {
+      k: 'prepara',
+      field: 'function',
+      q: 'Se essa história faz parte de algo maior, o que ela prepara para o que vem depois?',
+      note: 'opcional',
+    },
+    {
+      k: 'ausencia',
+      field: 'significant_absence',
+      q: 'Tem alguma coisa que você esperaria nessa história e que não aparece? Um nome, alguém no comando, um problema, um acontecimento? O narrador parece ter deixado algo de fora de propósito?',
+      note: 'conduzida pela facilitadora — nunca preencha por conta própria',
+    },
+  ];
+  var L2_Q = [
+    { k: 'descrever', field: '', q: 'Me conte o que acontece nesse trecho, com as suas palavras.' },
+    {
+      k: 'quem',
+      field: 'beings_in_scene',
+      q: 'Quem aparece nesse trecho? Pessoas, animais, um grupo, alguém de quem se fala?',
+    },
+    {
+      k: 'onde',
+      field: 'places_in_scene',
+      q: 'Onde isso acontece? É o mesmo lugar de antes ou mudou?',
+    },
+    {
+      k: 'objeto',
+      field: 'objects_in_scene',
+      q: 'Tem alguma coisa, algum objeto, algum elemento importante nesse trecho?',
+    },
+    {
+      k: 'ausencia',
+      field: 'significant_absence',
+      q: 'Tem algo que você esperaria nesse trecho e que não aparece?',
+      note: 'conduzida pela facilitadora',
+    },
+  ];
+  var L3_Q = [
+    { k: 'oque', q: 'O que aconteceu nesta frase?' },
+    { k: 'quem', q: 'Quem?' },
+    { k: 'onde', q: 'Onde?' },
+    { k: 'como', q: 'Como? Por quê?', note: 'se fizer sentido' },
+    { k: 'o_que_mais', q: 'O que mais tem nessa frase?' },
+  ];
+  function ensureMapping() {
+    if (!state.mapping) state.mapping = { level1: {}, level2: {}, level3: {} };
+    var m = state.mapping;
+    L1_Q.forEach(function (q) {
+      if (m.level1[q.k] == null) m.level1[q.k] = '';
+    });
+    lockedParts().forEach(function (p) {
+      if (!m.level2[p.part_id]) m.level2[p.part_id] = {};
+      L2_Q.forEach(function (q) {
+        if (m.level2[p.part_id][q.k] == null) m.level2[p.part_id][q.k] = '';
+      });
+    });
+    state.frases.forEach(function (fr) {
+      if (fr.locked && fr.span && fr.part_link) {
+        if (!m.level3[fr.prop_id]) m.level3[fr.prop_id] = {};
+        L3_Q.forEach(function (q) {
+          if (m.level3[fr.prop_id][q.k] == null) m.level3[fr.prop_id][q.k] = '';
+        });
+      }
+    });
+  }
+  function downloadText(name, text, mime) {
+    var blob = new Blob([text], { type: mime || 'text/plain' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () {
+      URL.revokeObjectURL(a.href);
+    }, 1500);
+  }
+  function mapTextarea(getval, setval) {
+    var ta = el('textarea', 'map-ta', null);
+    ta.value = getval() || '';
+    ta.placeholder = 'resposta do Jean, em português…';
+    ta.rows = 2;
+    ta.oninput = function () {
+      setval(ta.value);
+    };
+    return ta;
+  }
+  function sceneNum(p) {
+    return lockedParts().indexOf(p) + 1;
+  }
+  function mapPlayBtn(s, e, label) {
+    return mkPlay('map:' + s + '-' + e, s, e, (label || 'ouvir').replace(/^▶\s*/, ''));
+  }
+  function bindGet(o, k) {
+    return function () {
+      return o[k];
+    };
+  }
+  function bindSet(o, k) {
+    return function (v) {
+      o[k] = v;
+    };
+  }
+  function mapTitle() {
+    return state.mapStep === 'n1'
+      ? 'Responda as perguntas sobre a história.'
+      : state.mapStep === 'n2'
+        ? 'Responda as perguntas sobre as cenas.'
+        : state.mapStep === 'n3'
+          ? 'Responda as perguntas sobre cada frase.'
+          : 'Confira e corrija se precisar.';
+  }
+  function mapNav(card, onPrev, onNext, nextLabel) {
+    var nav = el('div', 'btnrow');
+    var prev = el('button', 'ghost sm', null);
+    prev.textContent = '← anterior';
+    prev.onclick = onPrev;
+    nav.appendChild(prev);
+    var nx = el('button', 'clay', null);
+    nx.textContent = nextLabel || 'próxima →';
+    nx.onclick = onNext;
+    nav.appendChild(nx);
+    card.appendChild(nav);
+  }
+  function productiveFrases() {
+    var out = [];
+    productiveScenes().forEach(function (p) {
+      state.frases
+        .filter(function (fr) {
+          return fr.locked && fr.span && fr.part_link === p.part_id;
+        })
+        .forEach(function (fr) {
+          out.push({ fr: fr, scene: p });
+        });
+    });
+    return out;
+  }
+  function renderMapeamento() {
+    ensureMapping();
+    var h = $('mapeamentoTitle');
+    if (h) h.textContent = mapTitle();
+    var b = $('mapBody');
+    if (!b) return;
+    b.innerHTML = '';
+    if (state.mapStep === 'n1') renderMapN1(b);
+    else if (state.mapStep === 'n2') renderMapN2(b);
+    else if (state.mapStep === 'n3') renderMapN3(b);
+    else renderMapReport(b);
+  }
+  function renderMapN1(b) {
+    // uma pergunta por tela
+    var i = Math.max(0, Math.min(L1_Q.length - 1, state.mapN1i || 0));
+    var q = L1_Q[i];
+    var bar = el('div', 'btnrow');
+    bar.appendChild(mapPlayBtn(0, state.totalBeads - 1, 'ouvir a história'));
+    b.appendChild(bar);
+    var card = el('div', 'map-q');
+    card.appendChild(el('div', 'map-qtext', q.q));
+    if (q.note) card.appendChild(el('div', 'map-qnote', '⚑ ' + q.note));
+    card.appendChild(
+      mapTextarea(bindGet(state.mapping.level1, q.k), bindSet(state.mapping.level1, q.k)),
+    );
+    mapNav(
+      card,
+      function () {
+        if (i > 0) {
+          state.mapN1i = i - 1;
+          renderMapeamento();
+        } else {
+          setMode('segmentacao');
+        }
+      },
+      function () {
+        if (i < L1_Q.length - 1) {
+          state.mapN1i = i + 1;
+          renderMapeamento();
+        } else {
+          state.mapStep = 'n2';
+          state.mapN2i = 0;
+          renderMapeamento();
+        }
+      },
+      i < L1_Q.length - 1 ? 'próxima →' : 'perguntas das cenas →',
+    );
+    b.appendChild(card);
+  }
+  function renderMapN2(b) {
+    // uma cena por tela
+    var all = lockedParts();
+    if (!all.length) {
+      b.appendChild(el('p', 'muted', 'Nenhuma cena.'));
+      return;
+    }
+    var i = Math.max(0, Math.min(all.length - 1, state.mapN2i || 0));
+    var p = all[i];
+    var tag =
+      p.tag_state === 'tagged' && p.scene_kind
+        ? skShort(p.scene_kind)
+        : p.tag_state === 'none_fit'
+          ? '⌀ nenhum tipo'
+          : 'sem tipo';
+    var bar = el('div', 'btnrow');
+    bar.appendChild(mapPlayBtn(p.span.s, p.span.e, 'ouvir a cena'));
+    b.appendChild(bar);
+    var card = el('div', 'map-q');
+    card.appendChild(el('div', 'map-scenehead2', 'Cena ' + (i + 1) + ' · ' + tag));
+    L2_Q.forEach(function (q) {
+      var qd = el('div', 'map-qrow');
+      qd.appendChild(
+        el(
+          'div',
+          'map-qtext',
+          q.q + (q.note ? ' <span class="map-qnote">⚑ ' + q.note + '</span>' : ''),
+        ),
+      );
+      qd.appendChild(
+        mapTextarea(
+          bindGet(state.mapping.level2[p.part_id], q.k),
+          bindSet(state.mapping.level2[p.part_id], q.k),
+        ),
+      );
+      card.appendChild(qd);
+    });
+    mapNav(
+      card,
+      function () {
+        if (i > 0) {
+          state.mapN2i = i - 1;
+          renderMapeamento();
+        } else {
+          state.mapStep = 'n1';
+          state.mapN1i = L1_Q.length - 1;
+          renderMapeamento();
+        }
+      },
+      function () {
+        if (i < all.length - 1) {
+          state.mapN2i = i + 1;
+          renderMapeamento();
+        } else {
+          state.mapStep = 'n3';
+          state.mapN3i = 0;
+          renderMapeamento();
+        }
+      },
+      i < all.length - 1 ? 'próxima cena →' : 'perguntas das frases →',
+    );
+    b.appendChild(card);
+  }
+  function renderMapN3(b) {
+    // uma frase por tela
+    var list = productiveFrases();
+    if (!list.length) {
+      b.appendChild(el('p', 'muted', 'Nenhuma frase.'));
+      var n0 = el('div', 'btnrow');
+      var g0 = el('button', 'clay', null);
+      g0.textContent = 'ver o relatório →';
+      g0.onclick = function () {
+        state.mapStep = 'rel';
+        renderMapeamento();
+      };
+      n0.appendChild(g0);
+      b.appendChild(n0);
+      return;
+    }
+    var i = Math.max(0, Math.min(list.length - 1, state.mapN3i || 0));
+    var fr = list[i].fr,
+      sc = list[i].scene;
+    var bar = el('div', 'btnrow');
+    bar.appendChild(mapPlayBtn(fr.span.s, fr.span.e, 'ouvir a frase'));
+    b.appendChild(bar);
+    var card = el('div', 'map-q');
+    card.appendChild(el('div', 'map-scenehead2', skShort(sc.scene_kind) + ' · frase'));
+    L3_Q.forEach(function (q) {
+      var qd = el('div', 'map-qrow');
+      qd.appendChild(
+        el(
+          'div',
+          'map-qtext',
+          q.q + (q.note ? ' <span class="map-qnote">' + q.note + '</span>' : ''),
+        ),
+      );
+      qd.appendChild(
+        mapTextarea(
+          bindGet(state.mapping.level3[fr.prop_id], q.k),
+          bindSet(state.mapping.level3[fr.prop_id], q.k),
+        ),
+      );
+      card.appendChild(qd);
+    });
+    mapNav(
+      card,
+      function () {
+        if (i > 0) {
+          state.mapN3i = i - 1;
+          renderMapeamento();
+        } else {
+          state.mapStep = 'n2';
+          state.mapN2i = lockedParts().length - 1;
+          renderMapeamento();
+        }
+      },
+      function () {
+        if (i < list.length - 1) {
+          state.mapN3i = i + 1;
+          renderMapeamento();
+        } else {
+          state.mapStep = 'rel';
+          renderMapeamento();
+        }
+      },
+      i < list.length - 1 ? 'próxima frase →' : 'ver o relatório →',
+    );
+    b.appendChild(card);
+  }
+  function renderMapReport(b) {
+    // documento consolidado, editável
+    function sec(title) {
+      var s = el('div', 'map-rep');
+      s.appendChild(el('h3', 'map-reph', title));
+      return s;
+    }
+    var s1 = sec('A história');
+    L1_Q.forEach(function (q) {
+      var r = el('div', 'map-qrow');
+      r.appendChild(el('div', 'map-qtext', q.q));
+      r.appendChild(
+        mapTextarea(bindGet(state.mapping.level1, q.k), bindSet(state.mapping.level1, q.k)),
+      );
+      s1.appendChild(r);
+    });
+    b.appendChild(s1);
+    var s2 = sec('As cenas');
+    lockedParts().forEach(function (p, i) {
+      s2.appendChild(
+        el(
+          'div',
+          'map-scenehead2',
+          'Cena ' +
+            (i + 1) +
+            ' · ' +
+            (p.scene_kind
+              ? skShort(p.scene_kind)
+              : p.tag_state === 'none_fit'
+                ? '⌀ nenhum'
+                : 'sem tipo'),
+        ),
+      );
+      L2_Q.forEach(function (q) {
+        var r = el('div', 'map-qrow');
+        r.appendChild(el('div', 'map-qtext', q.q));
+        r.appendChild(
+          mapTextarea(
+            bindGet(state.mapping.level2[p.part_id], q.k),
+            bindSet(state.mapping.level2[p.part_id], q.k),
+          ),
+        );
+        s2.appendChild(r);
+      });
+    });
+    b.appendChild(s2);
+    var s3 = sec('As frases');
+    productiveScenes().forEach(function (p) {
+      state.frases
+        .filter(function (fr) {
+          return fr.locked && fr.span && fr.part_link === p.part_id;
+        })
+        .forEach(function (fr, idx) {
+          s3.appendChild(
+            el('div', 'map-frasehead', skShort(p.scene_kind) + ' · frase ' + (idx + 1)),
+          );
+          L3_Q.forEach(function (q) {
+            var r = el('div', 'map-qrow');
+            r.appendChild(el('div', 'map-qtext', q.q));
+            r.appendChild(
+              mapTextarea(
+                bindGet(state.mapping.level3[fr.prop_id], q.k),
+                bindSet(state.mapping.level3[fr.prop_id], q.k),
+              ),
+            );
+            s3.appendChild(r);
+          });
+        });
+    });
+    b.appendChild(s3);
+    var nav = el('div', 'btnrow');
+    var bk = el('button', 'ghost sm', null);
+    bk.textContent = '← anterior';
+    bk.onclick = function () {
+      state.mapStep = 'n3';
+      renderMapeamento();
+    };
+    nav.appendChild(bk);
+    var dl = el('button', 'clay sm', null);
+    dl.textContent = 'Baixar relatório (.md)';
+    dl.onclick = function () {
+      downloadText(
+        (state.slug || 'historia') + '-relatorio-mapeamento.md',
+        buildMapReportMd(),
+        'text/markdown',
+      );
+    };
+    nav.appendChild(dl);
+    var dj = el('button', 'ghost sm', null);
+    dj.textContent = 'Baixar a ancoragem (.json)';
+    dj.onclick = function () {
+      if (state.whole && state.whole.confirmed)
+        download((state.slug || 'historia') + '-retorno-ancoragem.json', buildReturn());
+    };
+    nav.appendChild(dj);
+    b.appendChild(nav);
+  }
+  function buildMapReportMd() {
+    var m = state.mapping,
+      L = [];
+    L.push('# Relatório de Mapeamento — ' + (state.slug || 'história'));
+    L.push('');
+    L.push(
+      '> Matéria-prima para o Claude Code. **Não** é o mapa. Respostas em texto livre (perguntas gerais do método); o agente faz as perguntas contextuais, classifica o vocabulário controlado, sinaliza NEW_VALUE e escreve a prosa do meaning map.',
+    );
+    L.push(
+      '> `source_domain: oral_archive` · `speaker_role: LISTENER_NOT_STORYTELLER` · manifest: `' +
+        (state.manifestId || '') +
+        '`',
+    );
+    L.push('');
+    L.push('## Nível 1 — a história inteira');
+    L1_Q.forEach(function (q) {
+      L.push('- **' + q.q + '**' + (q.field ? ' _(' + q.field + ')_' : ''));
+      L.push('  ' + ((m.level1[q.k] || '').trim() || '_(sem resposta)_'));
+    });
+    L.push('');
+    L.push('## Nível 2 — as cenas');
+    lockedParts().forEach(function (p) {
+      L.push('');
+      L.push(
+        '### Cena ' +
+          sceneNum(p) +
+          ' (S' +
+          sceneNum(p) +
+          ') — scene_kind: ' +
+          (p.scene_kind || '(nenhum)') +
+          (p.tag_state === 'none_fit' ? ' [none_fit]' : ''),
+      );
+      L2_Q.forEach(function (q) {
+        L.push(
+          '- **' +
+            q.q +
+            '** ' +
+            (((m.level2[p.part_id] && m.level2[p.part_id][q.k]) || '').trim() ||
+              '_(sem resposta)_'),
+        );
+      });
+    });
+    L.push('');
+    L.push('## Nível 3 — proposições (cenas produtivas)');
+    productiveScenes().forEach(function (p) {
+      L.push('');
+      L.push('### Cena ' + sceneNum(p) + ' (S' + sceneNum(p) + ') — ' + (p.scene_kind || ''));
+      state.frases
+        .filter(function (fr) {
+          return fr.locked && fr.span && fr.part_link === p.part_id;
+        })
+        .forEach(function (fr, idx) {
+          L.push('');
+          L.push(
+            '**Frase ' +
+              (idx + 1) +
+              ' (' +
+              fr.prop_id +
+              ') — contas ' +
+              fr.span.s +
+              '–' +
+              fr.span.e +
+              ':**',
+          );
+          L3_Q.forEach(function (q) {
+            L.push(
+              '- ' +
+                q.q +
+                ' ' +
+                (((m.level3[fr.prop_id] && m.level3[fr.prop_id][q.k]) || '').trim() ||
+                  '_(sem resposta)_'),
+            );
+          });
+        });
+    });
+    L.push('');
+    return L.join('\n');
+  }
+  $('mode-escuta').onclick = function () {
+    setMode('escuta');
+  };
+  $('mode-triagem').onclick = function () {
+    setMode('triagem');
+  };
+  $('mode-segmentacao').onclick = function () {
+    setMode('segmentacao');
+  };
+  $('mode-mapeamento').onclick = function () {
+    setMode('mapeamento');
+  };
+  /* Triagem → "Já classifiquei todas as cenas" (habilita só quando todas triadas e ≥1 produtiva — PLANO §4.2) */
+  function updateTriagemDone() {
+    var b = $('triagemDone');
+    if (!b) return;
+    var parts = lockedParts();
+    var allTriaged =
+      parts.length > 0 &&
+      parts.every(function (p) {
+        return p.tag_state !== 'pending';
+      });
+    var prod = parts.filter(function (p) {
+      return p.tag_state === 'tagged' && p.scene_kind;
+    }).length;
+    b.disabled = !(allTriaged && prod > 0);
+    var m = $('triagemDoneMsg');
+    if (m) {
+      m.textContent = !allTriaged
+        ? 'Classifique todas as cenas (ou marque “nenhum se encaixa”) para seguir.'
+        : prod === 0
+          ? 'Nenhuma cena se encaixa em Rute — escolha outra história.'
+          : '';
+    }
+  }
+  $('triagemDone').onclick = function () {
+    if (!this.disabled) setMode('segmentacao');
+  };
+  $('triagemBack').onclick = function () {
+    setMode('escuta');
+  };
+
+  /* ---------------- triagem: classificar cada cena ---------------- */
+  var T_TARGET = { ALTA: 1, comum: 3 };
+  function lockedParts() {
+    return state.parts.filter(function (p) {
+      return p.locked && p.span;
+    });
+  }
+  /* Rótulos em português dos scene_kind — SÓ EXIBIÇÃO. O valor (ex.: "GLEANING_SCENE") é o
+   contrato com o Compilador e continua em inglês no dado e na exportação (CLAUDE.md §9).
+   Traduzir aqui nunca toca o que é gravado no retorno-ancoragem.json; o inglês fica no title (hover). */
+  var SK_PT = {
+    BIRTH_SCENE: 'Nascimento',
+    CONSENT_SCENE: 'Consentimento',
+    DEPARTURE_SCENE: 'Partida',
+    GATE_COURT_CONVENING_SCENE: 'Convocação do tribunal na porta',
+    GENEALOGY_SCENE: 'Genealogia',
+    GLEANING_SCENE: 'Respiga',
+    INITIATIVE_SCENE: 'Iniciativa',
+    LAMENT_SCENE: 'Lamento',
+    MARRIAGE_SCENE: 'Casamento',
+    MEAL_SCENE: 'Refeição',
+    NAMING_SCENE: 'Nomeação',
+    NARRATOR_INTRODUCTION_SCENE: 'Introdução do narrador',
+    NIGHT_APPROACH_SCENE: 'Aproximação noturna',
+    OPENING_CHRONICLE_SCENE: 'Crônica de abertura',
+    PROVISION_HOMECOMING_SCENE: 'Provisão e retorno ao lar',
+    REDEEMER_RECOGNITION_SCENE: 'Reconhecimento do resgatador',
+    REDEMPTION_DECLINE_SCENE: 'Recusa do resgate',
+    REDEMPTION_OFFER_SCENE: 'Oferta de resgate',
+    VOW_SCENE: 'Voto',
+    APPEAL_SCENE: 'Apelo',
+    BLESSING_SCENE: 'Bênção',
+    INSTRUCTION_SCENE: 'Instrução',
+    RATIFICATION_SCENE: 'Ratificação',
+    ARRIVAL_SCENE: 'Chegada',
+    BEREAVEMENT_SCENE: 'Luto',
+    NARRATOR_FRAMING_CLOSE_SCENE: 'Fechamento do narrador',
+    REPORT_SCENE: 'Relato',
+  };
+  function skEnShort(v) {
+    return v
+      .replace(/_SCENE$/, '')
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/^./, function (m) {
+        return m.toUpperCase();
+      });
+  }
+  function skShort(v) {
+    return SK_PT[v] || skEnShort(v);
+  }
+  function norm(s) {
+    return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+  }
+  function confClass(c) {
+    return c === 'alta' ? 'conf-alta' : c === 'média' ? 'conf-media' : 'conf-baixa';
+  }
+  function confLabel(c) {
+    return c === 'alta' ? 'certeza' : c === 'média' ? 'quase' : 'na dúvida';
+  }
+  function playScene(pt) {
+    if (playingKey === pt.part_id) {
+      stopPlayback();
+      return;
+    }
+    if (pt.span) {
+      playRange(pt.span.s, pt.span.e);
+      playingKey = pt.part_id;
+      renderTriagem();
+    }
+  }
+  function renderTriagem() {
+    var box = $('triagemScenes');
+    if (!box) return;
+    var parts = lockedParts();
+    $('tSceneCount').textContent = ''; // sem contagem (minimalismo — cultura oral)
+    box.innerHTML = '';
+    if (parts.length === 0) {
+      box.appendChild(
+        el(
+          'p',
+          'muted',
+          'Nenhuma cena confirmada ainda. Volte à aba Escuta e confirme as cenas primeiro.',
+        ),
+      );
+      renderCoverage();
+      return;
+    }
+    parts.forEach(function (pt, i) {
+      var open = triagemUI.openId === pt.part_id;
+      var card = el('div', 'scene-row' + (open ? ' open' : ''));
+      var top = el('div', 'top');
+      top.appendChild(el('span', null, 'Cena ' + (i + 1)));
+      top.appendChild(mkPlay(pt.part_id, pt.span.s, pt.span.e, 'ouvir'));
+      var tag = el('span', 'tagshow');
+      if (pt.tag_state === 'none_fit')
+        tag.innerHTML = '<span class="none">⌀ nenhum se encaixa</span>';
+      else if (pt.tag_state === 'tagged' && pt.scene_kind)
+        tag.innerHTML =
+          skShort(pt.scene_kind) +
+          ' · <span class="' +
+          confClass(pt.scene_kind_confidence) +
+          '">' +
+          confLabel(pt.scene_kind_confidence) +
+          '</span>';
+      else tag.innerHTML = '<span class="pend">— por classificar</span>';
+      top.appendChild(tag);
+      var btog = el('button', 'ghost sm', null);
+      btog.textContent = open ? 'fechar' : 'classificar ▾';
+      btog.onclick = function () {
+        triagemUI.openId = open ? null : pt.part_id;
+        triagemUI.pend = null;
+        renderTriagem();
+      };
+      top.appendChild(btog);
+      card.appendChild(top);
+      if (open) card.appendChild(renderPicker(pt));
+      box.appendChild(card);
+    });
+    renderCoverage();
+  }
+  function renderPicker(pt) {
+    var p = el('div', 'picker');
+    var f = el('input', 'filter', null);
+    f.placeholder = 'filtrar tipos…';
+    f.value = triagemUI.filter;
+    f.oninput = function () {
+      triagemUI.filter = f.value;
+      var np = renderPicker(pt);
+      p.replaceWith(np);
+      var nf = np.querySelector('.filter');
+      if (nf) {
+        nf.focus();
+        nf.setSelectionRange(nf.value.length, nf.value.length);
+      }
+    };
+    p.appendChild(f);
+    var q = norm(triagemUI.filter.trim());
+    function chips(tier, cls) {
+      var c = el('div', 'chips');
+      SCENE_KINDS.filter(function (sk) {
+        return (
+          sk.tier === tier &&
+          (!q || norm(sk.value).indexOf(q) >= 0 || norm(skShort(sk.value)).indexOf(q) >= 0)
+        );
+      }).forEach(function (sk) {
+        var ch = el(
+          'span',
+          'chip ' + cls + (triagemUI.pend === sk.value ? ' sel' : ''),
+          skShort(sk.value),
+        );
+        ch.title = sk.value;
+        ch.onclick = function () {
+          triagemUI.pend = sk.value;
+          var np = renderPicker(pt);
+          p.replaceWith(np);
+        };
+        c.appendChild(ch);
+      });
+      if (!c.children.length) c.appendChild(el('span', 'muted', '—'));
+      return c;
+    }
+    p.appendChild(chips('ALTA', 'rara'));
+    p.appendChild(chips('comum', ''));
+    var nfwrap = el('div');
+    nfwrap.style.marginTop = '9px';
+    var bnf = el(
+      'span',
+      'chip nofit' + (triagemUI.pend === '__none__' ? ' sel' : ''),
+      '⌀ Nenhum se encaixa',
+    );
+    bnf.onclick = function () {
+      triagemUI.pend = '__none__';
+      var np = renderPicker(pt);
+      p.replaceWith(np);
+    };
+    nfwrap.appendChild(bnf);
+    p.appendChild(nfwrap);
+    if (triagemUI.pend === '__none__') {
+      var rn = el('div', 'confrow');
+      rn.innerHTML =
+        '<span>Marcar como <b>nenhum se encaixa</b> (vira achado, não cena compilada):</span>';
+      var bc = el('button', 'clay sm', 'Confirmar');
+      bc.onclick = function () {
+        pt.tag_state = 'none_fit';
+        pt.scene_kind = null;
+        pt.scene_kind_confidence = null;
+        triagemUI.openId = null;
+        triagemUI.pend = null;
+        renderTriagem();
+      };
+      rn.appendChild(bc);
+      p.appendChild(rn);
+    } else if (triagemUI.pend) {
+      var row = el('div', 'confrow');
+      row.innerHTML = '<span>Confiança em <b>' + skShort(triagemUI.pend) + '</b>:</span>';
+      [
+        ['alta', 'Certeza', 'go sm'],
+        ['média', 'Quase', 'go sm'],
+        ['baixa', 'Na dúvida', 'clay sm'],
+      ].forEach(function (c) {
+        var b = el('button', c[2], c[1]);
+        b.onclick = function () {
+          pt.tag_state = 'tagged';
+          pt.scene_kind = triagemUI.pend;
+          pt.scene_kind_confidence = c[0];
+          triagemUI.openId = null;
+          triagemUI.pend = null;
+          renderTriagem();
+        };
+        row.appendChild(b);
+      });
+      p.appendChild(row);
+    }
+    return p;
+  }
+  function renderCoverage() {
+    var firm = {},
+      hes = {};
+    SCENE_KINDS.forEach(function (sk) {
+      firm[sk.value] = 0;
+      hes[sk.value] = 0;
+    });
+    lockedParts().forEach(function (pt) {
+      if (pt.tag_state === 'tagged' && pt.scene_kind && firm[pt.scene_kind] !== undefined) {
+        if (pt.scene_kind_confidence === 'baixa') hes[pt.scene_kind]++;
+        else firm[pt.scene_kind]++;
+      }
+    });
+    var raras = SCENE_KINDS.filter(function (s) {
+      return s.tier === 'ALTA';
+    });
+    var comuns = SCENE_KINDS.filter(function (s) {
+      return s.tier === 'comum';
+    });
+    var rarasCob = raras.filter(function (s) {
+      return firm[s.value] >= T_TARGET.ALTA;
+    }).length;
+    var nofit = lockedParts().filter(function (p) {
+      return p.tag_state === 'none_fit';
+    }).length;
+    var sm = $('tSummary');
+    if (sm)
+      sm.innerHTML =
+        'Tipos raros de cena cobertos com firmeza: <b>' +
+        rarasCob +
+        '</b>/' +
+        raras.length +
+        ' · abertos: <b style="color:var(--clay)">' +
+        (raras.length - rarasCob) +
+        '</b> <span class="pill">candidatos a ausência</span>';
+    var t = el('table');
+    var head = el('tr');
+    head.innerHTML = '<th>Tipo</th><th>firme</th><th>hesit.</th><th>alvo</th><th>status</th>';
+    t.appendChild(head);
+    function rows(list, tier, label) {
+      var hr = el('tr', 'tierhead');
+      hr.innerHTML = '<td colspan="5">' + label + '</td>';
+      t.appendChild(hr);
+      list.forEach(function (s) {
+        var fv = firm[s.value],
+          hv = hes[s.value],
+          lo = T_TARGET[tier],
+          status,
+          cls;
+        if (fv >= lo) {
+          status = '✓ coberto';
+          cls = 'st-cob';
+        } else if (fv > 0 || hv > 0) {
+          status = '◐ parcial';
+          cls = 'st-par';
+        } else {
+          status = '⚠ aberto';
+          cls = 'st-ab';
+        }
+        var openR = tier === 'ALTA' && fv === 0;
+        var tr = el('tr', openR ? 'open-rara' : '');
+        tr.innerHTML =
+          '<td title="' +
+          s.value +
+          '">' +
+          skShort(s.value) +
+          '</td><td class="num">' +
+          fv +
+          '</td><td class="num">' +
+          (hv ? '<span class="conf-baixa">' + hv + '</span>' : '·') +
+          '</td><td class="num">' +
+          (tier === 'ALTA' ? '1–2' : '3') +
+          '</td><td class="' +
+          cls +
+          '">' +
+          status +
+          '</td>';
+        t.appendChild(tr);
+      });
+    }
+    rows(raras, 'ALTA', 'Tipos raros de cena — ' + raras.length);
+    rows(comuns, 'comum', 'Tipos comuns de cena — ' + comuns.length);
+    var cov = $('triagemCoverage');
+    if (cov) {
+      cov.innerHTML = '';
+      cov.appendChild(t);
+    }
+    var parts = lockedParts();
+    var prod = parts.filter(function (p) {
+      return p.tag_state === 'tagged' && p.scene_kind;
+    }).length;
+    var triaged = parts.filter(function (p) {
+      return p.tag_state !== 'pending';
+    }).length;
+    var nb = $('tNofit');
+    if (nb) {
+      var html = nofit
+        ? '<div class="tsummary">⌀ <b>' +
+          nofit +
+          '</b> cena(s) <b>nenhum se encaixa</b> — evidência para nomear um tipo nativo quando o padrão se repetir (decisão da Marcia → SC).</div>'
+        : '';
+      if (parts.length > 0 && triaged === parts.length && prod === 0) {
+        html +=
+          '<div class="tsummary" style="border-color:var(--clay);color:#6e3b22">⚠ <b>Nenhuma cena se encaixa em Rute.</b> Segmentação e Mapeamento ficam <b>travadas</b> — esta história não rende cobertura de Rute. Escolha outra (carregue outro áudio na aba <b>Escuta</b>). As marcas ficam salvas como evidência de tipo nativo.</div>';
+      }
+      nb.innerHTML = html;
+    }
+    updateModeLocks();
+    updateTriagemDone();
+  }
+
+  /* ---------------- exportar / importar ---------------- */
+  function download(name, obj) {
+    var blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () {
+      URL.revokeObjectURL(a.href);
+    }, 1500);
+  }
+  function buildManifest() {
+    return {
+      manifest_id: state.manifestId,
+      audio_filename: state.audioFilename,
+      bead_duration_sec: state.beadSec,
+      total_beads: state.totalBeads,
+      beads: state.beads.map(function (b) {
+        return { index: b.index, startTime: b.startTime, endTime: b.endTime };
+      }),
+    };
+  }
+  function buildReturn() {
+    var props = [],
+      parts = [],
+      flags = [];
+    var sn = 0;
+    state.parts.forEach(function (pt) {
+      if (pt.locked && pt.span) {
+        sn++;
+        parts.push({
+          part_id: pt.part_id,
+          scene_id: 'S' + sn,
+          scene_kind: pt.scene_kind || null,
+          scene_kind_confidence: pt.scene_kind_confidence || null,
+          tag_state: pt.tag_state || 'pending',
+          confirmed_span: { start_bead: pt.span.s, end_bead: pt.span.e },
+        });
+      }
+    });
+    state.frases.forEach(function (p) {
+      if (p.locked && p.span)
+        props.push({
+          prop_id: p.prop_id,
+          part_link: p.part_link || null,
+          confirmed_span: { start_bead: p.span.s, end_bead: p.span.e },
+        });
+      if (p.flagged) flags.push({ kind: 'NEEDS_REVIEW', prop_id: p.prop_id, note_pt: '' });
+    });
+    return {
+      manifest_id: state.manifestId,
+      story_slug: state.slug,
+      scenes: [
+        {
+          scene_id: state.whole.id,
+          confirmed_span: { start_bead: state.whole.span.s, end_bead: state.whole.span.e },
+          parts: parts,
+          propositions: props,
+        },
+      ],
+      flags: flags,
+    };
+  }
+  function maybeCollapseExport() {
+    if (state.dlRet && state.dlMan) {
+      collapseCard('exportCard', '✓ documentos salvos');
+    }
+  }
+  $('dlManifest').onclick = function () {
+    if (!state.totalBeads) {
+      return;
+    }
+    download((state.slug || 'colar') + '-manifesto-contas.json', buildManifest());
+    state.dlMan = true;
+    maybeCollapseExport();
+  };
+  $('dlReturn').onclick = function () {
+    var msg = $('exportMsg');
+    msg.innerHTML = '';
+    if (!state.whole.confirmed) {
+      msg.innerHTML = '<div class="err">Confirme o colar antes de exportar.</div>';
+      return;
+    }
+    var semFim = state.frases.filter(function (p) {
+      return !p.locked && (p.span || (p.statement_pt && p.statement_pt.trim()));
+    }).length;
+    download((state.slug || 'colar') + '-retorno-ancoragem.json', buildReturn());
+    msg.innerHTML =
+      '<div class="ok">✓ Retorno baixado.' +
+      (semFim ? ' ' + semFim + ' frase(s) ainda sem fim travado.' : '') +
+      '</div>';
+    state.dlRet = true;
+    maybeCollapseExport();
+  };
+  $('loadEntregaBtn').onclick = function () {
+    $('entregaFile').click();
+  };
+  $('entregaFile').onchange = async function (ev) {
+    var f = ev.target.files[0];
+    if (!f) return;
+    try {
+      var data = JSON.parse(await f.text());
+      if (!state.totalBeads) {
+        $('setupMsg').innerHTML =
+          '<div class="err">Segmente o áudio antes de carregar a entrega.</div>';
+        return;
+      }
+      if (data.manifest_id && data.manifest_id !== state.manifestId) {
+        $('setupMsg').innerHTML =
+          '<div class="err">Atenção: o manifest_id da entrega não bate com o do áudio. A grade pode estar diferente.</div>';
+      }
+      var sc = (data.scenes && data.scenes[0]) || null;
+      if (sc) {
+        if (sc.scene_id) state.whole.id = sc.scene_id;
+        state.parts = (sc.parts || []).map(function (pt, idx) {
+          return {
+            part_id: pt.part_id || 'PT' + (idx + 1),
+            span: pt.proposed_span
+              ? { s: pt.proposed_span.start_bead, e: pt.proposed_span.end_bead }
+              : null,
+            color: PALETTE[idx % PALETTE.length],
+            locked: false,
+            scene_kind: pt.scene_kind || null,
+            scene_kind_confidence: pt.scene_kind_confidence || null,
+            tag_state: pt.tag_state || 'pending',
+          };
+        });
+        state.frases = (sc.propositions || []).map(function (p, idx) {
+          return {
+            prop_id: p.prop_id || 'P' + (idx + 1),
+            statement_pt: p.statement_pt || '',
+            qa: p.qa_readback_pt || [],
+            span: p.proposed_span
+              ? { s: p.proposed_span.start_bead, e: p.proposed_span.end_bead }
+              : null,
+            part_link: p.part_link || null,
+            color: PALETTE_PT[idx % PALETTE_PT.length],
+            locked: false,
+            flagged: false,
+          };
+        });
+      }
+      renderWhole();
+      renderParts();
+      renderFrases();
+      renderCord();
+      $('setupMsg').innerHTML +=
+        '<div class="ok">✓ Entrega carregada: ' +
+        state.parts.length +
+        ' cena(s), ' +
+        state.frases.length +
+        ' frase(s). As cenas são propostas — confirme de ouvido.</div>';
+    } catch (e) {
+      $('setupMsg').innerHTML =
+        '<div class="err">Não consegui ler a entrega (' + ((e && e.message) || e) + ').</div>';
+    }
+  };
+  $('resumeBtn').onclick = function () {
+    $('resumeFile').click();
+  };
+  $('resumeFile').onchange = async function (ev) {
+    var f = ev.target.files[0];
+    if (!f) return;
+    try {
+      var data = JSON.parse(await f.text());
+      if (!state.totalBeads) {
+        $('setupMsg').innerHTML = '<div class="err">Segmente o áudio antes de retomar.</div>';
+        return;
+      }
+      var sc = (data.scenes && data.scenes[0]) || null;
+      if (sc && sc.confirmed_span) {
+        state.whole.id = sc.scene_id || 'S1';
+        state.whole.span = { s: sc.confirmed_span.start_bead, e: sc.confirmed_span.end_bead };
+        state.whole.confirmed = true;
+        $('partsCard').classList.remove('locked');
+        state.parts = (sc.parts || []).map(function (pt, idx) {
+          return {
+            part_id: pt.part_id || 'PT' + (idx + 1),
+            span: { s: pt.confirmed_span.start_bead, e: pt.confirmed_span.end_bead },
+            color: PALETTE[idx % PALETTE.length],
+            locked: true,
+            scene_kind: pt.scene_kind || null,
+            scene_kind_confidence: pt.scene_kind_confidence || null,
+            tag_state: pt.tag_state || 'pending',
+          };
+        });
+        if (state.parts.length) {
+          state.partsConfirmed = true;
+          $('frasesCard').classList.remove('locked');
+        }
+        state.frases = (sc.propositions || []).map(function (p, idx) {
+          return {
+            prop_id: p.prop_id,
+            statement_pt: '',
+            qa: [],
+            span: { s: p.confirmed_span.start_bead, e: p.confirmed_span.end_bead },
+            part_link: p.part_link || null,
+            color: PALETTE_PT[idx % PALETTE_PT.length],
+            locked: true,
+            flagged: false,
+          };
+        });
+      }
+      (data.flags || []).forEach(function (fl) {
+        var p = state.frases.filter(function (x) {
+          return x.prop_id === fl.prop_id;
+        })[0];
+        if (p) p.flagged = true;
+      });
+      state.current = { layer: 'frases', index: -1 };
+      state.selection = null;
+      renderWhole();
+      renderParts();
+      renderFrases();
+      renderCord();
+      $('setupMsg').innerHTML +=
+        '<div class="ok">✓ Retomado: ' +
+        state.parts.length +
+        ' cena(s), ' +
+        state.frases.length +
+        ' frase(s).</div>';
+    } catch (e) {
+      $('setupMsg').innerHTML =
+        '<div class="err">Não consegui ler o retorno (' + ((e && e.message) || e) + ').</div>';
+    }
+  };
+
+  $('setupToggle').onclick = function () {
+    var hid = $('setupBody').classList.toggle('hidden');
+    this.textContent = hid ? 'editar' : 'recolher';
+  };
+  function scrollToActive() {
+    var map = { whole: 'cordCard', parts: 'partsCard', frases: 'frasesCard' };
+    var id = map[state.current.layer];
+    if (!id) return;
+    var card = $(id),
+      cord = $('cordCard');
+    if (!card || !cord) return;
+    var top = card.getBoundingClientRect().top + window.pageYOffset - (cord.offsetHeight + 24);
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }
+  $('segBtn').onclick = segment;
+</script>

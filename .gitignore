@@ -1,0 +1,19 @@
+# dependências e builds
+node_modules/
+dist/
+coverage/
+
+# worktrees locais (skill using-git-worktrees)
+.worktrees/
+
+# artefatos de teste
+playwright-report/
+test-results/
+
+# ambiente
+.env
+.env.*
+!.env.example
+
+# sistema
+.DS_Store
