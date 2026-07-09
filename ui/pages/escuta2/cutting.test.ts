@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { PlayAction } from '../../../domain';
+import { scenePalette } from '../../tokens';
 import { playActionOn, sceneColor, sceneLabel } from './cutting';
 
 /**
@@ -73,6 +74,6 @@ describe('sceneLabel — rótulo de cena sem dígitos (PRD v2 §9.2)', () => {
 describe('sceneColor — cor de cena por índice, cíclica (§4.2)', () => {
   it('cores adjacentes diferem e o índice cicla na paleta', () => {
     expect(sceneColor(0)).not.toEqual(sceneColor(1));
-    expect(sceneColor(0)).toEqual(sceneColor(8));
+    expect(sceneColor(0)).toEqual(sceneColor(scenePalette.length));
   });
 });

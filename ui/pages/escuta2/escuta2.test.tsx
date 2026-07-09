@@ -1,7 +1,8 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Player } from '../../../adapters/audio';
 import {
   buildBeads,
   createSession,
@@ -63,6 +64,18 @@ function cutting(overrides: Partial<SessionState>): SessionState {
 
 function load(state: SessionState): void {
   sessionStore.getState().load(state);
+}
+
+/** Player-espião: registra as chamadas de reprodução sem tocar áudio real. */
+function spyPlayer(): Player {
+  return {
+    toggle: vi.fn(),
+    play: vi.fn(),
+    playEdge: vi.fn(),
+    stop: vi.fn(),
+    state: { key: null, playing: false, paused: false },
+    onHead: vi.fn(() => () => {}),
+  };
 }
 
 beforeEach(() => {
@@ -160,6 +173,24 @@ describe('Escuta 2 — chips das cenas confirmadas (redesign §6.3)', () => {
     expect(chips[0]!.getAttribute('aria-label')).toBe('Cena um');
     expect(sessionStore.getState().session!.current.index).toBe(1);
   });
+
+  it('▶ ouvir de um chip toca o span da cena travada pelo player', async () => {
+    const player = spyPlayer();
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 1, e: 6 }), part({ part_id: 'PT2' })],
+        current: { layer: 'parts', index: 1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 player={player} />);
+
+    const chip = screen.getByRole('group', { name: 'Cena um' });
+    await userEvent.click(within(chip).getByRole('button', { name: 'Tocar' }));
+
+    expect(player.toggle).toHaveBeenCalledWith('PT1', 1, 6);
+  });
 });
 
 describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
@@ -210,6 +241,9 @@ describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
     const s = sessionStore.getState().session!;
     expect(s.whole.confirmed).toBe(false);
     expect(s.mode).toBe('escuta');
+    // volta à camada da história — sem âncora ativa enquanto a história não é
+    // reconfirmada (port fiel do cenasBack: setMode('escuta') reseta o current)
+    expect(s.current).toEqual({ layer: 'whole', index: -1 });
     // a cena travada continua lá
     expect(s.parts.some((p) => p.locked && p.part_id === 'PT1')).toBe(true);
   });
@@ -217,19 +251,15 @@ describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
 
 describe('Escuta 2 — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
   it('não mostra dígito, tem ≤1 linha de instrução e exatamente uma ação dominante', () => {
-    const { container } = render(
-      (() => {
-        load(
-          cutting({
-            parts: [lockedPart('PT1', { s: 0, e: 4 }), part({ part_id: 'PT2' })],
-            current: { layer: 'parts', index: 1 },
-            selection: { s: 5, e: 5 },
-            pendingStart: 5,
-          }),
-        );
-        return <Escuta2 />;
-      })(),
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), part({ part_id: 'PT2' })],
+        current: { layer: 'parts', index: 1 },
+        selection: { s: 5, e: 5 },
+        pendingStart: 5,
+      }),
     );
+    const { container } = render(<Escuta2 />);
 
     expect(container.textContent ?? '').not.toMatch(/\d/);
     for (const el of container.querySelectorAll('[aria-label]')) {

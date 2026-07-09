@@ -105,9 +105,17 @@ export function Escuta2({ player = null }: Escuta2Props) {
 
   const back = (): void => {
     setError(null);
+    // Port fiel do `cenasBack` da referência (index.html L903 → setMode('escuta')
+    // com whole desconfirmado → L1014 reseta current p/ a camada da história). O
+    // `setMode` do domínio é puro e não orquestra camada, então compomos o reset.
     sessionStore
       .getState()
-      .apply((s) => setMode({ ...s, whole: { ...s.whole, confirmed: false } }, 'escuta'));
+      .apply((s) =>
+        setMode(
+          { ...s, whole: { ...s.whole, confirmed: false }, current: { layer: 'whole', index: -1 } },
+          'escuta',
+        ),
+      );
   };
 
   const reopen = (i: number): void => {
