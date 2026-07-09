@@ -42,7 +42,7 @@ describe('createSession — espelho do reset de segment() (referência L454–46
 
     expect(s.durationSec).toBe(3);
     expect(s.beadSec).toBe(0.3);
-    expect(s.beads).toBe(beads);
+    expect(s.beads).toEqual(beads);
     expect(s.manifestId).toBe('fnv1a32:1a884f38');
     expect(s.audioFilename).toBe('conta-parcial.wav');
     expect(s.slug).toBe('conta-parcial');

@@ -60,4 +60,13 @@ describe('replaySessionSteps — passos de cena do golden case 2 (ENG-216)', () 
   it('recusa passo de sessão antes do segment', () => {
     expect(() => replaySessionSteps([{ type: 'confirmWhole' }])).toThrow(/segment/);
   });
+
+  it('falha ALTO quando o domínio recusa um passo — nunca replay pela metade', () => {
+    const { steps } = minimalFlow();
+    const segment = steps[0] as GoldenStep;
+    // confirmParts sem nenhuma cena travada → NO_LOCKED_SCENE
+    expect(() =>
+      replaySessionSteps([segment, { type: 'confirmWhole' }, { type: 'confirmParts' }]),
+    ).toThrow(/NO_LOCKED_SCENE/);
+  });
 });

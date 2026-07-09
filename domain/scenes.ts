@@ -51,8 +51,14 @@ export function confirmWhole(state: SessionState): SceneResult {
       message: SCENE_ERROR_COPY.WHOLE_SPAN_INCOMPLETE(state.totalBeads - 1),
     });
   }
-  const confirmed = { ...state, whole: { ...state.whole, confirmed: true } };
-  // a referência segue por setMode("escuta") → enterLayer("parts") (L692, L1013)
+  // a referência segue por setMode("escuta") → enterLayer("parts") (L692,
+  // L1013); setMode também grava mode e derruba review (L985–986)
+  const confirmed: SessionState = {
+    ...state,
+    whole: { ...state.whole, confirmed: true },
+    mode: 'escuta',
+    review: false,
+  };
   return { ok: true, state: enterPartsLayer(confirmed) };
 }
 
@@ -151,8 +157,10 @@ export function confirmParts(state: SessionState): SceneResult {
       selection: null,
       pendingStart: null,
       partsConfirmed: true,
-      // setMode("triagem") (L766): transição direta; gates de modo são ENG-219
+      // setMode("triagem") (L766): transição direta (grava mode e derruba
+      // review, L985–986); gates de modo são ENG-219
       mode: 'triagem',
+      review: false,
     },
   };
 }

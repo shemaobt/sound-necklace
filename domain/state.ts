@@ -5,7 +5,8 @@
  * Shape COMPLETO da sessão (ENG-216): issues posteriores ADICIONAM FUNÇÕES,
  * nunca editam este módulo. Ficam FORA do domínio os campos de UI/playback da
  * referência: `color`, `beadSize`, `playing`, `paused`, `dlRet`, `dlMan`,
- * `mapStep`/`mapN1i`/`mapN2i`/`mapN3i` (andaime de tela) e `audioBuffer` (IO).
+ * `mapStep`/`mapN1i`/`mapN2i`/`mapN3i` (andaime de tela), `whole.label`
+ * ("O colar" — copy de exibição, fora de qualquer artefato) e `audioBuffer` (IO).
  *
  * Desvio DELIBERADO de tipo: `whole.span` é não-nulo — na referência ele nasce
  * `null` e só existe entre segment() e o uso; aqui `createSession` é o único

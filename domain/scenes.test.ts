@@ -83,6 +83,12 @@ describe('confirmWhole (referência L685–694 + enterLayer L930–935)', () => 
     expect(s.mode).toBe('escuta');
   });
 
+  it('espelha o setMode encadeado (L692, L985–986): força mode escuta e sai da revisão', () => {
+    const s = okState(confirmWhole(sess({ mode: 'triagem', review: true })));
+    expect(s.mode).toBe('escuta');
+    expect(s.review).toBe(false);
+  });
+
   it('com slots destravados existentes, assume o ÚLTIMO destravado (quirk enterLayer L931)', () => {
     const s = okState(
       confirmWhole(
@@ -333,6 +339,16 @@ describe('confirmParts (referência L757–767)', () => {
     // o PT# do slot descartado volta ao pool: o próximo addPart reusa PT3
     const depois = addPart(done);
     expect(depois.parts[2]?.part_id).toBe('PT3');
+  });
+
+  it('espelha o setMode encadeado (L766, L986): também sai da revisão', () => {
+    const base = sess({
+      parts: [part({ part_id: 'PT1', span: { s: 0, e: 23 }, locked: true })],
+      review: true,
+    });
+    const s = okState(confirmParts({ ...base, whole: { ...base.whole, confirmed: true } }));
+    expect(s.mode).toBe('triagem');
+    expect(s.review).toBe(false);
   });
 });
 

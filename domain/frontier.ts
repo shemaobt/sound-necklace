@@ -6,6 +6,9 @@
  * O ramo de cena ativa da camada de frases (L401–409: última frase travada na
  * cena, back-reach à vizinha anterior) chega com a ENG-223 — aqui só o ramo
  * genérico, que a referência aplica às duas camadas.
+ *
+ * Desvio de shape: activeAnchor devolve `index` onde a referência devolve o
+ * próprio `item` (L420) — com estado imutável o chamador endereça pelo índice.
  */
 
 import type { SessionState } from './state';

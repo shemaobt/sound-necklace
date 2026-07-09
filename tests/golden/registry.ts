@@ -134,8 +134,7 @@ export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
     if (!state) throw new Error('passo de sessão antes do segment');
     return state;
   };
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i] as GoldenStep;
+  for (const [i, step] of steps.entries()) {
     switch (step.type) {
       case 'segment': {
         const { beadSec, audioFilename, slug, pcm } = step as SegmentStep;
