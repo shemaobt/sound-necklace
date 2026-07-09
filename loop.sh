@@ -39,9 +39,11 @@ while :; do
   git worktree add "$wt" -b "loop-bootstrap-$ts" origin/main
   (
     cd "$wt"
-    # -p (headless): o processo ENCERRA ao fim do turno; --verbose mostra o
-    # progresso (turnos/ferramentas) no terminal em vez de só o texto final.
-    claude -p --verbose "${perm_flags[@]}" "$@" <PROMPT.md || true
+    # -p (headless): o processo ENCERRA ao fim do turno. Em modo texto o -p é
+    # MUDO até o final; por isso emitimos stream-json e filtramos para linhas
+    # legíveis (💬 texto do agente, 🔧 ferramenta, ✅ resultado) em tempo real.
+    claude -p --verbose --output-format stream-json "${perm_flags[@]}" "$@" <PROMPT.md \
+      | python3 -u loop-progress-filter.py || true
   )
   # Remove o worktree APENAS se não houver commits não enviados nem sujeira —
   # nunca perder trabalho de uma iteração interrompida antes do push.
