@@ -25,12 +25,15 @@ describe('buildBeads', () => {
     expect(beads[2]).toEqual({ index: 2, startTime: 0.6, endTime: 0.9 });
   });
 
-  it('toFixed(6) elimina artefatos de float nos tempos (0.9, nunca 0.8999999999999999)', () => {
+  it('tempos da grade saem limpos, sem artefatos de float (0.9, nunca 0.8999999999999999)', () => {
+    // a referência coage via +(x).toFixed(6) — parte do contrato de bytes
     const beads = buildBeads(2, 0.3);
     expect(beads[3]?.startTime).toBe(0.9);
     expect(beads[2]?.endTime).toBe(0.9);
-    // e os tempos são Numbers, não strings
-    expect(typeof beads[3]?.startTime).toBe('number');
+  });
+
+  it('duração zero: grade vazia', () => {
+    expect(buildBeads(0, 0.25)).toEqual([]);
   });
 
   it('duração menor que beadSec: uma única conta parcial terminando na duração', () => {

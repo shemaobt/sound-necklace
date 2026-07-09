@@ -35,7 +35,7 @@ describe('nextPid (P#)', () => {
     expect(nextPid([{ prop_id: 'P1' }, { prop_id: 'P3' }])).toBe('P2');
   });
 
-  it('reusa o ID após remoção e conta slots não travados', () => {
+  it('preenche a lacuna e conta slots não travados', () => {
     expect(nextPid([{ prop_id: 'P2' }])).toBe('P1');
     const frases = [
       { prop_id: 'P1', locked: false },

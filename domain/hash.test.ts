@@ -20,6 +20,13 @@ function makePcm(seed: number, samples: number): Float32Array {
   return pcm;
 }
 
+it('makePcm local está em sincronia com o contrato do harness (vetores seed 42 do README)', () => {
+  // x₁ = 1250496027, x₂ = 1116302264 (tests/golden/README.md)
+  const pcm = makePcm(42, 2);
+  expect(pcm[0]).toBe(Math.fround(1250496027 / 2 ** 30 - 1));
+  expect(pcm[1]).toBe(Math.fround(1116302264 / 2 ** 30 - 1));
+});
+
 function pcmOf(data: Float32Array, channels = 1, sampleRate = 8000): PcmLike {
   return {
     numberOfChannels: channels,
