@@ -1,0 +1,127 @@
+/*
+ * Palco da conversa do Mapeamento (redesign §6.6): momento cerimonial em oliva
+ * full-bleed, guia à esquerda e resposta à direita, fio de progresso embaixo.
+ * A cor herda o creme para a pergunta ler como voz quieta sobre o oliva.
+ */
+.cds-conversation-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-height: 100%;
+  padding: 48px clamp(20px, 6vw, 80px);
+  background: var(--cds-olive);
+  color: var(--cds-cream);
+}
+
+.cds-conversation-stage-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(24px, 5vw, 64px);
+  flex: 1;
+}
+
+.cds-conversation-stage-guide {
+  flex: 0 0 auto;
+  width: clamp(160px, 24vw, 240px);
+}
+
+.cds-conversation-stage-panel {
+  flex: 1 1 360px;
+  max-width: 640px;
+}
+
+.cds-conversation-stage-note {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.78;
+}
+
+.cds-conversation-stage-recorder {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 88px;
+}
+
+/* microfone telha grande — a ação dominante da resposta em voz */
+.cds-conversation-stage-mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border: none;
+  border-radius: 50%;
+  background: var(--cds-telha);
+  color: var(--cds-cream);
+  cursor: pointer;
+}
+
+.cds-conversation-stage-mic:active {
+  background: var(--cds-telha-deep);
+}
+
+.cds-conversation-stage-mic-glyph {
+  width: 34px;
+  height: 34px;
+}
+
+.cds-conversation-stage-waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 48px;
+}
+
+.cds-conversation-stage-review {
+  display: flex;
+  gap: 12px;
+}
+
+.cds-conversation-stage-typed {
+  margin-top: 4px;
+}
+
+.cds-conversation-stage-typed-hint {
+  margin: 0 0 8px;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 13px;
+  opacity: 0.72;
+}
+
+.cds-conversation-stage-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.cds-conversation-stage-nav {
+  display: flex;
+  gap: 12px;
+}
+
+.cds-conversation-stage-progress {
+  width: min(100%, 520px);
+}
+
+/* convite discreto do microfone — movimento decorativo é opt-in (§4.5) */
+@media (prefers-reduced-motion: no-preference) {
+  .cds-conversation-stage-recorder[data-state='idle'] .cds-conversation-stage-mic {
+    animation: cds-conversation-mic-pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes cds-conversation-mic-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--cds-telha, #be4a01) 45%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 0 10px color-mix(in srgb, var(--cds-telha, #be4a01) 0%, transparent);
+    }
+  }
+}
