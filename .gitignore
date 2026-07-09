@@ -17,3 +17,7 @@ test-results/
 
 # sistema
 .DS_Store
+
+# artefatos do vitest browser mode
+.vitest-attachments/
+**/__screenshots__/
