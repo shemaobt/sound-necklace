@@ -10,6 +10,11 @@ describe('ProgressDots — pontos de cena como atalhos (redesign §6.4)', () => 
     expect(screen.getAllByRole('button')).toHaveLength(4);
   });
 
+  it('o conjunto de pontos é um grupo nomeado', () => {
+    render(<ProgressDots count={4} current={0} />);
+    expect(screen.getByRole('group', { name: 'cenas' })).toBeDefined();
+  });
+
   it('clicar o k-ésimo ponto chama onSelect(k)', async () => {
     const onSelect = vi.fn();
     render(<ProgressDots count={4} current={0} onSelect={onSelect} />);

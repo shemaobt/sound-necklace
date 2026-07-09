@@ -23,7 +23,11 @@ export function KindCard({
   /** cor do segmento; ausente na variante none-fit */
   tint?: PaletteEntry;
   selected?: boolean;
-  /** entra na ordem de tabulação (roving tabindex do grupo); padrão = selecionado */
+  /**
+   * entra na ordem de tabulação (roving tabindex do grupo); padrão = selecionado.
+   * O organismo que agrupa os cartões DEVE deixar exatamente um `tabbable` mesmo
+   * sem seleção — senão o grupo inteiro fica inalcançável pelo teclado.
+   */
   tabbable?: boolean;
   /** cartão tracejado "Nenhum se encaixa" */
   noneFit?: boolean;

@@ -10,6 +10,7 @@ export function ProgressDots({
   current,
   onSelect,
   dotLabel = 'ir para a cena',
+  groupLabel = 'cenas',
 }: {
   count: number;
   /** índice da cena em foco */
@@ -17,9 +18,11 @@ export function ProgressDots({
   onSelect?: (index: number) => void;
   /** nome acessível de cada ponto (digit-free) */
   dotLabel?: string;
+  /** nome acessível do grupo de pontos (digit-free) */
+  groupLabel?: string;
 }) {
   return (
-    <div className="cds-progress-dots" role="group">
+    <div className="cds-progress-dots" role="group" aria-label={groupLabel}>
       {Array.from({ length: count }, (_, i) => (
         <button
           key={i}
