@@ -17,8 +17,8 @@ Path: @/ui/atoms
 
 ```
 ui/tokens ──▶ ui/atoms ──▶ ui/molecules ──▶ ui/organisms ──▶ templates/pages/app
-(CSS vars,     (this        (ENG-218,        (necklace,
- PaletteEntry)  folder)      planned)         planned)
+(CSS vars,     (this        (rows, cards,    (necklace +
+ PaletteEntry)  folder)      chips)          more planned)
 ```
 
 ### Core Implementation
