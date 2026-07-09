@@ -1,0 +1,8 @@
+/* Fallback quieto de estação ainda não construída (docs/architecture.md §4). */
+.cds-station-fallback {
+  padding: clamp(40px, 10vh, 120px) clamp(20px, 6vw, 80px);
+  color: var(--cds-warning-ink);
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  text-align: center;
+}

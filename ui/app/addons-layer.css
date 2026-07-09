@@ -1,0 +1,19 @@
+/*
+ * Camada de overlay dos addons (docs/architecture.md §4): região inferior-direita
+ * sobre a estação, sem capturar o ponteiro exceto no próprio addon (§9 — chrome
+ * discreto). Prioridade mais baixa do MVP; nunca atrapalha a estação.
+ */
+.cds-addons-layer {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.cds-addons-layer > * {
+  pointer-events: auto;
+}

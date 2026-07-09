@@ -1,0 +1,15 @@
+/*
+ * Layout do shell (redesign §4.1, §5.1): cabeçalho no topo, fio de contas logo
+ * abaixo, a estação ativa ocupando o resto. Fundo creme por default; as estações
+ * cerimoniais (Escuta 1, Mapeamento) pintam o próprio oliva full-bleed.
+ */
+.cds-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.cds-app-main {
+  flex: 1;
+  min-height: 0;
+}

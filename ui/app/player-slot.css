@@ -1,0 +1,21 @@
+/*
+ * Encaixe do player itinerante (redesign §5.2): o host reserva o lugar; a
+ * transição da instância entre encaixes é animada e legível, nunca um salto —
+ * gated por prefers-reduced-motion.
+ */
+.cds-player-host {
+  display: contents;
+}
+
+/* O player fica ACIMA da cobertura offline do connection gate (z-index 2): o
+   playback client-side segue funcionando mesmo com a edição pausada (§7.3/§13). */
+.cds-player {
+  position: relative;
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-player {
+    transition: opacity var(--cds-motion-duration) var(--cds-motion-easing);
+  }
+}

@@ -1,0 +1,58 @@
+/*
+ * Cabeçalho (redesign §4.1): marca à esquerda, toggle de som à direita. Calmo,
+ * creme, com uma hairline verde quase invisível na base.
+ */
+.cds-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px clamp(16px, 5vw, 48px);
+  background: var(--cds-cream);
+  border-bottom: 1px solid var(--cds-hairline);
+}
+
+.cds-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cds-header-eyebrow {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cds-confidence-filled);
+}
+
+.cds-header-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cds-olive);
+}
+
+.cds-header-subtitle {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--cds-warning-ink);
+}
+
+.cds-header-sound {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--cds-hairline);
+  border-radius: var(--cds-radius-pill);
+  background: transparent;
+  color: var(--cds-olive);
+}
+
+.cds-header-sound[aria-pressed='true'] {
+  color: var(--cds-telha);
+}
