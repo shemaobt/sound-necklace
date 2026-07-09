@@ -1,0 +1,25 @@
+/*
+ * Fileira do protótipo (_rowStyle / .row): pérolas em linha sobre o fio, com
+ * respiro entre contas. O fio (.cds-cord) fica atrás, posicionado pela fileira.
+ */
+.cds-bead-row {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* o fio atravessa a fileira atrás das contas */
+.cds-bead-row > .cds-cord {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  z-index: 0;
+}
+
+.cds-bead-row > .cds-pearl {
+  position: relative;
+  z-index: 1;
+}

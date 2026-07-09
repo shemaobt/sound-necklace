@@ -1,0 +1,48 @@
+/*
+ * Cartão de pergunta (protótipo 1h/2a): a pergunta na voz quieta (Merriweather
+ * itálico); o marcador de papel é um disco areia com o glifo de caderno.
+ */
+.cds-question-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+}
+
+.cds-question-card-role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cds-warning-ink) 22%, var(--cds-cream));
+  color: var(--cds-olive);
+}
+
+.cds-question-card-role-glyph {
+  width: 16px;
+  height: 16px;
+}
+
+.cds-question-card-text {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.45;
+  color: inherit;
+}
+
+.cds-question-card-listen {
+  align-self: flex-start;
+  padding: 9px 18px;
+  border: 1.5px solid var(--cds-hairline);
+  border-radius: var(--cds-radius-pill, 999px);
+  background: transparent;
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 13px;
+  color: inherit;
+  cursor: pointer;
+}

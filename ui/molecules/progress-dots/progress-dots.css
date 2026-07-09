@@ -1,0 +1,29 @@
+/*
+ * Pontos da Triagem (protótipo tDots): discos pequenos; o atual em telha e maior,
+ * os demais no verde a ~22%. Botões-alvo de salto, sem rótulo numérico.
+ */
+.cds-progress-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.cds-progress-dots-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(63, 62, 32, 0.22);
+  cursor: pointer;
+  transition:
+    width 160ms,
+    height 160ms,
+    background-color 160ms;
+}
+
+.cds-progress-dots-dot[data-current='true'] {
+  width: 11px;
+  height: 11px;
+  background: var(--cds-telha);
+}

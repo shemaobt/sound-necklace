@@ -1,0 +1,41 @@
+/*
+ * Estação do fio de contas (protótipo journey): conta + rótulo em caixa alta
+ * pequena; a atual ganha um halo suave e o nome em oliva forte, as outras esmaecem.
+ */
+.cds-stepper-station {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  list-style: none;
+}
+
+.cds-stepper-station-label {
+  font-family: var(--cds-font-load-bearing);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cds-olive) 50%, var(--cds-cream));
+}
+
+.cds-stepper-station[data-state='current'] .cds-stepper-station-label {
+  color: var(--cds-olive);
+}
+
+/* halo suave da conta atual (protótipo journey box-shadow 0 0 0 4px) */
+.cds-stepper-station[data-state='current'] .cds-pearl {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cds-telha) 22%, transparent);
+}
+
+/* estado também em texto, escondido do olho mas lido por leitores de tela */
+.cds-stepper-station-state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

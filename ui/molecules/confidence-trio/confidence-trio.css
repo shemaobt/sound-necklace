@@ -1,0 +1,49 @@
+/*
+ * Três cartões grandes (protótipo 1e): Certeza oliva, Quase areia, Na dúvida
+ * branco tracejado — o disco (átomo) carrega a forma; o cartão dá o toque grande.
+ */
+.cds-confidence-trio {
+  display: flex;
+  gap: 26px;
+}
+
+.cds-confidence-trio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 168px;
+  padding: 28px 16px;
+  border: 1.5px solid transparent;
+  border-radius: var(--cds-radius-card, 20px);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+  transition:
+    box-shadow var(--cds-motion-duration, 220ms) var(--cds-motion-easing, ease-out),
+    transform var(--cds-motion-duration, 220ms) var(--cds-motion-easing, ease-out);
+}
+
+.cds-confidence-trio-card[data-choice='certeza'] {
+  background: var(--cds-confidence-filled);
+  color: var(--cds-cream);
+  box-shadow: 0 4px 14px rgba(63, 62, 32, 0.18);
+}
+
+.cds-confidence-trio-card[data-choice='quase'] {
+  background: var(--cds-warning-bg);
+  color: var(--cds-warning-ink);
+  border-color: color-mix(in srgb, var(--cds-confidence-half) 30%, transparent);
+}
+
+.cds-confidence-trio-card[data-choice='duvida'] {
+  background: white;
+  color: var(--cds-warning-ink);
+  border-style: dashed;
+  border-color: var(--cds-hairline);
+}
+
+.cds-confidence-trio-card[aria-checked='true'] {
+  box-shadow: 0 0 0 3px var(--cds-telha);
+}

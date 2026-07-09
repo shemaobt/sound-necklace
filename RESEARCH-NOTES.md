@@ -151,6 +151,33 @@ durable findings (not narration) at iteration end. Delete entries that stop bein
   contracts são banidos de tests/) — o brief da ENG-217 cita esse import de
   propósito para a fixture sintetizar o PCM dourado.
 
+## UI molecules / camada de composição (verificado 2026-07-09, ENG-218)
+
+- **Nenhum glifo lock/caderno/mic/download existe** no repo — só `PlayGlyph`
+  (play/pause, filled) e `ShemaIcon` (marca). Molecules autoram os seus inline
+  (Feather stroke, viewBox 24, `aria-hidden`+`focusable=false`, `currentColor`).
+  Paths lift-áveis verbatim dos protótipos: cadeado
+  `rect 4,10 16x10 rx2 + M8 10V7a4 4 0 0 1 8 0v3`; caderno
+  `M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z`; download
+  `M12 4v11 / M7 10l5 5 5-5 / M4 19h16`; check `M20 6L9 17l-5-5`.
+- **Decisões de a11y (pesquisa web, APG/WCAG)**: escolha única = `role=radiogroup`
+  - `role=radio` + `aria-checked` com roving tabindex (NÃO toggles com aria-pressed,
+    NÃO `<ul>` de botões) — usado no `confidence-trio` (grupo completo, dono do
+    roving+setas) e no `kind-card` (radio isolado; o organismo ENG-225 orquestra o
+    grupo). Chip com ações = container `role=group`+`aria-label` com botões-IRMÃOS
+    (nunca aninhar interativos — WCAG 4.1.2). Stepper = `<ol>/<li>` +
+    `aria-current="step"`, não-focável, sem `<nav>`; texto sr-only p/ done/atual/futuro.
+    Dots-como-atalho = `<button>` nomeado, atual com `aria-current="step"`.
+- **Teste sem jest-dom**: consultar por papel+nome (`getByRole('radio',{name,checked:true})`);
+  o filtro de papel `{checked}`/`{current:'step'}`/`{pressed}` já afirma estado sem
+  matcher; payloads via `vi.fn()`+`toHaveBeenCalledWith`. Helpers CSS reusados de
+  `ui/atoms/testing/css.ts` (import `../../atoms/testing/css` do teste da molécula).
+- Molecules importam só `ui/atoms` (barrel), `ui/tokens` e React; irmãos por caminho
+  direto (regra depcruise `atomos-e-moleculas-puros`). Não precisam de novo
+  `cds-css-props.d.ts` (a augmentation `--cds-*` é global/ambient). Pergunta em
+  Merriweather usa `var(--cds-font-quiet-voice)`. Trio emite tokens presentacionais
+  `certeza|quase|duvida` (não `alta/média/baixa`) p/ ficar domain-free; a página mapeia.
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.

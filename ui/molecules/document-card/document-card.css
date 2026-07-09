@@ -1,0 +1,64 @@
+/*
+ * Cartão de documento (protótipo Guardar): branco, raio generoso, sombra baixa;
+ * o botão baixar é a pílula telha e, baixado, esmaece para o oliva concluído.
+ */
+.cds-document-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+  padding: 30px 32px;
+  border-radius: 22px;
+  background: white;
+  box-shadow: 0 2px 6px rgba(63, 62, 32, 0.08);
+}
+
+.cds-document-card-filename {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cds-olive) 55%, var(--cds-cream));
+}
+
+.cds-document-card-title {
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--cds-olive);
+}
+
+.cds-document-card-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--cds-olive) 78%, var(--cds-cream));
+}
+
+.cds-document-card-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--cds-radius-pill, 999px);
+  background: var(--cds-telha);
+  color: var(--cds-cream);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--cds-telha) 28%, transparent);
+}
+
+.cds-document-card-glyph {
+  width: 18px;
+  height: 18px;
+}
+
+.cds-document-card-download[data-downloaded='true'] {
+  background: color-mix(in srgb, var(--cds-confidence-filled) 16%, white);
+  color: color-mix(in srgb, var(--cds-confidence-filled) 80%, black);
+  box-shadow: none;
+}
