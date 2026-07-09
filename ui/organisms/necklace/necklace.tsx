@@ -1,0 +1,330 @@
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
+
+import type { Span } from '../../../domain';
+import { Pearl, type PearlState } from '../../atoms';
+import type { PaletteEntry } from '../../tokens';
+import {
+  bandRects,
+  beadAtXY,
+  beadPosition,
+  beadsPerRow,
+  type Rect,
+  resolveWindow,
+  type Size,
+  SIZE_M,
+} from './geometry';
+import './necklace.css';
+
+/** Um segmento colorido (cena ou frase) que tinge um trecho de contas. */
+export interface NecklaceSegment {
+  span: Span;
+  tint: PaletteEntry;
+}
+
+/**
+ * Contrato de props do colar. Para a iluminação de playback rodar a 60fps SEM
+ * re-render (o campo de contas é memoizado sem `playbackHead`), as props
+ * ESTRUTURAIS — `segments`, `lockedEndBeads`, `selection`, `window`, `size` —
+ * devem ser referencialmente estáveis entre frames: a página que dirige o
+ * `playbackHead` não deve recriar esses valores inline a cada frame, ou o campo
+ * recomputa e o ganho se perde.
+ */
+export interface NecklaceProps {
+  totalBeads: number;
+  beadSec: number;
+  /** trechos coloridos pela paleta do segmento (§4.2) */
+  segments?: NecklaceSegment[];
+  /** índices de conta que terminam cenas travadas → rendem quadradas (§4.3) */
+  lockedEndBeads?: number[];
+  selection?: Span | null;
+  pendingStart?: number | null;
+  /** span da cena ativa (Segmentação): abre a janela cena ± margem, dim fora, banda tracejada */
+  window?: Span | null;
+  /** cabeça de reprodução: acende as contas ≤ head de forma imperativa (60fps) */
+  playbackHead?: number | null;
+  /** modo transporte (Escuta/review): toca ao tocar, sem afordâncias de seleção */
+  transportOnly?: boolean;
+  size?: Size;
+  onBeadPointerDown?: (bead: number) => void;
+  onEdgeHover?: (edge: number) => void;
+  onHeadTap?: () => void;
+}
+
+interface BeadDescriptor {
+  index: number;
+  left: number;
+  top: number;
+  state: PearlState;
+  tint?: PaletteEntry;
+  sceneEnd: boolean;
+  selEdge: boolean;
+}
+
+interface Field {
+  beads: BeadDescriptor[];
+  sceneBand: Rect[];
+  selectionBand: Rect[];
+  height: number;
+}
+
+function computeField(
+  total: number,
+  beadSec: number,
+  width: number,
+  size: Size,
+  segments: NecklaceSegment[],
+  lockedEndBeads: number[],
+  selection: Span | null,
+  window: Span | null,
+): Field {
+  const { winS, winE } = resolveWindow(total, beadSec, window);
+  const bpr = beadsPerRow(width, size);
+
+  const colorMap = new Map<number, PaletteEntry>();
+  for (const seg of segments) {
+    for (let i = seg.span.s; i <= seg.span.e; i++) colorMap.set(i, seg.tint);
+  }
+  const endSet = new Set(lockedEndBeads);
+
+  const beads: BeadDescriptor[] = [];
+  for (let i = winS; i <= winE; i++) {
+    const dim = window !== null && (i < window.s || i > window.e);
+    const pos = beadPosition(i, winS, bpr, size);
+    beads.push({
+      index: i,
+      left: pos.left,
+      top: pos.top,
+      state: dim ? 'dim' : 'unplayed',
+      tint: colorMap.get(i),
+      sceneEnd: endSet.has(i),
+      selEdge: selection !== null && (i === selection.s || i === selection.e),
+    });
+  }
+
+  const sceneBand = window
+    ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, bpr, size, 4)
+    : [];
+  const selectionBand = selection
+    ? bandRects(Math.max(winS, selection.s), Math.min(winE, selection.e), winS, bpr, size, 3)
+    : [];
+
+  const rows = Math.ceil((winE - winS + 1) / bpr);
+  return { beads, sceneBand, selectionBand, height: rows * size.row + 12 };
+}
+
+/** Estado vivo lido pelos listeners nativos delegados (padrão ref-mirror). */
+interface Interaction {
+  total: number;
+  size: Size;
+  winS: number;
+  winE: number;
+  bpr: number;
+  selection: Span | null;
+  transportOnly: boolean;
+  playbackHead: number | null;
+  onBeadPointerDown?: (bead: number) => void;
+  onEdgeHover?: (edge: number) => void;
+  onHeadTap?: () => void;
+}
+
+const BeadField = memo(function BeadField({ field, size }: { field: Field; size: Size }) {
+  return (
+    <>
+      {field.sceneBand.map((r, i) => (
+        <div
+          key={`scene-${i}`}
+          className="cds-necklace-scene-band"
+          style={{
+            left: `${r.left}px`,
+            top: `${r.top}px`,
+            width: `${r.width}px`,
+            height: `${r.height}px`,
+          }}
+        />
+      ))}
+      {field.selectionBand.map((r, i) => (
+        <div
+          key={`sel-${i}`}
+          className="cds-necklace-selection-band"
+          style={{
+            left: `${r.left}px`,
+            top: `${r.top}px`,
+            width: `${r.width}px`,
+            height: `${r.height}px`,
+          }}
+        />
+      ))}
+      {field.beads.map((b) => (
+        <span
+          key={b.index}
+          className="cds-necklace-bead"
+          data-idx={b.index}
+          data-sel-edge={b.selEdge || undefined}
+          style={{ left: `${b.left}px`, top: `${b.top}px` }}
+        >
+          <Pearl state={b.state} tint={b.tint} size={size.bead} sceneEnd={b.sceneEnd} />
+        </span>
+      ))}
+    </>
+  );
+});
+
+/**
+ * O colar — o herói (redesign §6). Contas renderizadas como DOM gerenciado pelo
+ * React; a iluminação de playback é IMPERATIVA (escreve `data-play` via ref, sem
+ * re-render), e um único handler de pointer delegado no container mapeia
+ * pointer→conta pela geometria e chama de volta. As DECISÕES de seleção vivem em
+ * domain/selection.ts — este organismo só reporta o índice.
+ */
+export function Necklace(props: NecklaceProps) {
+  const {
+    totalBeads,
+    beadSec,
+    segments,
+    lockedEndBeads,
+    selection = null,
+    window = null,
+    playbackHead = null,
+    transportOnly = false,
+    size = SIZE_M,
+  } = props;
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  // afordâncias de seleção somem no modo transporte
+  const effectiveSelection = transportOnly ? null : selection;
+
+  const field = useMemo(
+    () =>
+      computeField(
+        totalBeads,
+        beadSec,
+        width,
+        size,
+        segments ?? [],
+        lockedEndBeads ?? [],
+        effectiveSelection,
+        window,
+      ),
+    [totalBeads, beadSec, width, size, segments, lockedEndBeads, effectiveSelection, window],
+  );
+
+  const { winS, winE } = resolveWindow(totalBeads, beadSec, window);
+  const bpr = beadsPerRow(width, size);
+
+  // ref-mirror: os listeners nativos (montados uma vez) leem sempre o estado atual.
+  // A escrita em ref fica num efeito (a regra react-hooks/refs proíbe mutar no render).
+  const ixRef = useRef<Interaction>(null as unknown as Interaction);
+  useLayoutEffect(() => {
+    ixRef.current = {
+      total: totalBeads,
+      size,
+      winS,
+      winE,
+      bpr,
+      selection: effectiveSelection,
+      transportOnly,
+      playbackHead,
+      onBeadPointerDown: props.onBeadPointerDown,
+      onEdgeHover: props.onEdgeHover,
+      onHeadTap: props.onHeadTap,
+    };
+  });
+
+  // medida da largura (síncrona) + observador de resize
+  useLayoutEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const measure = () => setWidth(node.clientWidth);
+    measure();
+    // ResizeObserver não existe no jsdom; a medida síncrona basta lá.
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
+
+  // handlers delegados nativos — montados UMA vez; leem ixRef.current
+  useLayoutEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    function beadFromEvent(ev: PointerEvent): number {
+      const ix = ixRef.current;
+      const rect = node!.getBoundingClientRect();
+      return beadAtXY(
+        ev.clientX - rect.left,
+        ev.clientY - rect.top,
+        ix.winS,
+        ix.winE,
+        ix.bpr,
+        ix.size,
+      );
+    }
+
+    function onPointerDown(ev: PointerEvent): void {
+      const ix = ixRef.current;
+      if (!ix.total) return;
+      const bead = beadFromEvent(ev);
+      if (ix.playbackHead !== null && bead === ix.playbackHead) ix.onHeadTap?.();
+      else ix.onBeadPointerDown?.(bead);
+      ev.preventDefault();
+    }
+
+    let hoverEdge: number | null = null;
+    let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearHover = () => {
+      if (hoverTimer) clearTimeout(hoverTimer);
+      hoverTimer = null;
+      hoverEdge = null;
+    };
+
+    function onPointerMove(ev: PointerEvent): void {
+      const ix = ixRef.current;
+      if (ev.pointerType === 'touch') return; // hover só no mouse
+      const sel = ix.selection;
+      if (!ix.total || ix.transportOnly || !sel) return clearHover();
+      const bead = beadFromEvent(ev);
+      const near = (edge: number) => bead === edge || bead === edge - 1 || bead === edge + 1;
+      const edge = near(sel.s) ? sel.s : near(sel.e) ? sel.e : null;
+      if (edge === null) return clearHover();
+      if (edge === hoverEdge) return; // já agendado/tocado nesta fronteira
+      hoverEdge = edge;
+      if (hoverTimer) clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => {
+        // re-checa a seleção: se ela sumiu durante o dwell, não toca (referência L595)
+        if (hoverEdge === edge && ixRef.current.selection) ixRef.current.onEdgeHover?.(edge);
+      }, 280);
+    }
+
+    node.addEventListener('pointerdown', onPointerDown);
+    node.addEventListener('pointermove', onPointerMove);
+    node.addEventListener('pointerleave', clearHover);
+    return () => {
+      node.removeEventListener('pointerdown', onPointerDown);
+      node.removeEventListener('pointermove', onPointerMove);
+      node.removeEventListener('pointerleave', clearHover);
+      if (hoverTimer) clearTimeout(hoverTimer);
+    };
+  }, []);
+
+  // iluminação de playback — imperativa: escreve `data-play` nas contas ≤ head
+  // sem re-renderizar os elementos (BeadField é memoizado sem playbackHead).
+  useLayoutEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const head = playbackHead;
+    for (const bead of node.querySelectorAll<HTMLElement>('.cds-necklace-bead')) {
+      const idx = Number(bead.dataset.idx);
+      if (head === null || idx > head) delete bead.dataset.play;
+      else bead.dataset.play = idx === head ? 'head' : 'played';
+    }
+  }, [playbackHead, field]);
+
+  return (
+    <div ref={containerRef} className="cds-necklace" style={{ height: `${field.height}px` }}>
+      <BeadField field={field} size={size} />
+    </div>
+  );
+}

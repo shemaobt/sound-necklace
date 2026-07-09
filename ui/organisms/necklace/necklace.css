@@ -1,0 +1,87 @@
+/*
+ * O colar (redesign §4.3, §6.2, §6.5) — contas posicionadas em absoluto sobre um
+ * container único (porta da geometria da referência renderCord/drawBand). A
+ * iluminação de playback entra por `data-play` (escrito de forma imperativa, fora
+ * do JSX); a banda de seleção e a banda de cena são sobreposições sem hit-test.
+ */
+.cds-necklace {
+  position: relative;
+  width: 100%;
+  touch-action: none;
+}
+
+.cds-necklace-bead {
+  position: absolute;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+}
+
+/* contas de borda da seleção: anel telha (§9.3 — "toque aqui para ouvir a costura") */
+.cds-necklace-bead[data-sel-edge='true'] {
+  z-index: 2;
+}
+
+.cds-necklace-bead[data-sel-edge='true'] .cds-pearl {
+  box-shadow:
+    0 0 0 2px var(--cds-cream, #f6f5eb),
+    0 0 0 3.5px var(--cds-telha, #be4a01);
+}
+
+/* trilha percorrida: a conta acende no tom quente */
+.cds-necklace-bead[data-play='played'] .cds-pearl {
+  box-shadow: 0 1px 3px rgba(10, 7, 3, 0.2);
+  filter: brightness(1.05);
+}
+
+/* a cabeça de reprodução: anel de destaque, escala recuperada */
+.cds-necklace-bead[data-play='head'] {
+  z-index: 3;
+}
+
+.cds-necklace-bead[data-play='head'] .cds-pearl {
+  transform: scale(1.18);
+  box-shadow:
+    0 0 0 2.5px rgba(246, 245, 235, 0.95),
+    0 2px 6px rgba(10, 7, 3, 0.28);
+}
+
+/* banda suave de seleção sob o intervalo pendente (redesign §4.3) */
+.cds-necklace-selection-band {
+  position: absolute;
+  z-index: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cds-telha, #be4a01) 14%, transparent);
+  pointer-events: none;
+}
+
+/* banda tracejada da cena ativa em Segmentação (redesign §6.5 — "banda acordada") */
+.cds-necklace-scene-band {
+  position: absolute;
+  z-index: 0;
+  border: 1.5px dashed color-mix(in srgb, var(--cds-olive, #3f3e20) 45%, transparent);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+/* movimento decorativo é opt-in: quem prefere menos movimento nunca o recebe (§4.5) */
+@media (prefers-reduced-motion: no-preference) {
+  .cds-necklace-bead[data-play='head'] .cds-pearl {
+    animation: cds-necklace-head-glow 1.6s ease-in-out infinite;
+  }
+
+  @keyframes cds-necklace-head-glow {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 2.5px rgba(246, 245, 235, 0.95),
+        0 0 0 5px color-mix(in srgb, var(--cds-telha, #be4a01) 22%, transparent),
+        0 2px 6px rgba(10, 7, 3, 0.28);
+    }
+    50% {
+      box-shadow:
+        0 0 0 2.5px rgba(246, 245, 235, 0.95),
+        0 0 0 12px color-mix(in srgb, var(--cds-telha, #be4a01) 0%, transparent),
+        0 2px 6px rgba(10, 7, 3, 0.28);
+    }
+  }
+}

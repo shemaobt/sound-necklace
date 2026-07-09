@@ -178,6 +178,41 @@ durable findings (not narration) at iteration end. Delete entries that stop bein
   Merriweather usa `var(--cds-font-quiet-voice)`. Trio emite tokens presentacionais
   `certeza|quase|duvida` (não `alta/média/baixa`) p/ ficar domain-free; a página mapeia.
 
+## UI organisms — o colar / browser mode (verificado 2026-07-09, ENG-220)
+
+- **Sem `vitest-browser-react` no repo.** O único browser test (`ui/browser-smoke.browser.test.tsx`)
+  monta com `createRoot`/`flushSync` cru + APIs DOM. Reusar esse padrão nos
+  `*.browser.test.tsx` do organismo (evita dep nova / mudança em package.json fora do escopo).
+- **Eventos por coordenada**: `userEvent` (Playwright) NÃO aceita clientX/clientY e roda
+  actionability checks que quebram com milhares de beads sobrepostos. Usar
+  `el.dispatchEvent(new PointerEvent(type,{clientX,clientY,pointerType:'mouse',bubbles:true,...}))` —
+  síncrono, determinístico; `getBoundingClientRect()` devolve geometria real no Chromium.
+- **Dwell de 280ms**: fake timers funcionam em browser mode (`@sinonjs`), mas dão deadlock
+  se misturados com `userEvent` (CDP). Como uso dispatch nativo (síncrono), posso
+  `vi.useFakeTimers()` + `await vi.advanceTimersByTimeAsync(280)`. Fallback: `vi.waitFor` com timers reais.
+- **Ilha imperativa (react.dev)**: seguro tocar SÓ atributos que o React não gerencia.
+  Alternar um `data-*` que NÃO vem de JSX é seguro entre re-renders (a reconciliação só
+  escreve/remove atributos vistos no JSX; nunca mexe no que não conhece). NÃO usar `class`
+  gerenciada por `className` no JSX (React sobrescreve a string inteira no re-render).
+  Chaves estáveis por bead → identidade de nó DOM preservada.
+- **Sem re-render por frame**: memoizar o campo de beads (`React.memo`) com apenas props
+  ESTRUTURAIS; `playbackHead` fica FORA delas e a iluminação roda num `useEffect` que escreve
+  `data-play` via ref do container → mudar head não reconcilia os beads (identidade estável).
+- **Listener único**: `useEffect` com `addEventListener('pointerdown'|'pointermove'|'pointerleave')`
+  no container (não `onPointerDown` JSX, que o React delega na raiz). Mapear pointer→bead por
+  geometria (`beadAtXY`: rect + `Z.slot`/`Z.row`) espelhando a referência L554–560 (clamp à janela).
+  Contar via `vi.spyOn(HTMLElement.prototype,'addEventListener')` antes do render.
+- **Janela = span da cena ativa** (prop `window {s,e}|null`): o organismo deriva o range de
+  render `cena ± max(3, round(2/beadSec))` (referência L509), dim nos beads da margem, band
+  tracejada sobre a cena; `beadAtXY`/posições usam `winS = cena.s − M` (o "window offset" da DoD).
+- Geometria M (referência L484): `SIZES.M={slot:25,bead:18,row:31}`; `bpr=max(1,floor(W/slot))`;
+  bead `left=col*slot+slot/2`, `top=6+row*row+row/2` (centro; wrapper com translate(-50%,-50%)).
+  `drawBand` (L485–498) desenha retângulos por linha para banda de seleção (pad 3) e cena (pad 4).
+- Convenções de camada: organismo pode importar `domain` (tipos) + `ui/tokens` + `ui/atoms`/`molecules`
+  (barrels), nunca adapters (depcruise `organismos-sem-adapters`). Precisa do próprio
+  `ui/organisms/index.ts`, `docs.md` e `minimalism.test.tsx` (§9.2: sem dígitos em texto/aria/title;
+  `data-idx` interno é permitido). Augmentation `--cds-*` é global (não recriar).
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.
