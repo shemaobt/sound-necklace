@@ -47,7 +47,9 @@ export function stepperStations(state: SessionState): StepperStationView[] {
     locks.triagem,
     locks.segmentacao,
     locks.mapeamento,
-    locks.mapeamento,
+    // Guardar (export) é a cauda: exibida como conta futura, mas ainda não
+    // alcançável — a estação Export a liga na ENG-246 (evita afordância morta).
+    false,
   ];
   const ci = currentIndex(state);
   return STATIONS.map((def, i) => ({

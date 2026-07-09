@@ -92,5 +92,8 @@ describe('stepperStations — estados derivados dos gates do domínio', () => {
     expect(pick(s, 'mapeamento').state).toBe('current');
     expect(pick(s, 'triagem').state).toBe('done');
     expect(pick(s, 'segmentacao').state).toBe('done');
+    // Guardar (export) segue a cauda futura, ainda não alcançável (ENG-246).
+    expect(pick(s, 'export').reachable).toBe(false);
+    expect(pick(s, 'export').state).toBe('future');
   });
 });
