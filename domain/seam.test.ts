@@ -55,15 +55,10 @@ const PT2 = mkPart('PT2', { s: 10, e: 29 }, { tag_state: 'tagged', scene_kind: '
 const PT3 = mkPart('PT3', { s: 30, e: 39 }, { tag_state: 'none_fit' });
 
 describe('prevNeighbor / nextNeighbor — vizinhas travadas (none_fit incluído)', () => {
-  it('acha a vizinha imediata em cada direção', () => {
+  it('acha a vizinha imediata em cada direção (none_fit conta)', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
     expect(prevNeighbor(s, PT2)?.part_id).toBe('PT1');
-    expect(nextNeighbor(s, PT2)?.part_id).toBe('PT3');
-  });
-
-  it('none_fit conta como vizinha (só travada+span importa)', () => {
-    const s = sess({ parts: [PT2, PT3] });
-    expect(nextNeighbor(s, PT2)?.part_id).toBe('PT3');
+    expect(nextNeighbor(s, PT2)?.part_id).toBe('PT3'); // PT3 é none_fit
   });
 
   it('sem vizinha na direção devolve null', () => {
@@ -85,6 +80,11 @@ describe('prevNeighbor / nextNeighbor — vizinhas travadas (none_fit incluído)
     const perto = mkPart('PT8', { s: 4, e: 9 });
     const s = sess({ parts: [longe, perto, PT2] });
     expect(prevNeighbor(s, PT2)?.part_id).toBe('PT8');
+    // e na outra direção, com a candidata pior examinada depois da melhor
+    const dep1 = mkPart('PT6', { s: 30, e: 33 });
+    const dep2 = mkPart('PT7', { s: 34, e: 39 });
+    const s2 = sess({ parts: [PT2, dep1, dep2] });
+    expect(nextNeighbor(s2, PT2)?.part_id).toBe('PT6');
   });
 
   it('cena sem span não tem vizinhas', () => {
@@ -265,8 +265,7 @@ describe('slideSeam — a cena cresce, a vizinha imediata encolhe', () => {
 
   it('newStart/newEnd que não ultrapassam o span atual não mexem em nada', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
-    const next = slideSeam(s, 'PT2', 12, 25);
-    expect(next.parts[1]!.span).toEqual({ s: 10, e: 29 });
+    expect(slideSeam(s, 'PT2', 12, 25)).toBe(s);
   });
 });
 

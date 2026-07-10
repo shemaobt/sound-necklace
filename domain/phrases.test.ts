@@ -10,7 +10,6 @@ import {
   enterFrasesLayer,
   enterScene,
   enterSegmentacao,
-  FRASE_ERROR_COPY,
   moveBorder,
   phraseFrontier,
   reanchorFrase,
@@ -141,6 +140,14 @@ describe('phraseFrontier — fronteira com back-reach (§6.4)', () => {
     });
     expect(phraseFrontier(s)).toBe(0); // ainda o back-reach a PT1
   });
+
+  it('sem cena produtiva cai no ramo genérico da fronteira', () => {
+    const s = sess({
+      parts: [PT3],
+      frases: [mkFrase('P1', { locked: true, span: { s: 30, e: 34 }, part_link: 'PT3' })],
+    });
+    expect(phraseFrontier(s)).toBe(35); // fim da última frase travada + 1
+  });
 });
 
 describe('addFrase — slot com menor P# livre', () => {
@@ -221,9 +228,6 @@ describe('confirmFrase — guardas na ordem da referência', () => {
       code: 'FRASE_BEFORE_FRONTIER',
       message: 'A frase não pode começar antes da conta 15.',
     });
-    expect(FRASE_ERROR_COPY.FRASE_BEFORE_FRONTIER(15)).toBe(
-      'A frase não pode começar antes da conta 15.',
-    );
   });
 
   it('fim além do colar: "A frase precisa terminar dentro do colar."', () => {
