@@ -15,6 +15,7 @@ export {
   type Retorno,
   type RetornoExportStatus,
 } from './retorno';
+export { buildMapReport, relatorioFilename } from './relatorio';
 
 // DTOs PROVISÓRIOS do bucket + endpoints (ENG-235) — trocados pelos tipos gerados
 // do OpenAPI do tripod-api (ENG-211). Adapters importam SOMENTE os tipos daqui.
