@@ -537,10 +537,18 @@ max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
   `role=group` aninhado em radiogroup NÃO é sancionado (required owned = só radio;
   suporte de AT inconsistente). Roving tabindex com setas movendo foco SEM marcar
   (variante toolbar): marcar no arrow dispararia a troca grid→confiança a cada
-  tecla. Revelar o passo 2 após seleção sem mover foco (WCAG 3.2.2/2.4.3).
-  `KindCard` não encaminha ref ⇒ o roving usa `querySelectorAll('.cds-kind-card')`
-  no container (ordem DOM = ordem do array de render) + estado `focusedKey`
-  dirigindo `tabbable`.
+  tecla. `KindCard` não encaminha ref ⇒ o roving usa
+  `querySelectorAll('[role="radio"]')` no container (ordem DOM = ordem do array
+  de render) + índice `focusedIdx` dirigindo `tabbable` (reset a 0 quando a
+  lista muda: filtro/disclosure).
+- **Passo de confiança NÃO emite na seleção** (self-review 2026-07-10): o
+  ConfidenceTrio é APG padrão (setas movem E marcam via onSelect) — mapear
+  onSelect→onConfirm faria uma seta de exploração cometer a triagem. O picker
+  guarda a escolha em estado local (`value` controlado, aria-checked real) e a
+  emissão contratual fica num botão "Confirmar" dominante revelado após a
+  primeira escolha. Trocas de estágio (grade↔confiança, disclosure↔recolher)
+  gerem foco explicitamente (senão cai no body, WCAG 2.4.3) — padrão useEffect
+  com ref de estágio anterior, foco no `[role="radio"][tabindex="0"]`.
 - Barrel `ui/organisms/index.ts` fica FORA do escopo da ENG-225 (precedente
   ConnectionGate/ENG-224): a estação (ENG-236) importa por caminho direto ou
   adiciona ao barrel no escopo dela.

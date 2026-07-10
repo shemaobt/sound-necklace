@@ -6,8 +6,8 @@
   position: absolute;
   right: 0;
   top: 42%;
-  background: #3f3e20;
-  color: #f6f5eb;
+  background: var(--cds-olive, #3f3e20);
+  color: var(--cds-cream, #f6f5eb);
   border: none;
   border-radius: 12px 0 0 12px;
   padding: 14px 9px;
@@ -37,15 +37,15 @@
   top: 0;
   bottom: 0;
   width: 340px;
-  background: #3f3e20;
-  color: #f6f5eb;
+  background: var(--cds-olive, #3f3e20);
+  color: var(--cds-cream, #f6f5eb);
   box-shadow: -16px 0 40px -8px rgba(10, 7, 3, 0.3);
   padding: 26px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
-  font-family: 'Montserrat', system-ui, sans-serif;
+  font-family: var(--cds-font-load-bearing, 'Montserrat', system-ui, sans-serif);
 }
 
 .cds-coverage-drawer-head {
@@ -67,7 +67,7 @@
 .cds-coverage-drawer-close {
   background: transparent;
   border: none;
-  color: #f6f5eb;
+  color: var(--cds-cream, #f6f5eb);
   font-size: 20px;
   line-height: 1;
 }
@@ -80,7 +80,7 @@
 }
 
 .cds-coverage-drawer-intro strong {
-  color: #f6f5eb;
+  color: var(--cds-cream, #f6f5eb);
 }
 
 .cds-coverage-drawer-rows {

@@ -143,6 +143,26 @@ describe('TriagemPicker — filtro (conveniência da facilitadora)', () => {
     fireEvent.change(input, { target: { value: '' } });
     expect(visibleKindValues(container)).toHaveLength(8);
   });
+
+  it('sem resultado algum, "Nenhum se encaixa" segue visível e clicável', () => {
+    const onNoneFit = vi.fn();
+    const { container, getByText, getByLabelText } = render(
+      <TriagemPicker onNoneFit={onNoneFit} />,
+    );
+    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'xyz' } });
+    expect(visibleKindValues(container)).toHaveLength(0);
+    fireEvent.click(getByText('Nenhum se encaixa'));
+    expect(onNoneFit).toHaveBeenCalledOnce();
+  });
+
+  it('digitar com temas expandidos troca para a grade filtrada (temas somem)', () => {
+    const { container, getByLabelText } = render(<TriagemPicker />);
+    expand(container);
+    expect(container.querySelector('[data-theme]')).not.toBeNull();
+    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'voto' } });
+    expect(container.querySelector('[data-theme]')).toBeNull();
+    expect(visibleKindValues(container)).toEqual(['VOW_SCENE']);
+  });
 });
 
 describe('TriagemPicker — cartão mostra PT, inglês só no title (hover)', () => {
@@ -150,6 +170,18 @@ describe('TriagemPicker — cartão mostra PT, inglês só no title (hover)', ()
     const { container } = render(<TriagemPicker />);
     const card = container.querySelector('[role="radio"][title="BEREAVEMENT_SCENE"]')!;
     expect(card.textContent).toBe('Luto');
+  });
+
+  it('nenhum valor EN aparece como texto visível em estado algum', () => {
+    const { container, getByLabelText } = render(<TriagemPicker />);
+    expect(container.textContent).not.toMatch(/_SCENE/);
+    expand(container);
+    expect(container.textContent).not.toMatch(/_SCENE/);
+    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'respiga' } });
+    expect(container.textContent).not.toMatch(/_SCENE/);
+    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: '' } });
+    fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
+    expect(container.textContent).not.toMatch(/_SCENE/);
   });
 });
 
@@ -166,15 +198,33 @@ describe('TriagemPicker — escolher tipo revela o passo de confiança', () => {
     expect(getByText('Na dúvida')).toBeTruthy();
   });
 
-  it('"trocar tipo" volta para a grade sem emitir nada', () => {
+  it('"trocar tipo" volta para a grade sem emitir nada e descarta a escolha', () => {
     const onConfirm = vi.fn();
     const { container, getByText, queryByText } = render(<TriagemPicker onConfirm={onConfirm} />);
     fireEvent.click(container.querySelector('[role="radio"][title="BEREAVEMENT_SCENE"]')!);
+    fireEvent.click(getByText('Certeza'));
     fireEvent.click(getByText('trocar tipo'));
 
     expect(getByText('Mais comuns')).toBeTruthy();
     expect(queryByText('Certeza')).toBeNull();
     expect(onConfirm).not.toHaveBeenCalled();
+
+    // reescolher: a escolha anterior não vaza para o novo tipo
+    fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
+    expect(queryByText('Confirmar')).toBeNull();
+  });
+
+  it('o foco entra no trio ao escolher e volta à grade no "trocar tipo" (WCAG 2.4.3)', () => {
+    const { container, getByText } = render(<TriagemPicker />);
+    const kindCard = container.querySelector<HTMLElement>('[role="radio"][title="APPEAL_SCENE"]')!;
+    kindCard.focus();
+    fireEvent.click(kindCard);
+    const trioRadios = Array.from(container.querySelectorAll<HTMLElement>('[role="radio"]'));
+    expect(trioRadios).toContain(document.activeElement);
+
+    fireEvent.click(getByText('trocar tipo'));
+    const gridTabbable = container.querySelector<HTMLElement>('[role="radio"][tabindex="0"]');
+    expect(document.activeElement).toBe(gridTabbable);
   });
 });
 
@@ -183,12 +233,37 @@ describe('TriagemPicker — confirmar emite os valores contratuais exatos', () =
     ['Certeza', 'alta'],
     ['Quase', 'média'],
     ['Na dúvida', 'baixa'],
-  ] as const)('%s emite "%s"', (label, stored) => {
+  ] as const)('%s + Confirmar emite "%s"', (label, stored) => {
     const onConfirm = vi.fn();
     const { container, getByText } = render(<TriagemPicker onConfirm={onConfirm} />);
     fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
     fireEvent.click(getByText(label));
+    expect(onConfirm).not.toHaveBeenCalled(); // escolher só seleciona
+    fireEvent.click(getByText('Confirmar'));
     expect(onConfirm).toHaveBeenCalledExactlyOnceWith('APPEAL_SCENE', stored);
+  });
+
+  it('escolher marca o rádio (aria-checked) e revela o Confirmar', () => {
+    const { container, getByText, queryByText } = render(<TriagemPicker />);
+    fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
+    expect(queryByText('Confirmar')).toBeNull(); // sem escolha, sem ação
+    fireEvent.click(getByText('Certeza'));
+    const checked = container.querySelector('[role="radio"][aria-checked="true"]')!;
+    expect(checked.textContent).toContain('Certeza');
+    expect(getByText('Confirmar')).toBeTruthy();
+  });
+
+  it('setas no trio movem e selecionam SEM confirmar (nunca cometem a triagem)', () => {
+    const onConfirm = vi.fn();
+    const { container, getByText } = render(<TriagemPicker onConfirm={onConfirm} />);
+    fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
+    const certeza = getByText('Certeza').closest('[role="radio"]') as HTMLElement;
+    certeza.focus();
+    fireEvent.keyDown(certeza, { key: 'ArrowRight' });
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
+    expect(onConfirm).not.toHaveBeenCalled();
+    fireEvent.click(getByText('Confirmar'));
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith('APPEAL_SCENE', 'baixa');
   });
 
   it('"média" carrega o U+00E9 (contrato)', () => {
@@ -196,6 +271,7 @@ describe('TriagemPicker — confirmar emite os valores contratuais exatos', () =
     const { container, getByText } = render(<TriagemPicker onConfirm={onConfirm} />);
     fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
     fireEvent.click(getByText('Quase'));
+    fireEvent.click(getByText('Confirmar'));
     const conf = onConfirm.mock.calls[0]?.[1] as string;
     expect(conf.codePointAt(1)).toBe(0xe9);
   });

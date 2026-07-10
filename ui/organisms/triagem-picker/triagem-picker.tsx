@@ -1,7 +1,7 @@
-import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { SCENE_KINDS, SK_PT, skShort, type Confidence } from '../../../domain';
-import { Pearl } from '../../atoms';
+import { Button, Pearl } from '../../atoms';
 import { ConfidenceTrio, KindCard, type ConfidenceChoice } from '../../molecules';
 import { scenePalette, type PaletteEntry } from '../../tokens';
 import './triagem-picker.css';
@@ -20,6 +20,16 @@ import './triagem-picker.css';
  * `role=group` aninhado em radiogroup não é sancionado pelo ARIA (required
  * owned = radio). Setas movem o foco SEM marcar (variante toolbar do APG) —
  * marcar já revela o passo de confiança, o que tornaria as setas destrutivas.
+ * No passo de confiança o trio segue o APG padrão (setas movem E marcam),
+ * então marcar ali NUNCA emite: a emissão contratual fica num "Confirmar"
+ * explícito, revelado após a primeira escolha (ação dominante única, §9.2).
+ *
+ * Trade-off documentado: os botões de disclosure ("Ver todos os tipos por
+ * tema"/"recolher") vivem DENTRO do elemento radiogroup — movê-los para fora
+ * quebraria a ordem visual do protótipo (entre os comuns e o none-fit) sem
+ * quebrar o grupo em dois radiogroups. O handler de teclado ignora não-radios;
+ * o custo é uma parada de Tab extra no meio do grupo, inevitável para uma
+ * ação que precisa ser alcançável.
  */
 
 interface Theme {
@@ -124,24 +134,64 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
   const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState('');
   const [picked, setPicked] = useState<string | null>(null);
+  const [choice, setChoice] = useState<ConfidenceChoice | null>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
   const groupRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Trocar de estágio desmonta o elemento focado; sem gestão o foco cai no
+  // body (WCAG 2.4.3). Ao entrar na confiança, foco no rádio tabbável do trio;
+  // ao voltar, no cartão tabbável da grade.
+  const prevStage = useRef<'tipos' | 'confianca'>('tipos');
+  useEffect(() => {
+    const stage = picked ? 'confianca' : 'tipos';
+    if (prevStage.current === stage) return;
+    prevStage.current = stage;
+    rootRef.current?.querySelector<HTMLElement>('[role="radio"][tabindex="0"]')?.focus();
+  }, [picked]);
+
+  // Expandir/recolher troca um botão pelo outro; seguir com o foco evita a
+  // queda para o body no meio do grupo.
+  const prevExpanded = useRef(expanded);
+  useEffect(() => {
+    if (prevExpanded.current === expanded) return;
+    prevExpanded.current = expanded;
+    rootRef.current
+      ?.querySelector<HTMLElement>(
+        expanded ? '.cds-triagem-picker-collapse' : '.cds-triagem-picker-disclosure',
+      )
+      ?.focus();
+  }, [expanded]);
 
   if (picked) {
     const label = skShort(picked);
     return (
-      <div className="cds-triagem-picker" data-stage="confianca">
+      <div className="cds-triagem-picker" data-stage="confianca" ref={rootRef}>
         <div className="cds-triagem-picker-chosen">
           <Pearl tint={tintOf(picked)} size={22} state="lit" />
           <span className="cds-triagem-picker-chosen-label" title={picked}>
             {label}
           </span>
-          <button type="button" className="cds-triagem-picker-swap" onClick={() => setPicked(null)}>
+          <button
+            type="button"
+            className="cds-triagem-picker-swap"
+            onClick={() => {
+              setPicked(null);
+              setChoice(null);
+            }}
+          >
             trocar tipo
           </button>
         </div>
         <p className="cds-triagem-picker-question">O quanto isso parece certo pra você?</p>
-        <ConfidenceTrio onSelect={(choice) => onConfirm?.(picked, CONFIDENCE_BY_CHOICE[choice])} />
+        <ConfidenceTrio value={choice ?? undefined} onSelect={setChoice} />
+        {choice ? (
+          <div className="cds-triagem-picker-confirm">
+            <Button onClick={() => onConfirm?.(picked, CONFIDENCE_BY_CHOICE[choice])}>
+              Confirmar
+            </Button>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -196,7 +246,10 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
         en={m.value}
         tint={m.tint}
         tabbable={start + i === tabIdx}
-        onSelect={() => setPicked(m.value)}
+        onSelect={() => {
+          setPicked(m.value);
+          setChoice(null);
+        }}
       />
     ));
 
@@ -226,14 +279,17 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
   ));
 
   return (
-    <div className="cds-triagem-picker" data-stage="tipos">
+    <div className="cds-triagem-picker" data-stage="tipos" ref={rootRef}>
       <input
         className="cds-triagem-picker-filter"
         type="search"
         aria-label="filtrar tipos"
         placeholder="filtrar…"
         value={filter}
-        onChange={(e) => setFilter(e.target.value)}
+        onChange={(e) => {
+          setFilter(e.target.value);
+          setFocusedIdx(0); // a lista muda de identidade; roving recomeça previsível
+        }}
       />
       <div
         ref={groupRef}
@@ -255,7 +311,10 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
                   type="button"
                   className="cds-triagem-picker-collapse"
                   aria-expanded="true"
-                  onClick={() => setExpanded(false)}
+                  onClick={() => {
+                    setExpanded(false);
+                    setFocusedIdx(0);
+                  }}
                 >
                   recolher
                 </button>
@@ -265,7 +324,10 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
                 type="button"
                 className="cds-triagem-picker-disclosure"
                 aria-expanded="false"
-                onClick={() => setExpanded(true)}
+                onClick={() => {
+                  setExpanded(true);
+                  setFocusedIdx(0);
+                }}
               >
                 Ver todos os tipos por tema
               </button>
