@@ -55,7 +55,11 @@ describe('WebVoiceRecorder — persistência delega ao store (sem microfone)', (
   it('play toca uma resposta existente; ausente → lança', async () => {
     const store = new MemoryVoiceStore();
     const play = vi.fn(async () => {});
-    const audio = { play, pause: vi.fn() } as unknown as HTMLAudioElement;
+    const audio = {
+      play,
+      pause: vi.fn(),
+      addEventListener: vi.fn(),
+    } as unknown as HTMLAudioElement;
     const rec = new WebVoiceRecorder({ store, createAudio: () => audio });
 
     await expect(rec.play(P1)).rejects.toThrow();
@@ -110,5 +114,58 @@ describe('WebVoiceRecorder — gravar → parar (fakes, sem AudioContext)', () =
     recording.cancel();
 
     expect(await store.has(P1)).toBe(false);
+  });
+
+  it('stop() rejeita (sem pendurar) se a persistência falhar', async () => {
+    const store = new MemoryVoiceStore();
+    vi.spyOn(store, 'put').mockRejectedValueOnce(new Error('quota'));
+    const rec = new WebVoiceRecorder(okDeps(store));
+
+    const recording = await rec.start(P1);
+    await expect(recording.stop()).rejects.toThrow('quota');
+  });
+});
+
+describe('WebVoiceRecorder — nível via AudioContext e limpeza (fakes)', () => {
+  it('emite um nível 0..1 por quadro e fecha o contexto ao parar', async () => {
+    const close = vi.fn();
+    const analyser = {
+      fftSize: 4,
+      getByteTimeDomainData: (arr: Uint8Array) => arr.set([210, 40, 210, 40]),
+    };
+    const ctx = {
+      resume: vi.fn(),
+      createAnalyser: () => analyser,
+      createMediaStreamSource: () => ({ connect: vi.fn() }),
+      close,
+    };
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb));
+
+    const store = new MemoryVoiceStore();
+    const rec = new WebVoiceRecorder({
+      store,
+      isTypeSupported: () => true,
+      MediaRecorderCtor: FakeMediaRecorder as unknown as typeof MediaRecorder,
+      getUserMedia: async () => fakeStream(),
+      AudioContextCtor: function AudioContextCtor(this: unknown) {
+        return ctx;
+      } as unknown as typeof AudioContext,
+    });
+
+    const recording = await rec.start(P1);
+    const levels: number[] = [];
+    recording.onLevel((l) => levels.push(l));
+
+    frames.shift()?.(0); // roda um quadro de medição
+
+    expect(levels).toHaveLength(1);
+    expect(levels[0]).toBeGreaterThan(0);
+    expect(levels[0]).toBeLessThanOrEqual(1);
+
+    await recording.stop();
+    expect(close).toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
   });
 });

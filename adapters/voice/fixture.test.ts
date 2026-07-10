@@ -51,6 +51,13 @@ describe('FixtureVoiceRecorder', () => {
     expect(await rec.has(P2)).toBe(false);
   });
 
+  it('cancelar uma gravação não persiste', async () => {
+    const rec = new FixtureVoiceRecorder();
+    const recording = await rec.start(P1);
+    recording.cancel();
+    expect(await rec.has(P1)).toBe(false);
+  });
+
   it('play só toca o que existe; sem gravação, lança', async () => {
     const rec = new FixtureVoiceRecorder();
     await expect(rec.play(P1)).rejects.toThrow();

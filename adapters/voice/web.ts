@@ -34,7 +34,17 @@ function defaultGetUserMedia(constraints: MediaStreamConstraints): Promise<Media
 }
 
 function defaultCreateAudio(blob: Blob): HTMLAudioElement {
-  return new Audio(URL.createObjectURL(blob));
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  // libera a URL quando a reprodução termina ou é pausada (evita fuga por sessão)
+  const revoke = () => URL.revokeObjectURL(url);
+  audio.addEventListener('ended', revoke, { once: true });
+  audio.addEventListener('pause', revoke, { once: true });
+  return audio;
+}
+
+function stopTracks(stream: MediaStream): void {
+  for (const track of stream.getTracks()) track.stop();
 }
 
 export class WebVoiceRecorder implements VoiceRecorder {
@@ -71,39 +81,58 @@ export class WebVoiceRecorder implements VoiceRecorder {
       throw new MicPermissionError('acesso ao microfone negado', { cause });
     }
 
-    const recorder = new this.#MediaRecorderCtor(stream, { mimeType: MIME });
+    // se a montagem do recorder/metering falhar, o microfone NÃO pode ficar aberto
+    let recorder: MediaRecorder;
+    let meter: ReturnType<WebVoiceRecorder['startMetering']>;
     const chunks: Blob[] = [];
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
+    try {
+      recorder = new this.#MediaRecorderCtor(stream, { mimeType: MIME });
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      meter = this.startMetering(stream);
+    } catch (cause) {
+      stopTracks(stream);
+      throw cause;
+    }
 
-    const meter = this.#startMetering(stream);
-    const startedAt = this.#now();
+    const startedAt = this.now();
     recorder.start();
 
-    const finish = (persist: boolean) =>
-      new Promise<RecordedAnswer>((resolve) => {
+    let settled = false;
+    const finish = (persist: boolean): Promise<RecordedAnswer> =>
+      new Promise<RecordedAnswer>((resolve, reject) => {
+        if (settled) {
+          reject(new Error('gravação já finalizada'));
+          return;
+        }
+        settled = true;
         recorder.onstop = () => {
           meter.stop();
-          for (const track of stream.getTracks()) track.stop();
+          stopTracks(stream);
           const blob = new Blob(chunks, { type: MIME });
-          const durationSec = (this.#now() - startedAt) / 1000;
+          const durationSec = (this.now() - startedAt) / 1000;
           if (!persist) {
             resolve({ blob, durationSec });
             return;
           }
-          void blob.arrayBuffer().then(async (buf) => {
-            await this.#store.put(path, new Uint8Array(buf));
-            resolve({ blob, durationSec });
-          });
+          blob
+            .arrayBuffer()
+            .then((buf) => this.#store.put(path, new Uint8Array(buf)))
+            .then(() => resolve({ blob, durationSec }))
+            .catch(reject);
         };
-        recorder.stop();
+        try {
+          recorder.stop();
+        } catch (cause) {
+          reject(cause);
+        }
       });
 
     return {
       onLevel: meter.onLevel,
       stop: () => finish(true),
-      cancel: () => void finish(false),
+      cancel: () => void finish(false).catch(() => {}),
     };
   }
 
@@ -112,6 +141,13 @@ export class WebVoiceRecorder implements VoiceRecorder {
     this.stopPlayback();
     const audio = this.#createAudio(new Blob([bytes as BlobPart], { type: MIME }));
     this.#playing = audio;
+    audio.addEventListener(
+      'ended',
+      () => {
+        if (this.#playing === audio) this.#playing = null;
+      },
+      { once: true },
+    );
     await audio.play();
   }
 
@@ -128,11 +164,11 @@ export class WebVoiceRecorder implements VoiceRecorder {
     await this.#store.delete(path);
   }
 
-  #now(): number {
+  private now(): number {
     return typeof performance !== 'undefined' ? performance.now() : Date.now();
   }
 
-  #startMetering(stream: MediaStream): {
+  private startMetering(stream: MediaStream): {
     onLevel: (cb: (level: number) => void) => Unsubscribe;
     stop: () => void;
   } {
@@ -142,6 +178,7 @@ export class WebVoiceRecorder implements VoiceRecorder {
 
     if (this.#AudioContextCtor) {
       ctx = new this.#AudioContextCtor();
+      void ctx.resume();
       const analyser = ctx.createAnalyser();
       ctx.createMediaStreamSource(stream).connect(analyser);
       const data = new Uint8Array(analyser.fftSize);
