@@ -184,6 +184,54 @@ function runStepsInPage(steps) {
         else m.level3[step.propId][step.key] = step.text;
         break;
       }
+      case 'importReturn': {
+        // Espelha o handler de retomada da referência (resumeFile.onchange,
+        // L1362–1383): tudo TRAVADO, spans de confirmed_span, flags reaplicadas
+        // por prop_id, cursor em frases. A cor não entra no export (buildReturn
+        // não a serializa), mas segue o PALETTE para fidelidade.
+        const data = step.dto;
+        const sc = (data.scenes && data.scenes[0]) || null;
+        if (sc && sc.confirmed_span) {
+          state.whole.id = sc.scene_id || 'S1';
+          state.whole.span = { s: sc.confirmed_span.start_bead, e: sc.confirmed_span.end_bead };
+          state.whole.confirmed = true;
+          document.getElementById('partsCard').classList.remove('locked');
+          state.parts = (sc.parts || []).map((pt, idx) => ({
+            part_id: pt.part_id || 'PT' + (idx + 1),
+            span: { s: pt.confirmed_span.start_bead, e: pt.confirmed_span.end_bead },
+            color: PALETTE[idx % PALETTE.length],
+            locked: true,
+            scene_kind: pt.scene_kind || null,
+            scene_kind_confidence: pt.scene_kind_confidence || null,
+            tag_state: pt.tag_state || 'pending',
+          }));
+          if (state.parts.length) {
+            state.partsConfirmed = true;
+            document.getElementById('frasesCard').classList.remove('locked');
+          }
+          state.frases = (sc.propositions || []).map((p, idx) => ({
+            prop_id: p.prop_id,
+            statement_pt: '',
+            qa: [],
+            span: { s: p.confirmed_span.start_bead, e: p.confirmed_span.end_bead },
+            part_link: p.part_link || null,
+            color: PALETTE_PT[idx % PALETTE_PT.length],
+            locked: true,
+            flagged: false,
+          }));
+        }
+        (data.flags || []).forEach((fl) => {
+          const p = state.frases.filter((x) => x.prop_id === fl.prop_id)[0];
+          if (p) p.flagged = true;
+        });
+        state.current = { layer: 'frases', index: -1 };
+        state.selection = null;
+        renderWhole();
+        renderParts();
+        renderFrases();
+        renderCord();
+        break;
+      }
       case 'export': {
         if (step.artifacts.includes('manifesto'))
           out['manifesto-contas.json'] = JSON.stringify(buildManifest(), null, 2);

@@ -1,0 +1,45 @@
+{
+  "manifest_id": "fnv1a32:cb90e5f3",
+  "story_slug": "mapeamento-preguicoso",
+  "scenes": [
+    {
+      "scene_id": "S1",
+      "confirmed_span": {
+        "start_bead": 0,
+        "end_bead": 23
+      },
+      "parts": [
+        {
+          "part_id": "PT1",
+          "scene_id": "S1",
+          "scene_kind": "GLEANING_SCENE",
+          "scene_kind_confidence": "alta",
+          "tag_state": "tagged",
+          "confirmed_span": {
+            "start_bead": 0,
+            "end_bead": 23
+          }
+        }
+      ],
+      "propositions": [
+        {
+          "prop_id": "P1",
+          "part_link": "PT1",
+          "confirmed_span": {
+            "start_bead": 0,
+            "end_bead": 9
+          }
+        },
+        {
+          "prop_id": "P2",
+          "part_link": "PT1",
+          "confirmed_span": {
+            "start_bead": 10,
+            "end_bead": 15
+          }
+        }
+      ]
+    }
+  ],
+  "flags": []
+}

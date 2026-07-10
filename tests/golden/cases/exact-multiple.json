@@ -1,0 +1,14 @@
+{
+  "name": "exact-multiple",
+  "description": "Duração múltiplo exato de beadSec (6.0s / 0.5 = 12 contas, sem conta parcial): buildBeads não soma a conta extra; a última conta fecha em 6.0.",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "multiplo-exato",
+      "audioFilename": "multiplo-exato.wav",
+      "pcm": { "seed": 444, "sampleRate": 8000, "samples": 48000, "channels": 1 }
+    },
+    { "type": "export", "artifacts": ["manifesto"] }
+  ]
+}

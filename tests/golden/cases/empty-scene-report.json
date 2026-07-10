@@ -1,0 +1,28 @@
+{
+  "name": "empty-scene-report",
+  "description": "Cena produtiva terminada com zero frases (2º clique atravessa o aviso) → chega ao Mapeamento; o relatório traz o cabeçalho N3 da cena sem blocos de Frase e o retorno tem propositions [].",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "cena-vazia",
+      "audioFilename": "cena-vazia.wav",
+      "pcm": { "seed": 909, "sampleRate": 8000, "samples": 96000, "channels": 1 }
+    },
+    { "type": "confirmWhole" },
+    { "type": "cutScene", "endBead": 23 },
+    { "type": "confirmParts" },
+    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triagemDone" },
+    { "type": "sceneDone", "forceEmpty": true },
+    { "type": "answer", "level": 1, "key": "recontar", "text": "Uma cena sem frases fraseadas." },
+    {
+      "type": "answer",
+      "level": 2,
+      "partId": "PT1",
+      "key": "descrever",
+      "text": "A cena inteira, sem recorte de frases."
+    },
+    { "type": "export", "artifacts": ["manifesto", "retorno", "relatorio"] }
+  ]
+}

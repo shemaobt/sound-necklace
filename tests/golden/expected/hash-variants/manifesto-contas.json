@@ -1,0 +1,208 @@
+{
+  "manifest_id": "fnv1a32:c67b7840",
+  "audio_filename": "hash-variantes.wav",
+  "bead_duration_sec": 0.25,
+  "total_beads": 40,
+  "beads": [
+    {
+      "index": 0,
+      "startTime": 0,
+      "endTime": 0.25
+    },
+    {
+      "index": 1,
+      "startTime": 0.25,
+      "endTime": 0.5
+    },
+    {
+      "index": 2,
+      "startTime": 0.5,
+      "endTime": 0.75
+    },
+    {
+      "index": 3,
+      "startTime": 0.75,
+      "endTime": 1
+    },
+    {
+      "index": 4,
+      "startTime": 1,
+      "endTime": 1.25
+    },
+    {
+      "index": 5,
+      "startTime": 1.25,
+      "endTime": 1.5
+    },
+    {
+      "index": 6,
+      "startTime": 1.5,
+      "endTime": 1.75
+    },
+    {
+      "index": 7,
+      "startTime": 1.75,
+      "endTime": 2
+    },
+    {
+      "index": 8,
+      "startTime": 2,
+      "endTime": 2.25
+    },
+    {
+      "index": 9,
+      "startTime": 2.25,
+      "endTime": 2.5
+    },
+    {
+      "index": 10,
+      "startTime": 2.5,
+      "endTime": 2.75
+    },
+    {
+      "index": 11,
+      "startTime": 2.75,
+      "endTime": 3
+    },
+    {
+      "index": 12,
+      "startTime": 3,
+      "endTime": 3.25
+    },
+    {
+      "index": 13,
+      "startTime": 3.25,
+      "endTime": 3.5
+    },
+    {
+      "index": 14,
+      "startTime": 3.5,
+      "endTime": 3.75
+    },
+    {
+      "index": 15,
+      "startTime": 3.75,
+      "endTime": 4
+    },
+    {
+      "index": 16,
+      "startTime": 4,
+      "endTime": 4.25
+    },
+    {
+      "index": 17,
+      "startTime": 4.25,
+      "endTime": 4.5
+    },
+    {
+      "index": 18,
+      "startTime": 4.5,
+      "endTime": 4.75
+    },
+    {
+      "index": 19,
+      "startTime": 4.75,
+      "endTime": 5
+    },
+    {
+      "index": 20,
+      "startTime": 5,
+      "endTime": 5.25
+    },
+    {
+      "index": 21,
+      "startTime": 5.25,
+      "endTime": 5.5
+    },
+    {
+      "index": 22,
+      "startTime": 5.5,
+      "endTime": 5.75
+    },
+    {
+      "index": 23,
+      "startTime": 5.75,
+      "endTime": 6
+    },
+    {
+      "index": 24,
+      "startTime": 6,
+      "endTime": 6.25
+    },
+    {
+      "index": 25,
+      "startTime": 6.25,
+      "endTime": 6.5
+    },
+    {
+      "index": 26,
+      "startTime": 6.5,
+      "endTime": 6.75
+    },
+    {
+      "index": 27,
+      "startTime": 6.75,
+      "endTime": 7
+    },
+    {
+      "index": 28,
+      "startTime": 7,
+      "endTime": 7.25
+    },
+    {
+      "index": 29,
+      "startTime": 7.25,
+      "endTime": 7.5
+    },
+    {
+      "index": 30,
+      "startTime": 7.5,
+      "endTime": 7.75
+    },
+    {
+      "index": 31,
+      "startTime": 7.75,
+      "endTime": 8
+    },
+    {
+      "index": 32,
+      "startTime": 8,
+      "endTime": 8.25
+    },
+    {
+      "index": 33,
+      "startTime": 8.25,
+      "endTime": 8.5
+    },
+    {
+      "index": 34,
+      "startTime": 8.5,
+      "endTime": 8.75
+    },
+    {
+      "index": 35,
+      "startTime": 8.75,
+      "endTime": 9
+    },
+    {
+      "index": 36,
+      "startTime": 9,
+      "endTime": 9.25
+    },
+    {
+      "index": 37,
+      "startTime": 9.25,
+      "endTime": 9.5
+    },
+    {
+      "index": 38,
+      "startTime": 9.5,
+      "endTime": 9.75
+    },
+    {
+      "index": 39,
+      "startTime": 9.75,
+      "endTime": 10
+    }
+  ]
+}

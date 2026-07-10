@@ -383,10 +383,26 @@ const sessionExportReplayer: Replayer = (steps) => {
 };
 
 export const replayers: Record<string, Replayer> = {
+  // grid + manifest apenas
   'manifest-only': manifestReplayer,
   'partial-bead': manifestReplayer,
+  'hash-variants': manifestReplayer,
+  'exact-multiple': manifestReplayer,
+  // sessão completa → export real (manifesto/retorno/relatório)
   'minimal-flow': sessionExportReplayer,
+  'reopen-cascade': sessionExportReplayer,
+  'pid-reuse': sessionExportReplayer,
+  'back-reach': sessionExportReplayer,
+  'seam-small-move': sessionExportReplayer,
+  'seam-large-move': sessionExportReplayer,
+  'seam-escalation': sessionExportReplayer,
+  'seam-consumed': sessionExportReplayer,
+  'all-none-fit': sessionExportReplayer,
+  'empty-scene-report': sessionExportReplayer,
+  'flag-no-proposition': sessionExportReplayer,
+  'mapping-lazy': sessionExportReplayer,
+  'import-return-roundtrip': sessionExportReplayer,
 };
 
-/** ENG-238 liga isto: com strict=true, casos pendentes REPROVAM o harness. */
-export const STRICT = false;
+/** ENG-238 ligou isto: com strict=true, casos pendentes REPROVAM o harness. */
+export const STRICT = true;

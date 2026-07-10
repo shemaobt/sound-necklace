@@ -1,0 +1,20 @@
+{
+  "name": "all-none-fit",
+  "description": "Todas as cenas none_fit → nenhuma cena produtiva (downstream trava). O retorno exporta com scene_kind null em todas as partes e propositions [].",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "nenhum-encaixa",
+      "audioFilename": "nenhum-encaixa.wav",
+      "pcm": { "seed": 808, "sampleRate": 8000, "samples": 96000, "channels": 1 }
+    },
+    { "type": "confirmWhole" },
+    { "type": "cutScene", "endBead": 11 },
+    { "type": "cutScene", "endBead": 23 },
+    { "type": "confirmParts" },
+    { "type": "triage", "partIndex": 0, "none_fit": true },
+    { "type": "triage", "partIndex": 1, "none_fit": true },
+    { "type": "export", "artifacts": ["manifesto", "retorno"] }
+  ]
+}

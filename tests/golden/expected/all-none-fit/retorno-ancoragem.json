@@ -1,0 +1,39 @@
+{
+  "manifest_id": "fnv1a32:90de82b1",
+  "story_slug": "nenhum-encaixa",
+  "scenes": [
+    {
+      "scene_id": "S1",
+      "confirmed_span": {
+        "start_bead": 0,
+        "end_bead": 23
+      },
+      "parts": [
+        {
+          "part_id": "PT1",
+          "scene_id": "S1",
+          "scene_kind": null,
+          "scene_kind_confidence": null,
+          "tag_state": "none_fit",
+          "confirmed_span": {
+            "start_bead": 0,
+            "end_bead": 11
+          }
+        },
+        {
+          "part_id": "PT2",
+          "scene_id": "S2",
+          "scene_kind": null,
+          "scene_kind_confidence": null,
+          "tag_state": "none_fit",
+          "confirmed_span": {
+            "start_bead": 12,
+            "end_bead": 23
+          }
+        }
+      ],
+      "propositions": []
+    }
+  ],
+  "flags": []
+}
