@@ -1,0 +1,31 @@
+{
+  "audios": [
+    {
+      "id": "aud_conto_do_boto",
+      "filename": "conto-do-boto.wav",
+      "duration_sec": 42.5,
+      "consent_present": true,
+      "acousteme": {
+        "version": 1,
+        "data": { "bead_sec": { "pequena": 0.15, "media": 0.25, "grande": 0.5 } }
+      }
+    },
+    {
+      "id": "aud_vitoria_regia",
+      "filename": "lenda-da-vitoria-regia.wav",
+      "duration_sec": 63.0,
+      "consent_present": true,
+      "acousteme": {
+        "version": 1,
+        "data": { "bead_sec": { "pequena": 0.2, "media": 0.3, "grande": 0.6 } }
+      }
+    },
+    {
+      "id": "aud_gravacao_sem_acousteme",
+      "filename": "gravacao-antiga.wav",
+      "duration_sec": 30.0,
+      "consent_present": false,
+      "acousteme": null
+    }
+  ]
+}
