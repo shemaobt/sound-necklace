@@ -200,6 +200,11 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
     return session.mapping ? session : ensureMapping(session);
   }, [session]);
   const sequence = useMemo(() => (mapped ? questionSequence(mapped) : []), [mapped]);
+  // Caminhos de voz das perguntas — chave estrutural ESTÁVEL: só muda quando o
+  // conjunto de perguntas muda (cenas/frases), não a cada tecla digitada numa
+  // resposta (`setAnswer` recria `mapped`, mas o conjunto de perguntas é o mesmo).
+  const voiceKey = useMemo(() => sequence.map((s) => voiceAnswerPath(s)).join('|'), [sequence]);
+  const voicePaths = useMemo(() => (voiceKey ? voiceKey.split('|') : []), [voiceKey]);
 
   useEffect(() => {
     if (session && !session.mapping) sessionStore.getState().apply((s) => ensureMapping(s));
@@ -212,14 +217,15 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
     // setState síncrono no efeito — react-hooks/set-state-in-effect).
     if (!recorder) return;
     let alive = true;
-    const paths = sequence.map((s) => voiceAnswerPath(s));
-    void Promise.all(paths.map((p) => recorder.has(p).then((h) => (h ? p : null)))).then((res) => {
-      if (alive) setVoiceSet(new Set(res.filter((p): p is string => p !== null)));
-    });
+    void Promise.all(voicePaths.map((p) => recorder.has(p).then((h) => (h ? p : null)))).then(
+      (res) => {
+        if (alive) setVoiceSet(new Set(res.filter((p): p is string => p !== null)));
+      },
+    );
     return () => {
       alive = false;
     };
-  }, [recorder, sequence]);
+  }, [recorder, voicePaths]);
 
   if (!session || !mapped || !sequence.length) return null;
 
