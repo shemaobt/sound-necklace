@@ -392,6 +392,51 @@ confirmed:false}},'escuta')` — DISTINTO do `reopenWhole` da Escuta 1 (que tamb
   forjando `selection.s < frontier`. `NO_LOCKED_SCENE` não surge: o botão é escondido
   sem ≥1 travada (gate por presença, não por mensagem).
 
+## Frases / fronteira / costura (verificado 2026-07-09, ENG-223)
+
+- **Quirks de varredura da referência (break vs sem break)**: `lockFrase` L796 e
+  `enterScene` L839 pegam o PRIMEIRO slot destravado (`break`); `removeFrase` L852 e
+  `enterLayer` L931 pegam o ÚLTIMO (sem `break`). Espelhar exatamente — afeta
+  `current.index` e portanto alocação de P# nos auto-adds.
+- **Entrada em segmentação vive no setMode da referência (L1003–1008)**, não numa
+  função própria: `ps=productiveScenes()`; se há produtivas, conserta `activeSceneId`
+  inválido para `ps[0]` e chama `enterScene`; senão `enterLayer("frases")` (que
+  auto-`addFrase` — cria slot dangling mesmo sem cena produtiva). Como gates.ts
+  (ENG-219) já portou só a decisão de porta, a orquestração de camada é uma função
+  composta em phrases.ts (`enterSegmentacao`), chamada APÓS `setMode` — o replayer
+  do golden compõe as duas no passo `triagemDone`.
+- `confirmFrase` NÃO checa `pendingStart` (≠ confirmPart) — meia-seleção `{b,b}`
+  passa. Ordem das guardas (L779–792): locked/ausente → no-op silencioso;
+  partsConfirmed; selection; activeScene; `sel.s >= phraseFrontier`; `sel.e <=
+whole.span.e`; só então crossing → oferta. A fronteira de frases com cena ativa
+  NÃO clampa em totalBeads−1 (≠ ramo genérico) — se a última frase cobre o fim,
+  frontier = e+1 fora do colar e todo confirm é rejeitado (fiel).
+- **Oferta de borda é pura (effects-as-data)**: `classifyBorderMove` devolve união
+  discriminada `two-productive | escalation | simple` com `delta`, `thr =
+max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
+  (`simple`, ou `escalation && !consumed`). `Math.round(0.25*n)` é EXATO em IEEE-754
+  (0.25 = 2^-2); tie quando `n%4===2`, arredonda para +∞ (spec) — determinístico
+  entre engines. `nb===null` ⇒ `consumed=false`, `twoProd=false`, e o move só
+  estica a cena (slideSeam sem vizinha).
+- `slideSeam` (L832–835) mexe SÓ na vizinha imediata travada e só se ela colide
+  (`nb.span.s<=newEnd` / `pb.span.e>=newStart`); cresce a cena nas duas direções
+  independentemente. `reopenFrase` cascata o array GLOBAL (frases de outras cenas
+  destravam juntas); `flagged` sobrevive — flag exporta sem proposition (quirk).
+- `warnedEmptyScene` é variável de módulo na referência (L916) — no domain vira
+  parâmetro explícito de `confirmFrasesDone(state, warned)` que devolve o próximo
+  marcador no resultado (não entra em SessionState — state.ts é congelado e o
+  marcador é efêmero de UI). O replayer do golden mantém o marcador local entre
+  passos; `sceneDone` com `forceEmpty` chama duas vezes (generate.mjs L172–175).
+- Golden case 2 pós-ENG-223: replay consome até `toggleFlag`/`sceneDone` e para
+  pendente em `{index: 12, type: 'answer'}` (ENG-226) com `mode==='mapeamento'`.
+  `toggleFlag.index` indexa as frases TRAVADAS (generate.mjs L166), não o array
+  todo. Passo `confirmPhrase` com `borderDecision` espelha doMove/reanchor/triagem;
+  sem decisão e com crossing, o estado fica intacto (a referência só renderiza).
+- `structuredClone` quebra identidade e não é para reducers — spread por caminho
+  (padrão do repo). `toSpliced`/`with` exigem `lib: es2023` no tsconfig; evitados
+  (filter/map/slice bastam). Python `round()` é ties-to-even ≠ JS — não validar
+  thresholds com Python sem cuidado.
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.

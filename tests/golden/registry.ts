@@ -12,17 +12,26 @@
  */
 import {
   buildBeads,
+  confirmFrase,
+  confirmFrasesDone,
   confirmPart,
   confirmParts,
   confirmWhole,
   createSession,
+  enterScene,
+  enterSegmentacao,
   frontier,
   hashPCM,
   lockedParts,
   markNoneFit,
+  moveBorder,
+  reanchorFrase,
+  removeFrase,
+  reopenFrase,
   reopenPart,
   setMode,
   tagScene,
+  toggleFlag,
   triagemDone,
   type Confidence,
   type SceneResult,
@@ -109,11 +118,13 @@ const manifestReplayer: Replayer = (steps) => {
 };
 
 /**
- * ENG-216: replay dos passos de sessão/cena (segment → confirmWhole → cutScene
- * → reopenScene → confirmParts) através dos reducers de domain/. Passos de
- * issues posteriores (triage, phraseSelect, answer, export…) param o replay e
- * são reportados em `pendingAt` — o caso minimal-flow segue PENDENTE no
- * harness até a ENG-219+ registrarem seus passos e o export real (ENG-227/233).
+ * ENG-216/219/223: replay dos passos de sessão (segment → confirmWhole →
+ * cutScene → reopenScene → confirmParts → triage → triagemDone → enterScene →
+ * phraseSelect → confirmPhrase → reopenPhrase → removePhrase → toggleFlag →
+ * sceneDone) através dos reducers de domain/. Passos de issues posteriores
+ * (answer, export…) param o replay e são reportados em `pendingAt` — o caso
+ * minimal-flow segue PENDENTE no harness até a ENG-226 registrar as respostas
+ * e a ENG-227/233 o export real.
  */
 export interface SessionReplay {
   state: SessionState;
@@ -136,6 +147,27 @@ interface TriageStep extends GoldenStep {
   none_fit?: boolean;
 }
 
+interface EnterSceneStep extends GoldenStep {
+  partId: string;
+}
+
+interface PhraseSelectStep extends GoldenStep {
+  s: number;
+  e: number;
+}
+
+interface ConfirmPhraseStep extends GoldenStep {
+  borderDecision?: 'move' | 'reanchor' | 'triagem';
+}
+
+interface PhraseIndexStep extends GoldenStep {
+  index: number;
+}
+
+interface SceneDoneStep extends GoldenStep {
+  forceEmpty?: boolean;
+}
+
 function unwrap(r: SceneResult): SessionState {
   if (!r.ok) throw new Error(`replay recusado pelo domínio — ${r.error.code}: ${r.error.message}`);
   return r.state;
@@ -143,9 +175,17 @@ function unwrap(r: SceneResult): SessionState {
 
 export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
   let state: SessionState | null = null;
+  // espelho da variável de módulo warnedEmptyScene da referência (L916)
+  let warned: string | null = null;
   const must = (): SessionState => {
     if (!state) throw new Error('passo de sessão antes do segment');
     return state;
+  };
+  // confirmFrasesDone da referência: aplica o resultado e guarda o marcador
+  const sceneDone = (st: SessionState): SessionState => {
+    const r = confirmFrasesDone(st, warned);
+    warned = r.warnedEmptyScene;
+    return r.kind === 'warn-empty' || r.kind === 'noop' ? st : r.state;
   };
   for (const [i, step] of steps.entries()) {
     switch (step.type) {
@@ -205,10 +245,63 @@ export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
       }
       case 'triagemDone': {
         // botão "Já classifiquei todas as cenas →" (L1185): só segue com o gate
-        // habilitado; a referência então setMode("segmentacao")
+        // habilitado; a referência então setMode("segmentacao"), cujo bloco de
+        // entrada (L1003–1008) posiciona a cena ativa e o slot corrente
         const st = must();
         if (!triagemDone(st).enabled) throw new Error('triagemDone: gate desabilitado');
-        state = setMode(st, 'segmentacao');
+        state = enterSegmentacao(setMode(st, 'segmentacao'));
+        break;
+      }
+      case 'enterScene':
+        state = enterScene(must(), (step as EnterSceneStep).partId);
+        break;
+      case 'phraseSelect': {
+        // driver (generate.mjs L138–140): escreve a seleção direto no estado
+        const { s, e } = step as PhraseSelectStep;
+        state = { ...must(), selection: { s, e }, pendingStart: null };
+        break;
+      }
+      case 'confirmPhrase': {
+        // driver (generate.mjs L142–160): confirma a frase corrente; se cruzou
+        // a borda, o passo decide como o usuário decidiria (doMove/reanchor/
+        // triagem) — sem decisão, a referência só renderiza a oferta e retorna
+        const st = must();
+        const r = confirmFrase(st, st.current.index);
+        if (r.kind === 'error') {
+          throw new Error(`replay recusado pelo domínio — ${r.error.code}: ${r.error.message}`);
+        }
+        if (r.kind === 'border') {
+          const decision = (step as ConfirmPhraseStep).borderDecision;
+          if (decision === 'move') state = moveBorder(st, r.offer);
+          else if (decision === 'reanchor') state = reanchorFrase(st);
+          else if (decision === 'triagem') state = setMode(st, 'triagem');
+          // sem decisão: estado intacto
+        } else {
+          state = r.state;
+        }
+        break;
+      }
+      case 'reopenPhrase':
+        state = reopenFrase(must(), (step as PhraseIndexStep).index);
+        break;
+      case 'removePhrase':
+        state = removeFrase(must(), (step as PhraseIndexStep).index);
+        break;
+      case 'toggleFlag': {
+        // driver (generate.mjs L164–168): o índice é sobre as frases TRAVADAS
+        const st = must();
+        const { index } = step as PhraseIndexStep;
+        let seen = -1;
+        const pos = st.frases.findIndex((f) => f.locked && ++seen === index);
+        if (pos < 0) throw new Error(`toggleFlag: índice ${index} fora das frases travadas`);
+        state = toggleFlag(st, pos);
+        break;
+      }
+      case 'sceneDone': {
+        // botão "Pronto com esta cena →" (L917–929); forceEmpty = 2º clique
+        // que atravessa o aviso de cena vazia (generate.mjs L172–175)
+        state = sceneDone(must());
+        if ((step as SceneDoneStep).forceEmpty) state = sceneDone(must());
         break;
       }
       default:
