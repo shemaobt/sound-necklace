@@ -1,0 +1,95 @@
+/*
+ * Cards de sessão do dashboard (PRD §7.2). Não há protótipo Claude Design do
+ * dashboard — o visual deriva do padrão de card branco dos protótipos
+ * (fundo #fff, raio de card, sombra suave) + tokens Shemá. Sem movimento
+ * decorativo.
+ */
+.cds-session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cds-session-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #ffffff;
+  border-radius: var(--cds-radius-card);
+  box-shadow: var(--cds-shadow-card);
+  padding: 22px 26px;
+}
+
+.cds-session-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cds-session-card-status {
+  align-self: flex-start;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--cds-radius-pill);
+}
+
+.cds-session-card[data-status='em-progresso'] .cds-session-card-status {
+  background: rgba(190, 74, 1, 0.12);
+  color: var(--cds-telha-deep);
+}
+
+.cds-session-card[data-status='concluida'] .cds-session-card-status {
+  background: rgba(119, 125, 69, 0.16);
+  color: #585d31;
+}
+
+.cds-session-card-title {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cds-ink, #0a0703);
+}
+
+.cds-session-card-meta {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 13px;
+  color: #8a8970;
+}
+
+.cds-session-card-fio {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* invólucro de layout — o visual do botão é do átomo Button (primary/ghost) */
+.cds-session-card-action {
+  flex: none;
+}
+
+/* título da sessão dentro do botão: só para o nome acessível composto */
+.cds-session-card-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
