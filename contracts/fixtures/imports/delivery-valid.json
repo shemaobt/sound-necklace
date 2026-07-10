@@ -1,0 +1,27 @@
+{
+  "manifest_id": "fnv1a32:d31a8419",
+  "scenes": [
+    {
+      "scene_id": "S1",
+      "parts": [
+        {
+          "part_id": "PT1",
+          "proposed_span": { "start_bead": 0, "end_bead": 9 },
+          "scene_kind": "GLEANING_SCENE",
+          "scene_kind_confidence": "alta",
+          "tag_state": "tagged"
+        },
+        { "proposed_span": { "start_bead": 10, "end_bead": 23 } }
+      ],
+      "propositions": [
+        {
+          "prop_id": "P1",
+          "statement_pt": "A chegada ao campo.",
+          "qa_readback_pt": ["Quem chega?"],
+          "proposed_span": { "start_bead": 0, "end_bead": 4 },
+          "part_link": "PT1"
+        }
+      ]
+    }
+  ]
+}

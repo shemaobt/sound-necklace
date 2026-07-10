@@ -1,0 +1,14 @@
+{
+  "scenes": [
+    {
+      "parts": [
+        {
+          "part_id": "PT1",
+          "proposed_span": { "start_bead": 0, "end_bead": 9 },
+          "scene_kind": "GLEANING_SCENE",
+          "scene_kind_confidence": "high"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "scenes": [
+    {
+      "parts": [{ "part_id": "PT1", "proposed_span": { "start_bead": 0.5, "end_bead": 9 } }]
+    }
+  ]
+}

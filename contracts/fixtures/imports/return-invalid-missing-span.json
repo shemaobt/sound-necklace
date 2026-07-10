@@ -1,0 +1,9 @@
+{
+  "scenes": [
+    {
+      "scene_id": "S1",
+      "confirmed_span": { "start_bead": 0, "end_bead": 23 },
+      "parts": [{ "part_id": "PT1", "scene_kind": "GLEANING_SCENE", "tag_state": "tagged" }]
+    }
+  ]
+}

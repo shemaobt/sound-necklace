@@ -41,7 +41,14 @@ import {
   type SessionState,
 } from '../../domain';
 
-import { buildManifesto, buildMapReport, buildRetorno, serializeArtifact } from '../../contracts';
+import {
+  applyReturn,
+  buildManifesto,
+  buildMapReport,
+  buildRetorno,
+  ReturnSchema,
+  serializeArtifact,
+} from '../../contracts';
 
 import { makePcm, type PcmSpec } from './pcm';
 
@@ -177,6 +184,11 @@ interface AnswerStep extends GoldenStep {
   text: string;
   partId?: string;
   propId?: string;
+}
+
+interface ImportReturnStep extends GoldenStep {
+  /** um retorno-ancoragem.json cru (validado por ReturnSchema no replay) */
+  dto: unknown;
 }
 
 function unwrap(r: SceneResult): SessionState {
@@ -325,6 +337,15 @@ export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
               ? { level: 2, partId: a.partId as string, k: a.key }
               : { level: 3, propId: a.propId as string, k: a.key };
         state = setAnswer(ensureMapping(must()), slot, a.text);
+        break;
+      }
+      case 'importReturn': {
+        // ENG-234: semeia o estado pela via de retorno (spans travados, flags
+        // reaplicadas) — habilita o caso import-return-roundtrip da ENG-238
+        const st = must();
+        const r = applyReturn(st, ReturnSchema.parse((step as ImportReturnStep).dto));
+        if (!r.ok) throw new Error(`importReturn recusado pelo domínio — ${r.reason}`);
+        state = r.state;
         break;
       }
       default:
