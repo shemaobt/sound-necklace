@@ -18,6 +18,7 @@ import {
   confirmParts,
   confirmWhole,
   createSession,
+  ensureMapping,
   enterScene,
   enterSegmentacao,
   frontier,
@@ -29,10 +30,12 @@ import {
   removeFrase,
   reopenFrase,
   reopenPart,
+  setAnswer,
   setMode,
   tagScene,
   toggleFlag,
   triagemDone,
+  type AnswerSlot,
   type Confidence,
   type SceneResult,
   type SessionState,
@@ -166,6 +169,14 @@ interface PhraseIndexStep extends GoldenStep {
 
 interface SceneDoneStep extends GoldenStep {
   forceEmpty?: boolean;
+}
+
+interface AnswerStep extends GoldenStep {
+  level: 1 | 2 | 3;
+  key: string;
+  text: string;
+  partId?: string;
+  propId?: string;
 }
 
 function unwrap(r: SceneResult): SessionState {
@@ -302,6 +313,18 @@ export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
         // que atravessa o aviso de cena vazia (generate.mjs L172–175)
         state = sceneDone(must());
         if ((step as SceneDoneStep).forceEmpty) state = sceneDone(must());
+        break;
+      }
+      case 'answer': {
+        // driver (generate.mjs L179–186): ensureMapping + atribuição direta
+        const a = step as AnswerStep;
+        const slot: AnswerSlot =
+          a.level === 1
+            ? { level: 1, k: a.key }
+            : a.level === 2
+              ? { level: 2, partId: a.partId as string, k: a.key }
+              : { level: 3, propId: a.propId as string, k: a.key };
+        state = setAnswer(ensureMapping(must()), slot, a.text);
         break;
       }
       default:

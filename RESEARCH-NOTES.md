@@ -553,6 +553,31 @@ max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
   ConnectionGate/ENG-224): a estação (ENG-236) importa por caminho direto ou
   adiciona ao barrel no escopo dela.
 
+## Mapeamento — roteiros + answer store (verificado 2026-07-10, ENG-226)
+
+- **Byte-igualdade sem risco de cópia manual**: o teste extrai `var L1_Q = [...]`
+  da própria referência em runtime (regex não-greedy até `];` + `new Function`)
+  e compara com `toStrictEqual` (distingue chave ausente de `undefined` — pega
+  o quirk "L3 sem field" vs "L2 descrever field vazio"). `new Function` é
+  lint-clean aqui: o eslint usa só `recommended` (sem type-checked), então
+  `no-implied-eval` não está ativo. depcruise: `domain/*.test.ts` PODE importar
+  `node:fs` (o `pathNot: '\\.test\\.ts$'` da regra de pureza exclui testes).
+- **Toolchain não altera literais unicode** (fontes na pesquisa ENG-226): tsc/
+  Vite/Oxc/V8 preservam o valor; `JSON.stringify` NÃO escapa U+201C/U+201D/
+  U+2014/U+00E9 (só `"` `\` controles e surrogates órfãos); Prettier só troca
+  delimitadores; `'—' === '—'`. Único vetor real: colar NFD/homóglifo —
+  guarda `s.normalize('NFC') === s` no teste.
+- Quirks do ensureMapping espelhados: semeadura com `== null` (resposta `""`
+  explícita sobrevive); L2 por `lockedParts()` (none_fit INCLUÍDA); L3 por
+  frase `locked && span && part_link` de QUALQUER cena (≠ productiveFrases,
+  que filtra produtivas) — a sequência da conversa (questionSequence) usa
+  productiveFrases, então L3 de cena none_fit é semeada mas nunca perguntada;
+  ensureMapping nunca apaga (frase reaberta mantém respostas). `setAnswer` em
+  bucket L2/L3 inexistente lança (referência lançaria TypeError na atribuição).
+- Golden minimal-flow pós-ENG-226: replay consome os 5 passos `answer` e para
+  pendente em `{index: 17, type: 'export'}` (ENG-227/233). `buildReturn()` da
+  referência NÃO lê `state.mapping` — só `buildMapReportMd()` (L1155–1170).
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.
