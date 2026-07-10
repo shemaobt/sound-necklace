@@ -647,3 +647,27 @@ ids, seam, triagem`; `selection/scenes → frontier`. Mover `activeScene` de
   `page.evaluate` — never edit `docs/reference/index.html`.
 - Integration points are add-a-file registries (stations / adapters `register.ts` /
   app addons / guide variants) — never edit another issue's files to wire yours.
+
+## ENG-235 — contracts API/bucket DTOs (provisional, fixture-first)
+
+- **Custódia opaca no schema (§10.5)**: artefato = `z.string()` (`OpaqueArtifactSchema`),
+  nunca objeto tipado. `schema.parse(bytes) === bytes` prova o round-trip byte-a-byte;
+  um teste faz grep no `api.ts` por `JSON\.parse\(` / `JSON\.stringify\(` (forma de
+  CHAMADA, não menção em comentário — o 1º regex ingênuo `/JSON\.parse/` pegava o
+  próprio doc-comment). Nenhuma via de (de)serialização mora neste módulo.
+- **Envelope de acousteme opaco e versionado (§15.2 O8)**: `strictObject({version, data})`
+  com `data: z.unknown()` — chaves internas desconhecidas sobrevivem intactas
+  (`toEqual` do input). O `strict` é só no envelope; a semântica de `data` (a regra
+  O8) fica com o GranularityResolver (ENG-241/242). A fixture `bucket-list.json` põe
+  `bead_sec` por nível em `data` (fixture-authored, provisório) só para o stub ler.
+- **Autosave sem duplicar o session-state (ENG-234)**: corpo do PUT = `looseObject({
+schema_version: z.int() })` — valida SÓ o envelope e passa o resto opaco. O schema
+  real do estado é do ENG-234; adapters importam só os tipos daqui, contendo a troca.
+- **Fronteira de escopo API vs bucket**: `GranularityLevelSchema` (pequena/media/grande)
+  vive em `bucket.ts` (par com o acousteme) e é importada por `api.ts` no create —
+  intra-contracts é permitido pelo depcruise (a regra `contracts-so-domain` só barra
+  adapters/ui/tests). `ResourcePathSchema` valida as 3 formas §10.4 por regex
+  (level1/<k> · level2/PT#/<k> · level3/P#/<k>, ext `.webm`).
+- **Byte-identidade não toca este módulo**: são DTOs de fio (wire), não artefatos —
+  a única serialização do app segue sendo `serialize.ts`. Status/estado usam ascii no
+  fio (`em_progresso`/`concluida`, `pequena`); o rótulo acentuado é display na UI.
