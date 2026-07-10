@@ -10,10 +10,10 @@ Path: @/ui/molecules
 
 ### How it fits into the larger codebase
 
-- Sits between @/ui/atoms and @/ui/organisms (the first of which, the necklace, has landed — see @/ui/organisms/docs.md). Consumers (organisms, then pages) import from the public barrel @/ui/molecules/index.ts; sibling molecules would import each other by direct path (never the barrel) to avoid cycles — the same rule atoms follow.
+- Sits between @/ui/atoms and @/ui/organisms (see @/ui/organisms/docs.md). Consumers (organisms, then pages) import from the public barrel @/ui/molecules/index.ts; sibling molecules would import each other by direct path (never the barrel) to avoid cycles — the same rule atoms follow.
 - Molecules import ONLY @/ui/atoms (via its barrel), @/ui/tokens (for `PaletteEntry`) and React. The ban on domain/contracts/adapters is enforced mechanically by @/.dependency-cruiser.cjs rule `atomos-e-moleculas-puros` (path `^ui/(atoms|molecules)`), not by convention.
 - Molecules carry no domain meaning. They emit **presentational tokens**, not domain enums: ConfidenceTrio yields `'certeza' | 'quase' | 'duvida'` and the calling page maps those to the domain's `alta`/`média`/`baixa` (see @/domain). Bead/scene geometry (how many beads land on each row, which are edge beads) is computed above by the necklace organism and handed in as props.
-- Unblocks the interaction-critical organisms that compose these pieces: the necklace (ENG-220, uses BeadRow + SelectionBand), the Triagem picker (ENG-225, KindCard + ConfidenceTrio + ProgressDots), the seam modal (ENG-228), the conversation stage (ENG-221, QuestionCard), the dashboard (ENG-222) and the app shell (ENG-224, StepperStation) — see @/ui/docs.md for the wiring layers.
+- Unblocks the interaction-critical organisms that compose these pieces: the necklace (ENG-220, uses BeadRow + SelectionBand), the Triagem picker (ENG-225, KindCard + ConfidenceTrio + ProgressDots), the conversation stage (ENG-221, QuestionCard), the dashboard (ENG-222) and the app shell (ENG-224, StepperStation) — see @/ui/docs.md for the wiring layers. (Not every organism needs a molecule: the seam modal composes atoms directly.)
 
 ```
 ui/tokens ──▶ ui/atoms ──▶ ui/molecules ──▶ ui/organisms ──▶ templates/pages/app

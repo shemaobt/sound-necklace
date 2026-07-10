@@ -11,4 +11,5 @@ export {
   type RecorderState,
 } from './conversation-stage/conversation-stage';
 export { Necklace, type NecklaceProps, type NecklaceSegment } from './necklace/necklace';
+export { SeamModal, type SeamCordSide, type SeamModalProps } from './seam-modal/seam-modal';
 export { StorytellerGuide, type GuideVariantProps } from './storyteller-guide';
