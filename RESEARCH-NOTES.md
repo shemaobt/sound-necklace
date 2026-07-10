@@ -899,3 +899,40 @@ cena"`, `aria-current="step"`), mas NÃO tem prop de "concluído" — o check de
   ui/organisms/index.ts (precedente ConnectionGate/ENG-224). As páginas Dashboard
   (ENG-245) e Export (ENG-246) os compõem por caminho direto — depcruise só regula
   direção de camada, não uso do barrel.
+
+## UI pages / estação Export — conclusão & custódia de artefatos (verificado 2026-07-10, ENG-246)
+
+- **Artefatos construídos UMA vez, reusados (§10.5):** o `useMemo` de `triple`
+  (`serializeArtifact(buildManifesto)`, `serializeArtifact(buildRetorno)`,
+  `buildMapReport(session, voice)`) é a ÚNICA origem dos bytes. `store.complete`
+  guarda esse mesmo objeto opaco e `getArtifacts` o devolve idêntico ao dashboard;
+  os downloads emitem `triple[kind]`. Byte-identidade sai de graça: complete e
+  download partilham o objeto — nenhum rebuild por download.
+- **A meta fora do domínio some no caminho até o Export.** O `ui/state` guarda só o
+  `SessionState` do domínio; `toSessionDto(state, meta)` EXIGE `SessionMeta`
+  (granularidade/bucket/voice/consent). A página recupera a meta relendo o DTO
+  persistido (`store.load(id)`) no mount — try/catch (fronteira de IO) cai em default
+  se nunca salvo. Consequência: o `complete` só é fiel à meta se a sessão já foi
+  autosalva; os testes da DoD só afirmam artefatos+status, então default basta ali.
+- **Máquina de fases `loading→edit|saved` a partir do STATUS do adapter.** `store.get(id).status==='concluida'`→`saved` (revisão): revisitar uma sessão
+  concluída abre em revisão com "Destravar para editar"→`store.reopen` (NÃO o
+  `unlock` da UI store, que é o lock consultivo da segmentação). `edit` mostra
+  "Concluir e guardar os documentos", desabilitado sem `whole.confirmed`.
+- **Gates 1:1 da referência (index.html L1331–1337).** retorno: `retornoExportStatus(state).canExport` (=`whole.confirmed`); bloqueio→cópia exata
+  "Confirme o colar antes de exportar."; aviso `semFim` literal "N frase(s) ainda
+  sem fim travado." (o "(s)" é literal na referência, não pluraliza). manifesto:
+  no-op silencioso sem `canExportManifesto` (`totalBeads>0`).
+- **`saveBytes(filename, bytes)` é a fronteira de download injetável.** Default =
+  Blob+objectURL+anchor (só roda no browser real; jsdom não tem `createObjectURL`);
+  os testes injetam um spy p/ afirmar identidade de bytes. Nome de arquivo via
+  `retorno/manifesto/relatorioFilename(slug)` (prefixado por slug) — distinto dos
+  filenames de EXIBIÇÃO sem prefixo dentro do organism `ArtifactCards`.
+- **A estação NÃO fica alcançável no shell ainda.** O slot `export` do stepper existe
+  mas `reachable=false` e `App.tsx KEY_TO_MODE` não tem `export` (não há `Mode` de
+  export no domínio). Ligar a estação (roteá-la + passar store/id) é edição de SHELL,
+  fora do Scope do ENG-246 → follow-up. A página é coberta 100% pelos testes jsdom
+  que injetam `FixtureSessionStore` + `sessionId`.
+- **Discrepância de cópia herdada (fora de escopo):** o chip de `ArtifactCards`
+  (ENG-222, mergeado) ainda diz "documentos salvos — nada saiu deste computador"
+  (custódia local v1), mas o PRD v2 §5 é custódia em nuvem e o ENG-246 pede NÃO usar
+  essa linha. O organismo é out-of-scope aqui → follow-up para corrigir o chip.
