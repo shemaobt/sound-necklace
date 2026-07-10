@@ -159,7 +159,10 @@ function lockFrase(state: SessionState, i: number, sel: Span, sceneId: string): 
   return addFrase({ ...base, current: { layer: 'frases', index: -1 } });
 }
 
-/** doMove (L814): desliza a costura e trava a frase na cena ativa. */
+/** doMove (L814): desliza a costura e trava a frase na cena ativa.
+ *  Pré-condição: chamar com o MESMO estado (mesma cena ativa) que produziu a
+ *  oferta — a referência fecha sobre a cena no momento da oferta e descarta a
+ *  oferta em todo caminho que troca o foco de cena. */
 export function moveBorder(state: SessionState, offer: BorderOffer): SessionState {
   const sc = activeScene(state);
   if (!sc) return state;
@@ -192,7 +195,9 @@ export function reopenFrase(state: SessionState, i: number): SessionState {
   };
 }
 
-/** Remove e libera o P#; assume o ÚLTIMO destravado ou auto-add (L850–855). */
+/** Remove e libera o P#; assume o ÚLTIMO destravado ou auto-add (L850–855).
+ *  Desvio deliberado: índice fora do intervalo não remove nada (o splice(-1)
+ *  da referência removeria a última — inalcançável por chamador bem-formado). */
 export function removeFrase(state: SessionState, i: number): SessionState {
   const frases = state.frases.filter((_, k) => k !== i);
   const base = { ...state, frases, selection: null, pendingStart: null };
@@ -233,7 +238,9 @@ export function enterFrasesLayer(state: SessionState): SessionState {
 
 /** Bloco de entrada em segmentação do setMode (L1006–1008): conserta um
  *  activeSceneId inválido para a 1ª produtiva e entra na cena; sem produtivas,
- *  entra na camada. Compor APÓS gates.setMode(state, 'segmentacao'). */
+ *  entra na camada. Compor APÓS gates.setMode(state, 'segmentacao') e SÓ
+ *  quando o modo efetivo for segmentacao — sob redirect (zero produtivas) a
+ *  referência não roda este bloco, e compô-lo criaria um slot P# dangling. */
 export function enterSegmentacao(state: SessionState): SessionState {
   const first = productiveScenes(state)[0];
   if (first) {
@@ -254,12 +261,14 @@ export type FrasesDoneResult =
   | { kind: 'noop'; state: SessionState; warnedEmptyScene: string | null }
   | { kind: 'warn-empty'; state: SessionState; warnedEmptyScene: string; message: string }
   | { kind: 'next-scene'; state: SessionState; warnedEmptyScene: null }
-  | { kind: 'mapeamento'; state: SessionState; warnedEmptyScene: null };
+  | { kind: 'mapeamento'; state: SessionState; warnedEmptyScene: string | null };
 
 /**
  * confirmFrasesDone (L917–929): cena vazia avisa uma vez POR CENA (o marcador
  * entra e sai como dado); a segunda chamada segue mesmo assim. Última produtiva
  * (ou nenhuma) pede mapeamento — o redirect do gates decide o modo efetivo.
+ * No ramo sem cena ativa a referência NÃO toca o marcador (L917–918) —
+ * preservado; o reset a null só acontece após passar o check de aviso (L925).
  */
 export function confirmFrasesDone(
   state: SessionState,
@@ -268,7 +277,7 @@ export function confirmFrasesDone(
   if (state.review) return { kind: 'noop', state, warnedEmptyScene };
   const sc = activeScene(state);
   if (!sc) {
-    return { kind: 'mapeamento', state: setMode(state, 'mapeamento'), warnedEmptyScene: null };
+    return { kind: 'mapeamento', state: setMode(state, 'mapeamento'), warnedEmptyScene };
   }
   const n = state.frases.filter((f) => f.locked && f.span && f.part_link === sc.part_id).length;
   if (n === 0 && warnedEmptyScene !== sc.part_id) {

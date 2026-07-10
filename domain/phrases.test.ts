@@ -515,10 +515,12 @@ describe('confirmFrasesDone — aviso de cena vazia e avanço (§8.6)', () => {
 
   it('sem cena produtiva pede mapeamento e o redirect derruba na triagem', () => {
     const s = sess({ parts: [PT3] });
-    const r = confirmFrasesDone(s, null);
+    const r = confirmFrasesDone(s, 'PT1');
     expect(r.kind).toBe('mapeamento');
     if (r.kind !== 'mapeamento') throw new Error('unreachable');
     expect(r.state.mode).toBe('triagem');
+    // a referência NÃO toca o marcador neste ramo (L917–918) — preserva
+    expect(r.warnedEmptyScene).toBe('PT1');
   });
 
   it('em revisão é no-op', () => {
