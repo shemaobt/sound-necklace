@@ -1,0 +1,88 @@
+/* Segmentação — as frases dentro de uma cena (redesign §6.5): palco creme de
+   trabalho, o título "Cena N · tipo", o colar em janela na cena desperta (banda
+   tracejada + contas de fora dormentes já vêm do organismo) e os chips de frase
+   numa fileira que quebra. O movimento (entrada de um novo chip ao travar uma
+   frase) fica sob a guarda de reduced-motion (§4.5); a iluminação do colar já é
+   guardada nos átomos. */
+
+.cds-segmentacao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: 72vh;
+  padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+  text-align: center;
+}
+
+.cds-segmentacao-title {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: clamp(1.15rem, 3vw, 1.6rem);
+  font-weight: 600;
+}
+
+.cds-segmentacao-instruction {
+  margin: 0;
+  max-width: 34ch;
+  font-family: var(--cds-font-load-bearing);
+  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  line-height: 1.35;
+  color: var(--cds-olive-soft, var(--cds-olive));
+}
+
+.cds-segmentacao-stage {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+}
+
+.cds-segmentacao-scene-controls {
+  display: flex;
+  justify-content: center;
+}
+
+.cds-segmentacao-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cds-segmentacao-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.cds-segmentacao-error {
+  margin: 0;
+  max-width: 34ch;
+  font-family: var(--cds-font-load-bearing);
+  color: var(--cds-error);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-segmentacao-chips > li {
+    animation: cds-segmentacao-chip-in 0.24s var(--cds-motion-easing) both;
+  }
+
+  @keyframes cds-segmentacao-chip-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.4rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
