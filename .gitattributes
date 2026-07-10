@@ -1,0 +1,7 @@
+# Ledgers que TODA branch paralela do loop anexa (uma linha por iteração/PR).
+# O driver 'union' (embutido no git) mantém os dois lados no merge/rebase em vez
+# de gerar conflito — elimina o atrito recorrente sem tocar em código.
+# GitHub honra o 'union' no botão de merge; rebases locais também auto-resolvem.
+CURRENT-PROGRESS.md merge=union
+RESEARCH-NOTES.md   merge=union
+**/docs.md          merge=union
