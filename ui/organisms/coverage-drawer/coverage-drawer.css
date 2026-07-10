@@ -1,0 +1,158 @@
+/* Drawer de cobertura — painel olive da direita (protótipo "Colar de Sons -
+   Protótipo", Triagem). Movimento (slide/fade) só sob a guarda reduced-motion:
+   sem animação o Radix desmonta imediato, que é o comportamento base. */
+
+.cds-coverage-drawer-tab {
+  position: absolute;
+  right: 0;
+  top: 42%;
+  background: var(--cds-olive, #3f3e20);
+  color: var(--cds-cream, #f6f5eb);
+  border: none;
+  border-radius: 12px 0 0 12px;
+  padding: 14px 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.cds-coverage-drawer-tab-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+}
+
+.cds-coverage-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 7, 3, 0.2);
+}
+
+.cds-coverage-drawer-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 340px;
+  background: var(--cds-olive, #3f3e20);
+  color: var(--cds-cream, #f6f5eb);
+  box-shadow: -16px 0 40px -8px rgba(10, 7, 3, 0.3);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  font-family: var(--cds-font-load-bearing, 'Montserrat', system-ui, sans-serif);
+}
+
+.cds-coverage-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cds-coverage-drawer-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(246, 245, 235, 0.6);
+}
+
+.cds-coverage-drawer-close {
+  background: transparent;
+  border: none;
+  color: var(--cds-cream, #f6f5eb);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.cds-coverage-drawer-intro {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(246, 245, 235, 0.7);
+  line-height: 1.5;
+}
+
+.cds-coverage-drawer-intro strong {
+  color: var(--cds-cream, #f6f5eb);
+}
+
+.cds-coverage-drawer-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cds-coverage-drawer-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  font-family: ui-monospace, Menlo, monospace;
+  background: rgba(246, 245, 235, 0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.cds-coverage-drawer-counts {
+  white-space: nowrap;
+  color: rgba(246, 245, 235, 0.8);
+}
+
+.cds-coverage-drawer-absence {
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c2a55a;
+}
+
+.cds-coverage-drawer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cds-coverage-drawer-chip {
+  font-size: 11px;
+  background: rgba(140, 90, 116, 0.3);
+  border: 1px solid rgba(180, 132, 157, 0.4);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes cds-coverage-drawer-slide-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes cds-coverage-drawer-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .cds-coverage-drawer-panel[data-state='open'] {
+    animation: cds-coverage-drawer-slide-in 0.22s ease-out;
+  }
+
+  .cds-coverage-drawer-overlay[data-state='open'] {
+    animation: cds-coverage-drawer-fade-in 0.22s ease-out;
+  }
+}

@@ -507,6 +507,52 @@ max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
   só pelo shell segue o precedente do connection-gate: FORA do barrel, import por
   caminho direto (evita editar ui/organisms/index.ts fora do Scope).
 
+## Triagem picker / coverage drawer / Radix (verificado 2026-07-09, ENG-225)
+
+- **Radix**: o trabalho original desta issue usou o pacote unificado `radix-ui`,
+  mas ao rebasear sobre a main o repo já tinha padronizado o pacote com escopo
+  `@radix-ui/react-dialog` (ENG-228, seam modal) — o drawer foi reconciliado para
+  `import * as Dialog from '@radix-ui/react-dialog'` (uma dep só, precedente vence).
+  `Dialog.Title` é OBRIGATÓRIO (console.error sem ele); sem `Description`, passar
+  `aria-describedby={undefined}` no `Content`. Portal → `document.body`: testes usam
+  `screen.*`, nunca `container`. Modal aberto ⇒ `pointer-events:none` no body +
+  `aria-hidden` nos irmãos (trigger some das queries por role enquanto aberto);
+  clique-fora = `fireEvent.pointerDown(document.body)` (DismissableLayer ouve
+  pointerdown, não click); ESC = keydown no documento. jsdom não computa animação
+  de stylesheet ⇒ Presence desmonta imediato ao fechar (sem forceMount/waits) —
+  e as animações ficam dentro da guarda reduced-motion de qualquer forma.
+- **Só o protótipo "Protótipo.dc.html" é normativo p/ Triagem** (o card 1c de
+  "Classificação (opções)" é rascunho): disclosure = "Ver todos os tipos por tema"
+  (a variante "Ver todos os 27 tipos" tem dígito — viola §9.2); escolher o kind
+  SUBSTITUI o grid pelo estágio de confiança (chip do kind + "trocar tipo" +
+  pergunta "O quanto isso parece certo pra você?"); drawer olive 340px com linhas
+  mono kind-EN + heading "Candidatos a ausência (raras em aberto)" (#C2A55A).
+  Cores dos 6 temas do protótipo = `scenePalette[0..5]` dos tokens (hex idênticos).
+- **"Mais comuns" = os 8 kinds do tier `comum`** (decisão da issue; o protótipo
+  mostrava 6 — a issue vence). Filtro de texto: exigido pelo PRD §8.5/DoD embora o
+  protótipo híbrido o tenha descartado (comportamento: PRD vence). Sem contagem de
+  resultados visível (dígito violaria §9.2; WCAG 4.1.3 só exige role=status SE uma
+  mensagem de status for exibida).
+- **A11y do picker (APG)**: radiogroup ÚNICO com headings de tema apenas visuais —
+  `role=group` aninhado em radiogroup NÃO é sancionado (required owned = só radio;
+  suporte de AT inconsistente). Roving tabindex com setas movendo foco SEM marcar
+  (variante toolbar): marcar no arrow dispararia a troca grid→confiança a cada
+  tecla. `KindCard` não encaminha ref ⇒ o roving usa
+  `querySelectorAll('[role="radio"]')` no container (ordem DOM = ordem do array
+  de render) + índice `focusedIdx` dirigindo `tabbable` (reset a 0 quando a
+  lista muda: filtro/disclosure).
+- **Passo de confiança NÃO emite na seleção** (self-review 2026-07-10): o
+  ConfidenceTrio é APG padrão (setas movem E marcam via onSelect) — mapear
+  onSelect→onConfirm faria uma seta de exploração cometer a triagem. O picker
+  guarda a escolha em estado local (`value` controlado, aria-checked real) e a
+  emissão contratual fica num botão "Confirmar" dominante revelado após a
+  primeira escolha. Trocas de estágio (grade↔confiança, disclosure↔recolher)
+  gerem foco explicitamente (senão cai no body, WCAG 2.4.3) — padrão useEffect
+  com ref de estágio anterior, foco no `[role="radio"][tabindex="0"]`.
+- Barrel `ui/organisms/index.ts` fica FORA do escopo da ENG-225 (precedente
+  ConnectionGate/ENG-224): a estação (ENG-236) importa por caminho direto ou
+  adiciona ao barrel no escopo dela.
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.

@@ -1,0 +1,150 @@
+/* Picker da Triagem — visual do protótipo "Colar de Sons - Protótipo" (Triagem).
+   Cores/tipografia dos tokens Shemá; movimento decorativo só sob a guarda. */
+
+.cds-triagem-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 640px;
+}
+
+.cds-triagem-picker-filter {
+  align-self: flex-end;
+  border: 1px solid var(--cds-hairline, rgba(63, 62, 32, 0.16));
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-family: var(--cds-font-load-bearing, 'Montserrat', system-ui, sans-serif);
+  font-size: 13px;
+  color: var(--cds-olive, #3f3e20);
+  background: #ffffff;
+}
+
+.cds-triagem-picker-filter::placeholder {
+  color: #8a8970;
+}
+
+.cds-triagem-picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cds-triagem-picker-section,
+.cds-triagem-picker-theme-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 2px 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a8970;
+}
+
+.cds-triagem-picker-theme-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cds-triagem-picker-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.cds-triagem-picker-theme {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cds-triagem-picker-disclosure {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1.5px dashed rgba(63, 62, 32, 0.28);
+  color: #5a5a3e;
+  font-weight: 600;
+  font-size: 13.5px;
+  background: transparent;
+}
+
+.cds-triagem-picker-disclosure:hover {
+  background: #f1efe3;
+}
+
+.cds-triagem-picker-collapse {
+  align-self: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cds-telha, #be4a01);
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+}
+
+.cds-triagem-picker-chosen {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(63, 62, 32, 0.08);
+  padding: 14px 24px;
+}
+
+.cds-triagem-picker-chosen-label {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 19px;
+  color: #0a0703;
+}
+
+.cds-triagem-picker-swap {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cds-telha, #be4a01);
+  background: transparent;
+  border: none;
+}
+
+.cds-triagem-picker-question {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0a0703;
+}
+
+.cds-triagem-picker-confirm {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes cds-triagem-picker-fade {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .cds-triagem-picker-theme,
+  .cds-triagem-picker[data-stage='confianca'] {
+    animation: cds-triagem-picker-fade 0.2s ease-out;
+  }
+}
