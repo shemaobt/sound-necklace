@@ -1,6 +1,7 @@
 /**
- * Camada 3 — as frases. Port 1:1 de activeScene/sceneIndexOf (docs/reference/
- * index.html L395–396), frontier de frases com back-reach (L400–410), addFrase
+ * Camada 3 — as frases. Port 1:1 de sceneIndexOf (docs/reference/index.html
+ * L396; activeScene L395 vive em seam.ts, o ramo de fronteira com back-reach
+ * L400–410 em frontier.ts — ENG-269), addFrase
  * (L772–777), confirmFrase (L779–792), lockFrase (L793–798), doMove (L814),
  * reopenFrase (L843–848), removeFrase (L850–855), flag toggle (L883),
  * enterScene (L837–842), enterLayer("frases") (L930–935), do bloco de entrada
@@ -21,17 +22,13 @@
 import { activeAnchor, frontier } from './frontier';
 import { setMode } from './gates';
 import { nextPid } from './ids';
-import { classifyBorderMove, prevNeighbor, slideSeam, type BorderOffer } from './seam';
+import { activeScene, classifyBorderMove, slideSeam, type BorderOffer } from './seam';
 import { productiveScenes } from './triagem';
-import type { Frase, ScenePart, SessionState, Span } from './state';
+import type { Frase, SessionState, Span } from './state';
 
-/** A cena produtiva em foco: resolve por activeSceneId, senão a 1ª (L395). */
-export function activeScene(state: SessionState): ScenePart | null {
-  const ps = productiveScenes(state);
-  let a: ScenePart | null = null;
-  for (const p of ps) if (p.part_id === state.activeSceneId) a = p;
-  return a ?? ps[0] ?? null;
-}
+// activeScene mudou para seam.ts (ENG-269, quebra de ciclo com frontier.ts);
+// re-exportado aqui para manter a API pública do domain estável.
+export { activeScene } from './seam';
 
 /** Índice da cena na vista de produtivas, ou −1 (L396). */
 export function sceneIndexOf(state: SessionState, id: string | null): number {
@@ -42,21 +39,9 @@ export function sceneIndexOf(state: SessionState, id: string | null): number {
  * Fronteira da camada de frases (L400–410): dentro da cena ativa, o fim da
  * última frase travada + 1; 1ª frase recua ao INÍCIO da vizinha anterior
  * (back-reach) ou ao início da própria cena. Sem cena ativa, o ramo genérico.
+ * Desde a ENG-269 o ramo completo vive em frontier() — isto é um alias.
  */
 export function phraseFrontier(state: SessionState): number {
-  const sc = activeScene(state);
-  const scSpan = sc?.span;
-  if (sc && scSpan) {
-    let maxEnd = -1;
-    for (const fr of state.frases) {
-      if (fr.locked && fr.span && fr.part_link === sc.part_id && fr.span.e > maxEnd) {
-        maxEnd = fr.span.e;
-      }
-    }
-    if (maxEnd >= 0) return maxEnd + 1;
-    const pv = prevNeighbor(state, sc);
-    return pv ? pv.span.s : scSpan.s;
-  }
   return frontier(state, 'frases');
 }
 

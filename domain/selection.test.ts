@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildBeads } from './grid';
 import { clickBead } from './selection';
-import { createSession, type ScenePart, type SessionState } from './state';
+import { createSession, type Frase, type ScenePart, type SessionState } from './state';
 
 /** Sessão de teste: 12 s a 0.5 s/conta → 24 contas (0…23). */
 function sess(over: Partial<SessionState> = {}, dur = 12, beadSec = 0.5): SessionState {
@@ -81,6 +81,73 @@ describe('clickBead — clamp a [fronteira, fim da história] (referência L565�
   it('clique além do fim da história é puxado para a última conta', () => {
     const r = clickBead(anchored(), 99);
     expect(r.state.selection).toEqual({ s: 23, e: 23 });
+  });
+});
+
+describe('clickBead — clamp na camada de frases: fronteira com back-reach (referência L563–566 + L400–409)', () => {
+  function frase(over: Partial<Frase>): Frase {
+    return {
+      prop_id: 'P1',
+      statement_pt: '',
+      qa: [],
+      span: null,
+      part_link: null,
+      locked: false,
+      flagged: false,
+      ...over,
+    };
+  }
+
+  /** Duas cenas produtivas travadas; ancorando uma frase na 2ª (PT2). */
+  function fraseando(frases: Frase[], index: number): SessionState {
+    const base = sess();
+    return {
+      ...base,
+      whole: { ...base.whole, confirmed: true },
+      parts: [
+        part({
+          part_id: 'PT1',
+          span: { s: 4, e: 9 },
+          locked: true,
+          tag_state: 'tagged',
+          scene_kind: 'GLEANING_SCENE',
+        }),
+        part({
+          part_id: 'PT2',
+          span: { s: 10, e: 19 },
+          locked: true,
+          tag_state: 'tagged',
+          scene_kind: 'MEAL_SCENE',
+        }),
+      ],
+      partsConfirmed: true,
+      frases,
+      current: { layer: 'frases', index },
+      activeSceneId: 'PT2',
+    };
+  }
+
+  it('1ª frase da cena: clique antes da vizinha anterior é puxado ao início dela (back-reach)', () => {
+    const r = clickBead(fraseando([frase({})], 0), 1);
+    expect(r.state.selection).toEqual({ s: 4, e: 4 });
+    expect(r.state.pendingStart).toBe(4);
+    expect(r.play).toEqual({ type: 'single-bead', bead: 4 });
+  });
+
+  it('o piso do clique é o fim da última frase travada DA CENA +1 — não o máximo global', () => {
+    const base = fraseando(
+      [
+        frase({ prop_id: 'P1', span: { s: 5, e: 6 }, locked: true, part_link: 'PT1' }),
+        frase({ prop_id: 'P2', span: { s: 12, e: 13 }, locked: true, part_link: 'PT2' }),
+        frase({ prop_id: 'P3' }),
+      ],
+      2,
+    );
+    const s = { ...base, activeSceneId: 'PT1' };
+    // piso na cena PT1 = 7 (fim da P1 +1); o ramo genérico daria 14 (fim da P2 +1)
+    const r = clickBead(s, 5);
+    expect(r.state.selection).toEqual({ s: 7, e: 7 });
+    expect(r.play).toEqual({ type: 'single-bead', bead: 7 });
   });
 });
 

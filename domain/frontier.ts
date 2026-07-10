@@ -1,19 +1,36 @@
 /**
  * Fronteira travada + âncora ativa — port 1:1 de frontier (docs/reference/
- * index.html L400–415, ramo genérico L411–415) e activeAnchor (L416–423).
- * PRD v2 §6.4, §11.
+ * index.html L400–415: ramo de cena ativa L401–409, ramo genérico L411–415)
+ * e activeAnchor (L416–423). PRD v2 §6.4, §11.
  *
- * O ramo de cena ativa da camada de frases (L401–409: última frase travada na
- * cena, back-reach à vizinha anterior) chega com a ENG-223 — aqui só o ramo
- * genérico, que a referência aplica às duas camadas.
+ * O ramo de cena ativa da camada de frases (última frase travada na cena +1;
+ * back-reach ao início da vizinha anterior) retorna ANTES do clamp em
+ * totalBeads−1 — quirk da referência espelhado de propósito (ENG-269): com a
+ * última frase cobrindo o fim do colar, a fronteira cai FORA da grade.
  *
  * Desvio de shape: activeAnchor devolve `index` onde a referência devolve o
  * próprio `item` (L420) — com estado imutável o chamador endereça pelo índice.
  */
 
+import { activeScene, prevNeighbor } from './seam';
 import type { SessionState } from './state';
 
 export function frontier(state: SessionState, layer: 'parts' | 'frases'): number {
+  if (layer === 'frases') {
+    const sc = activeScene(state);
+    const scSpan = sc?.span;
+    if (sc && scSpan) {
+      let maxEnd = -1;
+      for (const fr of state.frases) {
+        if (fr.locked && fr.span && fr.part_link === sc.part_id && fr.span.e > maxEnd) {
+          maxEnd = fr.span.e;
+        }
+      }
+      if (maxEnd >= 0) return maxEnd + 1;
+      const pv = prevNeighbor(state, sc);
+      return pv ? pv.span.s : scSpan.s;
+    }
+  }
   const arr = layer === 'parts' ? state.parts : state.frases;
   let f = layer === 'frases' ? state.whole.span.s : 0;
   for (const it of arr) {
