@@ -1,0 +1,64 @@
+/* Dashboard (redesign §4.1): superfície de trabalho creme, densidade de
+   facilitadora. A lista de sessões e, para as concluídas, os cartões de download
+   diretos. Sem movimento decorativo. */
+
+.cds-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 72vh;
+  padding: clamp(1.5rem, 5vh, 3rem) clamp(1rem, 5vw, 3rem);
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+}
+
+.cds-dashboard-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cds-dashboard-title {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: clamp(1.4rem, 3.6vw, 2rem);
+  line-height: 1.15;
+  color: var(--cds-ink, #0a0703);
+}
+
+.cds-dashboard-new {
+  padding: 0.6rem 1.1rem;
+  border: none;
+  border-radius: var(--cds-radius-pill, 999px);
+  background: var(--cds-ink, #0a0703);
+  color: var(--cds-cream);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cds-dashboard-new:focus-visible {
+  outline: 2px solid var(--cds-telha, #8f3701);
+  outline-offset: 2px;
+}
+
+.cds-dashboard-empty {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  color: var(--cds-olive);
+}
+
+.cds-dashboard-downloads {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cds-dashboard-download-title {
+  margin: 0 0 0.75rem;
+  font-family: var(--cds-font-quiet-voice);
+  font-size: 1rem;
+  color: var(--cds-olive);
+}

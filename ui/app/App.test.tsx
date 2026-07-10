@@ -28,9 +28,11 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: 'Colar de Sons' })).toBeDefined();
   });
 
-  it('rota sem estação construída cai no fallback', () => {
+  it('resolve a estação da rota (a rota default abre o dashboard)', () => {
+    // O fallback "estação em construção" para uma chave não construída é coberto
+    // em station-host.test.tsx; aqui basta que o shell resolva a estação da rota.
     render(<App />);
-    expect(screen.getByText('estação em construção')).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Minhas sessões' })).toBeDefined();
   });
 
   it('numa sessão carregada, mostra o fio de contas', () => {

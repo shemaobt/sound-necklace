@@ -1101,3 +1101,53 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   Coverage: `adapters/` não tem piso numérico (testado contra fixtures), então o ramo
   `return 0` sem Web Audio fica sem teste dedicado (guard de degradação graciosa,
   padrão dos erros tipados da porta) — proposital, não gaming de gate.
+
+## UI pages / Login + Dashboard (verificado 2026-07-10, ENG-245)
+
+- **O shell JÁ roteia login/dashboard — a issue só ADICIONA arquivos.** @/ui/app/App.tsx
+  renderiza `stationKey='login'` para `/login` e `'dashboard'` para `/`+`/dashboard`
+  via o glob `import.meta.glob('/ui/pages/*/index.tsx')` (@/ui/app/registries.ts),
+  passando `<Station />` SEM props. Então bastou criar `ui/pages/login/index.tsx` e
+  `ui/pages/dashboard/index.tsx` com `export default` — nenhuma edição de shell
+  (Scope). Navegação pelo router mínimo History-API (@/ui/app/router.ts): `navigate`
+  faz push+notify à mão (pushState não dispara popstate); `usePathname` via
+  `useSyncExternalStore`. Pages PODEM importar `../../app/router` e outras pages
+  (depcruise só barra organisms/atoms/molecules→adapters; pages/templates/app são a
+  camada de wiring). Sem ciclo: router não importa pages.
+- **Singletons de porta COMPARTILHADOS entre as duas telas (`dashboard/ports.ts`).**
+  A `AuthProvider` que o Login usa para entrar tem de ser a MESMA que o Dashboard
+  observa em `onAuthExpired` (§7.1 — expiração volta ao login). Por isso um único
+  módulo (`ports.ts`) exporta `defaultAuth()`/`defaultSessionStore()` memoizados
+  (fixture), e o Login importa `defaultAuth` de `../dashboard/ports`. Resolvi as
+  fixtures DIRETO (`new FixtureAuthProvider()`/`new FixtureSessionStore()`), NÃO via
+  `buildAdapterRegistry` — evita o ciclo `registries→(glob)→pages→registries` e a
+  seleção real por ambiente é wiring do composition root (ENG-247). Defaults são
+  produção-only e ficam SEM cobertura de propósito (os testes injetam as portas;
+  `ui/` não tem piso de coverage).
+- **"Nova sessão" → `navigate('/setup')`, mas o router NÃO conhece `/setup` ainda.**
+  `matchRoute` só casa `/login`, `/dashboard`, `/session/:id` (o resto → `unknown` →
+  o shell cai em `dashboard`). Setup (§8.1) é pré-sessão e não tem rota. Como o shell
+  está fora do Scope, o botão só dispara a navegação; ROTEAR `/setup`→estação Setup é
+  follow-up de shell (junto de ENG-243 Setup), mesmo padrão do ENG-246 Export que
+  adiou seu wiring. O teste afirma o alvo da navegação (`pathname==='/setup'`).
+- **GOTCHA — adicionar a página `dashboard` quebrou um teste do SHELL.** `App.test.tsx`
+  tinha "rota sem estação construída cai no fallback" que renderizava `<App />` em `/`
+  e esperava "estação em construção" — assumindo que `dashboard` NÃO estava construída.
+  Assim que a page existe, o glob resolve a chave e a rota abre o Dashboard. O fallback
+  em si já é coberto por `station-host.test.tsx` (registry vazio); reapontei o teste do
+  App para afirmar que o shell resolve a estação da rota (heading "Minhas sessões").
+  Regra global de CI ("fix any ci issues even if you did not cause them") > o Scope de
+  fonte, e o shell foi projetado para pages só ADICIONAREM arquivos — o teste era o
+  ponto frágil.
+- **Nomes de história aparecem 2–3× no DOM.** O `SessionCard` põe o nome no `<h3>` E
+  num `<span vh>` do botão (nome composto APG "Retomar <história>"), e o grupo de
+  download repete no `<h2>`. `getByText(nome)`/`findByText` LANÇAM por múltiplos →
+  usar `findAllByText`, ou ancorar pelo filename único do card (`retorno-ancoragem.json`),
+  ou por `role/heading`. Data formatada via `toLocaleString('pt-BR',{dateStyle,timeStyle})`
+  exportada (`formatWhen`) p/ o teste recomputar o esperado sem hardcode de fuso.
+- **Botão de submit do Login = `<button type="submit">` nativo, NÃO o atom `Button`.**
+  O atom é `type="button"` (não submete) — para Enter-submeter o formulário de
+  credenciais (dois inputs) é preciso um submit nativo; estilizei `.cds-login-submit`
+  no próprio css (evita acoplar ao contrato `data-variant` interno do atom).
+  Erro só de credencial (`AuthError`) vira orientação PT-BR; qualquer outra falha sobe
+  (fronteira de sistema, sem mascarar).
