@@ -98,6 +98,23 @@ describe('FixtureVoiceRecorder', () => {
     expect(await runLevels(42)).toEqual(await runLevels(42));
   });
 
+  it('duration devolve a duração da gravação salva (relógio falso: 3 quadros → 0,3 s)', async () => {
+    const rec = new FixtureVoiceRecorder();
+    const recording = await rec.start(P1);
+    recording.onLevel(() => {});
+    recording.tick();
+    recording.tick();
+    recording.tick();
+    await recording.stop();
+
+    expect(await rec.duration(P1)).toBeCloseTo(0.3, 6);
+  });
+
+  it('duration de um caminho sem gravação lança', async () => {
+    const rec = new FixtureVoiceRecorder();
+    await expect(rec.duration(P2)).rejects.toThrow();
+  });
+
   it('persiste através de um VoiceResourceStore apoiado no SessionStore (§10.4)', async () => {
     const sessions = new FixtureSessionStore();
     const summary = await sessions.create({

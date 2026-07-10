@@ -71,6 +71,30 @@ describe('WebVoiceRecorder — persistência delega ao store (sem microfone)', (
   });
 });
 
+describe('WebVoiceRecorder — duração de gravação salva (decode stub, sem microfone)', () => {
+  it('duration decodifica os bytes salvos e devolve a duração do buffer', async () => {
+    const store = new MemoryVoiceStore();
+    await store.put(P1, Uint8Array.of(1, 2, 3, 4));
+    const close = vi.fn();
+    const decodeAudioData = vi.fn(async () => ({ duration: 12.5 }) as AudioBuffer);
+    const rec = new WebVoiceRecorder({
+      store,
+      AudioContextCtor: function AudioContextCtor(this: unknown) {
+        return { decodeAudioData, close };
+      } as unknown as typeof AudioContext,
+    });
+
+    expect(await rec.duration(P1)).toBe(12.5);
+    expect(decodeAudioData).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalled();
+  });
+
+  it('duration de um caminho sem gravação lança', async () => {
+    const rec = new WebVoiceRecorder({ store: new MemoryVoiceStore() });
+    await expect(rec.duration(P1)).rejects.toThrow();
+  });
+});
+
 /** MediaRecorder falso: stop() emite um chunk e dispara onstop (sem microfone). */
 class FakeMediaRecorder {
   ondataavailable: ((e: { data: Blob }) => void) | null = null;

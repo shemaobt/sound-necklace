@@ -1083,3 +1083,21 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   `utterance.onstart()/onend()` no fake — sem síntese real. Num ambiente sem a API,
   `speak`/`stop` são no-ops silenciosos (a porta nunca é registrada nesse caso, mas
   o guard protege construção direta em testes).
+
+- **ENG-271 — `VoiceRecorder.duration(path)` p/ gravação salva.** A porta `stop()`
+  já devolvia `RecordedAnswer.durationSec` de uma gravação FRESCA, mas o relatório
+  precisa da duração de uma gravação JÁ persistida (só tinha `has`/`play`). Escolhi a
+  abordagem 1 da issue (novo método na porta), contida em `adapters/voice`: o
+  fixture não pode "recuperar" a duração dos bytes (o placeholder WebM é estático de 9
+  bytes), então rastreia `caminho→segundos` no `stop()` via callback `onPersist`
+  (relógio falso `FRAME_SEC=0.1`); o web decodifica os bytes reais por
+  `AudioContext.decodeAudioData` (Web Audio, injetável p/ testar sem microfone com um
+  stub `{duration}`). Decidi `decodeAudioData` em vez de `<audio>.duration` porque é
+  leak-free (`ctx.close()` no `finally`, sem `URL.createObjectURL` pendurada como no
+  `createAudio` de playback) e trivial de stubar deterministicamente. Caminho ausente
+  → `store.get` lança ANTES do guard de Web Audio (o teste do ausente não precisa de
+  AudioContext). Consumo no relatório: o MESMO efeito que sonda `has` agora lê
+  `duration` (mantém 1 efeito, sem `set-state-in-effect`); formatação `m:ss` local.
+  Coverage: `adapters/` não tem piso numérico (testado contra fixtures), então o ramo
+  `return 0` sem Web Audio fica sem teste dedicado (guard de degradação graciosa,
+  padrão dos erros tipados da porta) — proposital, não gaming de gate.

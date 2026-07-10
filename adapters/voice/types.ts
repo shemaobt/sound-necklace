@@ -50,6 +50,8 @@ export interface VoiceRecorder {
   start(path: ResourcePath): Promise<Recording>;
   /** Toca a resposta já gravada deste caminho. Lança se não houver. */
   play(path: ResourcePath): Promise<void>;
+  /** Duração em segundos de uma gravação já salva. Lança se não houver. */
+  duration(path: ResourcePath): Promise<number>;
   /** Para qualquer reprodução em curso. */
   stopPlayback(): void;
   /** Há gravação para esta pergunta? */
