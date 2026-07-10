@@ -1064,3 +1064,22 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   é a ÚNICA animação do lábio → "anima só quando falando" verificável no texto do css.
   SVG anima via `transform` com `transform-box: fill-box` (bob no grupo, pálpebras
   `.cds-guide-lid` recolhidas em `scaleY(0)` que fecham no piscar).
+- **ENG-251 — adapter OPCIONAL com "ausência graciosa" via `register.ts` = `null`.**
+  Um adapter cuja porta só existe em alguns ambientes (aqui: Web Speech API) não
+  precisa de nenhum mecanismo novo — `buildAdapterRegistry` (@/ui/app/registries.ts)
+  já guarda com `if (mod.default?.port)`, então basta o `register.ts` fazer
+  `export default supported ? { port, fixture, real } : null`. Sem a API, a porta
+  'tts' simplesmente não entra na registry e o botão "Ouvir a pergunta" (plumbado
+  na estação Conversa) fica oculto por AUSÊNCIA DE PORTA, não por prop. O
+  feature-detect (`speechSynthesisSupported`) lê `globalThis` por default →
+  no projeto `unit` (environment node, sem `speechSynthesis`) o default export de
+  register.ts é `null` por padrão; o teste do caminho "suportado" precisa de
+  `vi.stubGlobal('speechSynthesis'/'SpeechSynthesisUtterance', …)` + `vi.resetModules()`
+  ANTES do `await import('./register')` (o ternário roda em tempo de carga do módulo).
+- **Web Speech API é injetável como qualquer fronteira.** `WebSpeechSynthesizer`
+  recebe `synth`/`UtteranceCtor` opcionais (default = os globais, guardados por
+  `typeof … !== 'undefined'`), então testes de nó exercitam cancelar-antes-de-falar,
+  preferência de voz pt-BR→pt-*→padrão, e as transições de "falando" chamando
+  `utterance.onstart()/onend()` no fake — sem síntese real. Num ambiente sem a API,
+  `speak`/`stop` são no-ops silenciosos (a porta nunca é registrada nesse caso, mas
+  o guard protege construção direta em testes).
