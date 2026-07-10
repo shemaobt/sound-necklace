@@ -1,0 +1,56 @@
+/* Export/Completion — "Guardar os documentos" (redesign §6.7): palco creme calmo,
+   o colar inteiro enfiado sob o título de conclusão, os três document cards
+   explicados e a ação de guardar/destravar no rodapé. Sem movimento decorativo
+   (a celebração é o chip do organism artifact-cards, já sob sua própria guarda). */
+
+.cds-export {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: 72vh;
+  padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+  text-align: center;
+}
+
+.cds-export-headline {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--cds-font-load-bearing);
+  font-size: clamp(1.4rem, 3.6vw, 2rem);
+  line-height: 1.2;
+  color: var(--cds-ink, #0a0703);
+}
+
+.cds-export-stage {
+  width: 100%;
+  max-width: 880px;
+}
+
+.cds-export-warning,
+.cds-export-notice {
+  margin: 0;
+  max-width: 44ch;
+  padding: 0.65rem 1.1rem;
+  border-radius: var(--cds-radius-card);
+  font-family: var(--cds-font-quiet-voice);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.cds-export-warning {
+  background: var(--cds-warning-bg);
+  color: var(--cds-warning-ink);
+}
+
+.cds-export-notice {
+  background: rgba(143, 55, 1, 0.1);
+  color: var(--cds-telha-deep);
+}
+
+.cds-export-action {
+  display: flex;
+  justify-content: center;
+}
