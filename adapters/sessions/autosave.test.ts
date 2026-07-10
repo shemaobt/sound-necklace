@@ -108,4 +108,43 @@ describe('createAutosaver', () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(writes).toEqual([dto('A')]); // recuperado no reconnect
   });
+
+  it('flush of one session does not drop another session pending in the same window', async () => {
+    const writes: { id: string; state: SessionStateDto }[] = [];
+    const saver = createAutosaver({
+      persist: async (id, state) => {
+        writes.push({ id, state });
+      },
+      monitor: new FixtureConnectivityMonitor(true),
+      debounceMs: 100,
+    });
+
+    saver.schedule('s1', dto('A'));
+    saver.schedule('s2', dto('B'));
+    await saver.flush('s1');
+    expect(writes).toEqual([{ id: 's1', state: dto('A') }]);
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(writes).toEqual([
+      { id: 's1', state: dto('A') },
+      { id: 's2', state: dto('B') },
+    ]);
+  });
+
+  it('cancel discards a pending autosave so it never persists', async () => {
+    const writes: SessionStateDto[] = [];
+    const saver = createAutosaver({
+      persist: async (_id, state) => {
+        writes.push(state);
+      },
+      monitor: new FixtureConnectivityMonitor(true),
+      debounceMs: 100,
+    });
+
+    saver.schedule('s1', dto('A'));
+    saver.cancel('s1');
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(writes).toEqual([]);
+  });
 });

@@ -78,7 +78,9 @@ export class HttpSessionStore implements SessionStore {
   }
 
   autosave(id: string, state: SessionStateDto): void {
-    this.#autosaver.schedule(id, state);
+    // clona (paridade com a fixture): uma mutação do chamador na janela de debounce
+    // não pode reescrever a escrita já enfileirada
+    this.#autosaver.schedule(id, structuredClone(state));
   }
 
   async flush(id: string): Promise<void> {
@@ -86,11 +88,13 @@ export class HttpSessionStore implements SessionStore {
   }
 
   async complete(id: string, state: SessionStateDto, artifacts: ArtifactTriple): Promise<void> {
+    this.#autosaver.cancel(id); // nenhum PUT /state pendente pode chegar após o complete
     await this.#req('PUT', `/sessions/${id}/state`, state);
     await this.#req('POST', `/sessions/${id}/complete`, { artifacts });
   }
 
   async reopen(id: string): Promise<void> {
+    this.#autosaver.cancel(id);
     await this.#req('POST', `/sessions/${id}/reopen`);
   }
 

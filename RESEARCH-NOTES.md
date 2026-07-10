@@ -777,6 +777,7 @@ typecheck`).
   única diferença): mantém debounce/coalescing/retry/pausa num só lugar. O esqueleto
   HTTP (`http.ts`) injeta `fetch` (sem rede no CI) e um getter de token Bearer; endpoints
   PROVISÓRIOS até o OpenAPI (ENG-211/ENG-247), então só `create` tem teste de shape.
+
 ## Golden harness STRICT + pacote de bordas (ENG-238, 2026-07-10)
 
 - **`STRICT = true` está LIGADO** (`tests/golden/registry.ts`): qualquer caso em

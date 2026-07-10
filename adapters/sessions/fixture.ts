@@ -168,6 +168,7 @@ export class FixtureSessionStore implements SessionStore {
   }
 
   async complete(id: string, state: SessionStateDto, artifacts: ArtifactTriple): Promise<void> {
+    this.#autosaver.cancel(id); // um autosave armado não pode aterrissar após concluir
     await this.#settle();
     const rec = this.#requireRec(id);
     rec.state = clone(state);
@@ -182,6 +183,7 @@ export class FixtureSessionStore implements SessionStore {
   }
 
   async reopen(id: string): Promise<void> {
+    this.#autosaver.cancel(id);
     await this.#settle();
     const rec = this.#requireRec(id);
     rec.summary = {

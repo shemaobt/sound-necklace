@@ -27,6 +27,8 @@ export interface Autosaver {
   schedule(id: string, state: SessionStateDto): void;
   /** Persiste o pendente desta sessão já (com retry). No-op se offline. */
   flush(id: string): Promise<void>;
+  /** Descarta o pendente desta sessão (usado antes de complete/reopen). */
+  cancel(id: string): void;
   /** Cancela o timer e para de observar a conectividade. */
   dispose(): void;
 }
@@ -38,6 +40,8 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
 
   // pendente por sessão — Map.set coalesce (o último estado vence).
   const pending = new Map<string, SessionStateDto>();
+  // sessões com uma escrita em curso — evita drains reentrantes (PUT concorrente)
+  const inFlight = new Set<string>();
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   const arm = (): void => {
@@ -54,20 +58,26 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
   };
 
   const persistOne = async (id: string): Promise<void> => {
-    const state = pending.get(id);
-    if (state === undefined) return;
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      if (!monitor.isOnline()) return; // caiu no meio → mantém pendente
-      try {
-        await persist(id, state);
-        // só descarta se ninguém coalesceu um estado mais novo nesse meio-tempo
-        if (pending.get(id) === state) pending.delete(id);
-        return;
-      } catch {
-        if (attempt < maxRetries - 1) await delay(backoffMs * 2 ** attempt);
+    if (inFlight.has(id) || !pending.has(id)) return; // já persistindo esta sessão
+    inFlight.add(id);
+    try {
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        if (!monitor.isOnline()) return; // caiu no meio → mantém pendente
+        const state = pending.get(id); // relê o mais novo a cada tentativa
+        if (state === undefined) return;
+        try {
+          await persist(id, state);
+          // só descarta se ninguém coalesceu um estado mais novo nesse meio-tempo
+          if (pending.get(id) === state) pending.delete(id);
+          return;
+        } catch {
+          if (attempt < maxRetries - 1) await delay(backoffMs * 2 ** attempt);
+        }
       }
+      // esgotou as tentativas: mantém pendente p/ o próximo schedule/reconnect
+    } finally {
+      inFlight.delete(id);
     }
-    // esgotou as tentativas: mantém pendente p/ o próximo schedule/reconnect
   };
 
   // ao voltar a conexão, esvazia o que ficou pendente
@@ -85,8 +95,16 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
         clearTimeout(timer);
         timer = undefined;
       }
-      if (!monitor.isOnline()) return;
-      await persistOne(id);
+      if (monitor.isOnline()) await persistOne(id);
+      // não deixa órfãs as outras sessões que estavam na mesma janela de debounce
+      if (monitor.isOnline() && pending.size > 0) arm();
+    },
+    cancel(id) {
+      pending.delete(id);
+      if (pending.size === 0 && timer !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
     },
     dispose() {
       if (timer !== undefined) clearTimeout(timer);
