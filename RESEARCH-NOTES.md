@@ -762,3 +762,37 @@ schema_version: z.int() })` — valida SÓ o envelope e passa o resto opaco. O s
   (flags no export são independentes de `locked`); `buildBeads` só soma conta parcial se
   `dur - total*beadSec > 1e-9` (múltiplo exato ⇒ sem conta extra); `hashPCM` decima por
   `stride = max(1, floor(N/100000))` e mistura `numberOfChannels` + bytes de sampleRate.
+
+## UI pages / estação Segmentação — frases numa cena (verificado 2026-07-10, ENG-237)
+
+- **Confirmar frase = botão único, não 2º clique.** A referência (L904/L908) tem um
+  só `confirmHere` cujo rótulo alterna "✓ Confirmar esta cena"/"✓ Confirmar esta
+  frase" conforme `activeAnchor().layer`, chamando `confirmPart`/`confirmFrase(current.index)`.
+  A estação espelha isso: o `clickBead` só monta a seleção; um botão dominante confirma.
+- **`confirmFrase` é união discriminada**, não `Result`: `locked` | `border` | `noop`
+  | `error`. Em `border` a estação abre o seam-modal com `result.offer`; a decisão
+  do modal aplica `moveBorder(s, offer)` / `reanchorFrase(s)` / `setMode('triagem')`.
+  `moveBorder` DEVE rodar sobre o mesmo estado que gerou a oferta (mesma cena ativa) —
+  o store não muda com o modal aberto, então `apply(s => moveBorder(s, offer))` basta.
+- **Janela do colar** = passar `window={activeScene.span}` ao `Necklace`; o organismo
+  faz o resto (`resolveWindow` soma a margem `max(3, round(2/beadSec))`, escurece/omite
+  fora, desenha a banda tracejada da cena). Contas fora da janela NEM renderizam
+  (`data-idx` ausente) — bom para testar windowing sem inspecionar estados de pérola.
+- **`confirmFrasesDone(state, warnedEmptyScene)`** carrega o marcador de cena-vazia
+  como PARÂMETRO/RETORNO (estado efêmero de UI, `useState` local) — não entra na
+  sessão. Kinds: `noop`|`warn-empty`|`next-scene`|`mapeamento`. 1º clique numa cena
+  sem frases → `warn-empty` (mostra a cópia, guarda o marcador); 2º → segue.
+- **Reuso entre estações irmãs (ui/pages → ui/pages)** é permitido pelo depcruise (sem
+  ciclo): a Segmentação importa `playActionOn`/`sceneColor`/`sceneLabel` de
+  `../escuta2/cutting` em vez de duplicar o cardinal por extenso. `phraseLabel` reusa
+  `sceneLabel` trocando "Cena"→"Frase" (tela digit-free §9.2). Cor da frase = `phrasePalette`.
+- **React Compiler `preserve-manual-memoization` é ERRO (não warning).** Um `useMemo`
+  com deps derivadas de chamada de função (`sc?.part_id` onde `sc = activeScene(session)`)
+  dispara "This dependency may be modified later". Solução: UM `useMemo` keyed em
+  `[session]` (ref estável entre frames de playback) derivando tudo — cena ativa,
+  frases da cena, `segments`/`lockedEndBeads`. Mais limpo e some o warning de complexidade.
+- **CI roda `pnpm test` E `pnpm test:browser`** no mesmo job `test` (ci.yml L87–90) —
+  o browser É check obrigatório. Toda estação nova precisa do trio jsdom + um
+  `*.browser.test.tsx` em Chromium real (a geometria do colar só existe com layout).
+  Para o browser test da cena em janela, use uma cena começando na conta 0 (winS=0)
+  p/ o `beadPosition(index, 0, ...)` casar com o `firePointer` como na Escuta 2.
