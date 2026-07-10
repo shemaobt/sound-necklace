@@ -552,6 +552,7 @@ max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
 - Barrel `ui/organisms/index.ts` fica FORA do escopo da ENG-225 (precedente
   ConnectionGate/ENG-224): a estação (ENG-236) importa por caminho direto ou
   adiciona ao barrel no escopo dela.
+
 ## Contracts / manifesto + retorno + serializer (verificado 2026-07-10, ENG-227)
 
 - **Depcruise `contracts-so-domain` NÃO isenta testes**: contracts/*.test.ts não pode
