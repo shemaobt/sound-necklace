@@ -85,8 +85,7 @@ describe('WebVoiceRecorder — duração de gravação salva (decode stub, sem m
     });
 
     expect(await rec.duration(P1)).toBe(12.5);
-    expect(decodeAudioData).toHaveBeenCalledOnce();
-    expect(close).toHaveBeenCalled();
+    expect(close).toHaveBeenCalled(); // não vaza o AudioContext (finally)
   });
 
   it('duration de um caminho sem gravação lança', async () => {

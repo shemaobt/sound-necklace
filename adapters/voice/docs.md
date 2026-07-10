@@ -30,6 +30,7 @@ Path: @/adapters/voice
 - **Re-record is an overwrite:** `put` on the same canonical path replaces the prior answer — the invariant that one question maps to exactly one file lives in the store, and callers rely on it (PRD §8.7).
 - **`MemoryVoiceStore` is a placeholder**, not the production sink. The real per-session `VoiceResourceStore` binding (and SessionStore `deleteResource`) is a deliberate ENG-249 follow-up; do not treat the in-memory store as the persistence contract.
 - The fixture's determinism is deliberate: levels and the placeholder blob are stable so tests and any harness-adjacent checks agree byte-for-byte.
+- **Fixture `duration` has an in-memory ceiling:** the `path → seconds` map is populated on `stop()` and lives per recorder instance, so a recording persisted by an EARLIER instance (e.g. across a session resume with a fresh fixture) reports `0` — the placeholder blob carries no timing to recover. The real `WebVoiceRecorder` decodes the stored bytes each call, so it survives reload; this is a fixture-only "unknown → 0" degradation, matching the web branch's "no Web Audio → 0".
 - `register.ts` re-declares a local `AdapterRegistration<TPort>` shape matching @/adapters/audio and @/adapters/connectivity; the composition-root registry consumes the `{ port, fixture, real }` contract by name.
 
 Created and maintained by Nori.
