@@ -701,3 +701,38 @@ schema_version: z.int() })` — valida SÓ o envelope e passa o resto opaco. O s
 - **Byte-identidade não toca este módulo**: são DTOs de fio (wire), não artefatos —
   a única serialização do app segue sendo `serialize.ts`. Status/estado usam ascii no
   fio (`em_progresso`/`concluida`, `pequena`); o rótulo acentuado é display na UI.
+
+## ENG-234 — contracts session-state DTO (autosave) + import mappers
+
+- **Round-trip = domínio + meta**: `toSessionDto(state, meta)` / `fromSessionDto(dto)`
+  serializam TODO campo do `SessionState` do domínio (grade `beads[]` inclusa) e trazem
+  os campos v2-novos que não vivem no domínio num `SessionMeta` à parte
+  (`granularityLevel`, `bucketAudioId`, `pipelineConsent`, `voice[]`). Campos
+  TRANSIENTES da referência NÃO são persistidos: `warnedEmptyScene` (var de módulo
+  L916) e o andaime de tela `mapStep`/`mapN*i` — reconstruídos ao reabrir a estação.
+- **`whole.id` tipado `'S1'` no domínio, `string` no DTO**: a entrega sobrescreve
+  `whole.id` com o `scene_id` externo (arbitrário), então o DTO guarda `string` e o
+  `fromSessionDto` faz o cast de volta (`as Whole['id']`). No round-trip puro (sem
+  import) o id é sempre `'S1'`, então o cast é seguro.
+- **Schema estrito no NOSSO formato, leniente no import**: `session-state.ts` usa
+  `z.strictObject` (chave extra = inválida, é dado que a SPA valida na leitura §10.5);
+  `imports.ts` usa `z.object` (leniente, ignora chaves desconhecidas) — FIEL à
+  referência, que lê campos específicos e ignora o resto. A invalidez das fixtures de
+  import é semântica (enum de confiança fora, bead não-inteiro, `confirmed_span`
+  faltando no retorno), não "chave extra".
+- **Mappers 1:1 (referência L1341–1383)**: ENTREGA → propostas DESTRAVADAS, spans de
+  `proposed_span` senão null, prefills preservados, fallbacks `PT#`/`P#` por índice,
+  `whole.id` sobrescrito só quando `scene_id` existe; aviso de mismatch É um predicado
+  não-bloqueante (`manifestMismatch`), SÓ quando `manifest_id` existe e diverge.
+  RETORNO → tudo TRAVADO, spans de `confirmed_span` (schema os EXIGE), `partsConfirmed`
+  quando há cenas (nunca desliga), flags NEEDS_REVIEW reaplicadas por `prop_id`, cursor
+  → frases, SEM checagem de manifest. Ambos recusam com grade ausente (`totalBeads` 0)
+  via `{ok:false, reason:'no-grid'}`; as cópias PT-BR ficam expostas p/ a UI (ENG-248).
+- **Fidelidade import→export byte-a-byte**: `retorno → applyReturn → buildRetorno`
+  reproduz o retorno idêntico SE o seed tem `scene_id`s sequenciais (S1,S2…), flags com
+  `note_pt:""` referenciando proposições PRESENTES (flags dangling são DESCARTADAS no
+  import, igual à referência), e `manifest_id`/`story_slug` = os da sessão (o
+  `buildRetorno` usa `state.manifestId`/`state.slug`, NÃO os do seed). O `registry.ts`
+  ganhou o passo `importReturn` (valida por `ReturnSchema` + `applyReturn`) que habilita
+  o caso `import-return-roundtrip` da ENG-238; a prova de byte-identidade roda no
+  `registry.test`/`imports.test` (caso golden completo com `generate.mjs` = ENG-238).

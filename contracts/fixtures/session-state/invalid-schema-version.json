@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "durationSec": 1,
+  "beadSec": 0.5,
+  "totalBeads": 2,
+  "beads": [
+    { "index": 0, "startTime": 0, "endTime": 0.5 },
+    { "index": 1, "startTime": 0.5, "endTime": 1 }
+  ],
+  "manifestId": "fnv1a32:d31a8419",
+  "audioFilename": "historia.wav",
+  "slug": "historia",
+  "whole": { "id": "S1", "span": { "s": 0, "e": 1 }, "confirmed": true },
+  "parts": [],
+  "partsConfirmed": false,
+  "frases": [],
+  "current": { "layer": "whole", "index": -1 },
+  "activeSceneId": null,
+  "mapping": null,
+  "selection": null,
+  "pendingStart": null,
+  "mode": "escuta",
+  "review": false,
+  "granularityLevel": "media",
+  "bucketAudioId": "aud-1",
+  "pipelineConsent": true,
+  "voice": []
+}

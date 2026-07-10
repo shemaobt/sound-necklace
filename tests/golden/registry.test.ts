@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { buildManifesto, buildRetorno, serializeArtifact } from '../../contracts';
+import { type SessionState } from '../../domain';
 
 import { replaySessionSteps, type GoldenCase, type GoldenStep } from './registry';
 
@@ -197,6 +198,57 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
       ),
       'retorno-ancoragem.json: bytes divergem do golden',
     ).toBe(true);
+  });
+
+  it('importReturn: semear pela via de retorno → export sai byte-idêntico (ENG-234)', () => {
+    const segment = minimalFlow().steps[0] as GoldenStep;
+    const seg = replaySessionSteps([segment]);
+    const N = seg.state.totalBeads; // 24
+
+    // um retorno "de origem" cujos mappers reais dão o byte-golden desta prova
+    const source: SessionState = {
+      ...seg.state,
+      whole: { id: 'S1', span: { s: 0, e: N - 1 }, confirmed: true },
+      parts: [
+        {
+          part_id: 'PT1',
+          span: { s: 0, e: 9 },
+          locked: true,
+          scene_kind: 'GLEANING_SCENE',
+          scene_kind_confidence: 'alta',
+          tag_state: 'tagged',
+        },
+        {
+          part_id: 'PT2',
+          span: { s: 10, e: N - 1 },
+          locked: true,
+          scene_kind: null,
+          scene_kind_confidence: null,
+          tag_state: 'none_fit',
+        },
+      ],
+      partsConfirmed: true,
+      frases: [
+        {
+          prop_id: 'P1',
+          statement_pt: '',
+          qa: [],
+          span: { s: 0, e: 4 },
+          part_link: 'PT1',
+          locked: true,
+          flagged: true,
+        },
+      ],
+    };
+    const seedBytes = serializeArtifact(buildRetorno(source));
+
+    // semeia uma sessão FRESCA (mesma grade/slug/manifest) e re-exporta
+    const r = replaySessionSteps([
+      segment,
+      { type: 'importReturn', dto: JSON.parse(seedBytes) as unknown },
+    ]);
+    expect(r.pendingAt).toBeNull();
+    expect(serializeArtifact(buildRetorno(r.state))).toBe(seedBytes);
   });
 
   it('recusa passo de sessão antes do segment', () => {

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "durationSec": 1,
+  "beadSec": 0.5,
+  "totalBeads": 2,
+  "beads": [
+    { "index": 0, "startTime": 0, "endTime": 0.5 },
+    { "index": 1, "startTime": 0.5, "endTime": 1 }
+  ],
+  "manifestId": "fnv1a32:d31a8419",
+  "audioFilename": "historia.wav",
+  "slug": "historia",
+  "whole": { "id": "S1", "span": { "s": 0, "e": 1 }, "confirmed": true },
+  "parts": [
+    {
+      "part_id": "PT1",
+      "span": { "s": 0, "e": 1 },
+      "locked": true,
+      "scene_kind": "GLEANING_SCENE",
+      "scene_kind_confidence": "alta",
+      "tag_state": "tagged"
+    }
+  ],
+  "partsConfirmed": true,
+  "frases": [
+    {
+      "prop_id": "P1",
+      "statement_pt": "A chegada.",
+      "qa": ["Quem chega?"],
+      "span": { "s": 0, "e": 1 },
+      "part_link": "PT1",
+      "locked": true,
+      "flagged": false
+    }
+  ],
+  "current": { "layer": "frases", "index": -1 },
+  "activeSceneId": "PT1",
+  "mapping": {
+    "level1": { "recontar": "Uma história." },
+    "level2": { "PT1": { "quem": "Elas." } },
+    "level3": { "P1": { "oque": "A chegada." } }
+  },
+  "selection": null,
+  "pendingStart": null,
+  "mode": "mapeamento",
+  "review": false,
+  "granularityLevel": "media",
+  "bucketAudioId": "aud-1",
+  "pipelineConsent": true,
+  "voice": ["respostas/level1/recontar.webm"]
+}
