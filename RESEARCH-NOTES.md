@@ -1101,6 +1101,7 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   Coverage: `adapters/` não tem piso numérico (testado contra fixtures), então o ramo
   `return 0` sem Web Audio fica sem teste dedicado (guard de degradação graciosa,
   padrão dos erros tipados da porta) — proposital, não gaming de gate.
+
 ## adapters/api — AuthProvider + ApiClient (verificado 2026-07-10, ENG-239)
 
 - **Uma register.ts = UMA porta** (o glob do composition root lê `.default.port`). A
