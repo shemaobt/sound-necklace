@@ -1,0 +1,34 @@
+# Noridoc: mapeamento
+
+Path: @/ui/pages/mapeamento
+
+### Overview
+
+- The conversation station (ENG-249): "Conversa (Mapeamento)" (PRD v2 §8.7, redesign §6.6). The whole mapping interview, **one question per screen**, in the exact order the domain produces: 11 level-1 questions → 5 level-2 per locked scene (none_fit included) → 5 level-3 per phrase of a productive scene.
+- A wiring component: it reads the pure @/domain session through the @/ui/state session store, renders the @/ui/organisms `ConversationStage` (guide + Merriweather question + voice recorder + digit-free bead thread + optional facilitator typed channel), and dispatches the mapping domain writes.
+- Cream working stage, exactly one instruction line, no digits on the listener surface (§9.2). Each screen shows the ▶ of the relevant span ("ouvir a história / a cena / a frase").
+
+### How it fits into the larger codebase
+
+- **The station after Segmentação.** Stations self-register through the `import.meta.glob('/ui/pages/*/index.tsx')` registry built in @/ui/app/registries.ts, so the default export in `index.tsx` is the registry value, keyed by the directory name `mapeamento`. @/ui/app/App.tsx's `KEY_TO_MODE` maps `mapeamento` to the domain `mapeamento` mode; the shell renders this station when the session mode is `mapeamento`.
+- **Question order is the domain's, not the UI's.** The flat screen order comes verbatim from `questionSequence` (@/domain/mapping.ts): L1 `L1_Q` → per `lockedParts` (none_fit included) `L2_Q` → per `productiveFrases` `L3_Q`. The UI never re-derives the order; it walks a single index across all levels.
+- **Answers.** Text answers write through `setAnswer` (@/domain/mapping.ts) — the lazy answer store that never loses answers across re-cuts/reopens; the store is created/extended by `ensureMapping`, idempotent. Voice answers go through the injected `VoiceRecorder` port (@/adapters/voice), keyed by the canonical `respostas/level{1,2,3}/…/<k>.webm` path from `voiceAnswerPath` (§10.4/O5) — the recorder owns persistence; the page never stores voice bytes in domain state.
+- Reads session state via `useSessionStore` and writes only through `sessionStore.apply` (see @/ui/state/docs.md), so the store's editability gates (online/review/lock) can silently pause a write without losing in-memory state.
+- Per @/.dependency-cruiser.cjs, @/ui/pages may import @/domain, @/ui/state, @/ui/organisms, @/ui/atoms, @/ui/tokens and adapters.
+
+### Core Implementation
+
+- **`Mapeamento({ player, recorder })`** (@/ui/pages/mapeamento/index.tsx): subscribes `session`; renders `null` until a session with a non-empty question sequence exists. Navigation is **screen scaffolding** — the domain does not persist `mapStep` (see @/domain/state.ts) — so the current question is a local index and the report is a local `atReport` flag.
+- **Reading before the effect.** A `useMemo` derives `mapped` = `session` if it already has a mapping, else `ensureMapping(session)`, so answers render even before the mount effect persists the store. The mount effect calls `sessionStore.apply(ensureMapping)` once when `session.mapping` is null (guarded by the store's `canEdit`).
+- **Navigation crosses levels by walking the index.** `goPrev` at index 0 dispatches `setMode('segmentacao')`; otherwise index−1. `goNext` at the last index sets `atReport`; otherwise index+1. Because the sequence is flat, a single index reproduces the reference `mapNav` boundary semantics (last L1 → first L2, first L2 prev → last L1, …) with no per-level special cases.
+- **`QuestionScreen`** is a child mounted with `key={path}`: switching questions remounts it, so the recorder UI resets to `idle` by React's key rule (no synchronous setState-in-effect). Its one effect asynchronously checks `recorder.has(path)` and flips to `recorded` if a recording already exists. Record → `recorder.start(path)` (live levels feed the waveform) → `stop()` persists at `path`; "de novo" returns to `idle` and a fresh recording overwrites the same path; "ouvir" calls `recorder.play(path)`.
+- **Facilitator-led questions.** The `ausencia` items (both L1 and L2) pass `facilitatorLed` to the stage → the wordless role marker; every question's `note` renders as facilitator guidance.
+- **The report handoff is add-a-file.** `RelatorioStation` is resolved once at module load from a static `import.meta.glob('/ui/pages/relatorio/index.tsx')`; at the report step the page renders it when present, else a quiet placeholder. So the report screen (ENG-250) slots in without editing this station.
+
+### Things to Know
+
+- **Digit-free (§9.2).** No scene/phrase numbers on screen — the ▶ label ("ouvir a cena", etc.) carries the context. The progress thread is beads only. The one instruction line carries `data-role="instruction"`.
+- **The audio/voice seam is the extension point.** `player` and `recorder` default to `null`; with neither, the page renders and navigates but playback/recording are dormant (same convention as the sibling stations). The shell injects nothing yet — real audio/voice wiring lands with the setup/integration issues; binding the recorder to the active session's SessionStore resources is a documented follow-up (@/adapters/voice/register.ts).
+- **No browser test.** This station has no `Necklace`/canvas geometry, so all tests run in jsdom (`mapeamento.test.tsx`): the full 11+5×2+5×2 sequence walk, per-level ▶ span play (player spy), the voice flow against the real `FixtureVoiceRecorder`, the role marker, the level-boundary navigation, and the §9.2 minimalism guard.
+
+Created and maintained by Nori.

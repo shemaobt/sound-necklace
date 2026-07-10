@@ -935,3 +935,40 @@ cena"`, `aria-current="step"`), mas NÃO tem prop de "concluído" — o check de
   ui/organisms/index.ts (precedente ConnectionGate/ENG-224). As páginas Dashboard
   (ENG-245) e Export (ENG-246) os compõem por caminho direto — depcruise só regula
   direção de camada, não uso do barrel.
+
+## UI pages / estação Conversa (Mapeamento) (verificado 2026-07-10, ENG-249)
+
+- **A ordem das telas é do domínio, não da UI.** `questionSequence(state)` (@/domain/mapping.ts)
+  já entrega a sequência plana (11 L1 → 5 L2 por `lockedParts`, none_fit incluída → 5 L3 por
+  `productiveFrases`). A página só anda um índice sobre essa lista — não recria a ordem. Um
+  índice plano reproduz EXATAMENTE a navegação da referência (`mapNav` L1099–1133) sem casos
+  especiais por nível: última L1 → primeira L2, primeira L2 "anterior" → última L1, etc. são
+  só índice±1. Fronteiras: índice 0 "anterior" → `setMode('segmentacao')`; último "próxima" → relatório.
+- **Navegação é andaime de tela — o domínio NÃO guarda `mapStep`.** @/domain/state.ts omite
+  `mapStep`/`mapN*i` de propósito (comentário no topo: "andaime de tela"). Logo o índice da
+  pergunta e o flag `atReport` são estado local React, como o `head`/`offer` da Segmentação.
+- **Resetar estado ao trocar de pergunta = `key`, não efeito.** O gravador (idle/recording/recorded
+  - levels) vive num filho `QuestionScreen` montado com `key={path}`. Trocar de pergunta remonta →
+    estado limpo pela regra de key do React. Isso EVITA o eslint `react-hooks/set-state-in-effect`
+    (setState síncrono no corpo do efeito é ERRO de lint, não warning). A checagem inicial
+    `recorder.has(path)` fica no `.then` assíncrono (padrão permitido: setState em callback).
+- **`react-hooks/static-components` é ERRO:** resolver um componente durante o render (`const X =
+glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático, resolvi a station
+  `relatorio` UMA vez em escopo de módulo (`const RelatorioStation = ...`) e renderizo condicional.
+- **Handoff mapeamento→relatório é add-a-file, desacoplado.** O relatório (ENG-250) é um dir
+  `ui/pages/relatorio/` mas NÃO está no stepper (@/ui/app/stepper-model.ts só tem
+  escuta1/2·triagem·segmentacao·mapeamento·export) nem no `KEY_TO_MODE` — o shell mostra UMA station
+  para o modo `mapeamento`. Então a página de mapeamento é dona do sub-passo "relatório" e o
+  resolve por `import.meta.glob('/ui/pages/relatorio/index.tsx')` local (evita importar @/ui/app de
+  uma página e evita hard-import de um módulo que ainda não existe → typecheck verde antes de ENG-250).
+- **Voz: a porta persiste; a página não guarda bytes no domínio.** `voiceAnswerPath(slot)` (do
+  domínio) dá o caminho canônico; `recorder.start(path)`/`stop()` persiste no `VoiceResourceStore`
+  do adapter (fixture: `MemoryVoiceStore`). "Existe gravação?" = `recorder.has(path)`. Ligar o
+  recorder aos recursos da sessão ativa do SessionStore é follow-up (adapters, fora do escopo desta issue).
+- **`player`/`recorder` chegam por prop, default null** (mesma convenção de escuta/segmentacao): no app
+  atual o shell injeta um player no-op → áudio/voz dormentes até a issue de setup/integração. Testes
+  injetam `spyPlayer()` e o `FixtureVoiceRecorder` real (import direto de @/adapters/voice/fixture nos testes).
+- **`ConversationStage` já está no barrel** (ENG-221), mas importei direto do arquivo (barrel
+  congelado, precedente ENG-225/236). O organismo NÃO traz o ▶ do span ("ouvir a X") nem o TTS —
+  o ▶ é controle da página (como "▶ ouvir a cena" da Segmentação); o TTS ("Ouvir a pergunta") só
+  aparece se `onSpeakQuestion` for passado (ausente até a issue de TTS).
