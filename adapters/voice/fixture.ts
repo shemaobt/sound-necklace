@@ -40,6 +40,7 @@ export class FixtureRecording implements Recording {
     private readonly path: ResourcePath,
     private readonly store: VoiceResourceStore,
     seed: number,
+    private readonly onPersist: (durationSec: number) => void = () => {},
   ) {
     this.#next = lcg(seed);
   }
@@ -60,9 +61,11 @@ export class FixtureRecording implements Recording {
   async stop(): Promise<RecordedAnswer> {
     this.#active = false;
     await this.store.put(this.path, FIXTURE_WEBM);
+    const durationSec = this.#frames * FRAME_SEC;
+    this.onPersist(durationSec);
     return {
       blob: new Blob([FIXTURE_WEBM], { type: 'audio/webm' }),
-      durationSec: this.#frames * FRAME_SEC,
+      durationSec,
     };
   }
 
@@ -73,6 +76,7 @@ export class FixtureRecording implements Recording {
 
 export class FixtureVoiceRecorder implements VoiceRecorder {
   #playing: ResourcePath | null = null;
+  readonly #durations = new Map<string, number>();
 
   constructor(
     private readonly store: VoiceResourceStore = new MemoryVoiceStore(),
@@ -80,7 +84,14 @@ export class FixtureVoiceRecorder implements VoiceRecorder {
   ) {}
 
   async start(path: ResourcePath): Promise<FixtureRecording> {
-    return new FixtureRecording(path, this.store, this.seed);
+    return new FixtureRecording(path, this.store, this.seed, (sec) =>
+      this.#durations.set(path, sec),
+    );
+  }
+
+  async duration(path: ResourcePath): Promise<number> {
+    if (!(await this.store.has(path))) throw new Error(`sem gravação: ${path}`);
+    return this.#durations.get(path) ?? 0;
   }
 
   async play(path: ResourcePath): Promise<void> {
@@ -103,6 +114,7 @@ export class FixtureVoiceRecorder implements VoiceRecorder {
 
   async delete(path: ResourcePath): Promise<void> {
     if (this.#playing === path) this.#playing = null;
+    this.#durations.delete(path);
     await this.store.delete(path);
   }
 }

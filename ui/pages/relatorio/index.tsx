@@ -60,6 +60,12 @@ const NOTE_PREFIX = 'nota__';
 /** Alturas fixas das barras decorativas da linha de voz (px). */
 const WAVE_HEIGHTS = [6, 12, 20, 14, 22, 10, 16, 8];
 
+/** m:ss para a linha de voz do relatório. */
+function formatDuration(sec: number): string {
+  const total = Math.round(sec);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
 function domSaveBytes(filename: string, bytes: string): void {
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
   const a = document.createElement('a');
@@ -126,12 +132,22 @@ interface ReportCardProps {
   typed: string;
   note: string;
   hasVoice: boolean;
+  durationSec?: number;
   onTyped: (text: string) => void;
   onNote: (text: string) => void;
   onPlay: () => void;
 }
 
-function ReportCard({ slot, typed, note, hasVoice, onTyped, onNote, onPlay }: ReportCardProps) {
+function ReportCard({
+  slot,
+  typed,
+  note,
+  hasVoice,
+  durationSec,
+  onTyped,
+  onNote,
+  onPlay,
+}: ReportCardProps) {
   const [showNote, setShowNote] = useState(note !== '');
   const q = slot.question;
   const facilitatorLed = slot.k === 'ausencia';
@@ -161,7 +177,7 @@ function ReportCard({ slot, typed, note, hasVoice, onTyped, onNote, onPlay }: Re
             ))}
           </span>
           <span className="cds-relatorio-duration" aria-label="duração da resposta">
-            —
+            {durationSec === undefined ? '—' : formatDuration(durationSec)}
           </span>
         </div>
       ) : null}
@@ -193,6 +209,7 @@ function ReportCard({ slot, typed, note, hasVoice, onTyped, onNote, onPlay }: Re
 export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: RelatorioProps) {
   const session = useSessionStore((s) => s.session);
   const [voiceSet, setVoiceSet] = useState<ReadonlySet<string>>(new Set());
+  const [voiceDurations, setVoiceDurations] = useState<ReadonlyMap<string, number>>(new Map());
 
   // Visão de LEITURA com o answer store garantido mesmo antes do efeito persistir.
   const mapped = useMemo(() => {
@@ -217,11 +234,18 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
     // setState síncrono no efeito — react-hooks/set-state-in-effect).
     if (!recorder) return;
     let alive = true;
-    void Promise.all(voicePaths.map((p) => recorder.has(p).then((h) => (h ? p : null)))).then(
-      (res) => {
-        if (alive) setVoiceSet(new Set(res.filter((p): p is string => p !== null)));
-      },
-    );
+    void Promise.all(
+      voicePaths.map(async (p) => {
+        if (!(await recorder.has(p))) return null;
+        const sec = await recorder.duration(p).catch(() => 0);
+        return { p, sec };
+      }),
+    ).then((res) => {
+      if (!alive) return;
+      const found = res.filter((r): r is { p: string; sec: number } => r !== null);
+      setVoiceSet(new Set(found.map((r) => r.p)));
+      setVoiceDurations(new Map(found.map((r) => [r.p, r.sec])));
+    });
     return () => {
       alive = false;
     };
@@ -262,6 +286,7 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
               typed={readAnswer(mapped.mapping, slot)}
               note={readAnswer(mapped.mapping, noteSlot(slot))}
               hasVoice={voiceSet.has(path)}
+              durationSec={voiceDurations.get(path)}
               onTyped={(text) => writeTyped(slot, text)}
               onNote={(text) => writeNote(slot, text)}
               onPlay={() => recorder && void recorder.play(path)}

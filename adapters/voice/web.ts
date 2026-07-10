@@ -156,6 +156,18 @@ export class WebVoiceRecorder implements VoiceRecorder {
     this.#playing = null;
   }
 
+  async duration(path: ResourcePath): Promise<number> {
+    const bytes = await this.#store.get(path); // lança se não houver gravação
+    if (!this.#AudioContextCtor) return 0; // sem Web Audio → duração desconhecida
+    const ctx = new this.#AudioContextCtor();
+    try {
+      const decoded = await ctx.decodeAudioData(bytes.slice().buffer);
+      return decoded.duration;
+    } finally {
+      void ctx.close();
+    }
+  }
+
   async has(path: ResourcePath): Promise<boolean> {
     return this.#store.has(path);
   }

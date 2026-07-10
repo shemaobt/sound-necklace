@@ -99,9 +99,11 @@ function load(state: SessionState): void {
   sessionStore.getState().load(state);
 }
 
-/** Semeia uma gravação no caminho da resposta (has(path) → true). */
+/** Semeia uma gravação no caminho da resposta (has(path) → true), com ~9 s de
+ *  duração no relógio falso do fixture (90 quadros × 0,1 s) para a linha de voz. */
 async function seedVoice(recorder: FixtureVoiceRecorder, path: string): Promise<void> {
   const rec = await recorder.start(path);
+  for (let i = 0; i < 90; i += 1) rec.tick();
   await rec.stop();
 }
 
@@ -137,7 +139,9 @@ describe('Relatório — renderização por tipo de resposta (redesign §6.6)', 
     const voiceCard = cardFor(voiceQ.q);
     expect(await within(voiceCard).findByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
     expect(voiceCard.querySelectorAll('.cds-waveform-bar').length).toBeGreaterThan(0);
-    expect(within(voiceCard).getByLabelText('duração da resposta')).toBeTruthy();
+    const duration = await within(voiceCard).findByLabelText('duração da resposta');
+    expect(duration.textContent).toMatch(/^\d+:\d{2}$/); // duração real formatada, não "—"
+    expect(duration.textContent).not.toBe('—');
 
     // digitada: textarea editável com o valor
     const typedCard = cardFor(typedQ.q);
