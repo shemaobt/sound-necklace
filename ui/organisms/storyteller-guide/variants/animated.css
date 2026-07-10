@@ -1,0 +1,99 @@
+/*
+ * A figura humana calorosa do guia, viva (redesign §6.6, §9.7). Herda as tintas
+ * terrosas da estática; o movimento — respiração (bob), piscar e lip-sync — vive
+ * TODO dentro da guarda de opt-in abaixo. Sob `prefers-reduced-motion: reduce` a
+ * figura fica na mesma pose parada da estática (§4.5).
+ */
+.cds-guide-figure {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.cds-guide-skin {
+  fill: #e2b78f;
+}
+
+.cds-guide-hair {
+  fill: #4a3728;
+}
+
+.cds-guide-body {
+  fill: var(--cds-telha, #be4a01);
+}
+
+.cds-guide-eye {
+  fill: #2c2416;
+}
+
+.cds-guide-line {
+  fill: none;
+  stroke: #2c2416;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.cds-guide-mouth {
+  fill: none;
+  stroke: #2c2416;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* pálpebra em repouso: recolhida para cima (invisível) — só o piscar a fecha */
+.cds-guide-lid {
+  fill: #e2b78f;
+  transform-box: fill-box;
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+/* movimento decorativo é opt-in: quem prefere menos movimento nunca o recebe (§4.5) */
+@media (prefers-reduced-motion: no-preference) {
+  .cds-guide-bob {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: cds-guide-bob 4.2s ease-in-out infinite;
+  }
+
+  .cds-guide-lid {
+    animation: cds-guide-blink 5.4s ease-in-out infinite;
+  }
+
+  .cds-guide-anim[data-speaking='true'] .cds-guide-mouth {
+    animation: cds-guide-talk 320ms ease-in-out infinite;
+  }
+
+  @keyframes cds-guide-bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  @keyframes cds-guide-blink {
+    0%,
+    92%,
+    100% {
+      transform: scaleY(0);
+    }
+    96% {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes cds-guide-talk {
+    0%,
+    100% {
+      transform: scaleY(1);
+    }
+    50% {
+      transform: scaleY(0.35);
+    }
+  }
+}
