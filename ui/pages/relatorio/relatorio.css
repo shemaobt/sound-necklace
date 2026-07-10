@@ -1,0 +1,103 @@
+/* Relatório (redesign §6.6 "Report — kept, restyled"): superfície FACILITADORA
+   (§7.2 — texto/IDs densos permitidos), palco creme de trabalho. Um cartão creme
+   por pergunta: a pergunta em Merriweather, o marcador de papel das conduzidas, a
+   resposta editável / a linha de voz / o vazio, e a nota opcional da facilitadora.
+   O export do .md é byte-idêntico ao contrato (contracts/relatorio). */
+
+.cds-relatorio {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+}
+
+.cds-relatorio-section {
+  margin: 1.5rem 0 0.25rem;
+  font-family: var(--cds-font-quiet-voice);
+  font-size: 1.15rem;
+}
+
+.cds-relatorio-group {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--cds-olive-soft, var(--cds-olive));
+}
+
+.cds-relatorio-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--cds-olive-soft, var(--cds-olive));
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--cds-cream) 92%, #fff);
+}
+
+.cds-relatorio-q {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.cds-relatorio-field {
+  font-family: var(--cds-font-load-bearing);
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--cds-olive-soft, var(--cds-olive));
+}
+
+.cds-relatorio-role {
+  align-self: flex-start;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.cds-relatorio-typed,
+.cds-relatorio-note {
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--cds-olive-soft, var(--cds-olive));
+  border-radius: 0.45rem;
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+  font: inherit;
+  resize: vertical;
+}
+
+.cds-relatorio-note {
+  min-height: 2.5rem;
+  font-size: 0.9rem;
+}
+
+.cds-relatorio-voice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.cds-relatorio-wave {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 1.5rem;
+}
+
+.cds-relatorio-duration {
+  font-family: var(--cds-font-load-bearing);
+  font-size: 0.85rem;
+  color: var(--cds-olive-soft, var(--cds-olive));
+}
+
+.cds-relatorio-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}

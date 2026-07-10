@@ -1009,6 +1009,46 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   (ENG-222, mergeado) ainda diz "documentos salvos — nada saiu deste computador"
   (custódia local v1), mas o PRD v2 §5 é custódia em nuvem e o ENG-246 pede NÃO usar
   essa linha. O organismo é out-of-scope aqui → follow-up para corrigir o chip.
+
+## UI pages / estação Relatório — cartões editáveis + nota + export (verificado 2026-07-10, ENG-250)
+
+- **Onde a nota da facilitadora vive sem tocar camada congelada.** O domínio
+  `Mapping` só tem buckets `level1/2/3` de resposta e é FROZEN; não dá para
+  adicionar um campo `note`. Solução em escopo: a nota mora no MESMO bucket da
+  resposta sob uma chave reservada `nota__<k>` (via `setAnswer` com um slot cuja
+  `k` é prefixada). Funciona porque (a) `MappingSchema` (contracts/session-state)
+  é `strictObject` só no topo — cada bucket é `z.record(string,string)`, chaves
+  livres → a nota sobrevive ao round-trip do DTO/autosave; (b) `buildMapReport`
+  itera APENAS as chaves de `L1_Q/L2_Q/L3_Q` → a nota NUNCA sai no `.md`. Byte-
+  identidade do relatório antes/depois de anotar sai de graça. Zero edição em
+  domain/contracts.
+- **Duração de voz é um GAP do port (follow-up).** O redesign §6.6 pede a linha de
+  voz "play + waveform + duration", mas a porta `VoiceRecorder` (ENG-244) só expõe
+  duração no `stop()` fresco (`RecordedAnswer.durationSec`), NÃO para uma gravação
+  já salva — não há `duration(path)`. O wiring da issue assumia "VoiceRecorder para
+  playback + duração", mas o adapter mergeado não entrega isso e adapters/voice está
+  fora do Scope desta issue. A linha renderiza o slot de duração (`aria-label=
+"duração da resposta"`) com placeholder `—`; follow-up = adicionar `duration(path)`
+  ao port OU persistir a duração no momento da gravação (Mapeamento).
+- **`voiceSet` alimenta duas coisas.** Um efeito sonda `recorder.has(path)` para toda
+  pergunta e guarda o conjunto de caminhos COM gravação: decide a linha só-voz E é o
+  2º arg de `buildMapReport(mapped, voiceSet)` (o .md referencia a gravação, §10.4).
+  Sem recorder o conjunto fica vazio → `buildMapReport(session)` byte-idêntico à
+  referência. Sem setState síncrono no efeito (react-hooks/set-state-in-effect):
+  early-return quando não há recorder (estado inicial já é vazio).
+- **Superfície FACILITADORA (§7.2), não do ouvinte.** Diferente das estações do
+  ouvinte, o relatório PODE ter dígitos/IDs — cabeçalhos "Cena N"/"Frase N",
+  scene_kind, seções por nível. Nada de guarda §9.2 aqui.
+- **Gate do atalho .json 1:1 da referência (renderMapReport L1150).** O botão "Baixar
+  a ancoragem (.json)" é `disabled` + guard por `whole.confirmed`; baixa
+  `serializeArtifact(buildRetorno(mapped))`. O `.md` reusa `buildMapReport` +
+  `relatorioFilename`; download real pela fronteira injetável `saveBytes` (mesmo
+  padrão da estação Export/ENG-246).
+- **Teste de fundo creme via CSS `?raw` removido.** As estações irmãs afirmam o
+  token creme com regex sobre o texto-fonte do CSS (`?raw`); a revisão de TDD desta
+  sessão apontou (com razão) que isso testa formato de arquivo, não comportamento —
+  jsdom não aplica CSS. Cor real pertence a teste visual/browser (fora de escopo).
+  Removido; o creme fica no `.css` (não unit-testado).
 - **ENG-232 — variante animada do guia (padrão add-a-file variant-glob).** O upgrade
   do storyteller-guide é PURAMENTE aditivo: só `variants/animated.tsx`+`animated.css`
   novos; o glob `import.meta.glob('./variants/*.tsx')` do `index.tsx` (intocado) já
