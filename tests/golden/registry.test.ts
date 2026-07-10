@@ -14,13 +14,27 @@ function minimalFlow(): GoldenCase {
   ) as GoldenCase;
 }
 
-describe('replaySessionSteps — passos de cena + triagem do golden case 2 (ENG-216/219)', () => {
-  it('replaya cenas + triagem do minimal-flow e para pendente na frase (ENG-223)', () => {
+/** Prefixo comum: história confirmada, 2 cenas cortadas, triadas, segmentação. */
+function toSegmentacao(segment: GoldenStep): GoldenStep[] {
+  return [
+    segment,
+    { type: 'confirmWhole' },
+    { type: 'cutScene', endBead: 9 },
+    { type: 'cutScene', endBead: 23 },
+    { type: 'confirmParts' },
+    { type: 'triage', partIndex: 0, kind: 'GLEANING_SCENE', confidence: 'alta' },
+    { type: 'triage', partIndex: 1, none_fit: true },
+    { type: 'triagemDone' },
+  ];
+}
+
+describe('replaySessionSteps — passos de cena + triagem + frases do golden case 2', () => {
+  it('replaya o minimal-flow até as frases e para pendente na resposta (ENG-226)', () => {
     const { steps } = minimalFlow();
     const r = replaySessionSteps(steps);
 
-    // status documentado: cenas + triagem consumidos; frase (ENG-223) pendente
-    expect(r.pendingAt).toEqual({ index: 8, type: 'phraseSelect' });
+    // status documentado: cenas + triagem + frases consumidos; answer pendente
+    expect(r.pendingAt).toEqual({ index: 12, type: 'answer' });
 
     // 96000 amostras / 8000 Hz = 12 s a 0.5 s/conta → 24 contas
     expect(r.state.totalBeads).toBe(24);
@@ -43,8 +57,18 @@ describe('replaySessionSteps — passos de cena + triagem do golden case 2 (ENG-
       scene_kind_confidence: null,
     });
 
-    // triagemDone → o fluxo guiado avançou para a Segmentação
-    expect(r.state.mode).toBe('segmentacao');
+    // frases: P1 travada {0..4} em PT1, marcada para revisão; slot P2 dangling
+    expect(r.state.frases[0]).toMatchObject({
+      prop_id: 'P1',
+      locked: true,
+      span: { s: 0, e: 4 },
+      part_link: 'PT1',
+      flagged: true,
+    });
+    expect(r.state.frases[1]).toMatchObject({ prop_id: 'P2', locked: false, span: null });
+
+    // sceneDone na última produtiva → o fluxo guiado avançou ao Mapeamento
+    expect(r.state.mode).toBe('mapeamento');
   });
 
   it('reopenScene destrava em cascata e o re-corte preserva os PT#s', () => {
@@ -69,6 +93,68 @@ describe('replaySessionSteps — passos de cena + triagem do golden case 2 (ENG-
       { id: 'PT2', span: { s: 6, e: 23 }, locked: true },
     ]);
     expect(replayed.state.partsConfirmed).toBe(true);
+  });
+
+  it('confirmPhrase com borderDecision=move desliza a costura (doMove)', () => {
+    const { steps } = minimalFlow();
+    const replayed = replaySessionSteps([
+      ...toSegmentacao(steps[0] as GoldenStep),
+      // PT1 {0..9}: seleção até 12 cruza o fim (delta 3 = limiar de cena de 10)
+      { type: 'phraseSelect', s: 0, e: 12 },
+      { type: 'confirmPhrase', borderDecision: 'move' },
+    ]);
+
+    expect(replayed.pendingAt).toBeNull();
+    expect(replayed.state.parts[0]!.span).toEqual({ s: 0, e: 12 }); // cresceu
+    expect(replayed.state.parts[1]!.span).toEqual({ s: 13, e: 23 }); // encolheu
+    expect(replayed.state.frases[0]).toMatchObject({
+      locked: true,
+      span: { s: 0, e: 12 },
+      part_link: 'PT1',
+    });
+  });
+
+  it('confirmPhrase com borderDecision=reanchor limpa a seleção sem travar', () => {
+    const { steps } = minimalFlow();
+    const replayed = replaySessionSteps([
+      ...toSegmentacao(steps[0] as GoldenStep),
+      { type: 'phraseSelect', s: 0, e: 12 },
+      { type: 'confirmPhrase', borderDecision: 'reanchor' },
+    ]);
+    expect(replayed.state.frases[0]!.locked).toBe(false);
+    expect(replayed.state.selection).toBeNull();
+    expect(replayed.state.parts[0]!.span).toEqual({ s: 0, e: 9 }); // costura intacta
+  });
+
+  it('reopenPhrase + removePhrase reusam o P# e mantêm o replay íntegro', () => {
+    const { steps } = minimalFlow();
+    const replayed = replaySessionSteps([
+      ...toSegmentacao(steps[0] as GoldenStep),
+      { type: 'phraseSelect', s: 0, e: 4 },
+      { type: 'confirmPhrase' }, // P1 travada; P2 auto-add
+      { type: 'reopenPhrase', index: 0 }, // cascata global: P1 e P2 destravam
+      { type: 'removePhrase', index: 0 }, // P1 some; P# volta ao pool
+      { type: 'phraseSelect', s: 0, e: 3 },
+      { type: 'confirmPhrase' },
+    ]);
+
+    expect(replayed.pendingAt).toBeNull();
+    const locked = replayed.state.frases.filter((f) => f.locked);
+    expect(locked).toHaveLength(1);
+    expect(locked[0]).toMatchObject({ span: { s: 0, e: 3 }, part_link: 'PT1' });
+    // o próximo slot auto-add reusa o P1 liberado
+    expect(replayed.state.frases.map((f) => f.prop_id)).toContain('P1');
+  });
+
+  it('sceneDone com forceEmpty atravessa o aviso de cena vazia (2ª chamada)', () => {
+    const { steps } = minimalFlow();
+    const replayed = replaySessionSteps([
+      ...toSegmentacao(steps[0] as GoldenStep),
+      { type: 'sceneDone', forceEmpty: true },
+    ]);
+    // única produtiva sem frases → Mapeamento alcançado com zero frases (quirk)
+    expect(replayed.state.mode).toBe('mapeamento');
+    expect(replayed.state.frases.filter((f) => f.locked)).toHaveLength(0);
   });
 
   it('recusa passo de sessão antes do segment', () => {
