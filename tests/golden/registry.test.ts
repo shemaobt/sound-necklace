@@ -175,12 +175,13 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
   });
 
   it('golden case 2: os DOIS JSONs saem byte-idênticos pelos mappers reais (ENG-227)', () => {
-    // o caso segue PENDENTE no golden.test (relatório .md = ENG-233; answers =
-    // ENG-226), mas os artefatos JSON já são comparáveis: replay até o passo
-    // pendente e exporta via contracts/
+    // o caso segue PENDENTE no golden.test (relatório .md = ENG-233), mas os
+    // artefatos JSON já são byte-comparáveis: com os passos `answer` do ENG-226
+    // já na main, o replay avança por eles e para no `export`, exportando via
+    // contracts/
     const { steps } = minimalFlow();
     const r = replaySessionSteps(steps);
-    expect(r.pendingAt).toEqual({ index: 12, type: 'answer' });
+    expect(r.pendingAt).toEqual({ index: 17, type: 'export' });
 
     const golden = (file: string): Buffer =>
       readFileSync(join(__dirname, 'expected', 'minimal-flow', file));
