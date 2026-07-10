@@ -1,0 +1,115 @@
+/* Triagem — classificar cada cena (redesign §6.4): palco creme de trabalho, uma
+   cena por vez sob os pontos de progresso, o picker centrado e a barra escura
+   "Já classifiquei todas as cenas →" no rodapé. A gaveta de cobertura desliza da
+   direita (organismo). O único movimento decorativo (entrada do achado/bloqueio)
+   fica sob a guarda de reduced-motion (§4.5). */
+
+.cds-triagem {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: 72vh;
+  padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+  text-align: center;
+}
+
+.cds-triagem-empty {
+  margin: 0;
+  color: var(--cds-olive);
+  font-family: var(--cds-font-quiet-voice);
+}
+
+.cds-triagem-focus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 680px;
+}
+
+.cds-triagem-instruction {
+  margin: 0;
+  max-width: 30ch;
+  font-family: var(--cds-font-load-bearing);
+  font-size: clamp(1.3rem, 3.4vw, 1.8rem);
+  line-height: 1.25;
+  color: var(--cds-ink, #0a0703);
+}
+
+.cds-triagem-play {
+  display: flex;
+  justify-content: center;
+}
+
+.cds-triagem-tag {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-size: 0.95rem;
+  color: var(--cds-olive);
+}
+
+.cds-triagem-tag[data-tag='pending'] {
+  opacity: 0.6;
+}
+
+.cds-triagem-tag[data-tag='none_fit'] {
+  color: var(--cds-telha-deep);
+}
+
+.cds-triagem-finding,
+.cds-triagem-lockout {
+  margin: 0;
+  max-width: 640px;
+  padding: 0.65rem 1.1rem;
+  border-radius: var(--cds-radius-card);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.cds-triagem-finding {
+  background: var(--cds-warning-bg);
+  color: var(--cds-warning-ink);
+}
+
+.cds-triagem-lockout {
+  background: rgba(143, 55, 1, 0.1);
+  color: var(--cds-telha-deep);
+}
+
+.cds-triagem-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.cds-triagem-gate-msg {
+  margin: 0;
+  max-width: 42ch;
+  font-family: var(--cds-font-quiet-voice);
+  font-size: 0.85rem;
+  color: var(--cds-olive);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-triagem-finding,
+  .cds-triagem-lockout {
+    animation: cds-triagem-rise var(--cds-motion-duration, 0.22s) var(--cds-motion-easing, ease-out);
+  }
+
+  @keyframes cds-triagem-rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

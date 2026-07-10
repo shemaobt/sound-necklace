@@ -837,3 +837,39 @@ typecheck`).
   `*.browser.test.tsx` em Chromium real (a geometria do colar só existe com layout).
   Para o browser test da cena em janela, use uma cena começando na conta 0 (winS=0)
   p/ o `beadPosition(index, 0, ...)` casar com o `firePointer` como na Escuta 2.
+
+## UI pages / estação Triagem — classificar cenas (verificado 2026-07-10, ENG-236)
+
+- **Redesign §6.4 reformata a lista vertical da referência em UMA cena em foco +
+  pontos de progresso.** Precedência CLAUDE.md: dado/comportamento = PRD/referência,
+  look/layout = protótipo de design. A referência (`renderTriagem` L1213) lista TODAS
+  as cenas com "classificar ▾"; o protótipo (`Colar de Sons - Protótipo` L208–305)
+  mostra uma cena por vez, com `ProgressDots` (molécula já pronta) como atalho de salto.
+- **`ProgressDots` (ui/molecules) é digit-free por design** (`aria-label="ir para a
+cena"`, `aria-current="step"`), mas NÃO tem prop de "concluído" — o check dentro do
+  ponto classificado do protótipo fica de fora (molécula fora de escopo). O estado da
+  tag sempre visível (`tagShow`) dá o mesmo feedback por cena.
+- **Auto-avanço do foco:** após classificar/none-fit, salta para a próxima cena
+  pendente dando a volta (`_nextPending` do protótipo L711/L723). Reduz cliques e é
+  testável (o ponto seguinte ganha `aria-current`).
+- **O gate compõe `gates.setMode(s,'segmentacao')` + `phrases.enterSegmentacao(s)`.**
+  `setMode` puro só troca `mode`/`review`/`partsConfirmed`; a ENTRADA de camada
+  (activeSceneId + enterScene) é `enterSegmentacao`, e SÓ deve rodar quando o modo
+  efetivo é segmentacao (há produtiva) — sob o gate habilitado (≥1 produtiva) o ramo
+  é garantido. Espelha o bloco L1006–1008 da referência. Sem isso, a estação
+  Segmentação abre nula (activeScene null).
+- **Organismos fora do barrel:** `TriagemPicker`/`CoverageDrawer` (ENG-225) NÃO estão
+  em ui/organisms/index.ts (barrel congelado). A página os importa por caminho direto
+  — depcruise permite page→organism em qualquer caminho (só regula direção de camada,
+  não uso do barrel).
+- **`CoverageDrawer` é auto-contido:** Radix Dialog com trigger próprio, fechado por
+  padrão → nada da gaveta (nem dígitos de contagem) entra no DOM até a facilitadora
+  abrir. Satisfaz "só abre por ação explícita" + minimalismo §9.2 sem trabalho extra
+  na página.
+- **none-fit finding vs all-none-fit lockout:** `computeCoverage` dá `noneFit` e
+  `allNoneFit`. Finding (noneFit>0) mostra a frase-contrato "evidência para nomear um
+  tipo nativo quando o padrão se repetir"; lockout (allNoneFit) explica o travamento
+  a jusante. Ambos digit-free (a referência L1300–1302 carregava contagens).
+- **Sem browser test:** Triagem não renderiza `Necklace` → sem geometria dependente
+  de layout; a suíte jsdom cobre tudo. A exceção "toda estação nova precisa de
+  *.browser.test.tsx" vale só p/ estações com o colar (geometria de clique).
