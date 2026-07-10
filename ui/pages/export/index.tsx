@@ -147,15 +147,21 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
   if (!session) return null;
   const { canExport, semFim } = retornoExportStatus(session);
 
-  const onDownload = (kind: ArtifactKind): void => {
+  const onDownload = async (kind: ArtifactKind): Promise<void> => {
     if (!triple) return;
     if (kind === 'retorno' && !canExport) {
       setNotice(RETORNO_BLOCKED);
       return;
     }
     if (kind === 'manifesto' && !canExportManifesto(session)) return;
+    // §10.5: já concluída, o download REUSA os bytes guardados (sem rebuild); antes
+    // de concluir, baixa a prévia construída da sessão viva.
+    const bytes =
+      phase === 'saved' && store && sessionId
+        ? (await store.getArtifacts(sessionId))[kind]
+        : triple[kind];
     setNotice(null);
-    saveBytes(filenameFor(kind, session.slug), triple[kind]);
+    saveBytes(filenameFor(kind, session.slug), bytes);
     setDownloaded((d) => ({ ...d, [kind]: true }));
   };
 
