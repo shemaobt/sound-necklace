@@ -11,6 +11,7 @@ import {
   type Mapping,
   type ScenePart,
   type SessionState,
+  type Whole,
 } from '../domain';
 
 import { serializeArtifact } from './serialize';
@@ -71,6 +72,15 @@ const meta = (overrides: Partial<SessionMeta> = {}): SessionMeta => ({
 /** Variedade de estados que exercita cada campo round-trippável do domínio. */
 const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> = [
   { name: 'sessão recém-criada (escuta)', state: baseSession(), meta: meta() },
+  {
+    // whole.id round-trip é o ÚNICO campo não-trivial: o domínio o tipa 'S1',
+    // mas a entrega o sobrescreve com um scene_id externo — o DTO guarda string
+    name: 'whole.id sobrescrito por entrega (não-S1)',
+    state: baseSession({
+      whole: { id: 'CENA-EXTERNA' as Whole['id'], span: { s: 0, e: 23 }, confirmed: false },
+    }),
+    meta: meta(),
+  },
   {
     name: 'cenas travadas + slot destravado + none_fit',
     state: baseSession({

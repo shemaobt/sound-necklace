@@ -90,7 +90,11 @@ export const ReturnSchema = z.object({
     .array(
       z.object({
         scene_id: z.string().optional(),
-        confirmed_span: ProposedSpanSchema,
+        // opcional NA CENA (espelha o guard `if(sc && sc.confirmed_span)` da
+        // referência L1368): sem ele, o bloco da cena é pulado mas flags+cursor
+        // ainda se aplicam. As PARTES/proposições exigem confirmed_span (a
+        // referência lê `pt.confirmed_span.start_bead` sem guarda).
+        confirmed_span: ProposedSpanSchema.optional(),
         parts: z.array(ReturnPartSchema).optional(),
         propositions: z.array(ReturnPropositionSchema).optional(),
       }),
@@ -122,28 +126,32 @@ export function applyDelivery(session: SessionState, dto: Delivery): ImportOutco
   const sc = dto.scenes?.[0] ?? null;
   if (!sc) return { ok: true, state: session, manifestMismatch };
 
-  const parts: ScenePart[] = (sc.parts ?? []).map((pt, idx) => ({
+  // `||` (não `??`) espelha a truthiness da referência L1349–1356: "" cai no
+  // fallback igual à referência (fiel ao port + consistente com retorno.ts).
+  const parts: ScenePart[] = (sc.parts || []).map((pt, idx) => ({
     part_id: pt.part_id || `PT${idx + 1}`,
     span: pt.proposed_span
       ? { s: pt.proposed_span.start_bead, e: pt.proposed_span.end_bead }
       : null,
     locked: false,
-    scene_kind: pt.scene_kind ?? null,
-    scene_kind_confidence: pt.scene_kind_confidence ?? null,
-    tag_state: pt.tag_state ?? 'pending',
+    scene_kind: pt.scene_kind || null,
+    scene_kind_confidence: pt.scene_kind_confidence || null,
+    tag_state: pt.tag_state || 'pending',
   }));
 
-  const frases: Frase[] = (sc.propositions ?? []).map((p, idx) => ({
+  const frases: Frase[] = (sc.propositions || []).map((p, idx) => ({
     prop_id: p.prop_id || `P${idx + 1}`,
-    statement_pt: p.statement_pt ?? '',
-    qa: p.qa_readback_pt ?? [],
+    statement_pt: p.statement_pt || '',
+    qa: p.qa_readback_pt || [],
     span: p.proposed_span ? { s: p.proposed_span.start_bead, e: p.proposed_span.end_bead } : null,
-    part_link: p.part_link ?? null,
+    part_link: p.part_link || null,
     locked: false,
     flagged: false,
   }));
 
-  const whole: Whole = { ...session.whole, id: (sc.scene_id ?? session.whole.id) as Whole['id'] };
+  // referência L1349: `if(sc.scene_id) whole.id=sc.scene_id` — só sobrescreve
+  // com truthy; `||` reproduz (scene_id vazio/ausente mantém o id atual)
+  const whole: Whole = { ...session.whole, id: (sc.scene_id || session.whole.id) as Whole['id'] };
   return { ok: true, state: { ...session, whole, parts, frases }, manifestMismatch };
 }
 
@@ -153,28 +161,30 @@ export function applyReturn(session: SessionState, dto: ReturnImport): ImportOut
   const sc = dto.scenes?.[0] ?? null;
   let next = session;
 
-  if (sc) {
-    const parts: ScenePart[] = (sc.parts ?? []).map((pt, idx) => ({
+  // guard da referência L1368 (`if(sc && sc.confirmed_span)`): sem confirmed_span
+  // na cena, pula o bloco mas ainda aplica flags + cursor lá embaixo
+  if (sc?.confirmed_span) {
+    const parts: ScenePart[] = (sc.parts || []).map((pt, idx) => ({
       part_id: pt.part_id || `PT${idx + 1}`,
       span: { s: pt.confirmed_span.start_bead, e: pt.confirmed_span.end_bead },
       locked: true,
-      scene_kind: pt.scene_kind ?? null,
-      scene_kind_confidence: pt.scene_kind_confidence ?? null,
-      tag_state: pt.tag_state ?? 'pending',
+      scene_kind: pt.scene_kind || null,
+      scene_kind_confidence: pt.scene_kind_confidence || null,
+      tag_state: pt.tag_state || 'pending',
     }));
-    const frases: Frase[] = (sc.propositions ?? []).map((p) => ({
+    const frases: Frase[] = (sc.propositions || []).map((p) => ({
       prop_id: p.prop_id,
       statement_pt: '',
       qa: [],
       span: { s: p.confirmed_span.start_bead, e: p.confirmed_span.end_bead },
-      part_link: p.part_link ?? null,
+      part_link: p.part_link || null,
       locked: true,
       flagged: false,
     }));
     next = {
       ...next,
       whole: {
-        id: (sc.scene_id ?? 'S1') as Whole['id'],
+        id: (sc.scene_id || 'S1') as Whole['id'],
         span: { s: sc.confirmed_span.start_bead, e: sc.confirmed_span.end_bead },
         confirmed: true,
       },

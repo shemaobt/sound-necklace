@@ -222,13 +222,40 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
     expect(applyReturn(session(), ret)).toMatchObject({ manifestMismatch: false });
   });
 
-  it('sem parts confirmadas: não marca partsConfirmed, mas ainda reaplica flags', () => {
+  it('cena sem parts: não LIGA partsConfirmed (fica como estava)', () => {
     const semParts: ReturnImport = {
       scenes: [{ scene_id: 'S1', confirmed_span: { start_bead: 0, end_bead: 23 }, parts: [] }],
     };
-    const r = applyReturn(session({ frases: [frase({ prop_id: 'P1' })] }), semParts);
+    const r = applyReturn(session(), semParts);
     expect(r).toMatchObject({ ok: true });
     if (r.ok) expect(r.state.partsConfirmed).toBe(false);
+  });
+
+  it('cena sem parts: NUNCA desliga um partsConfirmed já verdadeiro', () => {
+    const semParts: ReturnImport = {
+      scenes: [{ scene_id: 'S1', confirmed_span: { start_bead: 0, end_bead: 23 }, parts: [] }],
+    };
+    const r = applyReturn(session({ partsConfirmed: true }), semParts);
+    expect(r).toMatchObject({ ok: true });
+    if (r.ok) expect(r.state.partsConfirmed).toBe(true);
+  });
+
+  it('sem cena confirmada: pula o bloco mas reaplica flags e move o cursor (ref L1368/L1378)', () => {
+    // frases já no estado; retorno só com flags, sem cena → o bloco da cena é
+    // pulado, mas as flags pousam e o cursor vai a frases
+    const soFlags: ReturnImport = { flags: [{ kind: 'NEEDS_REVIEW', prop_id: 'P1', note_pt: '' }] };
+    const seeded = session({
+      frases: [frase({ prop_id: 'P1', span: { s: 0, e: 4 }, part_link: 'PT1', locked: true })],
+      current: { layer: 'whole', index: -1 },
+      selection: { s: 1, e: 2 },
+    });
+    const r = applyReturn(seeded, soFlags);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.frases[0]?.flagged).toBe(true); // flag reaplicada sem cena
+    expect(r.state.frases[0]?.span).toEqual({ s: 0, e: 4 }); // frase preservada
+    expect(r.state.current).toEqual({ layer: 'frases', index: -1 });
+    expect(r.state.selection).toBeNull();
   });
 
   it('aplica os fallbacks quando campos opcionais faltam (scene_id, part_id, tipo, part_link)', () => {
