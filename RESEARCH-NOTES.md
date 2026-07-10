@@ -553,6 +553,34 @@ max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
   ConnectionGate/ENG-224): a estação (ENG-236) importa por caminho direto ou
   adiciona ao barrel no escopo dela.
 
+## Fronteira de frases no clamp do clique (verificado 2026-07-10, ENG-269)
+
+- **Grafo de imports do domain (relevante)**: `triagem → state`; `seam → scene-kinds,
+state`; `frontier → state`; `gates → triagem, state`; `phrases → frontier, gates,
+ids, seam, triagem`; `selection/scenes → frontier`. Mover `activeScene` de
+  phrases.ts para seam.ts (que ganha `productiveScenes` de triagem) deixa
+  `frontier → seam` SEM ciclo. Depcruise `sem-ciclos` é `severity: error` (não o
+  default `warn` do template) — ciclo quebra CI. Re-exports (`export {x} from`)
+  contam como aresta no grafo do depcruise (dependencyType `export`).
+- **Semântica ESM de ciclos (MDN)**: ciclo entre módulos que só exportam `function`
+  hoisted e não avaliam bindings no top-level é runtime-safe; quebra com TDZ quando
+  o top-level LÊ um binding do outro módulo. `import type` é apagado — nunca cicla
+  em runtime. Vitest roda via module runner do Vite (semântica emulada) — histórico
+  de bugs só com `vi.mock` + ciclo. Eliminar o ciclo torna tudo isso irrelevante.
+- **Golden não muda de bytes com o clamp**: o replay (tests/golden/registry.ts)
+  nunca chama `clickBead`/`activeAnchor`; `phraseSelect` escreve `selection` direto
+  e `confirmFrase` valida com `phraseFrontier` (semântica inalterada). Único
+  `frontier` do replay é camada `'parts'` (registry.ts:222).
+- **Quirk a preservar ao fundir o ramo**: o ramo de cena ativa da fronteira de
+  frases retorna SEM o clamp `Math.min(f, totalBeads−1)` (referência L400–409
+  retorna antes do ramo genérico); no `frontier` novo o early-return fica ANTES do
+  clamp. Consequência herdada no clickBead: com a última frase cobrindo o fim da
+  cena no fim do colar, o piso pode exceder `whole.span.e` e o clamp
+  `max(floor, min(ceil, b))` devolve o piso (> ceil) — fiel à referência (L565–566).
+- O ramo de cena ativa dispara sempre que `productiveScenes()` não é vazio
+  (`activeScene` cai em `ps[0]` sem `activeSceneId`) — NÃO depende de mode; branch
+  por `activeScene(state)`, não por `state.mode`.
+
 ## Mapeamento — roteiros + answer store (verificado 2026-07-10, ENG-226)
 
 - **Byte-igualdade sem risco de cópia manual**: o teste extrai `var L1_Q = [...]`

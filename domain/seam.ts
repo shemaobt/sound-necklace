@@ -1,6 +1,6 @@
 /**
- * Costura entre cenas e travessia de borda — port 1:1 de prevNeighbor/
- * nextNeighbor (docs/reference/index.html L397–398), sceneHasFrases (L399),
+ * Costura entre cenas e travessia de borda — port 1:1 de activeScene (docs/
+ * reference/index.html L395), prevNeighbor/nextNeighbor (L397–398), sceneHasFrases (L399),
  * offerBorderMove (L801–830 — aqui a DECISÃO vira dado puro, effects-as-data;
  * a UI interpreta a oferta), slideSeam (L832–835) e da janela da segmentação
  * (renderCord L509). PRD v2 §8.6, §11.
@@ -11,7 +11,17 @@
  */
 
 import { skShort } from './scene-kinds';
+import { productiveScenes } from './triagem';
 import type { ScenePart, SessionState, Span } from './state';
+
+/** A cena produtiva em foco: resolve por activeSceneId, senão a 1ª (L395).
+ *  Vive aqui (não em phrases.ts) para frontier.ts poder importá-la sem ciclo. */
+export function activeScene(state: SessionState): ScenePart | null {
+  const ps = productiveScenes(state);
+  let a: ScenePart | null = null;
+  for (const p of ps) if (p.part_id === state.activeSceneId) a = p;
+  return a ?? ps[0] ?? null;
+}
 
 /** Cena travada com span provado no tipo (pós-narrowing). */
 export type AnchoredPart = ScenePart & { span: Span };
