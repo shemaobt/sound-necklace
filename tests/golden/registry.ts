@@ -13,12 +13,12 @@
 import {
   buildBeads,
   confirmFrase,
-  ensureMapping,
   confirmFrasesDone,
   confirmPart,
   confirmParts,
   confirmWhole,
   createSession,
+  ensureMapping,
   enterScene,
   enterSegmentacao,
   frontier,
