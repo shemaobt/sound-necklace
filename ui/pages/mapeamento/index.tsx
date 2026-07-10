@@ -114,17 +114,23 @@ function QuestionScreen({
   const [levels, setLevels] = useState<number[]>([]);
   const recordingRef = useRef<Recording | null>(null);
   const unsubRef = useRef<Unsubscribe | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     let alive = true;
+    mountedRef.current = true;
     if (recorder) {
       void recorder.has(path).then((h) => {
         if (alive && h) setRecorderState('recorded');
       });
     }
+    // Sair da tela (trocar de pergunta remonta pela `key`) descarta a gravação em
+    // curso — solta o microfone/stream do `getUserMedia` (Recording.cancel, §12).
     return () => {
       alive = false;
+      mountedRef.current = false;
       unsubRef.current?.();
+      recordingRef.current?.cancel();
     };
   }, [recorder, path]);
 
@@ -135,6 +141,11 @@ function QuestionScreen({
   const onRecord = async (): Promise<void> => {
     if (!recorder) return;
     const rec = await recorder.start(path);
+    // desmontou durante o await (navegou depressa) → descarta e não escreve estado
+    if (!mountedRef.current) {
+      rec.cancel();
+      return;
+    }
     recordingRef.current = rec;
     unsubRef.current = rec.onLevel((l) =>
       setLevels((prev) => [...prev, Math.max(2, Math.round(l * 40))].slice(-32)),
@@ -260,6 +271,10 @@ export function Mapeamento({ player = null, recorder = null }: MapeamentoProps) 
     sessionStore.getState().apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), slot, text));
   };
 
+  // Fio de progresso (indicador, não gate): marca as perguntas com resposta de
+  // TEXTO. ponytail: teto conhecido — respostas só-de-voz não acendem a conta,
+  // pois `recorder.has()` é assíncrono; enumerar a voz vale um passo síncrono só
+  // quando o progresso virar informação carregada (não é o caso hoje).
   const answered = new Set(
     sequence.flatMap((s2, i) => (readAnswer(mapped.mapping, s2).trim() ? [i] : [])),
   );

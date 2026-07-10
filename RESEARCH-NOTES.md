@@ -972,6 +972,7 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   congelado, precedente ENG-225/236). O organismo NÃO traz o ▶ do span ("ouvir a X") nem o TTS —
   o ▶ é controle da página (como "▶ ouvir a cena" da Segmentação); o TTS ("Ouvir a pergunta") só
   aparece se `onSpeakQuestion` for passado (ausente até a issue de TTS).
+
 ## UI pages / estação Export — conclusão & custódia de artefatos (verificado 2026-07-10, ENG-246)
 
 - **Artefatos construídos UMA vez, reusados (§10.5):** o `useMemo` de `triple`

@@ -214,6 +214,21 @@ describe('Mapeamento — resposta por voz e canal digitado (PRD v2 §8.7, §10.4
     expect(answer).toBe('era uma vez');
     expect(await recorder.has(path)).toBe(true);
   });
+
+  it('navegar durante a gravação cancela a gravação em curso (libera o microfone)', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    const startSpy = vi.spyOn(recorder, 'start');
+    load(mapping());
+    render(<Mapeamento recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    const rec = await startSpy.mock.results[0]!.value;
+    const cancelSpy = vi.spyOn(rec, 'cancel');
+
+    // trocar de pergunta remonta a tela; a gravação órfã tem de ser cancelada
+    await next();
+    expect(cancelSpy).toHaveBeenCalled();
+  });
 });
 
 describe('Mapeamento — perguntas conduzidas pela facilitadora (PRD v2 §8.7)', () => {
@@ -253,18 +268,29 @@ describe('Mapeamento — navegação entre níveis (referência mapNav L1099–1
 });
 
 describe('Mapeamento — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
-  it('não mostra dígito e tem ≤1 linha de instrução', () => {
+  it('não mostra dígito e tem ≤1 linha de instrução — incluindo as telas de cena e de frase', async () => {
     load(mapping());
     const { container } = render(<Mapeamento />);
 
-    expect(container.textContent ?? '').not.toMatch(/\d/);
-    for (const el of container.querySelectorAll('[aria-label]')) {
-      expect(el.getAttribute('aria-label')).not.toMatch(/\d/);
-    }
-    for (const el of container.querySelectorAll('[title]')) {
-      expect(el.getAttribute('title')).not.toMatch(/\d/);
-    }
-    expect(container.querySelectorAll('[data-role="instruction"]').length).toBeLessThanOrEqual(1);
+    const assertNoDigits = (): void => {
+      expect(container.textContent ?? '').not.toMatch(/\d/);
+      for (const el of container.querySelectorAll('[aria-label]')) {
+        expect(el.getAttribute('aria-label')).not.toMatch(/\d/);
+      }
+      for (const el of container.querySelectorAll('[title]')) {
+        expect(el.getAttribute('title')).not.toMatch(/\d/);
+      }
+      expect(container.querySelectorAll('[data-role="instruction"]').length).toBeLessThanOrEqual(1);
+    };
+
+    // tela de nível 1
+    assertNoDigits();
+    // tela de nível 2 (a cena, cujo part_id "PT1" tem dígito — não pode vazar)
+    for (let i = 0; i < 11; i += 1) await next();
+    assertNoDigits();
+    // tela de nível 3 (a frase, cujo prop_id "P1" tem dígito — não pode vazar)
+    for (let i = 0; i < 10; i += 1) await next();
+    assertNoDigits();
   });
 
   it('o palco aplica o fundo creme (redesign §6.6, §4.5)', () => {
