@@ -644,7 +644,7 @@ ids, seam, triagem`; `selection/scenes → frontier`. Mover `activeScene` de
 
 - **`buildMapReport(state, voice?)` consome só domain**: seletores `lockedParts`/
   `productiveScenes` + scripts `L1_Q/L2_Q/L3_Q` + `voiceAnswerPath`. `sceneNum(p) =
-  lockedParts(state).indexOf(p)+1` funciona TAMBÉM para as cenas de
+lockedParts(state).indexOf(p)+1` funciona TAMBÉM para as cenas de
   `productiveScenes` porque ambos os seletores são `state.parts.filter(...)` e
   devolvem as MESMAS refs de objeto — logo o S# tem lacuna quando uma none_fit
   precede uma produtiva (fiel à referência). `mapping` nulo → default vazio (saída
@@ -654,7 +654,7 @@ ids, seam, triagem`; `selection/scenes → frontier`. Mover `activeScene` de
   acento, `relatorioFilename`, L1151); nomes dos JSONs = `slug||"colar"`
   (serialize.ts). Não confundir — são três strings de contrato diferentes.
 - **Extensão de voz (PRD §10.4, não na referência)**: 2º param `voice:
-  ReadonlySet<string>` = caminhos de recurso COM gravação. Célula resolve
+ReadonlySet<string>` = caminhos de recurso COM gravação. Célula resolve
   digitado(trim) > caminho de voz(`voiceAnswerPath(slot)`) > `_(sem resposta)_`;
   digitado vence. `voice` vazio ⇒ bytes idênticos à referência. Fixture PRD-derived
   em `contracts/fixtures/relatorio/` (README marca a origem — o teste de contracts
