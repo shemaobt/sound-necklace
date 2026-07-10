@@ -41,6 +41,8 @@ import {
   type SessionState,
 } from '../../domain';
 
+import { buildManifesto, serializeArtifact } from '../../contracts';
+
 import { makePcm, type PcmSpec } from './pcm';
 
 export interface GoldenStep {
@@ -68,45 +70,43 @@ interface ExportStep extends GoldenStep {
 }
 
 /**
- * ENG-214: replay de casos grid+manifest (passos `segment` + `export` com
+ * ENG-214/227: replay de casos grid+manifest (passos `segment` + `export` com
  * artefato `manifesto` apenas). Espelha o passo `segment` do driver
- * (generate.mjs): duração = samples/sampleRate; serialização idêntica à
- * referência — JSON.stringify(x, null, 2) SEM newline final.
+ * (generate.mjs): duração = samples/sampleRate. Desde a ENG-227 o artefato sai
+ * pelo mapper+serializer REAIS de contracts/ (buildManifesto + serializeArtifact)
+ * — o golden compara os bytes de produção, não um espelho local.
  */
 const manifestReplayer: Replayer = (steps) => {
   const out: Record<string, string> = {};
-  let manifest: Record<string, unknown> | null = null;
+  let state: SessionState | null = null;
   for (const step of steps) {
     switch (step.type) {
       case 'segment': {
-        const { beadSec, audioFilename, pcm } = step as SegmentStep;
+        const { beadSec, audioFilename, slug, pcm } = step as SegmentStep;
         const data = makePcm(pcm.seed, pcm.samples);
         const dur = pcm.samples / pcm.sampleRate;
-        const beads = buildBeads(dur, beadSec);
-        const manifestId = hashPCM(
-          {
-            numberOfChannels: pcm.channels,
-            sampleRate: pcm.sampleRate,
-            getChannelData: () => data,
-          },
+        state = createSession({
+          durationSec: dur,
           beadSec,
-        );
-        // espelho de buildManifest (referência L1316) — a ordem das chaves
-        // é parte da byte-identidade
-        manifest = {
-          manifest_id: manifestId,
-          audio_filename: audioFilename,
-          bead_duration_sec: beadSec,
-          total_beads: beads.length,
-          beads: beads.map((b) => ({ index: b.index, startTime: b.startTime, endTime: b.endTime })),
-        };
+          beads: buildBeads(dur, beadSec),
+          manifestId: hashPCM(
+            {
+              numberOfChannels: pcm.channels,
+              sampleRate: pcm.sampleRate,
+              getChannelData: () => data,
+            },
+            beadSec,
+          ),
+          audioFilename,
+          slug,
+        });
         break;
       }
       case 'export': {
         const { artifacts } = step as ExportStep;
         if (artifacts.includes('manifesto')) {
-          if (!manifest) throw new Error('export antes de segment');
-          out['manifesto-contas.json'] = JSON.stringify(manifest, null, 2);
+          if (!state) throw new Error('export antes de segment');
+          out['manifesto-contas.json'] = serializeArtifact(buildManifesto(state));
         }
         if (artifacts.some((a) => a !== 'manifesto')) {
           throw new Error('manifestReplayer só produz o manifesto (ENG-214)');

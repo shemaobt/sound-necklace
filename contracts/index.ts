@@ -5,3 +5,13 @@
  * Importa apenas domain/ (+ zod, raiz "zod" somente).
  */
 export const CONTRACTS_LAYER = 'contracts' as const;
+
+export { manifestoFilename, retornoFilename, serializeArtifact } from './serialize';
+export { buildManifesto, canExportManifesto, ManifestoSchema, type Manifesto } from './manifesto';
+export {
+  buildRetorno,
+  retornoExportStatus,
+  RetornoSchema,
+  type Retorno,
+  type RetornoExportStatus,
+} from './retorno';

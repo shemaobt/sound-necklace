@@ -1,0 +1,7 @@
+{
+  "manifest_id": "fnv1a32:0f2a9c3d",
+  "audio_filename": "historia.wav",
+  "bead_duration_sec": "0.25",
+  "total_beads": 1,
+  "beads": [{ "index": 0, "startTime": 0, "endTime": 0.25 }]
+}
