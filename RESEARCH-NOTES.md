@@ -661,7 +661,7 @@ ids, seam, triagem`; `selection/scenes → frontier`. Mover `activeScene` de
   O8) fica com o GranularityResolver (ENG-241/242). A fixture `bucket-list.json` põe
   `bead_sec` por nível em `data` (fixture-authored, provisório) só para o stub ler.
 - **Autosave sem duplicar o session-state (ENG-234)**: corpo do PUT = `looseObject({
-  schema_version: z.int() })` — valida SÓ o envelope e passa o resto opaco. O schema
+schema_version: z.int() })` — valida SÓ o envelope e passa o resto opaco. O schema
   real do estado é do ENG-234; adapters importam só os tipos daqui, contendo a troca.
 - **Fronteira de escopo API vs bucket**: `GranularityLevelSchema` (pequena/media/grande)
   vive em `bucket.ts` (par com o acousteme) e é importada por `api.ts` no create —
