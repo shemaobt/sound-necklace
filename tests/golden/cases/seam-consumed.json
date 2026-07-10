@@ -1,0 +1,26 @@
+{
+  "name": "seam-consumed",
+  "description": "A seleção engole a vizinha inteira (fim ≥ fim da vizinha) → nenhuma oferta de \"mover\", só re-olhar na Triagem ou reancorar; reancora dentro da cena e trava a frase.",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "costura-engolida",
+      "audioFilename": "costura-engolida.wav",
+      "pcm": { "seed": 707, "sampleRate": 8000, "samples": 96000, "channels": 1 }
+    },
+    { "type": "confirmWhole" },
+    { "type": "cutScene", "endBead": 11 },
+    { "type": "cutScene", "endBead": 23 },
+    { "type": "confirmParts" },
+    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triage", "partIndex": 1, "none_fit": true },
+    { "type": "triagemDone" },
+    { "type": "phraseSelect", "s": 0, "e": 23 },
+    { "type": "confirmPhrase", "borderDecision": "reanchor" },
+    { "type": "phraseSelect", "s": 0, "e": 11 },
+    { "type": "confirmPhrase" },
+    { "type": "sceneDone" },
+    { "type": "export", "artifacts": ["manifesto", "retorno"] }
+  ]
+}

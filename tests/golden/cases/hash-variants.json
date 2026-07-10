@@ -1,0 +1,14 @@
+{
+  "name": "hash-variants",
+  "description": "Variantes do hash: PCM multicanal (2), sampleRate 22050 e N=220500 > 100k (stride 2). Exercita numberOfChannels, os bytes de sampleRate e a decimação por stride no hashPCM.",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.25,
+      "slug": "hash-variantes",
+      "audioFilename": "hash-variantes.wav",
+      "pcm": { "seed": 333, "sampleRate": 22050, "samples": 220500, "channels": 2 }
+    },
+    { "type": "export", "artifacts": ["manifesto"] }
+  ]
+}

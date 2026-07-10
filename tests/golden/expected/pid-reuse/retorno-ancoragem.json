@@ -1,0 +1,61 @@
+{
+  "manifest_id": "fnv1a32:bb56a0a7",
+  "story_slug": "reuso-de-pid",
+  "scenes": [
+    {
+      "scene_id": "S1",
+      "confirmed_span": {
+        "start_bead": 0,
+        "end_bead": 23
+      },
+      "parts": [
+        {
+          "part_id": "PT1",
+          "scene_id": "S1",
+          "scene_kind": "GLEANING_SCENE",
+          "scene_kind_confidence": "alta",
+          "tag_state": "tagged",
+          "confirmed_span": {
+            "start_bead": 0,
+            "end_bead": 23
+          }
+        }
+      ],
+      "propositions": [
+        {
+          "prop_id": "P1",
+          "part_link": "PT1",
+          "confirmed_span": {
+            "start_bead": 0,
+            "end_bead": 3
+          }
+        },
+        {
+          "prop_id": "P3",
+          "part_link": "PT1",
+          "confirmed_span": {
+            "start_bead": 8,
+            "end_bead": 11
+          }
+        },
+        {
+          "prop_id": "P4",
+          "part_link": "PT1",
+          "confirmed_span": {
+            "start_bead": 12,
+            "end_bead": 15
+          }
+        },
+        {
+          "prop_id": "P2",
+          "part_link": "PT1",
+          "confirmed_span": {
+            "start_bead": 16,
+            "end_bead": 19
+          }
+        }
+      ]
+    }
+  ],
+  "flags": []
+}

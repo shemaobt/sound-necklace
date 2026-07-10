@@ -1,0 +1,24 @@
+{
+  "name": "back-reach",
+  "description": "Recuo à cena anterior: PT1 none_fit, PT2 produtiva. A 1ª frase da PT2 pode começar antes da PT2 (fronteira = início da vizinha anterior). Início cruza a borda → mover pequeno desliza a costura (PT1 encolhe).",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "recuo-vizinha",
+      "audioFilename": "recuo-vizinha.wav",
+      "pcm": { "seed": 303, "sampleRate": 8000, "samples": 96000, "channels": 1 }
+    },
+    { "type": "confirmWhole" },
+    { "type": "cutScene", "endBead": 11 },
+    { "type": "cutScene", "endBead": 23 },
+    { "type": "confirmParts" },
+    { "type": "triage", "partIndex": 0, "none_fit": true },
+    { "type": "triage", "partIndex": 1, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triagemDone" },
+    { "type": "phraseSelect", "s": 10, "e": 14 },
+    { "type": "confirmPhrase", "borderDecision": "move" },
+    { "type": "sceneDone" },
+    { "type": "export", "artifacts": ["manifesto", "retorno"] }
+  ]
+}

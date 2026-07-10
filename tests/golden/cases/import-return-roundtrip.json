@@ -1,0 +1,47 @@
+{
+  "name": "import-return-roundtrip",
+  "description": "Semeia uma sessão fresca pela via de retorno (spans travados, flag reaplicada) e re-exporta → retorno byte-idêntico ao que a via de retorno produz (fidelidade import→export).",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "retorno-roundtrip",
+      "audioFilename": "retorno-roundtrip.wav",
+      "pcm": { "seed": 555, "sampleRate": 8000, "samples": 96000, "channels": 1 }
+    },
+    {
+      "type": "importReturn",
+      "dto": {
+        "scenes": [
+          {
+            "scene_id": "S1",
+            "confirmed_span": { "start_bead": 0, "end_bead": 23 },
+            "parts": [
+              {
+                "part_id": "PT1",
+                "confirmed_span": { "start_bead": 0, "end_bead": 11 },
+                "scene_kind": "GLEANING_SCENE",
+                "scene_kind_confidence": "alta",
+                "tag_state": "tagged"
+              },
+              {
+                "part_id": "PT2",
+                "confirmed_span": { "start_bead": 12, "end_bead": 23 },
+                "tag_state": "none_fit"
+              }
+            ],
+            "propositions": [
+              {
+                "prop_id": "P1",
+                "part_link": "PT1",
+                "confirmed_span": { "start_bead": 0, "end_bead": 5 }
+              }
+            ]
+          }
+        ],
+        "flags": [{ "kind": "NEEDS_REVIEW", "prop_id": "P1", "note_pt": "" }]
+      }
+    },
+    { "type": "export", "artifacts": ["manifesto", "retorno"] }
+  ]
+}

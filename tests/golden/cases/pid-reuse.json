@@ -1,0 +1,31 @@
+{
+  "name": "pid-reuse",
+  "description": "Trava P1..P3, remove a P2 (do meio), confirma o slot pendente (P4) e a próxima frase reusa o menor P# livre (P2). Ordem final em state.frases: P1, P3, P4, P2.",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "reuso-de-pid",
+      "audioFilename": "reuso-de-pid.wav",
+      "pcm": { "seed": 202, "sampleRate": 8000, "samples": 96000, "channels": 1 }
+    },
+    { "type": "confirmWhole" },
+    { "type": "cutScene", "endBead": 23 },
+    { "type": "confirmParts" },
+    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triagemDone" },
+    { "type": "phraseSelect", "s": 0, "e": 3 },
+    { "type": "confirmPhrase" },
+    { "type": "phraseSelect", "s": 4, "e": 7 },
+    { "type": "confirmPhrase" },
+    { "type": "phraseSelect", "s": 8, "e": 11 },
+    { "type": "confirmPhrase" },
+    { "type": "removePhrase", "index": 1 },
+    { "type": "phraseSelect", "s": 12, "e": 15 },
+    { "type": "confirmPhrase" },
+    { "type": "phraseSelect", "s": 16, "e": 19 },
+    { "type": "confirmPhrase" },
+    { "type": "sceneDone" },
+    { "type": "export", "artifacts": ["manifesto", "retorno"] }
+  ]
+}
