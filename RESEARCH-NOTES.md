@@ -552,6 +552,7 @@ max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
 - Barrel `ui/organisms/index.ts` fica FORA do escopo da ENG-225 (precedente
   ConnectionGate/ENG-224): a estação (ENG-236) importa por caminho direto ou
   adiciona ao barrel no escopo dela.
+
 ## Mapeamento — roteiros + answer store (verificado 2026-07-10, ENG-226)
 
 - **Byte-igualdade sem risco de cópia manual**: o teste extrai `var L1_Q = [...]`
