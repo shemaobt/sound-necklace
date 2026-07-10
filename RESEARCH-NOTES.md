@@ -873,3 +873,64 @@ typecheck`).
   `test` do package.json não aceita filtro de path e `pnpm vitest` dá `ERR_PNPM_RECURSIVE_EXEC`).
   O worktree do loop.sh NÃO vem com `node_modules` — `corepack pnpm install --frozen-lockfile`
   primeiro (node 22.18 já satisfaz o engine, `fnm exec` desnecessário aqui).
+## UI pages / estação Triagem — classificar cenas (verificado 2026-07-10, ENG-236)
+
+- **Redesign §6.4 reformata a lista vertical da referência em UMA cena em foco +
+  pontos de progresso.** Precedência CLAUDE.md: dado/comportamento = PRD/referência,
+  look/layout = protótipo de design. A referência (`renderTriagem` L1213) lista TODAS
+  as cenas com "classificar ▾"; o protótipo (`Colar de Sons - Protótipo` L208–305)
+  mostra uma cena por vez, com `ProgressDots` (molécula já pronta) como atalho de salto.
+- **`ProgressDots` (ui/molecules) é digit-free por design** (`aria-label="ir para a
+cena"`, `aria-current="step"`), mas NÃO tem prop de "concluído" — o check dentro do
+  ponto classificado do protótipo fica de fora (molécula fora de escopo). O estado da
+  tag sempre visível (`tagShow`) dá o mesmo feedback por cena.
+- **Auto-avanço do foco:** após classificar/none-fit, salta para a próxima cena
+  pendente dando a volta (`_nextPending` do protótipo L711/L723). Reduz cliques e é
+  testável (o ponto seguinte ganha `aria-current`).
+- **O gate compõe `gates.setMode(s,'segmentacao')` + `phrases.enterSegmentacao(s)`.**
+  `setMode` puro só troca `mode`/`review`/`partsConfirmed`; a ENTRADA de camada
+  (activeSceneId + enterScene) é `enterSegmentacao`, e SÓ deve rodar quando o modo
+  efetivo é segmentacao (há produtiva) — sob o gate habilitado (≥1 produtiva) o ramo
+  é garantido. Espelha o bloco L1006–1008 da referência. Sem isso, a estação
+  Segmentação abre nula (activeScene null).
+- **Organismos fora do barrel:** `TriagemPicker`/`CoverageDrawer` (ENG-225) NÃO estão
+  em ui/organisms/index.ts (barrel congelado). A página os importa por caminho direto
+  — depcruise permite page→organism em qualquer caminho (só regula direção de camada,
+  não uso do barrel).
+- **`CoverageDrawer` é auto-contido:** Radix Dialog com trigger próprio, fechado por
+  padrão → nada da gaveta (nem dígitos de contagem) entra no DOM até a facilitadora
+  abrir. Satisfaz "só abre por ação explícita" + minimalismo §9.2 sem trabalho extra
+  na página.
+- **none-fit finding vs all-none-fit lockout:** `computeCoverage` dá `noneFit` e
+  `allNoneFit`. Finding (noneFit>0) mostra a frase-contrato "evidência para nomear um
+  tipo nativo quando o padrão se repetir"; lockout (allNoneFit) explica o travamento
+  a jusante. Ambos digit-free (a referência L1300–1302 carregava contagens).
+- **Sem browser test:** Triagem não renderiza `Necklace` → sem geometria dependente
+  de layout; a suíte jsdom cobre tudo. A exceção "toda estação nova precisa de
+  *.browser.test.tsx" vale só p/ estações com o colar (geometria de clique).
+
+## ENG-222 — session-list + artifact-cards (organismos do dashboard)
+
+- **Adoção de órfão (2º caso, após ENG-225):** trabalho anterior de qualidade morreu
+  sem push em branches locais baseadas em main antiga. O diff dessas branches contra a
+  main atual parece apagar meio repo — é ilusão do base velho, não deleção real. Padrão
+  seguro: extrair SÓ os diretórios novos com `git checkout <branch> -- <dir>` (não
+  rebasear a branch stale inteira), conferir que os imports batem com as assinaturas
+  atuais de atoms/molecules, então descartar as branches. Barato e sem conflito.
+- **Nome acessível composto sem `aria-labelledby`:** a ação do card usa verbo visível
+  ("Retomar"/"Abrir") + um `<span>` visually-hidden com o título dentro do MESMO botão.
+  O texto clip-hidden contribui para o nome acessível (não `display:none`), então o
+  leitor de tela ouve "Retomar A história de Rute". Uma única interativa por card,
+  nunca aninhada — teste afirma exatamente 1 button e 0 links por card.
+- **Live region tem de PRÉ-existir (WCAG 4.1.3 / ARIA22):** o `role="status"` do chip
+  de conclusão é montado desde o 1º render e vazio; só o texto entra quando os 3
+  documentos são baixados. Uma região viva montada JUNTO com sua mensagem não é
+  anunciada — por isso o container fica sempre no DOM e só o filho aparece.
+- **Organismo espelha o shell, não importa:** `SessionStationGlance` reproduz a forma
+  do `StepperStationView` (@/ui/app) em vez de importá-lo — organismos não podem depender
+  da camada de wiring (depcruise). Quem chama traduz o estado do shell nas props do
+  relance; `lastModified` chega já formatado (organismo não faz data).
+- **Barrel congelado, de novo:** session-list/artifact-cards NÃO entram em
+  ui/organisms/index.ts (precedente ConnectionGate/ENG-224). As páginas Dashboard
+  (ENG-245) e Export (ENG-246) os compõem por caminho direto — depcruise só regula
+  direção de camada, não uso do barrel.

@@ -1,0 +1,178 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import type { Player } from '../../../adapters/audio';
+import {
+  computeCoverage,
+  type Confidence,
+  enterSegmentacao,
+  lockedParts,
+  markNoneFit,
+  type ScenePart,
+  setMode,
+  skShort,
+  tagScene,
+  triagemDone,
+} from '../../../domain';
+import { Button } from '../../atoms';
+import { ProgressDots } from '../../molecules';
+import { CoverageDrawer } from '../../organisms/coverage-drawer/coverage-drawer';
+import { TriagemPicker } from '../../organisms/triagem-picker/triagem-picker';
+import { sessionStore, useSessionStore } from '../../state';
+import './triagem.css';
+
+/**
+ * Triagem — classificar cada cena travada (PRD v2 §8.5, redesign §6.4): uma cena
+ * por vez com pontos de progresso que também saltam o foco, "▶ Ouvir esta cena",
+ * o estado atual sempre visível (por classificar / tipo + confiança / ⌀ nenhum se
+ * encaixa), o picker por cena, a gaveta de cobertura só-facilitadora e o gate duro
+ * "Já classifiquei todas as cenas →" (habilita só com todas não-pendentes E ≥1
+ * produtiva). Marcar "nenhum se encaixa" é um ACHADO, não um beco: quando NENHUMA
+ * cena se encaixa, Segmentação/Mapeamento ficam travadas e a tela explica.
+ *
+ * Camada de wiring: classificar (`tagScene`), marcar achado (`markNoneFit`),
+ * o gate (`triagemDone` + `setMode`→`enterSegmentacao`) e a cobertura
+ * (`computeCoverage`) são decisões puras do domínio aplicadas pelo `sessionStore`;
+ * o picker e a gaveta são organismos presentacionais. O áudio chega por prop.
+ */
+export interface TriagemProps {
+  player?: Player | null;
+}
+
+/** Rótulo de confiança para o estado atual (referência L1211; sem dígitos, §9.2). */
+function confLabel(c: Confidence | null): string {
+  return c === 'alta' ? 'certeza' : c === 'média' ? 'quase' : c === 'baixa' ? 'na dúvida' : '';
+}
+
+/** Estado atual da cena em foco, sempre visível (PRD v2 §8.5). */
+function tagShow(scene: ScenePart): string {
+  if (scene.tag_state === 'none_fit') return '⌀ nenhum se encaixa';
+  if (scene.tag_state === 'tagged' && scene.scene_kind)
+    return `${skShort(scene.scene_kind)} · ${confLabel(scene.scene_kind_confidence)}`;
+  return '— por classificar';
+}
+
+/** Próxima cena pendente a partir de `from`, dando a volta (referência do protótipo). */
+function nextPending(parts: ScenePart[], from: number): number {
+  for (let i = from; i < parts.length; i++) if (parts[i]!.tag_state === 'pending') return i;
+  for (let i = 0; i < parts.length; i++) if (parts[i]!.tag_state === 'pending') return i;
+  return -1;
+}
+
+export function Triagem({ player = null }: TriagemProps) {
+  const session = useSessionStore((s) => s.session);
+  const [focusIdx, setFocusIdx] = useState(0);
+
+  useEffect(() => {
+    if (!player) return;
+    return () => player.stop();
+  }, [player]);
+
+  const view = useMemo(() => {
+    if (!session) return null;
+    return {
+      parts: lockedParts(session),
+      coverage: computeCoverage(session),
+      gate: triagemDone(session),
+    };
+  }, [session]);
+
+  if (!session || !view) return null;
+  const { parts, coverage, gate } = view;
+
+  if (parts.length === 0) {
+    return (
+      <section className="cds-triagem">
+        <p className="cds-triagem-empty">Nenhuma cena confirmada ainda.</p>
+      </section>
+    );
+  }
+
+  const idx = Math.min(focusIdx, parts.length - 1);
+  const scene = parts[idx]!;
+
+  const playScene = (): void => {
+    if (player && scene.span) player.toggle(scene.part_id, scene.span.s, scene.span.e);
+  };
+
+  const advanceFocus = (): void => {
+    const s = sessionStore.getState().session;
+    if (!s) return;
+    const nx = nextPending(lockedParts(s), idx + 1);
+    if (nx >= 0) setFocusIdx(nx);
+  };
+
+  const classify = (kind: string, confidence: Confidence): void => {
+    const id = scene.part_id;
+    sessionStore.getState().apply((s) => tagScene(s, id, kind, confidence));
+    advanceFocus();
+  };
+
+  const noneFit = (): void => {
+    const id = scene.part_id;
+    sessionStore.getState().apply((s) => markNoneFit(s, id));
+    advanceFocus();
+  };
+
+  // O gate compõe o `setMode` puro com a entrada de camada da referência
+  // (L1006–1008): só quando o modo efetivo é segmentacao (há produtiva) roda
+  // `enterSegmentacao`. Sob o gate só habilitado com produtiva, o ramo é certo.
+  const advance = (): void => {
+    const s = sessionStore.getState().session;
+    if (!s || !triagemDone(s).enabled) return;
+    sessionStore.getState().apply((st) => {
+      const moved = setMode(st, 'segmentacao');
+      return moved.mode === 'segmentacao' ? enterSegmentacao(moved) : moved;
+    });
+  };
+
+  return (
+    <section className="cds-triagem">
+      <ProgressDots count={parts.length} current={idx} onSelect={setFocusIdx} />
+
+      <div className="cds-triagem-focus">
+        <p className="cds-triagem-instruction" data-role="instruction">
+          Essa cena é sobre o quê?
+        </p>
+        <div className="cds-triagem-play">
+          <Button variant="primary" onClick={playScene}>
+            ▶ Ouvir esta cena
+          </Button>
+        </div>
+        <p className="cds-triagem-tag" data-tag={scene.tag_state}>
+          {tagShow(scene)}
+        </p>
+        <TriagemPicker key={scene.part_id} onConfirm={classify} onNoneFit={noneFit} />
+      </div>
+
+      {coverage.noneFit > 0 ? (
+        <p className="cds-triagem-finding">
+          ⌀ Nenhum se encaixa — evidência para nomear um tipo nativo quando o padrão se repetir.
+        </p>
+      ) : null}
+
+      {coverage.allNoneFit ? (
+        <p className="cds-triagem-lockout" role="status">
+          ⚠ Nenhuma cena se encaixa em Rute. Segmentação e Mapeamento ficam travadas — esta história
+          não rende cobertura de Rute. As marcas ficam salvas como evidência de tipo nativo.
+        </p>
+      ) : null}
+
+      <div className="cds-triagem-gate">
+        {!gate.enabled && gate.message ? (
+          <p className="cds-triagem-gate-msg" role="status">
+            {gate.message}
+          </p>
+        ) : null}
+        <div data-role="primary-action">
+          <Button variant="dark" disabled={!gate.enabled} onClick={advance}>
+            Já classifiquei todas as cenas →
+          </Button>
+        </div>
+      </div>
+
+      <CoverageDrawer coverage={coverage} />
+    </section>
+  );
+}
+
+export default Triagem;
