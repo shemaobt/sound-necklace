@@ -94,3 +94,14 @@ export {
   type FraseErrorCode,
   type FrasesDoneResult,
 } from './phrases';
+export { L1_Q, L2_Q, L3_Q, type MapQuestion } from './mapeamento-scripts';
+export {
+  ensureMapping,
+  productiveFrases,
+  questionSequence,
+  setAnswer,
+  voiceAnswerPath,
+  type AnswerSlot,
+  type ProductiveFrase,
+  type QuestionSlot,
+} from './mapping';

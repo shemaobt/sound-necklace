@@ -29,12 +29,13 @@ function toSegmentacao(segment: GoldenStep): GoldenStep[] {
 }
 
 describe('replaySessionSteps — passos de cena + triagem + frases do golden case 2', () => {
-  it('replaya o minimal-flow até as frases e para pendente na resposta (ENG-226)', () => {
+  it('replaya o minimal-flow até as respostas e para pendente no export (ENG-227/233)', () => {
     const { steps } = minimalFlow();
     const r = replaySessionSteps(steps);
 
-    // status documentado: cenas + triagem + frases consumidos; answer pendente
-    expect(r.pendingAt).toEqual({ index: 12, type: 'answer' });
+    // status documentado: cenas + triagem + frases + respostas consumidos;
+    // export pendente
+    expect(r.pendingAt).toEqual({ index: 17, type: 'export' });
 
     // 96000 amostras / 8000 Hz = 12 s a 0.5 s/conta → 24 contas
     expect(r.state.totalBeads).toBe(24);
@@ -69,6 +70,20 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
 
     // sceneDone na última produtiva → o fluxo guiado avançou ao Mapeamento
     expect(r.state.mode).toBe('mapeamento');
+
+    // respostas do caso nos buckets certos; não respondidas semeadas com ""
+    expect(r.state.mapping?.level1['recontar']).toBe(
+      'Uma história sobre respiga e retorno ao lar.',
+    );
+    expect(r.state.mapping?.level1['tempo']).toBe('');
+    expect(r.state.mapping?.level1['lugar']).toBe('');
+    expect(r.state.mapping?.level2['PT1']?.['quem']).toBe('Duas mulheres e os ceifeiros.');
+    expect(r.state.mapping?.level2['PT2']?.['descrever']).toBe(
+      'Um trecho que não se encaixa nos tipos.',
+    );
+    expect(r.state.mapping?.level3['P1']?.['oque']).toBe(
+      'A chegada ao campo — com acentos: coração, você, média.',
+    );
   });
 
   it('reopenScene destrava em cascata e o re-corte preserva os PT#s', () => {
