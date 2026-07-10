@@ -640,6 +640,36 @@ ids, seam, triagem`; `selection/scenes → frontier`. Mover `activeScene` de
   pendente em `{index: 17, type: 'export'}` (ENG-227/233). `buildReturn()` da
   referência NÃO lê `state.mapping` — só `buildMapReportMd()` (L1155–1170).
 
+## Relatório .md — buildMapReport + fecho do golden (verificado 2026-07-10, ENG-233)
+
+- **`buildMapReport(state, voice?)` consome só domain**: seletores `lockedParts`/
+  `productiveScenes` + scripts `L1_Q/L2_Q/L3_Q` + `voiceAnswerPath`. `sceneNum(p) =
+  lockedParts(state).indexOf(p)+1` funciona TAMBÉM para as cenas de
+  `productiveScenes` porque ambos os seletores são `state.parts.filter(...)` e
+  devolvem as MESMAS refs de objeto — logo o S# tem lacuna quando uma none_fit
+  precede uma produtiva (fiel à referência). `mapping` nulo → default vazio (saída
+  idêntica à semeada: chave ausente → `""` → `_(sem resposta)_`).
+- **Três fallbacks de slug DISTINTOS**: título do relatório = `slug||"história"`
+  (COM acento, U+00ED); nome do arquivo do relatório = `slug||"historia"` (SEM
+  acento, `relatorioFilename`, L1151); nomes dos JSONs = `slug||"colar"`
+  (serialize.ts). Não confundir — são três strings de contrato diferentes.
+- **Extensão de voz (PRD §10.4, não na referência)**: 2º param `voice:
+  ReadonlySet<string>` = caminhos de recurso COM gravação. Célula resolve
+  digitado(trim) > caminho de voz(`voiceAnswerPath(slot)`) > `_(sem resposta)_`;
+  digitado vence. `voice` vazio ⇒ bytes idênticos à referência. Fixture PRD-derived
+  em `contracts/fixtures/relatorio/` (README marca a origem — o teste de contracts
+  não pode importar `tests/`, então a fixture mora junto do módulo).
+- **Fecho do golden minimal-flow**: novo `sessionExportReplayer` (registry.ts)
+  COMPÕE sobre `replaySessionSteps` (inalterado — ainda para no `export`,
+  devolvido em `pendingAt`) e serializa os artefatos que o passo `export` lista
+  pelos mappers REAIS (`buildManifesto`/`buildRetorno`/`buildMapReport`).
+  `golden.test` compara TODOS os arquivos de `expected/<caso>/` — logo o replayer
+  de um caso DEVE produzir todos os artefatos comitados, não só o novo. minimal-flow
+  sai de PENDENTE; os 3 artefatos byte-diffam a cada CI.
+- Complexity de `buildMapReport` = 20 (lint WARN, não erro — CLAUDE.md gate 5):
+  port fiel 1:1 de uma função única da referência; dividir pioraria a auditoria
+  byte-a-byte. Não refatorar por causa do número.
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.

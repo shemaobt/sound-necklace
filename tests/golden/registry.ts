@@ -41,7 +41,7 @@ import {
   type SessionState,
 } from '../../domain';
 
-import { buildManifesto, serializeArtifact } from '../../contracts';
+import { buildManifesto, buildMapReport, buildRetorno, serializeArtifact } from '../../contracts';
 
 import { makePcm, type PcmSpec } from './pcm';
 
@@ -334,9 +334,37 @@ export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
   return { state: must(), pendingAt: null };
 }
 
+/**
+ * ENG-233: replay de sessão completo → export dos TRÊS artefatos pelos mappers
+ * reais de contracts/ (buildManifesto + buildRetorno + buildMapReport). Reusa
+ * replaySessionSteps, que consome tudo e para no passo `export` (o último);
+ * daí este replayer serializa os artefatos que o passo pedir. É o que tira o
+ * caso minimal-flow de PENDENTE no golden.test (o relatório .md fecha o trio).
+ */
+const sessionExportReplayer: Replayer = (steps) => {
+  const { state, pendingAt } = replaySessionSteps(steps);
+  if (!pendingAt) throw new Error('sessionExportReplayer: nenhum passo export ao fim do caso');
+  const step = steps[pendingAt.index] as ExportStep;
+  if (step.type !== 'export') {
+    throw new Error(`sessionExportReplayer: passo não suportado ${step.type}`);
+  }
+  const out: Record<string, string> = {};
+  if (step.artifacts.includes('manifesto')) {
+    out['manifesto-contas.json'] = serializeArtifact(buildManifesto(state));
+  }
+  if (step.artifacts.includes('retorno')) {
+    out['retorno-ancoragem.json'] = serializeArtifact(buildRetorno(state));
+  }
+  if (step.artifacts.includes('relatorio')) {
+    out['relatorio-mapeamento.md'] = buildMapReport(state);
+  }
+  return out;
+};
+
 export const replayers: Record<string, Replayer> = {
   'manifest-only': manifestReplayer,
   'partial-bead': manifestReplayer,
+  'minimal-flow': sessionExportReplayer,
 };
 
 /** ENG-238 liga isto: com strict=true, casos pendentes REPROVAM o harness. */
