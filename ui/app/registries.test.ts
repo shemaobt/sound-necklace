@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import TutorialAddon from './addons/tutorial';
 import { buildAdapterRegistry, buildStationRegistry, listAddons } from './registries';
 
 function Fake() {
@@ -36,7 +37,7 @@ describe('addons-registry', () => {
     expect(addons).toEqual([Fake]);
   });
 
-  it('em produção começa vazio (sem addons)', () => {
-    expect(listAddons()).toEqual([]);
+  it('descobre os addons existentes via glob real', () => {
+    expect(listAddons()).toContain(TutorialAddon);
   });
 });

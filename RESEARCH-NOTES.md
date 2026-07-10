@@ -473,6 +473,40 @@ max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
   look-layer, documentado). Só o small tem protótipo; 3-botões/escalada
   extrapolam os mesmos estilos.
 
+## Tutorial popup / Radix Popover / localStorage (verificado 2026-07-10, ENG-231)
+
+- **Radix Popover 1.1.19** (mesma leva do react-dialog já instalado; React 19 ok):
+  `Popover.Portal` é OPCIONAL — o `Content` renderiza inline (junto do trigger) e o
+  Popper posiciona via `position: fixed` relativo ao trigger mesmo assim; é o que
+  mantém o popup DENTRO da `.cds-addons-layer` (DoD) em vez de `document.body`.
+  Default `modal={false}`: sem focus trap, sem scroll lock; trigger ganha
+  `aria-haspopup`/`aria-expanded`/`data-state` de graça; ESC e pointer-down fora
+  convergem em `onOpenChange(false)`. Auto-open NÃO deve roubar foco:
+  `onOpenAutoFocus={(e) => e.preventDefault()}` (Carbon/NN-g: status não captura foco).
+- **jsdom + Popper**: exige `ResizeObserver` global (mock de 3 métodos vazios no
+  próprio arquivo de teste — o projeto `dom` não tem setupFiles); posições calculadas
+  são todas 0 — assertar presença/estado/callbacks, nunca side/posição.
+- **localStorage**: jsdom tem localStorage REAL (in-memory) — sem mock; resetar com
+  `localStorage.clear()` no `beforeEach`; spy só via `Storage.prototype` (webidl).
+  Safari ≥ 11 private mode NÃO lança mais em `setItem` (vira in-memory efêmero), mas
+  "Block all cookies" lança `SecurityError` no ACESSO a `window.localStorage` →
+  get/set sempre em try/catch com degradação silenciosa (dica volta a aparecer; nunca
+  quebrar o app). **Primeiro uso de localStorage no repo** — precedente de chave:
+  `colar-de-sons:<feature>:<nome>:v1` (versão na chave permite "resetar" sem migração).
+- **Dois níveis de dismiss** (VA.gov banner + NN/g): X/ESC/fora = esconde pela SESSÃO
+  (estado no componente; o addon fica montado entre estações, então useState = sessão
+  do app); "não mostrar de novo" = permanente (localStorage), mantendo o trigger "?"
+  como rota de reencontro (NN/g: dispensar não pode custar a informação para sempre).
+- **react-hooks v7 (compiler lint)**: `set-state-in-effect`/`set-state-in-render` são
+  ERROS → não "reabrir ao trocar de estação" via setState em effect; a dica troca por
+  DERIVAÇÃO da prop `station` com o popover aberto, e o auto-open é só estado inicial.
+- Addon (1º do glob `/ui/app/addons/*.tsx`): lê `useSessionStore` + `stepperStations`
+  (estação atual = `state === 'current'`) e passa `station` como prop; sem sessão
+  renderiza null (dashboard/login sem dica). `ui/app` pode importar organisms/state
+  (depcruise só proíbe organisms→adapters e não-wiring→adapters). Organismo consumido
+  só pelo shell segue o precedente do connection-gate: FORA do barrel, import por
+  caminho direto (evita editar ui/organisms/index.ts fora do Scope).
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.
