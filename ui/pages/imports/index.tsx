@@ -3,9 +3,11 @@ import { useState } from 'react';
 import {
   applyDelivery,
   applyReturn,
+  type Delivery,
   DeliverySchema,
   DELIVERY_NO_GRID_MSG,
   MANIFEST_MISMATCH_MSG,
+  type ReturnImport,
   ReturnSchema,
   RETURN_NO_GRID_MSG,
 } from '../../../contracts';
@@ -45,48 +47,55 @@ export function Imports() {
   const [notices, setNotices] = useState<Notice[]>([]);
 
   const onDelivery = async (file: File): Promise<void> => {
+    // try/catch SÓ na fronteira de sistema (ler + parsear o arquivo); o mapper
+    // puro e o `apply` do store rodam FORA — um bug de domínio borbulha com o
+    // stack trace, não vira "arquivo ilegível" (CLAUDE.md, regra de try/catch).
+    let dto: Delivery;
     try {
-      const dto = DeliverySchema.parse(JSON.parse(await file.text()));
-      const current = sessionStore.getState().session;
-      if (!current) return;
-      const outcome = applyDelivery(current, dto);
-      if (!outcome.ok) {
-        setNotices([{ tone: 'err', text: DELIVERY_NO_GRID_MSG }]);
-        return;
-      }
-      const msgs: Notice[] = [];
-      if (outcome.manifestMismatch) msgs.push({ tone: 'warn', text: MANIFEST_MISMATCH_MSG });
-      sessionStore.getState().apply(() => outcome.state);
-      msgs.push({
-        tone: 'ok',
-        text: `✓ Entrega carregada: ${outcome.state.parts.length} cena(s), ${outcome.state.frases.length} frase(s). As cenas são propostas — confirme de ouvido.`,
-      });
-      setNotices(msgs);
+      dto = DeliverySchema.parse(JSON.parse(await file.text()));
     } catch (e) {
       setNotices([{ tone: 'err', text: failure('entrega', e) }]);
+      return;
     }
+    const current = sessionStore.getState().session;
+    if (!current) return;
+    const outcome = applyDelivery(current, dto);
+    if (!outcome.ok) {
+      setNotices([{ tone: 'err', text: DELIVERY_NO_GRID_MSG }]);
+      return;
+    }
+    const msgs: Notice[] = [];
+    if (outcome.manifestMismatch) msgs.push({ tone: 'warn', text: MANIFEST_MISMATCH_MSG });
+    sessionStore.getState().apply(() => outcome.state);
+    msgs.push({
+      tone: 'ok',
+      text: `✓ Entrega carregada: ${outcome.state.parts.length} cena(s), ${outcome.state.frases.length} frase(s). As cenas são propostas — confirme de ouvido.`,
+    });
+    setNotices(msgs);
   };
 
   const onReturn = async (file: File): Promise<void> => {
+    let dto: ReturnImport;
     try {
-      const dto = ReturnSchema.parse(JSON.parse(await file.text()));
-      const current = sessionStore.getState().session;
-      if (!current) return;
-      const outcome = applyReturn(current, dto);
-      if (!outcome.ok) {
-        setNotices([{ tone: 'err', text: RETURN_NO_GRID_MSG }]);
-        return;
-      }
-      sessionStore.getState().apply(() => outcome.state);
-      setNotices([
-        {
-          tone: 'ok',
-          text: `✓ Retomado: ${outcome.state.parts.length} cena(s), ${outcome.state.frases.length} frase(s).`,
-        },
-      ]);
+      dto = ReturnSchema.parse(JSON.parse(await file.text()));
     } catch (e) {
       setNotices([{ tone: 'err', text: failure('retorno', e) }]);
+      return;
     }
+    const current = sessionStore.getState().session;
+    if (!current) return;
+    const outcome = applyReturn(current, dto);
+    if (!outcome.ok) {
+      setNotices([{ tone: 'err', text: RETURN_NO_GRID_MSG }]);
+      return;
+    }
+    sessionStore.getState().apply(() => outcome.state);
+    setNotices([
+      {
+        tone: 'ok',
+        text: `✓ Retomado: ${outcome.state.parts.length} cena(s), ${outcome.state.frases.length} frase(s).`,
+      },
+    ]);
   };
 
   if (!session) {
