@@ -737,6 +737,47 @@ schema_version: z.int() })` — valida SÓ o envelope e passa o resto opaco. O s
   o caso `import-return-roundtrip` da ENG-238; a prova de byte-identidade roda no
   `registry.test`/`imports.test` (caso golden completo com `generate.mjs` = ENG-238).
 
+## adapters/sessions — SessionStore (verificado 2026-07-10, ENG-240)
+
+- **adapters → adapters é permitido** (depcruise só barra `adapters → ui`): sessions
+  reusa a porta `connectivity` (tipo `ConnectivityMonitor` + `FixtureConnectivityMonitor`)
+  sem ciclo (connectivity não importa sessions). Importar outro adapter ≠ editá-lo
+  (escopo é sobre arquivos EDITADOS).
+- **Testes de adapter rodam no projeto `unit` (node), sem jsdom/localStorage**: para a
+  persistência da fixture, injetar um `KeyValueStorage` (shape da Web Storage:
+  getItem/setItem/removeItem) — default in-memory (`Map`) nos testes; o browser passa
+  `window.localStorage`. Chave de persistência segue o precedente da ENG-231:
+  `colar-de-sons:sessions:v1`. Bytes binários (recursos de voz) NÃO cabem em localStorage
+  sem base64 → ficam só em memória (limitação documentada; nenhum DoD exige recurso
+  sobrevivendo a reload).
+- **Autosaver = setTimeout + fake timers**: debounce + backoff usam `setTimeout`; os
+  testes usam `vi.useFakeTimers()` + `await vi.advanceTimersByTimeAsync(ms)` — confiável
+  no projeto `unit` (o caveat de deadlock fake-timer×userEvent da ENG-220 é só do browser
+  mode). Retry testado com uma função `persist` REAL que lança N vezes e grava tentativas
+  num array (padrão bom do skill TDD), não um mock do próprio autosaver.
+- **`noUncheckedIndexedAccess` está LIGADO** no tsconfig: `calls[0]` é `T | undefined` —
+  guardar (`const c = calls[0]; if (!c) throw`) ou castar nos testes; typecheck falha
+  senão (o `pnpm test`/vitest via Vite NÃO typa, então o erro só aparece no `pnpm
+typecheck`).
+- **Custódia opaca na store (§10.5)** = `structuredClone` na entrada e na saída (estado
+  e artefatos); a store NUNCA valida/reserializa o DTO — `contracts/api.ts` já trata o
+  autosave como `looseObject`, e a validação estrita é da camada de estado (ui/state via
+  `fromSessionDto`), não do adapter. Byte-identidade de artefato = strings imutáveis
+  (`{...triple}` copia refs; `got.manifesto === triple.manifesto`).
+- **Padrão "servidor partilhável"**: um `FixtureSessionBackend` injetado em N
+  `FixtureSessionStore` = N usuários num servidor — ÚNICA forma de exercitar o lock
+  consultivo (2º `acquireLock` de outro user devolve `LockStatus` com o holder atual,
+  SEM lançar → o não-holder abre em revisão §7.3). Lock por-usuário com TTL; identidade
+  do editor injetada por `opts.user` (default `DEFAULT_FIXTURE_USER`).
+- `globalThis.crypto.randomUUID()` é global em node ≥ 19 e no browser (sem import).
+  O passo do dashboard (`SessionSummary.progress.current_step`) é DERIVADO do `mode` do
+  estado salvo (`stepFor`: escuta→ouvir/cortar por `whole.confirmed`, triagem→triagem,
+  segmentacao→frases, mapeamento→conversa, concluida→guardar).
+- **`createAutosaver` é reusado pela fixture E pelo HTTP real** (o `persist` injetado é a
+  única diferença): mantém debounce/coalescing/retry/pausa num só lugar. O esqueleto
+  HTTP (`http.ts`) injeta `fetch` (sem rede no CI) e um getter de token Bearer; endpoints
+  PROVISÓRIOS até o OpenAPI (ENG-211/ENG-247), então só `create` tem teste de shape.
+
 ## Golden harness STRICT + pacote de bordas (ENG-238, 2026-07-10)
 
 - **`STRICT = true` está LIGADO** (`tests/golden/registry.ts`): qualquer caso em
