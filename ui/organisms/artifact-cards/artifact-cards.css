@@ -1,0 +1,65 @@
+/*
+ * Fila dos três document cards + chip de celebração (redesign §6.7; estilos do
+ * protótipo "Colar de Sons - Protótipo.dc.html" L499–527). O card em si é a
+ * molécula DocumentCard; aqui vive só a composição e o chip.
+ */
+.cds-artifact-cards {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.cds-artifact-cards-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.cds-artifact-cards-row > * {
+  flex: 1 1 260px;
+  max-width: 360px;
+}
+
+/* rgba de --cds-confidence-filled (#777d45) a .14, como no protótipo */
+.cds-artifact-cards-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(119, 125, 69, 0.14);
+  color: #585d31;
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 26px;
+  border-radius: var(--cds-radius-pill);
+}
+
+.cds-artifact-cards-chip-glyph {
+  width: 18px;
+  height: 18px;
+  color: var(--cds-confidence-filled);
+  flex: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-artifact-cards-chip {
+    animation: cds-artifact-cards-pop 0.3s ease-out;
+  }
+
+  @keyframes cds-artifact-cards-pop {
+    0% {
+      transform: scale(0.4);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.12);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+}

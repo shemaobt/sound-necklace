@@ -873,3 +873,29 @@ cena"`, `aria-current="step"`), mas NÃO tem prop de "concluído" — o check de
 - **Sem browser test:** Triagem não renderiza `Necklace` → sem geometria dependente
   de layout; a suíte jsdom cobre tudo. A exceção "toda estação nova precisa de
   *.browser.test.tsx" vale só p/ estações com o colar (geometria de clique).
+
+## ENG-222 — session-list + artifact-cards (organismos do dashboard)
+
+- **Adoção de órfão (2º caso, após ENG-225):** trabalho anterior de qualidade morreu
+  sem push em branches locais baseadas em main antiga. O diff dessas branches contra a
+  main atual parece apagar meio repo — é ilusão do base velho, não deleção real. Padrão
+  seguro: extrair SÓ os diretórios novos com `git checkout <branch> -- <dir>` (não
+  rebasear a branch stale inteira), conferir que os imports batem com as assinaturas
+  atuais de atoms/molecules, então descartar as branches. Barato e sem conflito.
+- **Nome acessível composto sem `aria-labelledby`:** a ação do card usa verbo visível
+  ("Retomar"/"Abrir") + um `<span>` visually-hidden com o título dentro do MESMO botão.
+  O texto clip-hidden contribui para o nome acessível (não `display:none`), então o
+  leitor de tela ouve "Retomar A história de Rute". Uma única interativa por card,
+  nunca aninhada — teste afirma exatamente 1 button e 0 links por card.
+- **Live region tem de PRÉ-existir (WCAG 4.1.3 / ARIA22):** o `role="status"` do chip
+  de conclusão é montado desde o 1º render e vazio; só o texto entra quando os 3
+  documentos são baixados. Uma região viva montada JUNTO com sua mensagem não é
+  anunciada — por isso o container fica sempre no DOM e só o filho aparece.
+- **Organismo espelha o shell, não importa:** `SessionStationGlance` reproduz a forma
+  do `StepperStationView` (@/ui/app) em vez de importá-lo — organismos não podem depender
+  da camada de wiring (depcruise). Quem chama traduz o estado do shell nas props do
+  relance; `lastModified` chega já formatado (organismo não faz data).
+- **Barrel congelado, de novo:** session-list/artifact-cards NÃO entram em
+  ui/organisms/index.ts (precedente ConnectionGate/ENG-224). As páginas Dashboard
+  (ENG-245) e Export (ENG-246) os compõem por caminho direto — depcruise só regula
+  direção de camada, não uso do barrel.
