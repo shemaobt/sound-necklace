@@ -837,3 +837,39 @@ typecheck`).
   `*.browser.test.tsx` em Chromium real (a geometria do colar só existe com layout).
   Para o browser test da cena em janela, use uma cena começando na conta 0 (winS=0)
   p/ o `beadPosition(index, 0, ...)` casar com o `firePointer` como na Escuta 2.
+
+## adapters/voice — VoiceRecorder (verificado 2026-07-10, ENG-244)
+
+- **Reuso de path builder (ladder rung 2)**: o caminho canônico `respostas/level{1,2,3}/…/<k>.webm`
+  já existe em DUAS camadas — `voiceAnswerPath(slot)` (@/domain/mapping.ts, §10.4/O5)
+  monta e `ResourcePathSchema` (@/contracts/api.ts) valida (regex `[a-z0-9_]+`, PT#/P#).
+  `adapters/voice/path.ts` só compõe os dois (`ResourcePathSchema.parse(voiceAnswerPath(slot))`) —
+  NÃO reinventa. Adapters podem importar domain+contracts (depcruise permite).
+- **Persistência desacoplada por `VoiceResourceStore` (put/get/has/delete)**: o recorder
+  nunca conhece o SessionStore diretamente. Fixture/registry usam `MemoryVoiceStore`
+  (Map, cópias defensivas §10.5). Em produção a estação Conversa (ENG-249) liga um store
+  apoiado nos recursos da SESSÃO ATIVA do SessionStore. **GOTCHA/follow-up**: SessionStore
+  só expõe `putResource`/`getResource`/`listResources` — NÃO tem `deleteResource`. O port
+  do voice PRECISA de `delete` (DoD). Logo a ligação real + `deleteResource` no SessionStore
+  ficam para ENG-249; por ora o registry usa MemoryVoiceStore como placeholder (mesmo espírito
+  do esqueleto HttpSessionStore). `has` sobre SessionStore = `listResources(id, path).includes(path)`
+  (o prefixo `startsWith` casa o caminho inteiro).
+- **Retorno covariante p/ o hook de teste**: `FixtureVoiceRecorder.start` devolve
+  `Promise<FixtureRecording>` (não o `Recording` do port) — TS aceita subtipo no retorno,
+  e assim o teste alcança o `tick()` (hook determinístico que avança um quadro de nível,
+  família LCG do harness; níveis emitem SÓ enquanto `#active`). Sem isso, `recording.tick`
+  não existe em `Recording` e o tsc reprova.
+- **Testes de adapter rodam no projeto `unit` (node, sem DOM)**: nada de MediaRecorder/
+  getUserMedia reais. `WebVoiceRecorder` injeta TODAS as deps de plataforma pelo construtor
+  (`getUserMedia`, `MediaRecorderCtor`, `isTypeSupported`, `AudioContextCtor`, `createAudio`);
+  defaults leem os globais só se existirem (`typeof MediaRecorder !== 'undefined'`). Caminhos
+  de erro testados: sem MediaRecorder → `VoiceUnsupportedError`; `isTypeSupported`=false →
+  idem (e NÃO pede microfone); getUserMedia rejeita → `MicPermissionError`. Happy-path
+  gravar→parar testado com um `FakeMediaRecorder` (o `.stop()` dispara `ondataavailable`+
+  `onstop`) e SEM `AudioContextCtor` (o metering vira no-op → evita `requestAnimationFrame`,
+  ausente em node). `Blob([bytes as BlobPart])` — `Uint8Array<ArrayBufferLike>` não casa
+  `BlobPart` no strict (SharedArrayBuffer), cast direto resolve.
+- **`corepack pnpm exec vitest run --project unit <dir>`** roda um subconjunto (o script
+  `test` do package.json não aceita filtro de path e `pnpm vitest` dá `ERR_PNPM_RECURSIVE_EXEC`).
+  O worktree do loop.sh NÃO vem com `node_modules` — `corepack pnpm install --frozen-lockfile`
+  primeiro (node 22.18 já satisfaz o engine, `fnm exec` desnecessário aqui).
