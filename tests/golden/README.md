@@ -14,9 +14,9 @@ quebra o harness, a mudança está errada — não o harness.
    (via `registry.ts`) e byte-compara com os mesmos goldens.
 
 Juntas: `domain ≡ referência`. Fases de rigor: infra (ENG-212; casos sem
-replayer ficam PENDENTES, verdes com aviso) → **ENG-238 liga `STRICT`**
-(zero pendências, pacote de 14 casos de borda) → nunca mais afrouxa
-(CLAUDE.md, gate 1).
+replayer ficavam PENDENTES) → **ENG-238 ligou `STRICT = true`** (pacote de 14
+casos de borda registrado; caso sem replayer agora REPROVA, zero pendências) →
+nunca mais afrouxa (CLAUDE.md, gate 1).
 
 ## Como a referência é dirigida (generate.mjs)
 
@@ -51,24 +51,25 @@ Implementações espelhadas: `pcm.ts` (TS, usada pelos replayers) e o bloco
 Cada caso: `{ name, description, steps: [...] }`. Passos, na ordem em que o
 fluxo real os permite:
 
-| Passo           | Campos                                                                    | Efeito na referência                                                                                                               |
-| --------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `segment`       | `beadSec, slug, audioFilename, pcm:{seed, sampleRate, samples, channels}` | Espelha a inicialização de `segment()` (L454–472) com o buffer sintético; `duração = samples/sampleRate`                           |
-| `confirmWhole`  | —                                                                         | `confirmWhole()`; o fluxo guiado abre a 1ª cena pré-ancorada                                                                       |
-| `cutScene`      | `endBead`                                                                 | Seleção `{s: frontier('parts'), e: endBead}` + `confirmPart(atual)`                                                                |
-| `reopenScene`   | `index`                                                                   | `reopenPart(index)` — cascata: destrava i e tudo depois                                                                            |
-| `confirmParts`  | —                                                                         | `confirmParts()` → descarta slots não travados, vai à Triagem                                                                      |
-| `triage`        | `partIndex` + (`kind`,`confidence`) ou `none_fit:true`                    | Escreve `tag_state/scene_kind/scene_kind_confidence` como o picker (L1258–1266)                                                    |
-| `triagemDone`   | —                                                                         | `setMode('segmentacao')` (redirect do setMode é o contrato)                                                                        |
-| `enterScene`    | `partId`                                                                  | `enterScene(partId)` — atenção: cria slot P# pendente se não houver                                                                |
-| `phraseSelect`  | `s, e`                                                                    | Seta `selection` completa (`pendingStart=null`)                                                                                    |
-| `confirmPhrase` | `borderDecision?: "move"\|"reanchor"\|"triagem"`                          | `confirmFrase(atual)`; se cruzou a borda, aplica a decisão como o usuário (move = `slideSeam`+`lockFrase`, espelho de doMove L814) |
-| `reopenPhrase`  | `index`                                                                   | `reopenFrase(index)` — cascata GLOBAL sobre `state.frases`                                                                         |
-| `removePhrase`  | `index`                                                                   | `removeFrase(index)` — libera o P# (índice em `state.frases`)                                                                      |
-| `toggleFlag`    | `index`                                                                   | Alterna `flagged` da `index`-ésima frase TRAVADA (ordem de criação)                                                                |
-| `sceneDone`     | `forceEmpty?: true`                                                       | `confirmFrasesDone()`; com `forceEmpty`, chama 2× (aviso de cena vazia → segue)                                                    |
-| `answer`        | `level (1\|2\|3), key, partId? (L2), propId? (L3), text`                  | `ensureMapping()` + escreve em `state.mapping.levelN`                                                                              |
-| `export`        | `artifacts: ["manifesto"?, "retorno"?, "relatorio"?]`                     | Captura `buildManifest`/`buildReturn`/`buildMapReportMd` serializados                                                              |
+| Passo           | Campos                                                                    | Efeito na referência                                                                                                                |
+| --------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `segment`       | `beadSec, slug, audioFilename, pcm:{seed, sampleRate, samples, channels}` | Espelha a inicialização de `segment()` (L454–472) com o buffer sintético; `duração = samples/sampleRate`                            |
+| `confirmWhole`  | —                                                                         | `confirmWhole()`; o fluxo guiado abre a 1ª cena pré-ancorada                                                                        |
+| `cutScene`      | `endBead`                                                                 | Seleção `{s: frontier('parts'), e: endBead}` + `confirmPart(atual)`                                                                 |
+| `reopenScene`   | `index`                                                                   | `reopenPart(index)` — cascata: destrava i e tudo depois                                                                             |
+| `confirmParts`  | —                                                                         | `confirmParts()` → descarta slots não travados, vai à Triagem                                                                       |
+| `triage`        | `partIndex` + (`kind`,`confidence`) ou `none_fit:true`                    | Escreve `tag_state/scene_kind/scene_kind_confidence` como o picker (L1258–1266)                                                     |
+| `triagemDone`   | —                                                                         | `setMode('segmentacao')` (redirect do setMode é o contrato)                                                                         |
+| `enterScene`    | `partId`                                                                  | `enterScene(partId)` — atenção: cria slot P# pendente se não houver                                                                 |
+| `phraseSelect`  | `s, e`                                                                    | Seta `selection` completa (`pendingStart=null`)                                                                                     |
+| `confirmPhrase` | `borderDecision?: "move"\|"reanchor"\|"triagem"`                          | `confirmFrase(atual)`; se cruzou a borda, aplica a decisão como o usuário (move = `slideSeam`+`lockFrase`, espelho de doMove L814)  |
+| `reopenPhrase`  | `index`                                                                   | `reopenFrase(index)` — cascata GLOBAL sobre `state.frases`                                                                          |
+| `removePhrase`  | `index`                                                                   | `removeFrase(index)` — libera o P# (índice em `state.frases`)                                                                       |
+| `toggleFlag`    | `index`                                                                   | Alterna `flagged` da `index`-ésima frase TRAVADA (ordem de criação)                                                                 |
+| `sceneDone`     | `forceEmpty?: true`                                                       | `confirmFrasesDone()`; com `forceEmpty`, chama 2× (aviso de cena vazia → segue)                                                     |
+| `answer`        | `level (1\|2\|3), key, partId? (L2), propId? (L3), text`                  | `ensureMapping()` + escreve em `state.mapping.levelN`                                                                               |
+| `importReturn`  | `dto` (retorno-ancoragem cru)                                             | Espelha o handler de retomada (referência L1362–1383): tudo TRAVADO, spans de `confirmed_span`, flags reaplicadas, cursor em frases |
+| `export`        | `artifacts: ["manifesto"?, "retorno"?, "relatorio"?]`                     | Captura `buildManifest`/`buildReturn`/`buildMapReportMd` serializados                                                               |
 
 Notas de fidelidade (comportamentos da referência que os casos exercitam):
 slots não travados ocupam `P#`/`PT#`; `confirmFrase` NÃO checa `pendingStart`;

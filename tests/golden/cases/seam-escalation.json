@@ -1,0 +1,29 @@
+{
+  "name": "seam-escalation",
+  "description": "Vizinha produtiva JÁ com frases: fraseia a PT2 primeiro, depois entra na PT1 e cruza o fim para dentro da PT2 → escalada de duas cenas (sem \"mover\"); reancora dentro da PT1.",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "costura-escalada",
+      "audioFilename": "costura-escalada.wav",
+      "pcm": { "seed": 606, "sampleRate": 8000, "samples": 96000, "channels": 1 }
+    },
+    { "type": "confirmWhole" },
+    { "type": "cutScene", "endBead": 11 },
+    { "type": "cutScene", "endBead": 23 },
+    { "type": "confirmParts" },
+    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triage", "partIndex": 1, "kind": "MEAL_SCENE", "confidence": "alta" },
+    { "type": "triagemDone" },
+    { "type": "enterScene", "partId": "PT2" },
+    { "type": "phraseSelect", "s": 12, "e": 15 },
+    { "type": "confirmPhrase" },
+    { "type": "enterScene", "partId": "PT1" },
+    { "type": "phraseSelect", "s": 0, "e": 13 },
+    { "type": "confirmPhrase", "borderDecision": "reanchor" },
+    { "type": "phraseSelect", "s": 0, "e": 10 },
+    { "type": "confirmPhrase" },
+    { "type": "export", "artifacts": ["manifesto", "retorno"] }
+  ]
+}

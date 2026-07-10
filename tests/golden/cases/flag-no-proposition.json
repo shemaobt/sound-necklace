@@ -1,0 +1,23 @@
+{
+  "name": "flag-no-proposition",
+  "description": "Frase marcada (⚑ NEEDS_REVIEW) e depois reaberta → a flag persiste mesmo sem a frase travada. O retorno traz uma entrada em flags sem proposition correspondente.",
+  "steps": [
+    {
+      "type": "segment",
+      "beadSec": 0.5,
+      "slug": "flag-sem-frase",
+      "audioFilename": "flag-sem-frase.wav",
+      "pcm": { "seed": 111, "sampleRate": 8000, "samples": 96000, "channels": 1 }
+    },
+    { "type": "confirmWhole" },
+    { "type": "cutScene", "endBead": 23 },
+    { "type": "confirmParts" },
+    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triagemDone" },
+    { "type": "phraseSelect", "s": 0, "e": 5 },
+    { "type": "confirmPhrase" },
+    { "type": "toggleFlag", "index": 0 },
+    { "type": "reopenPhrase", "index": 0 },
+    { "type": "export", "artifacts": ["manifesto", "retorno"] }
+  ]
+}

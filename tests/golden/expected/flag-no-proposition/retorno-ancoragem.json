@@ -1,0 +1,34 @@
+{
+  "manifest_id": "fnv1a32:964c7833",
+  "story_slug": "flag-sem-frase",
+  "scenes": [
+    {
+      "scene_id": "S1",
+      "confirmed_span": {
+        "start_bead": 0,
+        "end_bead": 23
+      },
+      "parts": [
+        {
+          "part_id": "PT1",
+          "scene_id": "S1",
+          "scene_kind": "GLEANING_SCENE",
+          "scene_kind_confidence": "alta",
+          "tag_state": "tagged",
+          "confirmed_span": {
+            "start_bead": 0,
+            "end_bead": 23
+          }
+        }
+      ],
+      "propositions": []
+    }
+  ],
+  "flags": [
+    {
+      "kind": "NEEDS_REVIEW",
+      "prop_id": "P1",
+      "note_pt": ""
+    }
+  ]
+}

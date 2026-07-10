@@ -777,3 +777,28 @@ typecheck`).
   única diferença): mantém debounce/coalescing/retry/pausa num só lugar. O esqueleto
   HTTP (`http.ts`) injeta `fetch` (sem rede no CI) e um getter de token Bearer; endpoints
   PROVISÓRIOS até o OpenAPI (ENG-211/ENG-247), então só `create` tem teste de shape.
+## Golden harness STRICT + pacote de bordas (ENG-238, 2026-07-10)
+
+- **`STRICT = true` está LIGADO** (`tests/golden/registry.ts`): qualquer caso em
+  `cases/` sem replayer registrado agora REPROVA `pnpm golden`. Nunca afrouxar
+  (CLAUDE.md gate 1). Ao adicionar um caso novo, registre o replayer no mesmo PR.
+- **`fnm exec --using=22 -- pnpm <script>` FALHA** ("Can't spawn program pnpm"): o
+  pnpm vem do corepack, não está no PATH desse node. Use
+  `fnm exec --using=22 -- corepack pnpm <script>` para TODOS os scripts.
+- **Goldens = verdade por construção.** O fluxo p/ um caso novo: escreva o script →
+  `corepack pnpm golden:generate` (Playwright dirige a referência e grava
+  `expected/<caso>/`) → `corepack pnpm golden` (replay por domain+contracts, byte-diff).
+  Verde = domínio ≡ referência; vermelho por assimetria de script = ajuste o script;
+  vermelho por divergência real de domínio/contracts = PARE e escale (fora do escopo
+  do harness). Os 14 casos da ENG-238 passaram sem NENHUMA divergência — o port está fiel.
+- **Passo `importReturn` no `generate.mjs`** (novo na ENG-238) espelha o handler de
+  retomada da referência (L1362–1383) inline na página; o lado do domínio usa o
+  `applyReturn` real via `registry.ts`. Sem tocar áudio nem UI, como os demais passos.
+- **Truques de borda que os casos fixam** (todos byte-verificados): `slideSeam` mexe só
+  a vizinha IMEDIATA; `nextPid`/`nextPartId` = menor P#/PT# livre (reuso após remoção);
+  frase que cruza a borda para dentro de vizinha produtiva-com-frases → escalada (sem
+  "mover"); frase que engole a vizinha → `consumed` (sem "mover"); `ensureMapping` NUNCA
+  apaga resposta (extensão preguiçosa `== null`); flag sobrevive à reabertura da frase
+  (flags no export são independentes de `locked`); `buildBeads` só soma conta parcial se
+  `dur - total*beadSec > 1e-9` (múltiplo exato ⇒ sem conta extra); `hashPCM` decima por
+  `stride = max(1, floor(N/100000))` e mistura `numberOfChannels` + bytes de sampleRate.
