@@ -1,0 +1,239 @@
+import { fireEvent, render } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+
+import { SCENE_KINDS } from '../../../domain';
+import { splitByGuard } from '../../atoms/testing/css';
+import { TriagemPicker } from './triagem-picker';
+import pickerCss from './triagem-picker.css?raw';
+
+/** Mapeamento de temas decidido no planejamento (issue ENG-225) — display-only. */
+const EXPECTED_THEMES: Record<string, string[]> = {
+  'Indo e vindo': [
+    'DEPARTURE_SCENE',
+    'ARRIVAL_SCENE',
+    'NIGHT_APPROACH_SCENE',
+    'PROVISION_HOMECOMING_SCENE',
+    'INITIATIVE_SCENE',
+  ],
+  'Fala e acordo': [
+    'APPEAL_SCENE',
+    'INSTRUCTION_SCENE',
+    'CONSENT_SCENE',
+    'RATIFICATION_SCENE',
+    'GATE_COURT_CONVENING_SCENE',
+    'REDEMPTION_OFFER_SCENE',
+    'REDEMPTION_DECLINE_SCENE',
+    'REPORT_SCENE',
+  ],
+  'Trabalho e terra': ['GLEANING_SCENE', 'MEAL_SCENE'],
+  Sentimento: ['LAMENT_SCENE', 'BEREAVEMENT_SCENE'],
+  'Rito e aliança': [
+    'MARRIAGE_SCENE',
+    'VOW_SCENE',
+    'BIRTH_SCENE',
+    'NAMING_SCENE',
+    'BLESSING_SCENE',
+    'REDEEMER_RECOGNITION_SCENE',
+  ],
+  Narração: [
+    'NARRATOR_INTRODUCTION_SCENE',
+    'NARRATOR_FRAMING_CLOSE_SCENE',
+    'OPENING_CHRONICLE_SCENE',
+    'GENEALOGY_SCENE',
+  ],
+};
+
+/** Os valores EN dos cartões visíveis (o none-fit não tem title). */
+function visibleKindValues(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll('[role="radio"][title]')).map(
+    (el) => el.getAttribute('title') ?? '',
+  );
+}
+
+function expand(container: HTMLElement) {
+  const disclosure = Array.from(container.querySelectorAll('button')).find(
+    (b) => b.textContent === 'Ver todos os tipos por tema',
+  );
+  expect(disclosure).toBeDefined();
+  fireEvent.click(disclosure!);
+}
+
+describe('TriagemPicker — grade "Mais comuns" e disclosure por tema', () => {
+  it('recolhido, mostra exatamente os 8 tipos do tier comum', () => {
+    const { container } = render(<TriagemPicker />);
+    const comuns = SCENE_KINDS.filter((k) => k.tier === 'comum').map((k) => k.value);
+    expect(visibleKindValues(container).sort()).toEqual([...comuns].sort());
+  });
+
+  it('o disclosure expõe os 27 tipos agrupados nos 6 temas decididos', () => {
+    const { container } = render(<TriagemPicker />);
+    const disclosure = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Ver todos os tipos por tema',
+    )!;
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+
+    fireEvent.click(disclosure);
+
+    const themeBlocks = Array.from(container.querySelectorAll('[data-theme]'));
+    expect(themeBlocks.map((b) => b.getAttribute('data-theme'))).toEqual(
+      Object.keys(EXPECTED_THEMES),
+    );
+    for (const block of themeBlocks) {
+      const name = block.getAttribute('data-theme')!;
+      const values = Array.from(block.querySelectorAll('[role="radio"][title]')).map(
+        (el) => el.getAttribute('title') ?? '',
+      );
+      expect(values.sort()).toEqual([...EXPECTED_THEMES[name]!].sort());
+    }
+    const all = new Set(
+      themeBlocks.flatMap((b) =>
+        Array.from(b.querySelectorAll('[role="radio"][title]')).map(
+          (el) => el.getAttribute('title') ?? '',
+        ),
+      ),
+    );
+    expect(all.size).toBe(27);
+    expect([...all].sort()).toEqual(SCENE_KINDS.map((k) => k.value).sort());
+  });
+
+  it('"recolher" fecha a lista por tema de volta aos comuns', () => {
+    const { container, getByRole } = render(<TriagemPicker />);
+    expand(container);
+    const recolher = getByRole('button', { name: 'recolher' });
+    expect(recolher.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(recolher);
+    expect(container.querySelector('[data-theme]')).toBeNull();
+    expect(visibleKindValues(container)).toHaveLength(8);
+  });
+
+  it('o cartão "Nenhum se encaixa" permanece visível recolhido, expandido e filtrando', () => {
+    const { container, getByText, getByLabelText } = render(<TriagemPicker />);
+    expect(getByText('Nenhum se encaixa')).toBeTruthy();
+    expand(container);
+    expect(getByText('Nenhum se encaixa')).toBeTruthy();
+    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'respiga' } });
+    expect(getByText('Nenhum se encaixa')).toBeTruthy();
+  });
+});
+
+describe('TriagemPicker — filtro (conveniência da facilitadora)', () => {
+  it('estreita pelo rótulo PT-BR', () => {
+    const { container, getByLabelText } = render(<TriagemPicker />);
+    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'Respiga' } });
+    expect(visibleKindValues(container)).toEqual(['GLEANING_SCENE']);
+  });
+
+  it('estreita pelo valor inglês', () => {
+    const { container, getByLabelText } = render(<TriagemPicker />);
+    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'GLEANING' } });
+    expect(visibleKindValues(container)).toEqual(['GLEANING_SCENE']);
+  });
+
+  it('ignora acentos (bencao encontra Bênção)', () => {
+    const { container, getByLabelText } = render(<TriagemPicker />);
+    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'bencao' } });
+    expect(visibleKindValues(container)).toEqual(['BLESSING_SCENE']);
+  });
+
+  it('limpar o filtro volta aos comuns', () => {
+    const { container, getByLabelText } = render(<TriagemPicker />);
+    const input = getByLabelText('filtrar tipos');
+    fireEvent.change(input, { target: { value: 'voto' } });
+    expect(visibleKindValues(container)).toEqual(['VOW_SCENE']);
+    fireEvent.change(input, { target: { value: '' } });
+    expect(visibleKindValues(container)).toHaveLength(8);
+  });
+});
+
+describe('TriagemPicker — cartão mostra PT, inglês só no title (hover)', () => {
+  it('o rótulo visível é PT-BR e o title carrega o valor inglês intocado', () => {
+    const { container } = render(<TriagemPicker />);
+    const card = container.querySelector('[role="radio"][title="BEREAVEMENT_SCENE"]')!;
+    expect(card.textContent).toBe('Luto');
+  });
+});
+
+describe('TriagemPicker — escolher tipo revela o passo de confiança', () => {
+  it('escolher um tipo troca a grade pelo passo de confiança com o tipo escolhido', () => {
+    const { container, getByText, queryByText } = render(<TriagemPicker />);
+    fireEvent.click(container.querySelector('[role="radio"][title="BEREAVEMENT_SCENE"]')!);
+
+    expect(queryByText('Mais comuns')).toBeNull();
+    expect(getByText('Luto')).toBeTruthy();
+    expect(getByText('O quanto isso parece certo pra você?')).toBeTruthy();
+    expect(getByText('Certeza')).toBeTruthy();
+    expect(getByText('Quase')).toBeTruthy();
+    expect(getByText('Na dúvida')).toBeTruthy();
+  });
+
+  it('"trocar tipo" volta para a grade sem emitir nada', () => {
+    const onConfirm = vi.fn();
+    const { container, getByText, queryByText } = render(<TriagemPicker onConfirm={onConfirm} />);
+    fireEvent.click(container.querySelector('[role="radio"][title="BEREAVEMENT_SCENE"]')!);
+    fireEvent.click(getByText('trocar tipo'));
+
+    expect(getByText('Mais comuns')).toBeTruthy();
+    expect(queryByText('Certeza')).toBeNull();
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+describe('TriagemPicker — confirmar emite os valores contratuais exatos', () => {
+  it.each([
+    ['Certeza', 'alta'],
+    ['Quase', 'média'],
+    ['Na dúvida', 'baixa'],
+  ] as const)('%s emite "%s"', (label, stored) => {
+    const onConfirm = vi.fn();
+    const { container, getByText } = render(<TriagemPicker onConfirm={onConfirm} />);
+    fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
+    fireEvent.click(getByText(label));
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith('APPEAL_SCENE', stored);
+  });
+
+  it('"média" carrega o U+00E9 (contrato)', () => {
+    const onConfirm = vi.fn();
+    const { container, getByText } = render(<TriagemPicker onConfirm={onConfirm} />);
+    fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
+    fireEvent.click(getByText('Quase'));
+    const conf = onConfirm.mock.calls[0]?.[1] as string;
+    expect(conf.codePointAt(1)).toBe(0xe9);
+  });
+
+  it('none-fit emite sem confiança e sem passar pelo trio', () => {
+    const onConfirm = vi.fn();
+    const onNoneFit = vi.fn();
+    const { getByText } = render(<TriagemPicker onConfirm={onConfirm} onNoneFit={onNoneFit} />);
+    fireEvent.click(getByText('Nenhum se encaixa'));
+    expect(onNoneFit).toHaveBeenCalledOnce();
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+describe('TriagemPicker — teclado (radiogroup com roving tabindex)', () => {
+  it('há exatamente um cartão tabbável e a seta move o foco sem selecionar', () => {
+    const { container, queryByText } = render(<TriagemPicker />);
+    const radios = Array.from(container.querySelectorAll<HTMLElement>('[role="radio"]'));
+    const tabbable = radios.filter((r) => r.tabIndex === 0);
+    expect(tabbable).toHaveLength(1);
+
+    tabbable[0]!.focus();
+    fireEvent.keyDown(tabbable[0]!, { key: 'ArrowRight' });
+
+    const idx = radios.indexOf(tabbable[0]!);
+    const next = radios[idx + 1]!;
+    expect(document.activeElement).toBe(next);
+    expect(next.tabIndex).toBe(0);
+    expect(tabbable[0]!.tabIndex).toBe(-1);
+    // mover o foco NÃO seleciona: a grade continua na tela
+    expect(queryByText('O quanto isso parece certo pra você?')).toBeNull();
+  });
+});
+
+describe('TriagemPicker — movimento decorativo só sob reduced-motion (§9.3)', () => {
+  it('animation/keyframes só dentro da guarda prefers-reduced-motion', () => {
+    const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
+    const { outside } = splitByGuard(pickerCss, guard);
+    expect(outside).not.toMatch(/animation|@keyframes/);
+  });
+});
