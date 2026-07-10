@@ -1049,3 +1049,18 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   sessão apontou (com razão) que isso testa formato de arquivo, não comportamento —
   jsdom não aplica CSS. Cor real pertence a teste visual/browser (fora de escopo).
   Removido; o creme fica no `.css` (não unit-testado).
+- **ENG-232 — variante animada do guia (padrão add-a-file variant-glob).** O upgrade
+  do storyteller-guide é PURAMENTE aditivo: só `variants/animated.tsx`+`animated.css`
+  novos; o glob `import.meta.glob('./variants/*.tsx')` do `index.tsx` (intocado) já
+  prefere `animated` sobre `static` via `pickVariantPath`. GOTCHA (mesmo do ENG-231):
+  esse glob `*.tsx` engoliria um `animated.test.tsx` irmão e o importaria como
+  variante no bundle → o teste MORA em `variants/__tests__/` (o `*` do glob não
+  cruza `/`). Movimento (bob/blink em repouso + lip-sync do lábio) é 100% CSS atrás
+  de `@media (prefers-reduced-motion: no-preference)`; sob `reduce` a figura fica na
+  MESMA pose parada da estática — provado por texto do css com `splitByGuard` (mesmo
+  padrão de `pearl.css`), não por avaliação de media query (jsdom não avalia). O
+  lip-sync é dirigido por dado, não por prop no CSS: `AnimatedGuide` emite
+  `data-speaking={speaking?'true':'false'}` e a regra `.cds-guide-anim[data-speaking='true'] .cds-guide-mouth`
+  é a ÚNICA animação do lábio → "anima só quando falando" verificável no texto do css.
+  SVG anima via `transform` com `transform-box: fill-box` (bob no grupo, pálpebras
+  `.cds-guide-lid` recolhidas em `scaleY(0)` que fecham no piscar).
