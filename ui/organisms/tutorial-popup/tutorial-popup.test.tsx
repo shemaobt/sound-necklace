@@ -107,14 +107,17 @@ describe('TutorialPopup', () => {
     expect(tip()).toBeNull();
   });
 
-  it('não expõe dígitos em texto, aria-label ou title', () => {
-    render(<TutorialPopup station="segmentacao" />);
-    expect(document.body.textContent ?? '').not.toMatch(/\d/);
-    for (const el of document.body.querySelectorAll('[aria-label]')) {
-      expect(el.getAttribute('aria-label')).not.toMatch(/\d/);
-    }
-    for (const el of document.body.querySelectorAll('[title]')) {
-      expect(el.getAttribute('title')).not.toMatch(/\d/);
-    }
-  });
+  it.each(['escuta1', 'escuta2', 'triagem', 'segmentacao', 'mapeamento', 'export'])(
+    'não expõe dígitos em texto, aria-label ou title (%s)',
+    (station) => {
+      render(<TutorialPopup station={station} />);
+      expect(document.body.textContent ?? '').not.toMatch(/\d/);
+      for (const el of document.body.querySelectorAll('[aria-label]')) {
+        expect(el.getAttribute('aria-label')).not.toMatch(/\d/);
+      }
+      for (const el of document.body.querySelectorAll('[title]')) {
+        expect(el.getAttribute('title')).not.toMatch(/\d/);
+      }
+    },
+  );
 });

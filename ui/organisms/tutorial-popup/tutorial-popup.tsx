@@ -11,9 +11,10 @@ import './tutorial-popup.css';
  * propósito: o conteúdo precisa renderizar DENTRO da camada de overlay do
  * shell, não em document.body.
  *
- * Dois níveis de dismiss: fechar (X/ESC/fora) esconde pela sessão; "não
- * mostrar de novo" persiste em localStorage (chave no README). O gatilho "?"
- * permanece como rota de reencontro — dispensar nunca custa a informação.
+ * Dois níveis de dismiss: fechar (X/ESC/fora) esconde enquanto a sessão
+ * estiver aberta (o popup desmonta sem sessão e volta a se oferecer noutra);
+ * "não mostrar de novo" persiste em localStorage (chave no README). O gatilho
+ * "?" permanece como rota de reencontro — dispensar nunca custa a informação.
  */
 
 const TIPS: Record<string, string> = {
@@ -67,6 +68,7 @@ export function TutorialPopup({ station }: TutorialPopupProps) {
       </Popover.Trigger>
       <Popover.Content
         className="cds-tutorial-popup"
+        aria-label="Dica desta etapa"
         side="top"
         align="end"
         sideOffset={12}

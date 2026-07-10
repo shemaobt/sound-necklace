@@ -18,7 +18,9 @@ inferior-direita do shell (`AddonsLayer`).
 
 ## Dois níveis de dismiss
 
-- Fechar (X, ESC ou clique fora) esconde pela sessão do app.
+- Fechar (X, ESC ou clique fora) esconde enquanto a sessão estiver aberta:
+  trocar de estação preserva a escolha (o addon fica montado), mas sair para o
+  dashboard desmonta o popup e outra sessão volta a oferecer as dicas.
 - "Não mostrar de novo" persiste (chave acima) e desliga o auto-abrir.
 - O gatilho "?" (`Como funciona esta etapa`) permanece nos dois casos como
   rota de reencontro — dispensar nunca custa a informação.
