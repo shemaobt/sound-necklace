@@ -1,0 +1,14 @@
+{
+  "manifest_id": "fnv1a32:d31a8419",
+  "story_slug": "fluxo-minimo",
+  "scenes": [
+    {
+      "scene_id": "S1",
+      "confirmed_span": { "start_bead": 0, "end_bead": 23 },
+      "parts": [],
+      "propositions": []
+    }
+  ],
+  "flags": [],
+  "exported_at": "2026-07-10T00:00:00Z"
+}

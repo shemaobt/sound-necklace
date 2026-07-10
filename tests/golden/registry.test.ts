@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { buildManifesto, buildRetorno, serializeArtifact } from '../../contracts';
+
 import { replaySessionSteps, type GoldenCase, type GoldenStep } from './registry';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -170,6 +172,31 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
     // única produtiva sem frases → Mapeamento alcançado com zero frases (quirk)
     expect(replayed.state.mode).toBe('mapeamento');
     expect(replayed.state.frases.filter((f) => f.locked)).toHaveLength(0);
+  });
+
+  it('golden case 2: os DOIS JSONs saem byte-idênticos pelos mappers reais (ENG-227)', () => {
+    // o caso segue PENDENTE no golden.test (relatório .md = ENG-233), mas os
+    // artefatos JSON já são byte-comparáveis: com os passos `answer` do ENG-226
+    // já na main, o replay avança por eles e para no `export`, exportando via
+    // contracts/
+    const { steps } = minimalFlow();
+    const r = replaySessionSteps(steps);
+    expect(r.pendingAt).toEqual({ index: 17, type: 'export' });
+
+    const golden = (file: string): Buffer =>
+      readFileSync(join(__dirname, 'expected', 'minimal-flow', file));
+    expect(
+      Buffer.from(serializeArtifact(buildManifesto(r.state)), 'utf8').equals(
+        golden('manifesto-contas.json'),
+      ),
+      'manifesto-contas.json: bytes divergem do golden',
+    ).toBe(true);
+    expect(
+      Buffer.from(serializeArtifact(buildRetorno(r.state)), 'utf8').equals(
+        golden('retorno-ancoragem.json'),
+      ),
+      'retorno-ancoragem.json: bytes divergem do golden',
+    ).toBe(true);
   });
 
   it('recusa passo de sessão antes do segment', () => {

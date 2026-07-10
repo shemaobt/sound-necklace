@@ -553,6 +553,40 @@ max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
   ConnectionGate/ENG-224): a estação (ENG-236) importa por caminho direto ou
   adiciona ao barrel no escopo dela.
 
+## Contracts / manifesto + retorno + serializer (verificado 2026-07-10, ENG-227)
+
+- **Depcruise `contracts-so-domain` NÃO isenta testes**: contracts/*.test.ts não pode
+  importar `tests/` (nem `tests/golden/pcm`) — testes de contracts são autocontidos
+  (estados via `createSession`/forja direta; fixtures lidas com `node:fs`, que é
+  permitido em testes pela isenção `pathNot .test.ts` da regra de npm/builtin).
+  `tests/` → `contracts/` é permitido (nenhuma regra proíbe; o harness liga assim).
+- **`story_slug` é o slug CRU** (`state.slug`, sem fallback) — o fallback `"colar"`
+  existe SÓ nos nomes de arquivo (L1331/L1336). A referência tem um SEGUNDO fallback
+  divergente `"historia"` no nav do mapeamento (L1152) — fora do contrato ENG-227;
+  o export-card (`"colar"`) é o normativo.
+- Gates de export (L1330–1339): manifesto = `!state.totalBeads` → no-op SILENCIOSO
+  (sem mensagem); retorno = `!state.whole.confirmed` → erro "Confirme o colar antes
+  de exportar."; `semFim` (aviso, não bloqueia) = frases `!locked && (span ||
+statement_pt.trim())`.
+- **Coerções do buildReturn**: `scene_kind||null` e `confidence||null` são reais
+  (string vazia → null); `tag_state||"pending"` é INALCANÇÁVEL no domain (TagState
+  nunca é falsy) — omitido com comentário, seguindo o precedente ENG-216 de não
+  deixar branch morto que o tipo prova impossível. Bytes idênticos de qualquer forma.
+- **Zod 4 (4.4.3)**: `z.strictObject` rejeita chave extra (z.object faz STRIP
+  silencioso — nunca usar p/ DTO de contrato); `.regex()` continua existindo;
+  `z.int()` é o idioma novo (safe-integer bounded); enum de valores não-ASCII
+  (`média`) sem gotcha, mas o match é NFC-exato; `z.enum` de array runtime exige
+  cast `as [string, ...string[]]` (não há union type dos 27 kinds no domain —
+  derivar de `SCENE_KINDS.map(k => k.value)`).
+- **Zod `.parse()` de strictObject RECONSTRÓI o objeto** (ordem de chaves = ordem do
+  shape do schema) — nunca serializar o resultado do parse; o mapper devolve o
+  literal na ordem da referência e o schema só VALIDA (testes usam safeParse).
+- Byte-identidade JSON entre engines: ordem de propriedades é spec-mandada
+  (inserção; chaves numéricas iriam primeiro — não temos), shortest-round-trip de
+  números é de-facto universal (RFC 8785 depende disso; 0.25/0.9/10.371 têm forma
+  única), non-ASCII sai VERBATIM (Python `json.dumps` com `ensure_ascii=True`
+  produziria bytes diferentes — não validar goldens com Python default).
+
 ## Fronteira de frases no clamp do clique (verificado 2026-07-10, ENG-269)
 
 - **Grafo de imports do domain (relevante)**: `triagem → state`; `seam → scene-kinds,
