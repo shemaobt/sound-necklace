@@ -873,6 +873,7 @@ typecheck`).
   `test` do package.json não aceita filtro de path e `pnpm vitest` dá `ERR_PNPM_RECURSIVE_EXEC`).
   O worktree do loop.sh NÃO vem com `node_modules` — `corepack pnpm install --frozen-lockfile`
   primeiro (node 22.18 já satisfaz o engine, `fnm exec` desnecessário aqui).
+
 ## UI pages / estação Triagem — classificar cenas (verificado 2026-07-10, ENG-236)
 
 - **Redesign §6.4 reformata a lista vertical da referência em UMA cena em foco +
