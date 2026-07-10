@@ -437,6 +437,42 @@ max(3, Math.round(0.25*span))`, `consumed` (engoliu a vizinha), `canMove`
   (filter/map/slice bastam). Python `round()` é ties-to-even ≠ JS — não validar
   thresholds com Python sem cuidado.
 
+## Seam modal / Radix Dialog (verificado 2026-07-10, ENG-228)
+
+- **`BorderOffer` já carrega copy** (`question`, `warning`) — mas `WHY_DELTA`
+  produz dígitos ("são N contas, acima do limiar de M"). O modal (ouvinte,
+  digit-free por DoD) NÃO renderiza `offer.warning`/`offer.question`: renderiza
+  headline do redesign ("A frase passou da borda da cena."), botões exatos por
+  variante (PRD v2 §8.6 vence "Ficar dentro da cena" do protótipo →
+  "Reancorar dentro da cena") e a linha de consequência SÓ no small
+  ("A cena de hoje cresce, a vizinha encolhe"). delta/thr ficam internos.
+  Rótulos são constantes locais do modal (organismo não importa VALORES do
+  domain — só tipos; `BORDER_COPY` fica para superfícies do facilitador).
+- **Radix Dialog 1.1.19** (React 19 ok): ESC e pointer-down fora do Content
+  convergem em `onOpenChange(false)` — mapear para onReanchor (default seguro);
+  `onEscapeKeyDown`/`onPointerDownOutside` distinguem se precisar. `Title` é
+  obrigatório (aria-labelledby automático); sem `Description`, passar
+  `aria-describedby={undefined}` no Content ou Radix loga warning. Portal →
+  `document.body` (queries `screen.*` acham; `render().container` NÃO).
+- **jsdom vs Chromium p/ Radix**: open/close/ESC/foco-inicial/data-state
+  testáveis em jsdom (`fireEvent.keyDown(document, {key:'Escape'})`,
+  `fireEvent.pointerDown(overlay)`); Tab-cycling do focus trap NÃO é confiável
+  em jsdom (sem navegação de tab nativa) → asserção de trap em
+  `*.browser.test.tsx`. Modal seta `pointer-events:none` no body →
+  `userEvent` lança; usar `fireEvent`/dispatch nativo (padrão do repo).
+  Sem animação CSS no jsdom, unmount no close é síncrono (Presence não espera).
+- **A11y de diálogo de decisão** (APG): foco inicial na ação menos destrutiva;
+  ESC fecha SEM executar nada além de declinar (= Reancorar, que só descarta a
+  seleção). `data-state="open"` do Radix serve de gancho de animação.
+- **Prototype 1g (Exploração)** é a fonte visual: painel olive `#3F3E20`
+  (texto `#F6F5EB`), headline Merriweather itálico 300, marcador "borda de
+  hoje" = dashed `rgba(246,245,235,.45)`, "borda nova" = solid `#E8813E` com
+  glow, primário telha pill, secundário outline creme
+  (`border rgba(246,245,235,.4)`) — o ghost do átomo Button é olive-sobre-creme
+  e precisa de override escopado no CSS do modal (sem precedente no repo;
+  look-layer, documentado). Só o small tem protótipo; 3-botões/escalada
+  extrapolam os mesmos estilos.
+
 ## Process
 
 - The golden harness is the merge gate: placeholder until ENG-212, strict from ENG-238.

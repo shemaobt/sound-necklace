@@ -1,0 +1,156 @@
+/*
+ * Seam modal (protótipo 1g "A costura desliza"): painel olive cheio, headline
+ * Merriweather itálico, trecho do cordão com marcadores de borda e botões
+ * pílula. O deslize da borda nova é decorativo e opt-in (§4.5) — fora do bloco
+ * guardado, os dois marcadores ficam estáticos: o estado antes/depois.
+ */
+
+.cds-seam-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--cds-olive, #3f3e20) 55%, transparent);
+}
+
+.cds-seam-modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(920px, calc(100vw - 48px));
+  height: fit-content;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 38px;
+  padding: 60px 80px 52px;
+  border-radius: var(--cds-radius-card, 20px);
+  background: var(--cds-olive, #3f3e20);
+  color: var(--cds-cream, #f6f5eb);
+  font-family: var(--cds-font-load-bearing, 'Montserrat', sans-serif);
+  box-shadow: var(--cds-shadow-card, 0 10px 30px rgba(0, 0, 0, 0.25));
+}
+
+.cds-seam-modal-headline {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice, 'Merriweather', Georgia, serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 30px;
+  text-align: center;
+}
+
+.cds-seam-modal-subline {
+  margin: -30px 0 0;
+  font-size: 15px;
+  color: color-mix(in srgb, var(--cds-cream, #f6f5eb) 60%, transparent);
+}
+
+/* O trecho do cordão: fio horizontal atrás das contas (gradiente do 1g). */
+.cds-seam-modal-strip {
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 18px 6px 30px;
+  background: linear-gradient(
+    rgba(246, 245, 235, 0) 40px,
+    rgba(246, 245, 235, 0.25) 40px,
+    rgba(246, 245, 235, 0.25) 42px,
+    rgba(246, 245, 235, 0) 42px
+  );
+}
+
+.cds-seam-modal-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 5px;
+}
+
+.cds-seam-modal-bead {
+  display: inline-flex;
+  border-radius: 50%;
+}
+
+/* as contas que passaram ganham o halo creme de seleção do protótipo */
+.cds-seam-modal-bead[data-zone='overshoot'] {
+  box-shadow: 0 0 0 5px rgba(242, 216, 194, 0.95);
+}
+
+.cds-seam-modal-bead[data-zone='neighbor'] {
+  opacity: 0.8;
+}
+
+.cds-seam-modal-marker {
+  position: relative;
+  align-self: stretch;
+  min-height: 64px;
+  border-left: 2.5px dashed rgba(246, 245, 235, 0.45);
+}
+
+.cds-seam-modal-marker[data-role='seam-after'] {
+  border-left: 3px solid #e8813e;
+  box-shadow: 0 0 12px rgba(232, 129, 62, 0.7);
+}
+
+.cds-seam-modal-marker-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 6px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(246, 245, 235, 0.5);
+}
+
+.cds-seam-modal-marker[data-role='seam-after'] .cds-seam-modal-marker-label {
+  color: #e8813e;
+  font-weight: 700;
+}
+
+.cds-seam-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* Secundário sobre olive (protótipo 1g): o ghost do átomo é olive-sobre-creme
+ * — dentro do modal ele vira contorno creme. Override de contexto, look-layer. */
+.cds-seam-modal .cds-button[data-variant='ghost'] {
+  border-color: rgba(246, 245, 235, 0.4);
+  color: var(--cds-cream, #f6f5eb);
+}
+
+.cds-seam-modal .cds-button[data-variant='ghost']:hover:enabled,
+.cds-seam-modal .cds-button[data-variant='ghost']:active:enabled,
+.cds-seam-modal .cds-button[data-variant='ghost']:focus-visible:enabled {
+  background: color-mix(in srgb, var(--cds-cream, #f6f5eb) 12%, transparent);
+}
+
+.cds-seam-modal-consequence {
+  margin: -22px 0 0;
+  max-width: 900px;
+  font-size: 12.5px;
+  text-align: center;
+  color: color-mix(in srgb, var(--cds-cream, #f6f5eb) 50%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-seam-modal-marker[data-role='seam-after'] {
+    animation: cds-seam-slide 640ms var(--cds-motion-easing, ease-out) both;
+  }
+
+  @keyframes cds-seam-slide {
+    from {
+      transform: translateX(var(--cds-seam-slide-from, 0px));
+    }
+    to {
+      transform: none;
+    }
+  }
+}
