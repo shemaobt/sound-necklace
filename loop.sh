@@ -2,10 +2,10 @@
 # Ralph Wiggum loop — outer body for the Nori "loop" skillset (see PROMPT.md).
 #
 # Pré-requisitos (uma vez):
-#   nori-skillsets switch loop        # ativa o profile do loop (global!)
-#   fnm use 22                        # Node >= 22.12
+#   nori-skillsets switch public/loop  # ativa o profile do loop (global!)
+#   fnm use 22                         # Node >= 22.12
 #   pnpm install && pnpm exec playwright install chromium
-# Para voltar ao profile normal depois: nori-skillsets switch high-autonomy
+# Para voltar ao profile normal depois: nori-skillsets switch public/high-autonomy
 #
 # Uso: ./loop.sh [flags extras do claude]
 #   - Roda em modo HEADLESS (claude -p): cada iteração termina sozinha ao fim
@@ -21,8 +21,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-if [ "$(nori-skillsets current 2>/dev/null)" != "loop" ]; then
-  echo "profile ativo não é 'loop' — rode: nori-skillsets switch loop" >&2
+# Aceita o profile com ou sem namespace: o nori-skillsets passou a prefixar
+# (`public/loop`), então comparamos só o basename após a última "/".
+current_profile="$(nori-skillsets current 2>/dev/null)"
+if [ "${current_profile##*/}" != "loop" ]; then
+  echo "profile ativo ('${current_profile:-nenhum}') não é o loop — rode: nori-skillsets switch public/loop" >&2
   exit 1
 fi
 
