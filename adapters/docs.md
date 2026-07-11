@@ -28,9 +28,9 @@ ui/pages resolve ports by name; an absent port hides its affordance
 
 - Port signatures the app codes against are recorded in @/docs/architecture.md §3. Highlights:
   - `AudioEngine` — **implemented** (@/adapters/audio): decode bytes → duration + domain `PcmLike` PCM, plus the reference-faithful player (toggle/pause, single playback, head progress, edge windows). Details in @/adapters/audio/docs.md.
-  - `GranularityResolver` — acousteme → bead duration. The real rule is **pending open item O8** (PRD §15.2); the stub returns fixture values (medium ≈ 0.25 s). Never invent the derivation.
+  - `GranularityResolver` — **implemented as a stub** (@/adapters/granularity, see @/adapters/granularity/docs.md): reads fixture-authored `bead_sec[level]` from the acousteme envelope, else PROVISIONAL fallbacks (medium ≈ 0.25 s). The real acousteme → bead-duration rule is **pending open item O8** (PRD §15.2, ENG-242); never invent the derivation.
   - `AuthProvider` — targets the shared API's existing JWT scheme (python-jose Bearer); introduces no scheme of its own; auth expiry must **not** clear app state on re-login.
-  - `BucketSource` — the **only** MVP audio source (PRD §7.4): lists entries with duration, consent flag, and acousteme envelope; fetches raw bytes.
+  - `BucketSource` — **implemented** (@/adapters/bucket, see @/adapters/bucket/docs.md): the **only** MVP audio source (PRD §7.4). Lists entries with duration, consent flag, and acousteme envelope; fetches **opaque** audio bytes. Fixture bytes are `PcmSpec` JSON (what the fixture audio engine decodes); real HTTP serves WAV.
   - `SessionStore` — **implemented** (@/adapters/sessions, see @/adapters/sessions/docs.md): debounced full-state autosave that pauses offline and flushes on reconnect; `complete()` stores the three artifacts as **opaque** payload (never re-serialized — byte-identity rule, PRD §10.5); advisory editor lock; keyed blob resources for the `respostas/*.webm` voice answers.
   - Also port-shaped: `ConnectivityMonitor`, `VoiceRecorder` (WebM/Opus per question key), `SpeechSynthesizer` (optional — its absence hides the "Ouvir a pergunta" affordance).
 
