@@ -1151,33 +1151,3 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   no próprio css (evita acoplar ao contrato `data-variant` interno do atom).
   Erro só de credencial (`AuthError`) vira orientação PT-BR; qualquer outra falha sobe
   (fronteira de sistema, sem mascarar).
-
-## UI pages / estação imports — interop do pipeline (verificado 2026-07-10, ENG-248)
-
-- **A página é fina de propósito**: seleção de arquivo + erro + substituição de
-  estado. TODO o mapeamento vem de `contracts/imports.ts` (`DeliverySchema`/
-  `ReturnSchema` validam na borda; `applyDelivery`/`applyReturn` são ports 1:1 da
-  referência L1341–1383). Fluxo: `JSON.parse(await file.text())` → `Schema.parse`
-  → mapper com a sessão viva (`sessionStore.getState().session`, fresca) → em
-  `{ok:true}` substitui via `sessionStore.apply(() => outcome.state)` (autosave +
-  gate canEdit); em `{ok:false,reason:'no-grid'}` mostra a cópia de pré-condição;
-  qualquer throw de JSON/schema → "Não consegui ler a entrega/o retorno (…)." e o
-  store fica INTACTO (o `apply` só corre no ramo ok).
-- **`File.text()` funciona no jsdom** desta stack (Vitest 4 / jsdom recente) — o
-  teste usa `userEvent.upload(input, new File([json], 'x.json'))` e espera a cópia
-  com `await screen.findByText(...)` (o onChange é async). Duas portas = dois
-  `<input type=file>` dentro de `<label>` com texto contendo "entrega"/"retorno" →
-  `getByLabelText(/entrega|retorno/i)` seleciona cada uma (associação por
-  aninhamento, sem `htmlFor`).
-- **Superfície de FACILITADORA (§7.2)** → contagens permitidas; NÃO leva guarda
-  §9.2 nem `minimalism.test` (≠ estações do ouvinte). Sem `Necklace`/geometria →
-  sem browser test.
-- **Registro por glob, ainda não roteável**: default export obrigatório (chave =
-  diretório `imports`). Como o Export, `imports` NÃO está no stepper
-  (`stepper-model.ts`) nem no `KEY_TO_MODE` (`App.tsx`) — ligar as portas de
-  entrada do Setup para navegar até aqui é follow-up fora do escopo. `registries.test`
-  usa mapas fake + `arrayContaining` → adicionar a página não a quebra.
-- **Retorno NÃO avisa mismatch de manifesto** (espelha a referência: só a entrega
-  checa `manifest_id`); o schema de retorno aceita `manifest_id` mas o mapper o
-  ignora. Sessão real sempre nasce com grade (`createSession` seta `totalBeads`) →
-  o ramo no-grid só é alcançável por sessão forjada (`totalBeads:0`) — o teste força.
