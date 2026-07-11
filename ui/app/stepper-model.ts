@@ -39,7 +39,10 @@ function currentIndex(state: SessionState): number {
   }
 }
 
-export function stepperStations(state: SessionState): StepperStationView[] {
+export function stepperStations(
+  state: SessionState,
+  opts: { viewingExport?: boolean } = {},
+): StepperStationView[] {
   const locks = modeLocks(state);
   const reachable = [
     true,
@@ -47,11 +50,13 @@ export function stepperStations(state: SessionState): StepperStationView[] {
     locks.triagem,
     locks.segmentacao,
     locks.mapeamento,
-    // Guardar (export) é a cauda: exibida como conta futura, mas ainda não
-    // alcançável — a estação Export a liga na ENG-246 (evita afordância morta).
-    false,
+    // Guardar (export) é a cauda: alcançável exatamente quando a Conversa está —
+    // história confirmada e ≥1 frase travada numa cena produtiva (o mesmo gate de
+    // mapeamento). O shell a torna a conta atual ao entrar nela (`viewingExport`),
+    // pois o domínio não tem um modo `export`.
+    locks.mapeamento,
   ];
-  const ci = currentIndex(state);
+  const ci = opts.viewingExport ? STATIONS.length - 1 : currentIndex(state);
   return STATIONS.map((def, i) => ({
     key: def.key,
     label: def.label,

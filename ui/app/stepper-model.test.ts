@@ -92,8 +92,46 @@ describe('stepperStations — estados derivados dos gates do domínio', () => {
     expect(pick(s, 'mapeamento').state).toBe('current');
     expect(pick(s, 'triagem').state).toBe('done');
     expect(pick(s, 'segmentacao').state).toBe('done');
-    // Guardar (export) segue a cauda futura, ainda não alcançável (ENG-246).
-    expect(pick(s, 'export').reachable).toBe(false);
+    // Guardar (export) fica alcançável junto com a Conversa (mesmo gate), mas segue
+    // a cauda futura até o shell entrar nela.
+    expect(pick(s, 'export').reachable).toBe(true);
     expect(pick(s, 'export').state).toBe('future');
+  });
+
+  it('Guardar só é alcançável depois de uma frase travada (gate de mapeamento)', () => {
+    const semFrase: SessionState = {
+      ...base(),
+      mode: 'segmentacao',
+      whole: { id: 'S1', span: { s: 0, e: 15 }, confirmed: true },
+      partsConfirmed: true,
+      parts: [productive],
+    };
+    expect(pick(semFrase, 'export').reachable).toBe(false);
+  });
+
+  it('viewingExport marca Guardar como atual e as contas anteriores como concluídas', () => {
+    const s: SessionState = {
+      ...base(),
+      mode: 'mapeamento',
+      whole: { id: 'S1', span: { s: 0, e: 15 }, confirmed: true },
+      partsConfirmed: true,
+      parts: [productive],
+      frases: [
+        {
+          prop_id: 'P1',
+          statement_pt: '',
+          qa: [],
+          span: { s: 0, e: 1 },
+          part_link: 'PT1',
+          locked: true,
+          flagged: false,
+        },
+      ],
+    };
+    const stations = stepperStations(s, { viewingExport: true });
+    const exportStation = stations.find((st) => st.key === 'export')!;
+    expect(exportStation.state).toBe('current');
+    expect(exportStation.reachable).toBe(true);
+    expect(stations.find((st) => st.key === 'mapeamento')!.state).toBe('done');
   });
 });
