@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { toSessionDto } from '../../contracts';
 import { buildBeads, createSession, type SessionState } from '../../domain';
 import { sessionStore } from '../state';
 import { App } from './App';
@@ -52,6 +53,7 @@ function completableSession(): SessionState {
 beforeEach(() => {
   window.history.replaceState({}, '', '/');
   sessionStore.setState(sessionStore.getInitialState(), true);
+  localStorage.clear(); // a store app-global persiste no localStorage — sem bleed entre casos
 });
 
 describe('App shell', () => {
@@ -65,6 +67,57 @@ describe('App shell', () => {
     // em station-host.test.tsx; aqui basta que o shell resolva a estação da rota.
     render(<App />);
     expect(screen.getByRole('heading', { name: 'Minhas sessões' })).toBeDefined();
+  });
+
+  it('a rota /setup abre a estação Setup', async () => {
+    act(() => navigate('/setup'));
+    render(<App />);
+    // aguarda o Setup montar por completo (a listagem fixture do bucket resolve)
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+    expect(screen.getByRole('heading', { name: 'Nova sessão' })).toBeDefined();
+  });
+
+  it('a rota /imports abre a estação de arquivos do pipeline (não o dashboard)', () => {
+    act(() => navigate('/imports'));
+    render(<App />);
+    // sem sessão viva, a estação de imports orienta a abrir uma — o que importa é que
+    // a rota resolve a estação imports (ENG-248), não recai no dashboard.
+    expect(screen.getByText('Abra uma sessão para carregar arquivos do pipeline.')).toBeDefined();
+    expect(screen.queryByRole('heading', { name: 'Minhas sessões' })).toBeNull();
+  });
+
+  it('reidrata a sessão do store ao (re)abrir /session/:id com o ui/state vazio', async () => {
+    // Um reload/retomada: a sessão está persistida na store app-global, mas o
+    // ui/state em memória está vazio. O shell deve reidratar em vez de travar em
+    // "carregando a sessão…".
+    const store = appSessionStore();
+    const summary = await store.create({
+      projectId: 'p1',
+      storyName: 'H',
+      storySlug: 'h',
+      audioId: 'a1',
+      granularityLevel: 'media',
+      beadSec: 0.25,
+      manifestId: 'fnv1a32:deadbeef',
+      pipelineConsent: true,
+    });
+    store.autosave(
+      summary.id,
+      toSessionDto(sampleSession(), {
+        granularityLevel: 'media',
+        bucketAudioId: 'a1',
+        voice: [],
+        pipelineConsent: true,
+      }),
+    );
+    await store.flush(summary.id);
+
+    act(() => {
+      navigate(`/session/${summary.id}`);
+    });
+    render(<App />);
+    expect(await screen.findByText('Ouvir')).toBeDefined();
+    expect(screen.getByText('Guardar')).toBeDefined();
   });
 
   it('numa sessão carregada, mostra o fio de contas', () => {
