@@ -6,13 +6,13 @@ Path: @/fixtures
 
 - Deterministic test data powering **fixture mode** — the default mode in which the entire app and every UI/E2E test runs with no real API (see @/adapters/docs.md).
 - Two areas: `bucket/` — project-bucket audio entries, each a small WAV plus a JSON acousteme envelope (`{version, data}`) and a collection-consent flag; `sessions/` — ready-made session-state DTOs (in progress at each station, completed with artifacts, with an active editor lock).
-- Currently README stubs; populated by ENG-241 (bucket entries + granularity stub data), ENG-253 (a synthetic-PCM entry mirroring a golden case), and E2/E6 issues as UI/E2E tests need session states.
+- Currently README stubs; populated by ENG-241 (bucket entries + granularity stub data), ENG-253 (two synthetic-PCM entries mirroring the `minimal-flow` and `seam-small-move` golden cases), and E2/E6 issues as UI/E2E tests need session states.
 
 ### How it fits into the larger codebase
 
 - Consumed by the fixture implementations in @/adapters (`BucketSource`, `SessionStore`, `GranularityResolver` stub) and by Playwright E2E specs.
 - The session DTO shape is defined by @/contracts (session-state schemas, ENG-234) — fixtures here must validate against those schemas.
-- One bucket entry deliberately mirrors a golden case's seeded-LCG synthetic PCM, tying fixture-mode app behavior to the same audio the harness in @/tests/golden verifies against.
+- Two bucket entries deliberately mirror golden cases' seeded-LCG synthetic PCM, tying fixture-mode app behavior to the same audio the harness in @/tests/golden verifies against (ENG-253 drives the real UI with these to prove the exported artifacts are byte-identical to the golden files).
 - Excluded from dependency-cruiser scanning and from coverage (@/.dependency-cruiser.cjs, @/vitest.config.ts) — this is data, not code.
 
 ### Core Implementation

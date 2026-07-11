@@ -1350,3 +1350,44 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   "Sem abrir a sessão": `page.goto('/dashboard')` a partir do Export e afirmar `pathname==='/dashboard'`
   após cada download (o download é Blob/anchor, não navega). Fresh browser context = 1 sessão concluída
   → `group` tem `count(1)`.
+- **Identidade byte a byte pela UI real (ENG-253, acceptance 2):** o golden harness prova
+  domain+contracts = referência; ESTE spec (`tests/e2e/contract-identity.spec.ts`) fecha a
+  última fresta — o fio da UI (Setup→…→Export) não introduz divergência de serialização/estado.
+  Reproduz DOIS casos golden dirigindo o app real e compara os downloads da estação Export
+  contra `tests/golden/expected/<caso>/*` com **bytes crus** (`Buffer.equals`, sem trim). Resultado:
+  ambos byte-idênticos DE PRIMEIRA — nenhuma divergência, nenhum P0. Como reproduzir um caso golden
+  pela UI (não é trivial — o `SCENARIO` da ENG-252 é de outro áudio):
+  - **PCM/manifest_id:** adicionar ao `fixtures/bucket/audios.ts` uma entrada com o MESMO `PcmSpec`
+    do caso (`seed/samples/channels/sampleRate`). `FixtureBucketSource.fetchBytes`→`FixtureAudioEngine.decode`
+    (`makePcm` LCG) →`hashPCM` é o MESMO caminho de `tests/golden/generate.mjs` → hash idêntico
+    (minimal-flow `fnv1a32:d31a8419`, seam-small-move `fnv1a32:39876dcd`).
+  - **beadSec 0.5:** o Setup resolve granularidade via `StubGranularityResolver.resolve(level,acousteme)`
+    = `acousteme.data.bead_sec[level]` (fallback `{pequena:0.12,media:0.25,grande:0.5}` só se acousteme null).
+    O rádio **Média** → chave `media`. Autorei `bead_sec.media = 0.5` nas entradas novas → Média resolve 0.5
+    (grade de 24 contas em 96000/8000=12 s). `createSession` do support seleciona Média.
+  - **slug/audio_filename:** `story_slug` = `title.trim() || filename-sem-ext || 'colar'`. Deixar o TÍTULO
+    VAZIO → slug = nome do arquivo sem `.wav` (`fluxo-minimo`/`costura-pequena`). `audio_filename` = filename verbatim.
+  - **scene_kind `GLEANING_SCENE`:** label PT-BR = **"Respiga"** (`domain/scene-kinds.ts` `SK_PT`), tier **ALTA**
+    → NÃO está na grade "mais comuns" da Triagem. Alcançar via o `searchbox` **"filtrar tipos"** (`fill('Respiga')`)
+    e então o rádio "Respiga". Confiança: `alta`→**"Certeza"**, `média`→"Quase", `baixa`→"Na dúvida". `none_fit`→
+    rádio "Nenhum se encaixa" (dispara na hora, sem "Confirmar"). `ColarApp.triage()` NÃO serve p/ kind ALTA
+    (não filtra) → triagem inline no spec.
+  - **flag NEEDS_REVIEW:** na Segmentação, o chip da frase travada tem botão **"⚑ revisar"** (→"⚑ marcada");
+    clicar produz `{kind:'NEEDS_REVIEW', prop_id, note_pt:''}`. Sem método de suporte → clique inline.
+  - **respostas do Mapeamento:** o relatório `.md` embute o texto DIGITADO por pergunta. `domain/mapping.ts`
+    `questionSequence` = 11 L1 → 5 L2 por parte travada (PT1,PT2; none_fit incluído) → 5 L3 por frase produtiva.
+    Índices no minimal-flow: recontar=0, tempo=4 (VAZIO→inerte, "(sem resposta)" idêntico a não visitar),
+    PT1 `quem`=12, PT2 `descrever`=16, P1 `oque`=21. A conversa começa no índice 0; "Próxima pergunta" avança de 1;
+    o `<textarea aria-label="observação da facilitadora">` grava no slot da pergunta ATUAL (`setAnswer`). Perguntas
+    não respondidas renderizam `_(sem resposta)_` (`contracts/relatorio.ts` `answerCell`). **ARMADILHA byte:** voz
+    escreve paths `respostas/…webm` em `dto.voice` que o `answerCell` renderiza NO LUGAR de "(sem resposta)" →
+    NUNCA usar `ColarApp.answerConversation()` (grava voz) num caso de byte-identity; só digitar, zero voz.
+  - **downloads:** a estação Export mantém os 3 cards (`.cds-export .cds-document-card`, botão "Baixar") também no
+    `phase='saved'` (pós-conclusão); `onDownload` devolve os bytes GUARDADOS (`store.getArtifacts`), byte-idênticos
+    ao que a conclusão salvou (§10.5). `suggestedFilename()` = `retorno/manifesto/relatorioFilename(slug)` de contracts.
+  - **seam-small-move:** só manifesto+retorno (não há golden `.md`); sem respostas/flag; frase 0→13 cruza a borda 11
+    (delta 2 ≤ max(3,25%)) → `moveSeam()` "Mover a borda até aqui" desliza a costura (PT1→0–13, PT2→14–23); o gate de
+    export só pede ≥1 frase em cena produtiva (P1 em PT1 GLEANING) → `completeSession()` sem tocar na conversa.
+  - **Gotcha de tipo (afeta TODO o E6 255–258):** `ColarApp.createSession(audioFilename=SCENARIO.audioFilename)` infere
+    o parâmetro como o LITERAL `'conto-do-boto.wav'` (do default) → não aceita outros áudios. Support é read-only →
+    helper local `openSession(app,name)=app.createSession(name as never)`. Follow-up: dar a `createSession` assinatura `string`.
