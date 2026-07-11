@@ -56,4 +56,29 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
     },
     pcm: { seed: 303, sampleRate: 8000, samples: 20000, channels: 1 },
   },
+  // Espelham os casos golden `minimal-flow` e `seam-small-move` (mesmo PcmSpec do
+  // caso → mesmo manifest_id), para a ENG-253 dirigir a UI real e provar identidade
+  // byte a byte do export contra tests/golden/expected/*. O `media` do acousteme é
+  // 0.5 de propósito: a granularidade Média que o Setup seleciona resolve para o
+  // beadSec 0.5 dos casos (grade de 24 contas em 12 s).
+  {
+    audio: {
+      id: 'aud_fluxo_minimo',
+      filename: 'fluxo-minimo.wav',
+      duration_sec: 12,
+      consent_present: true,
+      acousteme: { version: 1, data: { bead_sec: { pequena: 0.25, media: 0.5, grande: 1 } } },
+    },
+    pcm: { seed: 12345, sampleRate: 8000, samples: 96000, channels: 1 },
+  },
+  {
+    audio: {
+      id: 'aud_costura_pequena',
+      filename: 'costura-pequena.wav',
+      duration_sec: 12,
+      consent_present: true,
+      acousteme: { version: 1, data: { bead_sec: { pequena: 0.25, media: 0.5, grande: 1 } } },
+    },
+    pcm: { seed: 404, sampleRate: 8000, samples: 96000, channels: 1 },
+  },
 ];
