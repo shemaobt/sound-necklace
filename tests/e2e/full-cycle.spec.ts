@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-import { ColarApp, SCENARIO, readPersistedState, readPersistedStatus } from './support';
+import {
+  ColarApp,
+  SCENARIO,
+  TYPED_ANSWER,
+  readPersistedState,
+  readPersistedStatus,
+} from './support';
 
 /**
  * Acceptance 1 (plano-de-acao §3.1): uma facilitadora completa um ciclo real inteiro
@@ -47,8 +53,15 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
 
   const conversation = await app.answerConversation();
   expect(conversation.voicedLevels).toEqual([1, 2, 3]); // ≥1 por nível por voz
-  expect(conversation.typed).toBe(true); // ≥1 digitada
 
   await app.completeSession();
   await expect.poll(() => readPersistedStatus(page, sessionId)).toBe('concluida');
+
+  // Zero-perda de ponta a ponta: o estado FINAL (após o reload + todo o trabalho do
+  // assento 2) ainda carrega as três cenas classificadas no assento 1 E a resposta
+  // digitada — provando que a reidratação recuperou o estado (não só que o localStorage
+  // sobreviveu ao reload) e que a resposta ≥1-digitada foi de fato gravada (§8.7/§10.4).
+  const finalState = await readPersistedState(page, sessionId);
+  expect(finalState?.parts).toHaveLength(SCENARIO.sceneEndBeads.length);
+  expect(JSON.stringify(finalState)).toContain(TYPED_ANSWER);
 });
