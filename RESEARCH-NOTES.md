@@ -1336,3 +1336,17 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   (array de pares de `Map.entries()`, NÃO objeto-mapa) — o DTO fica em `record.state`, `mode` na raiz do DTO.
 - **Support layer (`tests/e2e/support/`):** `ColarApp` (page object do fluxo inteiro), `SCENARIO`
   (roteiro de decisões), `readPersistedState/Status` — importados em leitura pelas specs 253–258.
+- **Download do dashboard byte-idêntico (ENG-254, acceptance 3):** a conclusão grava os 3 artefatos
+  opacos em `record.artifacts` do localStorage (`FixtureSessionBackend.persist()` serializa
+  `Map.entries()` → shape `{sessions:[[id,{summary,state,artifacts,lock?}]]}`); `artifacts` = trio
+  `{retorno,manifesto,relatorio}` de strings (bytes servidos = bytes guardados, §10.5). Baixar do card
+  do Dashboard = clicar o `<button>` "Baixar" dentro do `.cds-document-card` (escopado por
+  `.cds-dashboard-download-group`, um por sessão concluída; o card é achado pelo nome de arquivo EXIBIDO
+  `retorno-ancoragem.json`/`manifesto-contas.json`/`relatorio-mapeamento.md`, que é fixo, ≠ do filename
+  de download). Captura em Playwright: `Promise.all([page.waitForEvent('download'), click])` →
+  `download.suggestedFilename()` (afirma `<helper>(slug)` de contracts: `<slug>-retorno-ancoragem.json`
+  etc.) + `readFileSync(await download.path())` como Buffer → `buf.equals(Buffer.from(stored, 'utf8'))`
+  (bytes crus, sem trim/normalização; o `domSaveBytes` do dashboard codifica a string em UTF-8 no Blob).
+  "Sem abrir a sessão": `page.goto('/dashboard')` a partir do Export e afirmar `pathname==='/dashboard'`
+  após cada download (o download é Blob/anchor, não navega). Fresh browser context = 1 sessão concluída
+  → `group` tem `count(1)`.
