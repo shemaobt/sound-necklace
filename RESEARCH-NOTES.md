@@ -1290,3 +1290,49 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   comparando o DTO persistido (deep `toEqual`) com o `session` vivo — é exatamente o check da DoD.
 - **Desbloqueia ENG-252** (E2E acceptance-1: reload retoma no passo exato + resposta por voz) e
   com ela todo o E6 (253–258).
+
+## ENG-252 — acceptance-1 E2E (ciclo completo em dois assentos, modo fixture)
+
+- **Runner: `@playwright/test` (nova devDep) + `playwright.config.ts` na raiz.** O repo já tinha
+  `playwright` (provider do vitest browser mode) mas NÃO o test-runner. Vitest browser mode monta
+  COMPONENTES, não serve o app inteiro nem reseta os singletons de módulo (`sessionStore`,
+  `appSessionStore`) — então não prova a hidratação-do-localStorage do "segundo assento". Playwright
+  Test com um `webServer: vite` + `page.reload()` dá heap novo (singletons zerados) com o
+  localStorage sobrevivendo → é o caminho de retomada REAL. Config: `testDir tests/e2e`,
+  `testMatch **/*.spec.ts`, chromium bundled (sem `channel`), `webServer` roda `vite --host 127.0.0.1
+--port 5173 --strictPort` (Vite `appType:'spa'` faz fallback de index.html em qualquer rota → a
+  History API do router funciona sob reload/rota profunda). `reuseExistingServer: !CI`.
+- **`vitest` NÃO pega as specs E2E:** os projects unit/dom/browser incluem só `tests/golden/**`,
+  `ui/**`. `tests/e2e/*.spec.ts` fica fora → `pnpm test`/`test:browser` intocados.
+- **Fronteiras/tsc/lint dos novos arquivos:** depcruise cruza `tests` mas nenhuma regra restringe
+  `tests` como `from` (só domain/contracts/adapters/ui) → importar `@playwright/test` e tipos de
+  contracts é livre. eslint usa `tseslint.configs.recommended` (NÃO type-checked) → `playwright.config.ts`
+  e `tests/e2e/**` não precisam entrar no tsconfig. `.eslintignore`/config JÁ ignoram
+  `playwright-report/` e `test-results/`, e o `.gitignore` também (alguém antecipou o E6).
+- **Comando do webServer = `vite ...` (sem `pnpm exec`):** o `e2e` roda SEMPRE via pnpm, que põe
+  `node_modules/.bin` no PATH dos filhos → o Playwright acha `vite` ao spawnar o webServer, local e no CI.
+- **Modelo de clique do colar no Playwright:** clicar `.cds-necklace-bead[data-idx="N"]` (com
+  `{force:true}` p/ ignorar bandas sobrepostas) dispara pointerdown no CENTRO da conta; o handler
+  DELEGADO no container lê `clientX/clientY` e `beadAtXY` mapeia de volta ao índice N — robusto,
+  independe de bpr/largura/janela (contas fora da janela ativa ainda rendem `data-idx`, só ficam dim).
+  Escuta 2 = UM clique = FIM da cena (começo pré-costurado); Segmentação = DOIS cliques (começo, fim).
+- **Cenário determinístico (áudio `conto-do-boto`, 12 contas):** cenas fim 3/7/11; triagem Apelo/Certeza,
+  Chegada/Quase, Nenhum-se-encaixa; frase 0→5 cruza a borda 3 (delta 2 ≤ max(3,25%)=3 → oferta SIMPLES
+  "Mover a borda até aqui", cena cresce p/ 0–5, vizinha encolhe p/ 6–7), depois frase 6→7 contida.
+  Espelha o golden `seam-small-move` (phraseSelect s:0 e:13 + borderDecision "move").
+- **Detecção de nível na Conversa por DADO, não contagem:** o ▶ do trecho é "▶ ouvir a história"
+  (N1) / "▶ ouvir a cena" (N2) / "▶ ouvir a frase" (N3). O helper grava voz na 1ª pergunta de cada
+  nível e digita uma vez, sem depender das contagens exatas (11 N1 + 5×cena travada + 5×frase). Gotcha
+  strict-mode: `getByRole('button',{name:'ouvir'})` casa "▶ ouvir a história" E o "ouvir" de playback
+  → usar `{name:'ouvir', exact:true}` p/ o botão de reprodução da gravação.
+- **Alcançar o Export:** o Relatório NÃO tem botão "avançar"; a cauda "Guardar" entra pelo fio de
+  contas (`<ol aria-label="Progresso da sessão">`, clique delegado por índice do `<li>`), alcançável
+  quando `modeLocks().mapeamento` (história confirmada + ≥1 frase travada). Helper clica o `<li>`
+  com texto "Guardar". Concluir = "Concluir e guardar os documentos" → swap p/ "Destravar para editar"
+  - `summary.status='concluida'` no localStorage.
+- **Zero-perda:** `expect.poll` no `state.mode` do DTO persistido (fecha a janela do debounce 800ms do
+  autosave) ANTES do reload; captura o `state`; reload; `expect(after).toEqual(before)` + `mode==='segmentacao'`.
+  Shape do localStorage `colar-de-sons:sessions:v1` = `{ sessions: [ [id, {summary,state,...}], ... ] }`
+  (array de pares de `Map.entries()`, NÃO objeto-mapa) — o DTO fica em `record.state`, `mode` na raiz do DTO.
+- **Support layer (`tests/e2e/support/`):** `ColarApp` (page object do fluxo inteiro), `SCENARIO`
+  (roteiro de decisões), `readPersistedState/Status` — importados em leitura pelas specs 253–258.
