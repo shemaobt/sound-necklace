@@ -110,4 +110,34 @@ describe('App shell', () => {
     const after = await store.get(summary.id);
     expect(after.status).toBe('concluida');
   });
+
+  it('não vaza viewingExport ao trocar de sessão (remonta por rota)', async () => {
+    const store = appSessionStore();
+    const a = await store.create({
+      projectId: 'p1',
+      storyName: 'A',
+      storySlug: 'a',
+      audioId: 'a1',
+      granularityLevel: 'media',
+      beadSec: 0.25,
+      manifestId: 'fnv1a32:deadbeef',
+      pipelineConsent: true,
+    });
+    await act(async () => {
+      navigate(`/session/${a.id}`);
+      sessionStore.getState().load(completableSession());
+    });
+    render(<App />);
+    await act(async () => {
+      screen.getByText('Guardar').click();
+    });
+    expect(screen.getByText('A história está inteira no colar.')).toBeDefined();
+
+    // Abrir outra sessão que NÃO chegou ao gate: a Export não pode "grudar".
+    await act(async () => {
+      navigate('/session/outra');
+      sessionStore.getState().load(sampleSession());
+    });
+    expect(screen.queryByText('A história está inteira no colar.')).toBeNull();
+  });
 });
