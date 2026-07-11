@@ -1151,3 +1151,38 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   no próprio css (evita acoplar ao contrato `data-variant` interno do atom).
   Erro só de credencial (`AuthError`) vira orientação PT-BR; qualquer outra falha sobe
   (fronteira de sistema, sem mascarar).
+
+## ENG-243 — estação Setup (criação de sessão)
+
+- **Radix `@radix-ui/react-radio-group` em jsdom: seta move o FOCO (roving), mas NÃO
+  auto-seleciona.** `ArrowRight`/`ArrowDown` movem o foco entre os itens (e dão
+  wrap), porém `aria-checked` só muda quando o item focado recebe `Espaço`/`Enter`.
+  (Num browser real a seta seleciona; é uma divergência do jsdom.) Um teste de
+  navegação por teclado deve afirmar `document.activeElement` após a seta E `' '`
+  (Espaço) para confirmar a seleção. Verificado com dump por `process.stderr.write`
+  (o `console.log` do vitest fica suprimido por default).
+- **Hashes manifest_id conhecidos das fixtures do bucket** (PCM LCG determinístico,
+  fórmula do domínio `hashPCM`): `conto-do-boto` (seed 101, 24000 amostras, 8000 Hz)
+  → média 0.25 s = `fnv1a32:e8442b84`, pequena 0.15 = `fnv1a32:8bf70020`, grande 0.5
+  = `fnv1a32:9943a4ff`. Servem de valor de referência independente nos testes de UI
+  (o hash entra tanto no `createSession` quanto no `CreateSessionInput`).
+- **`SessionStore.create` NÃO persiste estado — só o resumo.** `create(input)` grava
+  um `SessionSummary` (id + nomes + `current_step:'ouvir'`) e nada de grade/DTO. Para
+  a sessão ser retomável/exportável, o Setup persiste o estado inicial com
+  `store.autosave(id, toSessionDto(state, meta))` + `await store.flush(id)` logo após
+  criar (o Export relê o meta pelo DTO persistido — sem isso, granularidade/consent/
+  áudio se perdem). `meta = { granularityLevel, bucketAudioId, voice: [], pipelineConsent }`.
+- **Landing em Escuta 1 é derivado do domínio, não roteado.** `createSession` nasce
+  `mode='escuta'` + `whole.confirmed=false` → `stepperStations`/`currentIndex` do shell
+  resolvem a estação `escuta1`. O Setup só faz `sessionStore.getState().load(state)`
+  (instala a sessão viva; `load` ignora o gate `canEdit`, ao contrário de `apply`) e
+  `navigate('/session/:id')`. O shell lê a sessão do `ui/state` singleton — se estiver
+  null na rota `/session/:id`, mostra "carregando a sessão…".
+- **Slug/título = campo único (fiel à referência `segment()` L457).** Sem slugificação:
+  `title.trim() || filename.replace(/\.[^.]+$/,'') || 'colar'`, e o mesmo valor vira
+  `storyName` E `storySlug` E `slug` do domínio. O `<input type="text">` é o único input
+  de texto; NÃO há `<input type="number">` (o campo "Segundos por conta" do v1 foi
+  removido — granularidade por nível só).
+- **`/setup` continua sem rota (confirmado).** Página auto-contida com `ports.ts`
+  (4 fixtures) + `navigate` injetável; rotear no shell é follow-up (padrão ENG-246).
+  As portas de importação navegam para `/imports` (fallback do shell até ENG-248).

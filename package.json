@@ -26,6 +26,7 @@
     "@fontsource/montserrat": "^5.2.8",
     "@radix-ui/react-dialog": "^1.1.19",
     "@radix-ui/react-popover": "^1.1.19",
+    "@radix-ui/react-radio-group": "^1.4.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "zod": "^4.4.3",

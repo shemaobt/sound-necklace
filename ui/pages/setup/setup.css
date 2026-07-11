@@ -1,0 +1,191 @@
+/* Setup (redesign §6.1, PRD v2 §8.1): superfície de trabalho creme, densidade de
+   facilitadora. Portas de entrada + escolha de áudio + nível de granularidade +
+   consentimento, em duas colunas. Sem movimento decorativo. */
+
+.cds-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: 72vh;
+  padding: clamp(1.5rem, 5vh, 3rem) clamp(1rem, 5vw, 3rem);
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+}
+
+.cds-setup-title {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: clamp(1.4rem, 3.6vw, 2rem);
+  line-height: 1.15;
+  color: var(--cds-ink, #0a0703);
+}
+
+/* §O7 — linha de confiança fixada e proeminente. */
+.cds-setup-trust {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--cds-radius-card);
+  background: var(--cds-warning-bg, #f4ecd8);
+  color: var(--cds-warning-ink, #5a4a2a);
+  font-weight: 600;
+}
+
+.cds-setup-heading {
+  margin: 0 0 0.5rem;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 1rem;
+}
+
+.cds-setup-doors,
+.cds-setup-levels {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cds-setup-audios {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cds-setup-door,
+.cds-setup-level,
+.cds-setup-audio {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--cds-hairline, #d8ccb0);
+  border-radius: var(--cds-radius-card);
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cds-setup-door {
+  flex: 1 1 12rem;
+}
+
+.cds-setup-level {
+  flex: 1 1 6rem;
+  align-items: flex-start;
+}
+
+.cds-setup-door[data-state='checked'],
+.cds-setup-level[data-state='checked'],
+.cds-setup-audio[data-state='checked'] {
+  border-color: var(--cds-telha);
+  box-shadow: 0 0 0 1px var(--cds-telha) inset;
+}
+
+.cds-setup-door:focus-visible,
+.cds-setup-level:focus-visible,
+.cds-setup-audio:focus-visible {
+  outline: 2px solid var(--cds-olive);
+  outline-offset: 2px;
+}
+
+.cds-setup-door-title,
+.cds-setup-level-title,
+.cds-setup-audio-name {
+  font-weight: 600;
+}
+
+.cds-setup-door-desc,
+.cds-setup-level-desc {
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.cds-setup-consent-ok {
+  font-size: 0.8rem;
+  color: var(--cds-confidence-filled, #3d6b3d);
+}
+
+.cds-setup-consent-warn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cds-warning-ink, #8a5a1a);
+}
+
+.cds-setup-audio-ready {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cds-telha-deep, var(--cds-telha));
+}
+
+.cds-setup-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1.5rem;
+}
+
+.cds-setup-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cds-setup-note {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.cds-setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.cds-setup-field input {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--cds-hairline, #d8ccb0);
+  border-radius: var(--cds-radius-card);
+  font: inherit;
+}
+
+.cds-setup-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.cds-setup-error {
+  margin: 0;
+  color: var(--cds-error, #a4331f);
+  font-weight: 600;
+}
+
+.cds-setup-create {
+  align-self: flex-start;
+  padding: 0.7rem 1.3rem;
+  border: none;
+  border-radius: var(--cds-radius-pill, 999px);
+  background: var(--cds-ink, #0a0703);
+  color: var(--cds-cream);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cds-setup-create:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.cds-setup-import-door {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.cds-setup-import-hint {
+  margin: 0;
+}
