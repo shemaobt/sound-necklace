@@ -9,6 +9,7 @@ import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
 import { buildAdapterRegistry, buildStationRegistry } from './registries';
 import { ReviewBanner } from './review-banner';
+import { appSessionStore } from './session-adapter';
 import { StationHost } from './station-host';
 import { Stepper } from './stepper';
 import { stepperStations } from './stepper-model';
@@ -59,7 +60,12 @@ export function App() {
   const review = useSessionStore((s) => s.review);
   const lock = useSessionStore((s) => s.lock);
 
+  // A cauda "Guardar" (export) não tem modo no domínio; o shell a marca como conta
+  // atual localmente ao entrar nela pelo fio de contas (ENG-270).
+  const [viewingExport, setViewingExport] = useState(false);
+
   const registry = useMemo(() => buildStationRegistry(), []);
+  const exportStore = useMemo(() => appSessionStore(), []);
   const player = useMemo<Player>(() => ({ stop() {} }), []);
 
   const header = <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />;
@@ -69,12 +75,21 @@ export function App() {
     if (!session) {
       body = <p className="cds-station-fallback">carregando a sessão…</p>;
     } else {
-      const stations = stepperStations(session);
+      const stations = stepperStations(session, { viewingExport });
       const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'escuta1';
       const navigateStation = (key: string) => {
+        if (key === 'export') {
+          setViewingExport(true);
+          return;
+        }
+        setViewingExport(false);
         const mode = KEY_TO_MODE[key];
         if (mode) sessionStore.getState().apply((s) => setMode(s, mode));
       };
+      // Só a Export precisa de portas de wiring: o SessionStore app-global + o id da
+      // rota (a página conclui/baixa os artefatos com eles).
+      const stationProps =
+        currentKey === 'export' ? { store: exportStore, sessionId: route.id } : undefined;
       body = (
         <>
           <Stepper stations={stations} onNavigate={navigateStation} />
@@ -90,7 +105,11 @@ export function App() {
           >
             <ConnectionGate online={online}>
               <main className="cds-app-main">
-                <StationHost stationKey={currentKey} registry={registry} />
+                <StationHost
+                  stationKey={currentKey}
+                  registry={registry}
+                  stationProps={stationProps}
+                />
               </main>
             </ConnectionGate>
           </PlayerSlotProvider>

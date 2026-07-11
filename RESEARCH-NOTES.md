@@ -1186,3 +1186,33 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
 - **`/setup` continua sem rota (confirmado).** Página auto-contida com `ports.ts`
   (4 fixtures) + `navigate` injetável; rotear no shell é follow-up (padrão ENG-246).
   As portas de importação navegam para `/imports` (fallback do shell até ENG-248).
+
+## Shell: cauda Guardar/Export alcançável + injeção de portas (verificado 2026-07-11, ENG-270)
+
+- **Não há modo `export` no domínio** (`Mode = escuta|triagem|segmentacao|mapeamento`,
+  congelado). Entrar na cauda "Guardar" é concern do SHELL: `App` guarda um estado
+  local `viewingExport` (clique na conta Guardar → true; navegar p/ qualquer outra
+  estação → false + `setMode`). `stepperStations(state, {viewingExport})` marca Guardar
+  como `current`. Reachability de Guardar = `modeLocks().mapeamento` (mesmo gate da
+  Conversa: história confirmada + ≥1 frase travada em cena produtiva) — antes era
+  `false` hardcoded.
+- **Injeção de portas nas páginas**: `StationHost` ganhou `stationProps?` opcional
+  repassado ao componente resolvido (`registry[key]` castado p/ `ComponentType<Record>`
+  — React ignora props desconhecidas em estações sem elas). Só a Export precisa: o shell
+  passa `{store, sessionId}` (id da rota). Padrão para futuras páginas com wiring.
+- **`ui/app/session-adapter.ts`** = `appSessionStore()`: UM singleton do adapter
+  `sessions` (`buildAdapterRegistry().sessions.fixture()`; real por ambiente = ENG-247).
+  `ui/app` PODE importar adapters (App.tsx já importa connectivity; depcruise permite).
+- **LIMITAÇÃO conhecida (fragmentação de store)**: Setup e Dashboard resolvem SEUS
+  PRÓPRIOS `FixtureSessionStore` em `ports.ts` (não compartilham `appSessionStore()`).
+  Logo uma sessão criada no Setup NÃO está na store injetada na Export → no app real a
+  Export fica em `phase='loading'` (o `store.get` rejeita silenciosamente no efeito
+  async). Unificar (apontar setup/dashboard p/ a store app-global, OU carregar a sessão
+  por id na rota `/session/:id`) é edição de `ui/pages`/fluxo, FORA do escopo ui/app-only
+  do ENG-270 → follow-up p/ ENG-247/ENG-252 (que dirigem setup→export ponta a ponta).
+- **Teste de shell ponta-a-ponta em fixture**: `App.test` semeia `appSessionStore().create`,
+  carrega estado completável no `sessionStore` (ui/state), navega `/session/:id`, clica
+  Guardar (delegação do `<ol>` só dispara em `reachable`), aguarda o efeito async da Export
+  (`findByRole` no botão "Concluir…") e conclui → `store.get(id).status==='concluida'`.
+  Builders toleram estado forjado: `buildMapReport` usa `state.mapping ?? EMPTY_MAPPING`;
+  `retornoExportStatus.canExport = whole.confirmed`.

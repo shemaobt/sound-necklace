@@ -5,6 +5,7 @@ import { buildBeads, createSession, type SessionState } from '../../domain';
 import { sessionStore } from '../state';
 import { App } from './App';
 import { navigate } from './router';
+import { appSessionStore } from './session-adapter';
 
 function sampleSession(): SessionState {
   return createSession({
@@ -15,6 +16,37 @@ function sampleSession(): SessionState {
     audioFilename: 'h.wav',
     slug: 'h',
   });
+}
+
+/** Sessão pronta para concluir: história confirmada + cena produtiva com frase travada. */
+function completableSession(): SessionState {
+  return {
+    ...sampleSession(),
+    mode: 'mapeamento',
+    whole: { id: 'S1', span: { s: 0, e: 15 }, confirmed: true },
+    partsConfirmed: true,
+    parts: [
+      {
+        part_id: 'PT1',
+        span: { s: 0, e: 15 },
+        locked: true,
+        scene_kind: 'BIRTH_SCENE',
+        scene_kind_confidence: 'alta',
+        tag_state: 'tagged',
+      },
+    ],
+    frases: [
+      {
+        prop_id: 'P1',
+        statement_pt: '',
+        qa: [],
+        span: { s: 0, e: 1 },
+        part_link: 'PT1',
+        locked: true,
+        flagged: false,
+      },
+    ],
+  };
 }
 
 beforeEach(() => {
@@ -43,5 +75,39 @@ describe('App shell', () => {
     render(<App />);
     expect(screen.getByText('Ouvir')).toBeDefined();
     expect(screen.getByText('Guardar')).toBeDefined();
+  });
+
+  it('entrar em Guardar leva à Export e conclui pela store injetada pelo shell', async () => {
+    const store = appSessionStore();
+    const summary = await store.create({
+      projectId: 'p1',
+      storyName: 'H',
+      storySlug: 'h',
+      audioId: 'a1',
+      granularityLevel: 'media',
+      beadSec: 0.25,
+      manifestId: 'fnv1a32:deadbeef',
+      pipelineConsent: true,
+    });
+    await act(async () => {
+      navigate(`/session/${summary.id}`);
+      sessionStore.getState().load(completableSession());
+    });
+    render(<App />);
+
+    await act(async () => {
+      screen.getByText('Guardar').click();
+    });
+    expect(screen.getByText('A história está inteira no colar.')).toBeDefined();
+
+    // O shell passou store + sessionId: concluir vira status "concluída" na store.
+    const concluir = await screen.findByRole('button', {
+      name: 'Concluir e guardar os documentos',
+    });
+    await act(async () => {
+      concluir.click();
+    });
+    const after = await store.get(summary.id);
+    expect(after.status).toBe('concluida');
   });
 });
