@@ -12,6 +12,7 @@ describe('matchRoute', () => {
     expect(matchRoute('/login').name).toBe('login');
     expect(matchRoute('/dashboard').name).toBe('dashboard');
     expect(matchRoute('/').name).toBe('dashboard');
+    expect(matchRoute('/setup').name).toBe('setup');
     expect(matchRoute('/session/abc')).toEqual({ name: 'session', id: 'abc' });
     expect(matchRoute('/qualquer-coisa').name).toBe('unknown');
   });

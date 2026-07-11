@@ -96,10 +96,11 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
     if (!store || !sessionId) return;
     let alive = true;
     void (async () => {
-      const summary = await store.get(sessionId);
       let meta = DEFAULT_META;
       let voice = new Set<string>();
+      let concluida = false;
       try {
+        concluida = (await store.get(sessionId)).status === 'concluida';
         const dto = await store.load(sessionId);
         meta = {
           granularityLevel: dto.granularityLevel,
@@ -109,11 +110,12 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
         };
         voice = new Set(dto.voice);
       } catch {
-        // estado nunca salvo — segue com os defaults
+        // sessão inacessível pela store ou estado nunca salvo — defaults editáveis,
+        // sem travar em "loading" (o guard cobre o get, não só o load)
       }
       if (!alive) return;
       setCustody({ meta, voice });
-      setPhase(summary.status === 'concluida' ? 'saved' : 'edit');
+      setPhase(concluida ? 'saved' : 'edit');
     })();
     return () => {
       alive = false;

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
+import { fromSessionDto } from '../../contracts';
 import { setMode, type Mode, type SessionState } from '../../domain';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
@@ -109,6 +110,41 @@ function useOnline(): boolean {
 }
 
 /**
+ * Reidratação de sessão (§7.3): num reload ou ao retomar do Dashboard, a URL é
+ * `/session/:id` mas o `ui/state` em memória está vazio. Carrega o estado salvo da
+ * store app-global e o injeta, de modo que a sessão retome no passo corrente em vez
+ * de travar em "carregando…". `loadedId` marca o id já hidratado, para não recarregar
+ * a cada render e para refazer a carga ao TROCAR de sessão.
+ *
+ * O try/catch cobre o corpo inteiro (load + `fromSessionDto`): uma sessão sem estado
+ * salvo, ou um DTO estruturalmente inválido vindo de localStorage adulterado, degrada
+ * para o placeholder "carregando…" em vez de virar rejeição não tratada. Sabida
+ * limitação: um id que falha ao carregar não LIMPA a sessão viva anterior (o `ui/state`
+ * não expõe reset) — no fluxo real toda sessão tem um DTO inicial persistido pelo Setup,
+ * então só afeta ids inexistentes digitados à mão.
+ */
+function useSessionHydration(routeId: string | null): void {
+  const loadedId = useRef<string | null>(null);
+  useEffect(() => {
+    if (routeId === null || routeId === loadedId.current) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const dto = await appSessionStore().load(routeId);
+        if (!alive) return;
+        loadedId.current = routeId;
+        sessionStore.getState().load(fromSessionDto(dto).state);
+      } catch {
+        // sessão sem estado salvo ou persistência corrompida — mantém o ui/state atual
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [routeId]);
+}
+
+/**
  * Composition root do Colar de Sons (ENG-224): cabeçalho + fio de contas + player
  * itinerante + chrome de revisão/trava + gate online-only, montados sobre as três
  * registries por glob (docs/architecture.md §4). As estações só ADICIONAM arquivos
@@ -122,6 +158,8 @@ export function App() {
   const session = useSessionStore((s) => s.session);
   const review = useSessionStore((s) => s.review);
   const lock = useSessionStore((s) => s.lock);
+
+  useSessionHydration(route.name === 'session' ? route.id : null);
 
   const registry = useMemo(() => buildStationRegistry(), []);
   const player = useMemo<Player>(() => ({ stop() {} }), []);
@@ -148,7 +186,11 @@ export function App() {
       );
     }
   } else {
-    const stationKey = route.name === 'login' ? 'login' : 'dashboard';
+    // login/dashboard/setup resolvem a estação homônima; uma rota de topo desconhecida
+    // (ex.: /imports, cuja estação já existe — ENG-248) resolve pelo 1º segmento e cai
+    // no fallback "em construção" quando não há página.
+    const stationKey =
+      route.name === 'unknown' ? (/^\/([^/]+)/.exec(route.path)?.[1] ?? 'dashboard') : route.name;
     body = (
       <main className="cds-app-main">
         <StationHost stationKey={stationKey} registry={registry} />

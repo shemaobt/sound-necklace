@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 /**
  * Roteador mínimo sobre a History API — sem react-router (a dependência está fora
- * do escopo desta issue). Três rotas: /login, /dashboard, /session/:id (PRD §7.3).
+ * do escopo desta issue). Rotas: /login, /dashboard, /setup, /session/:id (PRD §7.3).
  *
  * `pushState`/`replaceState` NÃO disparam `popstate` (spec/navegadores/jsdom), então
  * `navigate` notifica os inscritos à mão; `subscribe` também ouve `popstate` para o
@@ -13,12 +13,14 @@ import { useSyncExternalStore } from 'react';
 export type Route =
   | { name: 'login' }
   | { name: 'dashboard' }
+  | { name: 'setup' }
   | { name: 'session'; id: string }
   | { name: 'unknown'; path: string };
 
 export function matchRoute(path: string): Route {
   if (path === '/login') return { name: 'login' };
   if (path === '/' || path === '/dashboard') return { name: 'dashboard' };
+  if (path === '/setup') return { name: 'setup' };
   const session = /^\/session\/([^/]+)\/?$/.exec(path);
   if (session) return { name: 'session', id: decodeURIComponent(session[1]!) };
   return { name: 'unknown', path };

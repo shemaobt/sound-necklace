@@ -1227,3 +1227,36 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   remontagem por `key` é o padrão sancionado (React docs "resetting state with a key"). Teste
   de regressão: ver Export em A → navegar p/ sessão nova → headline "A história está inteira
   no colar." AUSENTE.
+
+## ENG-272 — shell setup→sessão→export ponta a ponta (composition-root wiring)
+
+- **Diagnóstico confirmado (4 quebras de wiring, todas fora de domain/contracts):** (1) `/setup`
+  não era rota → o botão "Nova sessão" trocava a URL mas re-renderizava o Dashboard (rota
+  desconhecida cai no dashboard em `App.tsx`); (2) Setup, Dashboard e Export usavam TRÊS
+  `FixtureSessionStore` distintas (setup/ports.ts, dashboard/ports.ts, session-adapter.ts) →
+  a sessão criada no Setup não aparecia no `list()` do Dashboard nem no `get()` da Export
+  (`SessionNotFoundError` fora do try→travava em `phase=loading`); (3) sem persistência →
+  nenhum store recebia `storage`, então reload/retomada em `/session/:id` ficava eterno em
+  "carregando a sessão…"; (4) `store.get` da Export estava FORA do try/catch.
+- **Store única com persistência:** `appSessionStore()` (ui/app/session-adapter.ts) passou a
+  construir DIRETO `new FixtureSessionStore({ backend: new FixtureSessionBackend(localStorage) })`
+  em vez de `buildAdapterRegistry().sessions.fixture()` — o adapter fixture do register.ts não
+  aceita storage e mudá-lo é fora de escopo (adapters/). O backend hidrata do localStorage na
+  construção e espelha a cada escrita (`fixture.ts` já suportava — era só WIRING). setup/ports.ts
+  e dashboard/ports.ts `defaultSessionStore()` agora retornam `appSessionStore()`.
+- **Reidratação no shell:** `useSessionHydration(routeId)` em App.tsx — quando `/session/:id`
+  monta e o `ui/state` está vazio (reload/resume), carrega o DTO do store app-global e injeta o
+  estado via `fromSessionDto(dto).state` (contracts já expõe o inverso de `toSessionDto`). Um
+  `useRef loadedId` evita recarregar por cima da sessão viva que o Setup já carregou E refaz a
+  carga ao TROCAR de sessão (SessionState do domínio NÃO tem o id — o guard é por routeId, não
+  por comparar `session!==null`, que grudaria a sessão A ao abrir a B). `.catch(()=>null)` no
+  load: se o estado nunca foi salvo (sessão só-summary), não clobbera o ui/state.
+- **Rota /imports:** a estação imports JÁ existe (ENG-248 Done) mas não era roteada. Em vez de
+  hardcodar, o branch não-session do App resolve rota desconhecida pelo 1º segmento do path →
+  `/imports`→estação imports; chave sem página cai no fallback "em construção" do StationHost.
+  `/setup` é rota nomeada explícita no router (matchRoute).
+- **Gotcha de teste (act):** um teste que renderiza a estação Setup via App precisa aguardar o
+  efeito async do bucket (`await findByRole("radio", {name:/conto-do-boto/})`) antes de asserir,
+  senão a promessa da listagem resolve fora do act. A estação imports sem sessão viva mostra só
+  "Abra uma sessão para carregar arquivos do pipeline." (o `<h2>` só aparece com sessão).
+- **Desbloqueia ENG-252** (E2E acceptance-1) e transitivamente E6 (253–258).
