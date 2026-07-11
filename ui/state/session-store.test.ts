@@ -89,4 +89,18 @@ describe('session store — edição guardada', () => {
     state().apply(rename);
     expect(state().session?.slug).toBe('historia-editada');
   });
+
+  it('setAutosave liga a porta num store já criado sem porta', () => {
+    const bare = createSessionStore(); // sem autosave
+    bare.getState().load(sampleSession());
+    const late = vi.fn<(state: SessionState) => void>();
+
+    bare.getState().apply(rename);
+    expect(late).not.toHaveBeenCalled();
+
+    bare.getState().setAutosave(late);
+    bare.getState().apply(rename);
+    expect(late).toHaveBeenCalledTimes(1);
+    expect(late.mock.calls[0]![0].slug).toBe('historia-editada-editada');
+  });
 });

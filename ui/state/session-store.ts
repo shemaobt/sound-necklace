@@ -33,6 +33,12 @@ export interface SessionStore {
   unlock(): void;
   setLock(lock: EditorLock | null): void;
   setOnline(online: boolean): void;
+  /**
+   * Liga (ou desliga) a porta de autosave em runtime. O singleton é criado no
+   * import de ui/state, antes de os adapters existirem; o composition root injeta
+   * a persistência aqui sem que ui/state precise importar adapters (§7.3).
+   */
+  setAutosave(autosave: ((state: SessionState) => void) | undefined): void;
 }
 
 export interface SessionStoreDeps {
@@ -71,6 +77,9 @@ export function createSessionStore(deps: SessionStoreDeps = {}) {
     },
     setOnline(online) {
       set({ online });
+    },
+    setAutosave(autosave) {
+      deps.autosave = autosave;
     },
   }));
 }

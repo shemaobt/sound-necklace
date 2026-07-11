@@ -1260,3 +1260,33 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   senão a promessa da listagem resolve fora do act. A estação imports sem sessão viva mostra só
   "Abra uma sessão para carregar arquivos do pipeline." (o `<h2>` só aparece com sessão).
 - **Desbloqueia ENG-252** (E2E acceptance-1) e transitivamente E6 (253–258).
+
+## ENG-273 — shell: autosave contínuo + gravador de voz no Mapeamento (últimos 2 wirings do root)
+
+- **Bloqueador A (autosave nunca ligado):** o singleton `sessionStore` (ui/state) nasce no
+  import com `deps.autosave` = no-op; `apply()` chama `deps.autosave?.(next)` mas nada
+  persistia fora do Setup (DTO inicial) e do Export (complete). Fix mínimo respeitando a
+  fronteira depcruise (ui/state NUNCA importa adapters): novo método de runtime
+  **`setAutosave(fn|undefined)`** que só faz `deps.autosave = fn` (deps é o objeto do closure,
+  mutável). O composition root liga a porta DENTRO de `useSessionHydration`, no mesmo ponto em
+  que já tem o DTO carregado → captura o `meta` de `fromSessionDto(dto)` e injeta
+  `setAutosave(live => appSessionStore().autosave(routeId, toSessionDto(live, meta)))`. Assim
+  cada mutação do domínio autossalva o estado INTEIRO. Um construtor-arg não serve: o singleton
+  é criado antes de os adapters existirem — daí o setter.
+- **Flush do debounce:** o adapter de autosave debounce 800ms (`adapters/sessions/autosave.ts`),
+  então uma decisão feita instantes antes do reload ficaria só na fila. `useAutosaveFlush(routeId)`
+  faz `appSessionStore().flush(routeId)` no evento `pagehide` (reload/fechar aba) e no cleanup ao
+  TROCAR de sessão. Dep do efeito = `routeId` (string), NÃO o objeto `route` (identidade nova a
+  cada render → re-registraria/flush a cada render). O flush é no-op se a fila está vazia/offline.
+- **Bloqueador B (recorder morto no Mapeamento):** `stationProps` no `SessionStations` só cobria
+  `export` → mapeamento recebia `recorder=null` e o microfone era controle morto. Fix: resolver
+  `buildAdapterRegistry().voice.fixture()` UMA vez (useMemo) e estender o `stationProps` com um
+  ramo `currentKey === 'mapeamento' ? { recorder } : ...`. O `FixtureVoiceRecorder` é 100%
+  headless (start/stop resolvem na hora, blob WebM estático) — só faltava ligar. Persistir os
+  recursos de voz por sessão (`respostas/...webm`) no SessionStore fica follow-up: `meta.voice`
+  autossalvado continua `[]` (a DoD não exige voz sobreviver ao reload, só o mic gravar in-session).
+- **Gotcha de teste (reload path):** o teste do autosave dispara `window.dispatchEvent(new Event('pagehide'))`
+  e usa `waitFor` para aguardar o flush assíncrono (o handler é fire-and-forget `void flush()`),
+  comparando o DTO persistido (deep `toEqual`) com o `session` vivo — é exatamente o check da DoD.
+- **Desbloqueia ENG-252** (E2E acceptance-1: reload retoma no passo exato + resposta por voz) e
+  com ela todo o E6 (253–258).
