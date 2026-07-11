@@ -1216,3 +1216,14 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   (`findByRole` no botão "Concluir…") e conclui → `store.get(id).status==='concluida'`.
   Builders toleram estado forjado: `buildMapReport` usa `state.mapping ?? EMPTY_MAPPING`;
   `retornoExportStatus.canExport = whole.confirmed`.
+- **BUG do 1º corte (pego em code-review) + fix**: `viewingExport` como estado do `App`
+  VAZAVA entre sessões — `App` nunca remonta na troca de rota (o router é hook, sem `key`),
+  então após ver a Export na sessão A, abrir a sessão B (que nem chegou ao gate) ainda caía
+  na Export (o `ci=last` do `viewingExport` ignora `reachable`, contornando o guard do
+  Stepper que só dispara `onNavigate` em alcançável). Fix idiomático: extrair o corpo da
+  sessão p/ um filho `SessionStations` remontado por `key={sessionId}` → trocar de sessão
+  zera o flag. NÃO usar `useEffect(()=>setX(false),[route.id])` nem reset em render: ambos
+  disparam os lints-ERRO `set-state-in-effect`/`set-state-in-render` (React Compiler) — a
+  remontagem por `key` é o padrão sancionado (React docs "resetting state with a key"). Teste
+  de regressão: ver Export em A → navegar p/ sessão nova → headline "A história está inteira
+  no colar." AUSENTE.

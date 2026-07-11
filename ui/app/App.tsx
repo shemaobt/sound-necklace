@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
-import { setMode, type Mode } from '../../domain';
+import { setMode, type Mode, type SessionState } from '../../domain';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
+import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
-import { buildAdapterRegistry, buildStationRegistry } from './registries';
+import { buildAdapterRegistry, buildStationRegistry, type StationComponent } from './registries';
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
 import { StationHost } from './station-host';
@@ -24,6 +25,68 @@ const KEY_TO_MODE: Record<string, Mode> = {
   segmentacao: 'segmentacao',
   mapeamento: 'mapeamento',
 };
+
+/**
+ * Corpo de uma sessão aberta: fio de contas + chrome de revisão + player + estação.
+ * A cauda "Guardar" (export) não tem modo no domínio, então entrar nela é um estado
+ * LOCAL (`viewingExport`). Este componente é remontado por `key={sessionId}` no App,
+ * de modo que trocar de sessão zera `viewingExport` — sem isso a flag vazaria e uma
+ * sessão que nem chegou ao gate abriria na Export (ENG-270).
+ */
+function SessionStations({
+  session,
+  sessionId,
+  review,
+  lock,
+  online,
+  registry,
+  exportStore,
+  player,
+}: {
+  session: SessionState;
+  sessionId: string;
+  review: boolean;
+  lock: EditorLock | null;
+  online: boolean;
+  registry: Record<string, StationComponent>;
+  exportStore: ReturnType<typeof appSessionStore>;
+  player: Player;
+}) {
+  const [viewingExport, setViewingExport] = useState(false);
+
+  const stations = stepperStations(session, { viewingExport });
+  const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'escuta1';
+  const navigateStation = (key: string) => {
+    if (key === 'export') {
+      setViewingExport(true);
+      return;
+    }
+    setViewingExport(false);
+    const mode = KEY_TO_MODE[key];
+    if (mode) sessionStore.getState().apply((s) => setMode(s, mode));
+  };
+  // Só a Export precisa de portas de wiring: o SessionStore app-global + o id da
+  // rota (a página conclui/baixa os artefatos com eles).
+  const stationProps = currentKey === 'export' ? { store: exportStore, sessionId } : undefined;
+
+  return (
+    <>
+      <Stepper stations={stations} onNavigate={navigateStation} />
+      <ReviewBanner review={review} lock={lock} onUnlock={() => sessionStore.getState().unlock()} />
+      <PlayerSlotProvider
+        activeKey={currentKey}
+        player={player}
+        playerNode={<div className="cds-player" />}
+      >
+        <ConnectionGate online={online}>
+          <main className="cds-app-main">
+            <StationHost stationKey={currentKey} registry={registry} stationProps={stationProps} />
+          </main>
+        </ConnectionGate>
+      </PlayerSlotProvider>
+    </>
+  );
+}
 
 /**
  * Assina a porta de conectividade (fixture por default) e reflete o estado tanto
@@ -60,12 +123,7 @@ export function App() {
   const review = useSessionStore((s) => s.review);
   const lock = useSessionStore((s) => s.lock);
 
-  // A cauda "Guardar" (export) não tem modo no domínio; o shell a marca como conta
-  // atual localmente ao entrar nela pelo fio de contas (ENG-270).
-  const [viewingExport, setViewingExport] = useState(false);
-
   const registry = useMemo(() => buildStationRegistry(), []);
-  const exportStore = useMemo(() => appSessionStore(), []);
   const player = useMemo<Player>(() => ({ stop() {} }), []);
 
   const header = <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />;
@@ -75,45 +133,18 @@ export function App() {
     if (!session) {
       body = <p className="cds-station-fallback">carregando a sessão…</p>;
     } else {
-      const stations = stepperStations(session, { viewingExport });
-      const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'escuta1';
-      const navigateStation = (key: string) => {
-        if (key === 'export') {
-          setViewingExport(true);
-          return;
-        }
-        setViewingExport(false);
-        const mode = KEY_TO_MODE[key];
-        if (mode) sessionStore.getState().apply((s) => setMode(s, mode));
-      };
-      // Só a Export precisa de portas de wiring: o SessionStore app-global + o id da
-      // rota (a página conclui/baixa os artefatos com eles).
-      const stationProps =
-        currentKey === 'export' ? { store: exportStore, sessionId: route.id } : undefined;
       body = (
-        <>
-          <Stepper stations={stations} onNavigate={navigateStation} />
-          <ReviewBanner
-            review={review}
-            lock={lock}
-            onUnlock={() => sessionStore.getState().unlock()}
-          />
-          <PlayerSlotProvider
-            activeKey={currentKey}
-            player={player}
-            playerNode={<div className="cds-player" />}
-          >
-            <ConnectionGate online={online}>
-              <main className="cds-app-main">
-                <StationHost
-                  stationKey={currentKey}
-                  registry={registry}
-                  stationProps={stationProps}
-                />
-              </main>
-            </ConnectionGate>
-          </PlayerSlotProvider>
-        </>
+        <SessionStations
+          key={route.id}
+          session={session}
+          sessionId={route.id}
+          review={review}
+          lock={lock}
+          online={online}
+          registry={registry}
+          exportStore={appSessionStore()}
+          player={player}
+        />
       );
     }
   } else {
