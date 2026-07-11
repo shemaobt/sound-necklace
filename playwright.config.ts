@@ -26,6 +26,9 @@ export default defineConfig({
     browserName: 'chromium',
     headless: true,
     viewport: { width: 1280, height: 900 },
+    // o app respeita prefers-reduced-motion; forçá-lo tira a duração de animação
+    // da equação → o clique de conta por geometria não corre com uma transição.
+    reducedMotion: 'reduce',
     trace: 'retain-on-failure',
   },
   webServer: {

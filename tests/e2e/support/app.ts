@@ -15,6 +15,12 @@ import { expect, type Page } from '@playwright/test';
 export const STORAGE_KEY = 'colar-de-sons:sessions:v1';
 
 /**
+ * Marcador único da resposta DIGITADA — distinto o bastante para a spec provar que a
+ * resposta foi de fato gravada no estado persistido (não um booleano auto-reportado).
+ */
+export const TYPED_ANSWER = 'observação-e2e-a1b2c3';
+
+/**
  * Roteiro determinístico de um ciclo completo sobre o áudio fixture `conto-do-boto`
  * (24000 amostras / 8000 Hz = 3 s; granularidade média 0.25 s → grade de 12 contas,
  * índices 0–11). Três cenas, duas classificadas + uma "nenhum se encaixa", e uma
@@ -93,7 +99,7 @@ export class ColarApp {
     await expect(this.page.locator('input[type="file"]')).toHaveCount(0);
 
     await this.page.getByText(audioFilename).click();
-    await this.page.getByRole('radio', { name: 'Média' }).click();
+    await this.page.getByRole('radio', { name: 'Média', exact: true }).click();
     await this.page.getByRole('checkbox').check();
     await this.page.getByRole('button', { name: 'Criar a sessão →' }).click();
 
@@ -134,11 +140,11 @@ export class ColarApp {
   ): Promise<void> {
     for (const step of steps) {
       if ('noneFit' in step && step.noneFit) {
-        await this.page.getByRole('radio', { name: 'Nenhum se encaixa' }).click();
+        await this.page.getByRole('radio', { name: 'Nenhum se encaixa', exact: true }).click();
       } else if ('kind' in step) {
-        await this.page.getByRole('radio', { name: step.kind }).click();
-        await this.page.getByRole('radio', { name: step.confidence }).click();
-        await this.page.getByRole('button', { name: 'Confirmar' }).click();
+        await this.page.getByRole('radio', { name: step.kind, exact: true }).click();
+        await this.page.getByRole('radio', { name: step.confidence, exact: true }).click();
+        await this.page.getByRole('button', { name: 'Confirmar', exact: true }).click();
       }
     }
     await this.page.getByRole('button', { name: 'Já classifiquei todas as cenas →' }).click();
@@ -201,7 +207,7 @@ export class ColarApp {
         await this.recordVoiceAnswer();
         voiced.add(level);
       } else if (!typed) {
-        await this.typeAnswer('uma observação da facilitadora');
+        await this.typeAnswer(TYPED_ANSWER);
         typed = true;
       }
       if (voiced.size === 3 && typed) break;
