@@ -32,8 +32,14 @@ export interface MinimalismScanOptions {
   readonly allow?: readonly MinimalismAllowEntry[];
 }
 
-/** IDs/hashes que jamais devem vazar para uma tela do ouvinte (§10–§11). */
-const ID_LIKE = /fnv1a32|\b[A-Z]{3,}_[A-Z]{2,}\b/;
+/**
+ * IDs/hashes que jamais devem vazar para uma tela do ouvinte (§10–§11): o
+ * `manifest_id` e qualquer `scene_kind` snake_case (o valor inglês vive só no
+ * `title`, nunca no texto). Case-insensitive: os valores de `scene_kind` podem
+ * vazar em maiúsculas OU minúsculas — nenhuma cópia PT-BR usa `_`, então sem
+ * falso-positivo.
+ */
+const ID_LIKE = /fnv1a32|\b[a-z]{3,}_[a-z]{2,}\b/i;
 
 interface Probe {
   instructions: string[];
@@ -80,6 +86,9 @@ export async function scanListenerSurface(
   // Regra 4 — nenhuma tabela.
   expect(probe.tables, `${opts.label}: <table> na tela do ouvinte`).toBe(0);
 
+  // `innerText` ≈ texto visível, com dois cantos conhecidos: dígitos pintados por
+  // `content`/counters de CSS escapam; texto `clip`ado (sr-only) entra mesmo sem ser
+  // visto. As telas do ouvinte não usam nenhum dos dois, então a aproximação vale.
   const lines = probe.text
     .split('\n')
     .map((l) => l.trim())

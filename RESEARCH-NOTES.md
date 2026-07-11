@@ -1598,7 +1598,7 @@ por isso `taggedScenes` conta por `tag_state==='tagged'`, não pelo kind.
 
 - **Scanner `tests/e2e/support/minimalism.ts` (`scanListenerSurface(root, {label, allow?})`).** Roda 5 regras
   sobre o DOM real de um `root` (Locator): (1) `[data-role="instruction"]` ≤1 e ≤90 chars; (2) `[data-role=
-  "primary-action"]` ≤1; (3) nenhum dígito no `innerText` visível (fora da allowlist); (4) nenhum `<table>`;
+"primary-action"]` ≤1; (3) nenhum dígito no `innerText` visível (fora da allowlist); (4) nenhum `<table>`;
   (5) nenhum ID/hash visível (`/fnv1a32|\b[A-Z]{3,}_[A-Z]{2,}\b/`). Allowlist versionada: cada entrada exige
   `reason` (PRD-§) não vazio senão lança — hoje **vazia** (telas do ouvinte soletram números por extenso).
 - **Regra 2 usa o MARCADOR semântico, não o variante visual.** O `primary` da telha é reusado além da ação

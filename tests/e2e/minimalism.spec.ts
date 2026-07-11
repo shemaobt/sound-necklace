@@ -27,7 +27,8 @@ async function currentLevel(page: Page): Promise<1 | 2 | 3> {
   await expect(page.locator('button', { hasText: '▶ ouvir a' })).toBeVisible();
   if (await page.getByRole('button', { name: LISTEN[1] }).count()) return 1;
   if (await page.getByRole('button', { name: LISTEN[2] }).count()) return 2;
-  return 3;
+  if (await page.getByRole('button', { name: LISTEN[3] }).count()) return 3;
+  throw new Error('pergunta do Mapeamento sem ▶ de nível reconhecível');
 }
 
 /** Avança "Próxima pergunta" até a primeira pergunta do nível pedido. */
