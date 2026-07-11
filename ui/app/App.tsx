@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
-import { fromSessionDto } from '../../contracts';
+import type { VoiceRecorder } from '../../adapters/voice/types';
+import { fromSessionDto, toSessionDto } from '../../contracts';
 import { setMode, type Mode, type SessionState } from '../../domain';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
@@ -43,6 +44,7 @@ function SessionStations({
   registry,
   exportStore,
   player,
+  recorder,
 }: {
   session: SessionState;
   sessionId: string;
@@ -52,6 +54,7 @@ function SessionStations({
   registry: Record<string, StationComponent>;
   exportStore: ReturnType<typeof appSessionStore>;
   player: Player;
+  recorder: VoiceRecorder | null;
 }) {
   const [viewingExport, setViewingExport] = useState(false);
 
@@ -66,9 +69,15 @@ function SessionStations({
     const mode = KEY_TO_MODE[key];
     if (mode) sessionStore.getState().apply((s) => setMode(s, mode));
   };
-  // Só a Export precisa de portas de wiring: o SessionStore app-global + o id da
-  // rota (a página conclui/baixa os artefatos com eles).
-  const stationProps = currentKey === 'export' ? { store: exportStore, sessionId } : undefined;
+  // Portas de wiring por estação: a Export conclui/baixa com o SessionStore
+  // app-global + o id da rota; o Mapeamento grava a resposta por voz com o
+  // recorder fixture (§8.7). As demais estações não precisam de props.
+  const stationProps =
+    currentKey === 'export'
+      ? { store: exportStore, sessionId }
+      : currentKey === 'mapeamento'
+        ? { recorder }
+        : undefined;
 
   return (
     <>
@@ -133,13 +142,39 @@ function useSessionHydration(routeId: string | null): void {
         const dto = await appSessionStore().load(routeId);
         if (!alive) return;
         loadedId.current = routeId;
-        sessionStore.getState().load(fromSessionDto(dto).state);
+        const { state, meta } = fromSessionDto(dto);
+        sessionStore.getState().load(state);
+        // Liga o autosave contínuo (§7.3): a partir daqui cada mutação do domínio
+        // persiste o estado INTEIRO no store app-global, sob o meta desta sessão
+        // (granularidade/áudio/consentimento), de modo que um reload retome no passo
+        // exato. O adapter debounce+coalesce; o flush no pagehide fecha a janela.
+        sessionStore.getState().setAutosave((live) => {
+          appSessionStore().autosave(routeId, toSessionDto(live, meta));
+        });
       } catch {
         // sessão sem estado salvo ou persistência corrompida — mantém o ui/state atual
       }
     })();
     return () => {
       alive = false;
+    };
+  }, [routeId]);
+}
+
+/**
+ * Fecha a janela do debounce do autosave (§7.3): o adapter agrupa as escritas, então
+ * uma decisão feita instantes antes de a página descarregar ficaria só na fila. Um
+ * `flush` no `pagehide` (reload/fechar aba) e ao TROCAR de sessão persiste o pendente
+ * agora — o adapter já é no-op se não há nada na fila ou está offline.
+ */
+function useAutosaveFlush(routeId: string | null): void {
+  useEffect(() => {
+    if (routeId === null) return;
+    const flush = () => void appSessionStore().flush(routeId);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
     };
   }, [routeId]);
 }
@@ -159,10 +194,16 @@ export function App() {
   const review = useSessionStore((s) => s.review);
   const lock = useSessionStore((s) => s.lock);
 
-  useSessionHydration(route.name === 'session' ? route.id : null);
+  const routeId = route.name === 'session' ? route.id : null;
+  useSessionHydration(routeId);
+  useAutosaveFlush(routeId);
 
   const registry = useMemo(() => buildStationRegistry(), []);
   const player = useMemo<Player>(() => ({ stop() {} }), []);
+  const recorder = useMemo<VoiceRecorder | null>(() => {
+    const registration = buildAdapterRegistry().voice;
+    return registration ? (registration.fixture() as VoiceRecorder) : null;
+  }, []);
 
   const header = <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />;
 
@@ -182,6 +223,7 @@ export function App() {
           registry={registry}
           exportStore={appSessionStore()}
           player={player}
+          recorder={recorder}
         />
       );
     }

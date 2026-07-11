@@ -1,7 +1,7 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { toSessionDto } from '../../contracts';
+import { fromSessionDto, toSessionDto } from '../../contracts';
 import { buildBeads, createSession, type SessionState } from '../../domain';
 import { sessionStore } from '../state';
 import { App } from './App';
@@ -162,6 +162,66 @@ describe('App shell', () => {
     });
     const after = await store.get(summary.id);
     expect(after.status).toBe('concluida');
+  });
+
+  it('persiste continuamente cada decisão no store app-global e retoma no passo exato', async () => {
+    // Setup persistiu o DTO inicial (mode=escuta). O shell reidrata e, a partir daí,
+    // toda mutação do domínio deve ser autossalva no store app-global — sem isso um
+    // reload retomaria na Escuta 1, perdendo as decisões (§7.3).
+    const store = appSessionStore();
+    const summary = await store.create({
+      projectId: 'p1',
+      storyName: 'H',
+      storySlug: 'h',
+      audioId: 'a1',
+      granularityLevel: 'media',
+      beadSec: 0.25,
+      manifestId: 'fnv1a32:deadbeef',
+      pipelineConsent: true,
+    });
+    store.autosave(
+      summary.id,
+      toSessionDto(sampleSession(), {
+        granularityLevel: 'media',
+        bucketAudioId: 'a1',
+        voice: [],
+        pipelineConsent: true,
+      }),
+    );
+    await store.flush(summary.id);
+
+    act(() => navigate(`/session/${summary.id}`));
+    render(<App />);
+    await screen.findByText('Ouvir'); // hidratado na Escuta 1
+
+    // Uma decisão pós-Setup, sem flush explícito (o app real não chama flush).
+    act(() => sessionStore.getState().apply((s) => ({ ...s, slug: 'avancada' })));
+    // A saída/descarregamento da página força o flush do autosave pendente.
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+
+    await waitFor(async () => {
+      const persisted = fromSessionDto(await store.load(summary.id)).state;
+      expect(persisted).toEqual(sessionStore.getState().session);
+    });
+    const persisted = fromSessionDto(await store.load(summary.id)).state;
+    expect(persisted.slug).toBe('avancada');
+  });
+
+  it('liga o gravador de voz fixture no Mapeamento (o microfone grava)', async () => {
+    await act(async () => {
+      navigate('/session/s1');
+      sessionStore.getState().load(completableSession());
+    });
+    render(<App />);
+
+    const mic = await screen.findByRole('button', { name: 'gravar a resposta' });
+    await act(async () => {
+      mic.click();
+    });
+    // A fixture inicia a gravação → surge o controle "Parar" (microfone vivo).
+    expect(await screen.findByText('Parar')).toBeDefined();
   });
 
   it('não vaza viewingExport ao trocar de sessão (remonta por rota)', async () => {

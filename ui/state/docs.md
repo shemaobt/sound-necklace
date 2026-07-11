@@ -20,7 +20,7 @@ Path: @/ui/state
 - **`apply(reducer)`** runs the reducer ONLY when `canEdit()` is true, then calls the injected `autosave` port. Otherwise it is a silent no-op — offline, review, and a foreign lock PAUSE editing without clearing in-memory state (nothing typed or anchored is lost).
 - **`canEdit()` invariant:** `online && !review && lock === null && session !== null` — the exact predicate every edit path checks.
 - **Lock forces review:** `setLock(holder)` sets the lock and turns `review` on together; `unlock()` clears review ONLY when no lock is present, so a session another editor holds cannot be unlocked into edit mode.
-- **`autosave` is an injected port** (`SessionStoreDeps`), defaulting to a no-op until the SessionStore adapter lands (ENG-240). This is why the layer can persist without importing adapters. The `sessionStore` singleton is created with the default no-op; the shell will inject the real autosave later.
+- **`autosave` is an injected port** (`SessionStoreDeps`), defaulting to a no-op. This is why the layer can persist without importing adapters. The `sessionStore` singleton is created with the default no-op; the shell wires the real port at runtime via **`setAutosave(fn)`** (ENG-273) — the singleton is imported before any adapter exists, so a runtime setter (not a constructor arg) is how @/ui/app connects continuous persistence while ui/state stays adapter-free. Passing `undefined` unwires it. Each `apply` then calls the current port with the freshly-computed state.
 - **`createAppStore` + `appStore`** (@/ui/state/app-store.ts): the global `muted` sound toggle, kept separate from the session store because it outlives any single session and enters no exported artifact.
 
 ### Things to Know
