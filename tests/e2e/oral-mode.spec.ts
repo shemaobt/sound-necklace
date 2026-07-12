@@ -8,15 +8,17 @@ import { ColarApp, SCENARIO } from './support';
  * Playwright dirige o app real em modo fixture; uma sonda instalada por
  * `addInitScript` observa o DOM para provar as propriedades de modo oral:
  *
- * - SOM ANTES DE TEXTO: nos pontos de decisão do ouvinte onde o áudio é
- *   DOM-observável — o playhead que o player fixture acende via `data-play` nas
- *   contas — o primeiro evento após a ação é sempre `sound`, nunca `text`. Isso
- *   cobre o transporte e o toque de conta (Escuta 1), o toque-início de frase
- *   (Segmentação) e o nudge de borda (Escuta 2). Onde o som NÃO é DOM-observável
- *   (toque que completa seleção, cujo confirm renderiza síncrono antes de o
- *   playhead visual acender — o `player.play()` roda após o `apply` do domínio; e o
- *   Mapeamento, que não tem colar) a propriedade é provada pelo sinal não-textual
- *   do controle e pelo avanço in-station.
+ * - SOM, NÃO TEXTO: nos pontos de decisão do ouvinte onde o áudio é DOM-observável
+ *   — o playhead que o player fixture acende via `data-play` nas contas — a ação
+ *   produz SOM e NÃO injeta texto novo (nó de texto fora do colar). Cobre o
+ *   transporte e o toque de conta (Escuta 1) e o toque-início de frase
+ *   (Segmentação). O playhead visual acende um rAF DEPOIS do render, então "som
+ *   antes de texto" por ORDEM não é observável quando a ação também renderiza texto
+ *   síncrono (o `player.play()` roda após o `apply` do domínio); a asserção honesta
+ *   e viva é "som, e nenhum texto competindo". Onde o som NÃO é DOM-observável
+ *   (toque que completa seleção, cujo confirm renderiza síncrono; e o Mapeamento,
+ *   que não tem colar) a propriedade é provada pelo sinal não-textual do controle e
+ *   pelo avanço in-station.
  * - NUDGE DE BORDA (§9.3): o dwell dispara o playback da janela da fronteira SEM
  *   mudar a seleção (as bandas de seleção continuam idênticas).
  * - ZERO CHROME: do momento em que a Escuta 1 assume até o relatório, nenhum
@@ -107,25 +109,27 @@ async function installOralSpy(page: Page): Promise<void> {
   });
 }
 
-/** Reseta a sonda, executa a ação e afirma que o primeiro evento observado é `sound`. */
-async function assertSoundBeforeText(page: Page, action: () => Promise<void>): Promise<void> {
+/**
+ * Reseta a sonda, executa a ação e afirma a propriedade ear-first NO ponto em que
+ * ela é DOM-observável: a ação produz SOM (uma conta acende `data-play`) e NÃO
+ * injeta TEXTO (nenhum nó de texto novo fora do colar). O playhead visual acende um
+ * rAF DEPOIS do render, então "som antes de texto" por ordem não é observável quando
+ * a ação também renderiza texto síncrono — a asserção honesta é "som, e nenhum texto
+ * competindo". É viva, não vacuosa: qualquer nó de texto novo desta ação REPROVA.
+ */
+async function assertPlaysWithoutText(page: Page, action: () => Promise<void>): Promise<void> {
   await page.evaluate(() => window.__oral.reset());
   await action();
   await expect
     .poll(() => page.evaluate(() => window.__oral.events.some((e) => e.kind === 'sound')))
     .toBe(true);
+  // o `apply` do domínio (e qualquer texto que ele renderize) é síncrono e precede o
+  // som — que espera um rAF; logo, ao ver o som, todo texto competindo já está no log.
   const kinds = await page.evaluate(() => window.__oral.events.map((e) => e.kind));
-  const firstSound = kinds.indexOf('sound');
-  const firstText = kinds.indexOf('text');
   expect(
-    firstSound,
-    `nenhum evento de som observado; log=${JSON.stringify(kinds)}`,
-  ).toBeGreaterThanOrEqual(0);
-  if (firstText !== -1) {
-    expect(firstSound, `texto apareceu antes do som; log=${JSON.stringify(kinds)}`).toBeLessThan(
-      firstText,
-    );
-  }
+    kinds,
+    `a ação injetou texto competindo com o som; log=${JSON.stringify(kinds)}`,
+  ).not.toContain('text');
 }
 
 /** Espera todo playhead apagar (nenhuma conta com `data-play`). */
@@ -195,11 +199,11 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   });
 
   // decisão: tocar a história inteira (transporte) → som, nenhum texto novo.
-  await assertSoundBeforeText(page, () =>
+  await assertPlaysWithoutText(page, () =>
     page.getByRole('button', { name: 'Ouvir a história' }).click(),
   );
   // decisão: tocar uma conta → som daquela conta, nenhum texto.
-  await assertSoundBeforeText(page, () => app.clickBead(3));
+  await assertPlaysWithoutText(page, () => app.clickBead(3));
 
   await app.confirmWholeStory();
 
@@ -222,7 +226,7 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
 
   // ——— Segmentação: o toque-início de frase dá som antes de qualquer confirm ———
   await expect(page.getByText('Toque no colar o começo e o fim de cada frase.')).toBeVisible();
-  await assertSoundBeforeText(page, () => app.clickBead(SCENARIO.crossingPhrase.s));
+  await assertPlaysWithoutText(page, () => app.clickBead(SCENARIO.crossingPhrase.s));
   await app.clickBead(SCENARIO.crossingPhrase.e); // completa a seleção
   await page.getByRole('button', { name: '✓ Confirmar esta frase' }).click(); // cruza a borda → seam modal
   await app.moveSeam();
