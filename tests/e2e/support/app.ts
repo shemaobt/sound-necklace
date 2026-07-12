@@ -92,7 +92,7 @@ export class ColarApp {
    * Cria a sessão pelo Setup (§8.1): áudio do bucket + granularidade média + consentimento.
    * Sem file-picker (só bucket). Devolve o id da sessão criada, lido da rota.
    */
-  async createSession(audioFilename = SCENARIO.audioFilename): Promise<string> {
+  async createSession(audioFilename: string = SCENARIO.audioFilename): Promise<string> {
     await this.page.getByRole('button', { name: 'Nova sessão' }).click();
     await expect(this.page.getByRole('heading', { name: 'Nova sessão' })).toBeVisible();
     // bucket-only: nenhuma entrada de arquivo em lugar nenhum.
