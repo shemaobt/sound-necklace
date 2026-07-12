@@ -1594,3 +1594,44 @@ pré-queda (as cenas não sumiram nem mudaram). Um seam-move mexeria em `parts`,
 mostra a Triagem (`Essa cena é sobre o quê?`) e `readPersistedState` deep-equal ao pré-expiração.
 scene_kind persistido é a chave EN (`APPEAL_SCENE`), não o rótulo PT `Apelo` (SK_PT é display-only) —
 por isso `taggedScenes` conta por `tag_state==='tagged'`, não pelo kind.
+## Voz→meta.voice→relatório / persistência do caminho de voz (verificado 2026-07-11, ENG-276)
+
+- **O bug estrutural:** o autosave contínuo (§7.3) persistia `toSessionDto(live, meta)` com um `meta` ESTÁTICO —
+  o snapshot capturado na hidratação (`fromSessionDto(dto).meta`) e fechado no closure do `setAutosave`. Gravar voz
+  no Mapeamento escrevia o blob no `MemoryVoiceStore` do `FixtureVoiceRecorder` (o caminho `respostas/…webm` PASSA a
+  existir — `recorder.has(path)` fica verdadeiro), mas NADA acrescentava esse caminho ao `meta.voice`. Como o Export
+  monta `custody.voice = new Set(dto.voice)` e `dto.voice` ficava `[]`, `buildMapReport(session, ∅)` (`contracts/relatorio.ts`
+  `answerCell`: texto digitado > caminho de voz > "_(sem resposta)_") emitia "sem resposta" para toda resposta de voz.
+- **Fix mínimo (só `ui/app` + `ui/pages/mapeamento`, sem tocar `contracts`/`domain`):** promovi o `meta` da hidratação
+  a um `metaRef: MutableRefObject<SessionMeta|null>` no `App`; o closure do autosave passa a ler `metaRef.current`, então
+  qualquer escrita futura (do domínio OU da voz) já reflete o `meta` atual. Novo `onVoiceSaved(path)` no `App`: insere o
+  caminho em `meta.voice` (dedup por `includes`) e persiste JÁ — `appSessionStore().autosave(routeId, toSessionDto(live, meta))`
+  seguido de `void store.flush(routeId)`.
+- **Por que flush IMEDIATO e não deixar o debounce:** o `createAutosaver` da fixture tem `debounceMs = 800`
+  (`adapters/sessions/fixture.ts`), e entrar no Export é navegação SHELL-local (`viewingExport`, a rota `/session/:id`
+  não muda) → `useAutosaveFlush` NÃO dispara (ele só faz flush no `pagehide` e na troca de `routeId`). Sem o flush,
+  o `Export` (efeito `[store,sessionId]` roda no mount → `store.load` → `dto.voice`) poderia ler `voice:[]` se o
+  facilitador concluir < 800 ms após gravar. Voz é ação discreta e rara → persistir na hora é correto e barato.
+- **Fiação:** `SessionStations` recebe `onVoiceSaved` e o injeta em `stationProps` do Mapeamento (`{recorder, player, onVoiceSaved}`);
+  `Mapeamento`/`QuestionScreen` ganham a prop opcional `onVoiceSaved?` e a chamam no `onStop` DEPOIS de `rec.stop()`
+  (blob já persistido no caminho de `voiceAnswerPath(slot)`). Fora de sessão viva/hidratada (`meta`/`live`/`routeId` nulos) é no-op.
+- **Cadeia que fecha o DoD:** gravar voz → `onVoiceSaved` persiste `dto.voice` com o caminho → `Export` carrega
+  `custody.voice` desse `dto.voice` → `buildMapReport` emite o caminho `respostas/…webm` → `onComplete` grava o trio
+  (`store.complete`) → `getArtifacts(id).relatorio` contém o caminho. A prévia do relatório dentro do Mapeamento
+  (`<RelatorioStation/>` sem recorder) segue com `voiceSet` vazio — fora do escopo; o DoD é o `.md` EXPORTADO.
+- **TDD:** 1 teste em `ui/app/App.test.tsx` (sessão `completableSession`, mode=mapeamento): clica "gravar a resposta" →
+  "Parar" → `waitFor` que `store.load(id).voice` contém `respostas/level1/recontar.webm`, então "Guardar" → "Concluir e
+  guardar os documentos" → afirma `getArtifacts(id).relatorio` contém o caminho. RED antes (voice `[]`), GREEN depois.
+  Gotcha de lint: `metaRef` usado no efeito de `useSessionHydration` dispara `react-hooks/exhaustive-deps` → adicionar
+  `metaRef` à dep array (ref é estável, adicionar é correto e silencia).
+- **Achado do self-review (corrigido antes do merge):** o `onStop` chamava `onVoiceSaved?.(path)` SEM o guard `mountedRef`
+  que o `onRecord` já tinha. Se o facilitador clica "Parar" e navega para outra sessão DURANTE o `await rec.stop()`, o
+  `onVoiceSaved` dispara depois, e o callback do `App` lê `metaRef.current`/`sessionStore.getState().session`/`routeId`
+  JÁ apontando para a nova sessão → gravaria o caminho da sessão A no `meta.voice` da sessão B (contaminação cross-sessão,
+  persistida na hora pelo flush). Fix de 1 linha: `if (!mountedRef.current) return;` após `rec.stop()`, antes de
+  `setRecorderState`/`onVoiceSaved` (espelha o `onRecord`). Teto aceito: quem navega no meio do stop perde o registro
+  daquela resposta em A (o blob fica no MemoryVoiceStore mas não entra em `meta.voice`) — melhor que contaminar B.
+  2 testes de regressão em `mapeamento.test.tsx`: positivo (`onVoiceSaved` chamado com o caminho no stop) e o guard
+  (stop com promessa segurada por `vi.spyOn(rec,'stop')` → `unmount()` → resolve → `onVoiceSaved` NÃO chamado). Provado
+  RED sem o guard. Gates: typecheck, lint 0 err (3 warns complexity pré-existentes), depcruise 345, test 924/2skip,
+  test:browser 19, golden 18/18. Desbloqueia ENG-256.

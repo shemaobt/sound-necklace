@@ -40,6 +40,8 @@ import './mapeamento.css';
 export interface MapeamentoProps {
   player?: Player | null;
   recorder?: VoiceRecorder | null;
+  /** O shell registra o caminho `respostas/…` recém-gravado no `meta.voice` da sessão (ENG-276). */
+  onVoiceSaved?: (path: string) => void;
 }
 
 /** A tela do relatório (ENG-250) entra por add-a-file: presente → renderiza; ausente → o passo fica em espera. */
@@ -91,6 +93,7 @@ interface QuestionScreenProps {
   onNext: () => void;
   player: Player | null;
   recorder: VoiceRecorder | null;
+  onVoiceSaved?: (path: string) => void;
 }
 
 /**
@@ -109,6 +112,7 @@ function QuestionScreen({
   onNext,
   player,
   recorder,
+  onVoiceSaved,
 }: QuestionScreenProps) {
   const [recorderState, setRecorderState] = useState<RecorderState>('idle');
   const [levels, setLevels] = useState<number[]>([]);
@@ -159,7 +163,13 @@ function QuestionScreen({
     unsubRef.current = null;
     await rec.stop();
     recordingRef.current = null;
+    // desmontou durante o await (navegou depressa) → não toca estado nem registra o
+    // caminho no meta.voice: `onVoiceSaved` leria a sessão/rota JÁ trocada e gravaria
+    // esta resposta na sessão errada (contaminação cross-sessão). Espelha `onRecord`.
+    if (!mountedRef.current) return;
     setRecorderState('recorded');
+    // Voz salva no caminho canônico: avisa o shell para registrá-lo em meta.voice (§10.4).
+    onVoiceSaved?.(path);
   };
   const onPlay = (): void => {
     if (recorder) void recorder.play(path);
@@ -212,7 +222,7 @@ function QuestionScreen({
   );
 }
 
-export function Mapeamento({ player = null, recorder = null }: MapeamentoProps) {
+export function Mapeamento({ player = null, recorder = null, onVoiceSaved }: MapeamentoProps) {
   const session = useSessionStore((s) => s.session);
   const [index, setIndex] = useState(0);
   const [atReport, setAtReport] = useState(false);
@@ -292,6 +302,7 @@ export function Mapeamento({ player = null, recorder = null }: MapeamentoProps) 
       onNext={goNext}
       player={player}
       recorder={recorder}
+      onVoiceSaved={onVoiceSaved}
     />
   );
 }

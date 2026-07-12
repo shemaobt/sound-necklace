@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
 import type { VoiceRecorder } from '../../adapters/voice/types';
-import { fromSessionDto, toSessionDto } from '../../contracts';
+import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
 import { DEFAULT_FIXTURE_USER } from '../../adapters/sessions';
 import { setMode, type Mode, type SessionState } from '../../domain';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
@@ -52,6 +52,7 @@ function SessionStations({
   exportStore,
   player,
   recorder,
+  onVoiceSaved,
 }: {
   session: SessionState;
   sessionId: string;
@@ -62,6 +63,7 @@ function SessionStations({
   exportStore: ReturnType<typeof appSessionStore>;
   player: AudioPlayer | null;
   recorder: VoiceRecorder | null;
+  onVoiceSaved: (path: string) => void;
 }) {
   const [viewingExport, setViewingExport] = useState(false);
 
@@ -84,7 +86,7 @@ function SessionStations({
     currentKey === 'export'
       ? { store: exportStore, sessionId }
       : currentKey === 'mapeamento'
-        ? { recorder, player }
+        ? { recorder, player, onVoiceSaved }
         : { player };
 
   return (
@@ -163,7 +165,10 @@ function useAuthExpiry(): void {
  * não expõe reset) — no fluxo real toda sessão tem um DTO inicial persistido pelo Setup,
  * então só afeta ids inexistentes digitados à mão.
  */
-function useSessionHydration(routeId: string | null): void {
+function useSessionHydration(
+  routeId: string | null,
+  metaRef: MutableRefObject<SessionMeta | null>,
+): void {
   const loadedId = useRef<string | null>(null);
   useEffect(() => {
     if (routeId === null || routeId === loadedId.current) return;
@@ -174,6 +179,11 @@ function useSessionHydration(routeId: string | null): void {
         if (!alive) return;
         loadedId.current = routeId;
         const { state, meta } = fromSessionDto(dto);
+        // O meta desta sessão vive num ref para que tanto o autosave quanto o
+        // registro de respostas de voz (`onVoiceSaved`) escrevam no MESMO objeto:
+        // gravar voz muta `meta.voice`, e a próxima persistência (do domínio ou da
+        // própria voz) já o reflete (ENG-276).
+        metaRef.current = meta;
         sessionStore.getState().load(state);
         // Trava consultiva (§7.3): se a sessão está em uso por OUTRA pessoa, abre em
         // revisão com o aviso de quem a detém. Este fluxo não adquire trava própria,
@@ -192,10 +202,11 @@ function useSessionHydration(routeId: string | null): void {
         sessionStore.getState().setLock(foreignHolder ? { holder: foreignHolder } : null);
         // Liga o autosave contínuo (§7.3): a partir daqui cada mutação do domínio
         // persiste o estado INTEIRO no store app-global, sob o meta desta sessão
-        // (granularidade/áudio/consentimento), de modo que um reload retome no passo
-        // exato. O adapter debounce+coalesce; o flush no pagehide fecha a janela.
+        // (granularidade/áudio/consentimento/voz), de modo que um reload retome no
+        // passo exato. O adapter debounce+coalesce; o flush no pagehide fecha a janela.
         sessionStore.getState().setAutosave((live) => {
-          appSessionStore().autosave(routeId, toSessionDto(live, meta));
+          const m = metaRef.current;
+          if (m) appSessionStore().autosave(routeId, toSessionDto(live, m));
         });
       } catch {
         // sessão sem estado salvo ou persistência corrompida — mantém o ui/state atual
@@ -204,7 +215,7 @@ function useSessionHydration(routeId: string | null): void {
     return () => {
       alive = false;
     };
-  }, [routeId]);
+  }, [routeId, metaRef]);
 }
 
 /**
@@ -276,9 +287,27 @@ export function App() {
   const lock = useSessionStore((s) => s.lock);
 
   const routeId = route.name === 'session' ? route.id : null;
-  useSessionHydration(routeId);
+  const metaRef = useRef<SessionMeta | null>(null);
+  useSessionHydration(routeId, metaRef);
   useAutosaveFlush(routeId);
   const player = useSessionPlayer(routeId);
+
+  // Registra o caminho canônico de uma resposta de voz recém-gravada no `meta.voice`
+  // desta sessão e persiste JÁ (autosave + flush): a voz é uma ação discreta e entrar
+  // no Export não dispara flush, então esperar o debounce arriscaria o relatório sair
+  // com "sem resposta" (§8.7/§10.4, ENG-276). Fora de uma sessão viva/hidratada é no-op.
+  const onVoiceSaved = useCallback(
+    (path: string) => {
+      const meta = metaRef.current;
+      const live = sessionStore.getState().session;
+      if (!meta || !live || routeId === null) return;
+      if (!meta.voice.includes(path)) meta.voice = [...meta.voice, path];
+      const store = appSessionStore();
+      store.autosave(routeId, toSessionDto(live, meta));
+      void store.flush(routeId);
+    },
+    [routeId],
+  );
 
   const registry = useMemo(() => buildStationRegistry(), []);
   const recorder = useMemo<VoiceRecorder | null>(() => {
@@ -305,6 +334,7 @@ export function App() {
           exportStore={appSessionStore()}
           player={player}
           recorder={recorder}
+          onVoiceSaved={onVoiceSaved}
         />
       );
     }
