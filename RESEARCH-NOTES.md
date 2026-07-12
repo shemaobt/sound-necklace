@@ -1450,9 +1450,9 @@ metade-fluxo do critério 4: o ouvinte opera por som + forma + posição, sem le
      handler nativo de pointer — mas isso não é DOM-observável.)
   2. **Mapeamento não tem colar** (usa `ConversationStage`) → sem conta, sem `data-play`; o ▶ "ouvir a história/cena/frase"
      toca mas não muda o DOM (o rótulo é estático, não vira ⏸). Logo o som da pergunta tocada não é observável.
-  → Asserto ordering onde É observável e não há texto competindo: transporte + toque de conta (Escuta 1), toque-INÍCIO
-    de frase (Segmentação, antes do 2º toque que traz o confirm), e o nudge de borda (Escuta 2). Onde não é observável,
-    provo por sinal não-textual do controle + avanço in-station. Documentado no cabeçalho do spec.
+     → Asserto ordering onde É observável e não há texto competindo: transporte + toque de conta (Escuta 1), toque-INÍCIO
+     de frase (Segmentação, antes do 2º toque que traz o confirm), e o nudge de borda (Escuta 2). Onde não é observável,
+     provo por sinal não-textual do controle + avanço in-station. Documentado no cabeçalho do spec.
 - **Pontos de decisão úteis:** só o TOQUE-INÍCIO (1º clique) dá som sem texto (o `anchor`/confirm só aparece quando a
   seleção fecha — `activeAnchor`). O nudge de borda (`onEdgeHover`→`playEdge`) precisa de seleção VIVA + `pointermove`
   mouse com dwell > 280ms: `mouse.move` p/ fora da borda e de volta ao centro da conta-borda agenda o timer; `playEdge`
