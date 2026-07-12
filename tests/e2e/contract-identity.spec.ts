@@ -23,16 +23,6 @@ import { ColarApp } from './support';
  * corrigir aqui (Out of scope).
  */
 
-/**
- * `ColarApp.createSession` infere o tipo do parâmetro do seu default
- * (`SCENARIO.audioFilename`), estreitando-o ao literal do fixture da ENG-252. Os casos
- * golden usam outros áudios do bucket; como a camada de suporte é read-only, alarga o
- * tipo com um cast (follow-up: dar a `createSession` uma assinatura `string`).
- */
-function openSession(app: ColarApp, filename: string): Promise<string> {
-  return app.createSession(filename as never);
-}
-
 /** tests/golden/expected/<caso>/<arquivo> — resolvido a partir deste spec, sem cwd. */
 const GOLDEN_DIR = fileURLToPath(new URL('../golden/expected', import.meta.url));
 function goldenBytes(caseName: string, file: string): Buffer {
@@ -97,7 +87,7 @@ test('minimal-flow: os três artefatos exportados pela UI são byte-idênticos a
 
   await app.login();
   // sem título → slug = nome do arquivo sem extensão; granularidade Média → beadSec 0.5.
-  await openSession(app, 'fluxo-minimo.wav');
+  await app.createSession('fluxo-minimo.wav');
 
   await app.confirmWholeStory();
   await app.cutScenes([9, 23]); // PT1 0–9, PT2 10–23
@@ -141,7 +131,7 @@ test('seam-small-move: manifesto+retorno exportados pela UI são byte-idênticos
   const slug = 'costura-pequena';
 
   await app.login();
-  await openSession(app, 'costura-pequena.wav');
+  await app.createSession('costura-pequena.wav');
 
   await app.confirmWholeStory();
   await app.cutScenes([11, 23]); // PT1 0–11, PT2 12–23

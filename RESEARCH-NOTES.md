@@ -1525,3 +1525,14 @@ quando o dashboard também assina). Ceilings deixados de fora (não bloqueiam o 
 `DEFAULT_FIXTURE_USER` re-derivada na UI quebrará quando o ENG-247 fiar o usuário logado real — ideal expor um
 "is-mine" no store; e o `isOnline()` estático da fixture sombreia `navigator.onLine` num load-já-offline (só
 transições pós-mount contam). GOTCHA p/ o autor do ENG-257: `expireAuth()` é no-op sem token → logar pela UI antes.
+
+## ENG-274 · alargar `ColarApp.createSession` para `string` (support E2E)
+
+Dívida de tipo herdada da ENG-253: um parâmetro com valor default e SEM anotação faz o TS
+inferir o **tipo do literal do default** (`'conto-do-boto.wav'`), não `string`. Qualquer caller
+passando outro nome ficava `Argument of type '"x.wav"' is not assignable to '"conto-do-boto.wav"'`.
+Correção de raiz de 1 caractere: anotar `audioFilename: string = SCENARIO.audioFilename`. Preferi
+`string` cru à união dos nomes de fixture — a união não agrega segurança real (os arquivos vivem no
+bucket fixture, não no tipo) e viraria manutenção a cada áudio novo. O teste do alargamento é a
+própria remoção do cast `as never` no consumidor: se o tipo não alargasse, o `pnpm typecheck` do
+`contract-identity.spec.ts` quebraria. Desbloqueia E6 255–258 dirigirem outros áudios sem cast.
