@@ -1594,3 +1594,42 @@ pré-queda (as cenas não sumiram nem mudaram). Um seam-move mexeria em `parts`,
 mostra a Triagem (`Essa cena é sobre o quê?`) e `readPersistedState` deep-equal ao pré-expiração.
 scene_kind persistido é a chave EN (`APPEAL_SCENE`), não o rótulo PT `Apelo` (SK_PT é display-only) —
 por isso `taggedScenes` conta por `tag_state==='tagged'`, não pelo kind.
+
+## ENG-256 — acceptance-5 interview completeness (E2E: todas as perguntas, cada resposta chaveada)
+
+Prova o §3.5/§8.7/§10.4: a conversa faz 100% das perguntas do roteiro na ordem/texto exatos e cada
+resposta (voz ou digitada) aterrissa sob a chave certa E no relatório. Test-only (`tests/e2e/
+interview-completeness.spec.ts`), dirige o app real em fixture. Dependia da ENG-276 (persistir voz em
+`meta.voice`) — peguei a issue em **Blocked** porque a marcaram assim às 23:30 quando a 276 ainda não
+mergeara; a 276 fechou (`fc739c2`) → único blocker resolvido → trabalhável (mesmo precedente da ENG-257).
+
+**O e2e pode importar `domain`:** o depcruise só restringe a direção FROM domain/contracts/adapters/ui;
+`tests → domain` é permitido (contract-identity já importa `../../contracts`). Importei `questionSequence`,
+`voiceAnswerPath`, `L1_Q/L2_Q/L3_Q` do domínio para computar a expectativa DRY em vez de duplicar 41
+strings de contrato. `pnpm depcruise` varre `tests` (352 módulos) e passou.
+
+**Estrutura de 41 (11 N1 + 5×3 N2 + 5×3 N3):** 3 cenas travadas (2 classificadas + 1 none_fit) e 3
+frases nas 2 produtivas — 2 na PT1 (`{0,1}`,`{2,3}`), 1 na PT2 (`{4,5}`). Duas frases na MESMA cena
+funcionam porque `lockFrase` (domain/phrases.ts) ao travar procura o próximo slot destravado e, não
+achando, faz `addFrase` → a âncora reaparece; `frontier` da camada de frases vira `maxEnd+1` (a 2ª frase
+começa em 2). none_fit entra em `lockedParts` (N2, 5 perguntas) mas NÃO em `productiveScenes` (sem N3).
+
+**Walk = asserção:** `expect(.cds-question-card-text).toHaveText(EXPECTED_WORDINGS[i])` faz DUPLO papel —
+auto-espera o remount (a tela remonta por `key={path}`, o clique do Playwright não espera o commit do
+React) E prova ordem+enunciado exatos. `EXPECTED_WORDINGS` é estrutural (11 + 3×L2 + 3×L3); ao fim,
+`questionSequence(state).map(q=>q.q)` deve == `EXPECTED_WORDINGS`, fechando "DOM == domínio".
+
+**Estado/artefato persistidos:** `.state` no localStorage é o `SessionStateDto` (superset de `SessionState`
+
+- `voice[]` do meta) — tipei como `SessionState & { voice: string[] }` (senão `state.voice` não tipa em
+  `SessionState`) e passo direto a `questionSequence` (só lê parts/frases). O `.md` exportado é
+  `sessions[id].artifacts.relatorio` guardado no `complete` (§10.5) — leio dali (como dashboard-retrieval),
+  sem precisar baixar. Mix determinístico `i%4`: só-voz/só-texto/ambas/nenhuma. Célula do `.md` = texto >
+  caminho de voz > `_(sem resposta)_`; em "ambas" o texto vence → o caminho fica AUSENTE do `.md` (asserção
+  `not.toContain`), mesmo estando em `state.voice`. Contagens: 21 caminhos de voz, 20 textos, 10 sem-resposta.
+
+**CEILING (ponytail, fora do Scope):** a prévia do relatório dentro do Mapeamento renderiza
+`<RelatorioStation/>` SEM `recorder` (a ENG-276 fiou só o `.md`/Export) → na TELA, respostas só-voz não
+acendem a linha de voz (`recorder.has` async não roda). A asserção de voz vive no `.md` (autoritativo); a
+tela cobre só estrutura (41 cards, 3 seções). Fiar `recorder` na prévia seria mudança de app → follow-up.
+Gates: e2e 10/10 (estável 3×), typecheck, lint (0 err/3 warns pré-existentes), depcruise 352, golden 18/18.
