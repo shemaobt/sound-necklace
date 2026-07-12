@@ -40,6 +40,24 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
     },
     pcm: { seed: 101, sampleRate: 8000, samples: 24000, channels: 1 },
   },
+  // Áudio dedicado do roteiro E2E (tests/e2e/support/app.ts SCENARIO): 6 s a 8 kHz →
+  // Média (25 frames × 20 ms = 0.5 s) resolve para uma grade de 12 contas (índices
+  // 0–11), a grade que o ColarApp roteiriza. Separado do `conto-do-boto` (3 s) para
+  // não acoplar a duração do roteiro àquele áudio, que outros testes reutilizam.
+  {
+    audio: {
+      id: 'aud_roteiro_e2e',
+      filename: 'jornada-do-boto.wav',
+      duration_sec: 6,
+      consent_present: true,
+      acousteme: {
+        version: 1,
+        hop_sec: 0.02,
+        granularity_frames: { small: 10, medium: 25, large: 50 },
+      },
+    },
+    pcm: { seed: 606, sampleRate: 8000, samples: 48000, channels: 1 },
+  },
   {
     audio: {
       id: 'aud_vitoria_regia',
