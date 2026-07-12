@@ -1391,3 +1391,40 @@ glob()[...]; <X/>`) reprova o lint. Como o `import.meta.glob` é eager+estático
   - **Gotcha de tipo (afeta TODO o E6 255–258):** `ColarApp.createSession(audioFilename=SCENARIO.audioFilename)` infere
     o parâmetro como o LITERAL `'conto-do-boto.wav'` (do default) → não aceita outros áudios. Support é read-only →
     helper local `openSession(app,name)=app.createSession(name as never)`. Follow-up: dar a `createSession` assinatura `string`.
+
+## ENG-275 — shell: fiar o Player de áudio no fluxo de estações (contas/bordas tocam)
+
+Escopo: `ui/app/` só (`App.tsx` + novo `audio-player.ts`). Análogo de áudio da ENG-270 (que tornou a Export
+alcançável). **Antes:** o seam de áudio estava DORMENTE — `App.tsx` só tinha um stub no-op `useMemo<Player>(()=>({stop(){}}))`
+(tipo do player-slot, não o `Player` de áudio) e `stationProps` nunca passava `player` → toda estação do colar
+rodava com `player=null`, muda. Desbloqueia ENG-255 (acceptance-4 oral-mode).
+
+- **De onde vem o player.** O `SessionMeta.bucketAudioId` (persistido no DTO) + `state.beadSec` (travado na sessão)
+  bastam. `buildSessionPlayer(sessionId)` = `appSessionStore().load` → `fromSessionDto` → `new FixtureBucketSource().fetchBytes(meta.bucketAudioId)`
+  → `FixtureAudioEngine.decode` → `engine.createPlayer(decoded, state.beadSec)`. Decisão da issue: **re-decodificar do
+  bucket na hidratação** (não guardar PCM na sessão). Faz um 2º `load` do DTO (o 1º é da `useSessionHydration`) — barato
+  no fixture. O `pcm` do fixture é ignorado pelo `createPlayer` (o core só lê `decoded.duration`), mas re-decodificar
+  mantém o fluxo fiel ao real.
+- **CRUX — engine fixture, NÃO o real.** O bucket fixture serve o áudio como JSON de `PcmSpec` (não WAV), que só o
+  `FixtureAudioEngine` decodifica; o `WebAudioEngine.decode` lançaria `AudioDecodeError` nesses bytes. Então a nota da
+  issue "usar o WebAudioEngine real no browser" NÃO se aplica em modo fixture (o toggle real por ambiente é ENG-247).
+  Escolhida a **outra** opção oferecida: **ponte rAF→`advance`** no `FixtureTransport`. `startClockBridge(transport)`:
+  `requestAnimationFrame` com delta real entre frames → `transport.advance(dt)`. O relógio do fixture só anda em
+  `advance()`; sem a ponte, `onHead`/`data-play` ficariam congelados mesmo com player fiado. Sob Playwright/Chromium o
+  rAF tica de verdade → playback e cabeça progridem. `stop()` cancela a ponte + `player.stop()`.
+- **Fiação em `App.tsx`.** Hook `useSessionPlayer(routeId)` (constrói async; reconstrói ao trocar de sessão; cleanup
+  para+cancela; sessão sem áudio resolvível → `null` dormente, catch silencioso — estações lidam com `player=null`).
+  `SessionStations` passa `stationProps` = `{player}` p/ escuta1/escuta2/triagem/segmentacao, `{recorder,player}` p/
+  mapeamento (export segue `{store,sessionId}`), e `player ?? NO_PLAYBACK` ao `PlayerSlotProvider` (trocar de estação
+  chama `player.stop()` → para o áudio, espelho de `setMode`→`stopPlayback`).
+- **Teste determinístico do `data-play` em jsdom** (sem geometria): o ▶ do `ScenePhraseChip` (aria-label **"Tocar"**) é
+  gatilho sem layout; `data-play` é escrito imperativo por `querySelectorAll('.cds-necklace-bead')` (roda em jsdom, os
+  elementos de conta existem sem posição). Espião de `requestAnimationFrame` captura os frames da ponte e os flusha à mão
+  com timestamps controlados dentro de `act()`: baseline `frames[0](0)` + `frames[1](100)` → `advance(0.1)` → o frame de
+  progresso do fixture emite `beadAtTime` → `setHead` → colar acende `data-play`. React 19 usa MessageChannel (não rAF)
+  → o espião só captura a ponte. Grade do teste casa `aud_conto_do_boto` (3 s / media 0,25 → 12 contas).
+- **Compat com testes existentes:** os App.tests usam `bucketAudioId:'a1'` (não existe no bucket fixture) → `fetchBytes`
+  lança → `buildSessionPlayer` rejeita → player fica `null` (mesmo comportamento de antes, gates verdes). A ponte só
+  arranca APÓS decode OK, então sessão inválida não vaza rAF.
+- Gates: typecheck, lint (0 err, 3 warns de complexity pré-existentes), depcruise (344 mód, fronteiras intactas),
+  test (921 pass/2 skip), test:browser (19), golden (18/18), e2e (4/4 — a fiação não quebra as specs 252/253/254).
