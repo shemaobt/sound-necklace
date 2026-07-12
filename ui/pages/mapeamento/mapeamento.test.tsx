@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -213,6 +213,40 @@ describe('Mapeamento — resposta por voz e canal digitado (PRD v2 §8.7, §10.4
     const answer = sessionStore.getState().session!.mapping!.level1.recontar;
     expect(answer).toBe('era uma vez');
     expect(await recorder.has(path)).toBe(true);
+  });
+
+  it('parar avisa o shell (onVoiceSaved) com o caminho canônico da pergunta', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    const onVoiceSaved = vi.fn();
+    load(mapping());
+    render(<Mapeamento recorder={recorder} onVoiceSaved={onVoiceSaved} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    expect(onVoiceSaved).toHaveBeenCalledWith('respostas/level1/recontar.webm');
+  });
+
+  it('parar após desmontar (navegar no meio do await) NÃO avisa o shell — sem contaminar outra sessão', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    const startSpy = vi.spyOn(recorder, 'start');
+    const onVoiceSaved = vi.fn();
+    load(mapping());
+    const { unmount } = render(<Mapeamento recorder={recorder} onVoiceSaved={onVoiceSaved} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    const rec = await startSpy.mock.results[0]!.value;
+    // segura o stop() pendente: o await de onStop fica suspenso até resolvermos
+    let resolveStop!: (v: { blob: Blob; durationSec: number }) => void;
+    vi.spyOn(rec, 'stop').mockImplementation(
+      () => new Promise((r) => (resolveStop = r as typeof resolveStop)),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    // navega/desmonta ANTES de o stop resolver (troca de sessão no app real)
+    unmount();
+    await act(async () => resolveStop({ blob: new Blob(), durationSec: 0 }));
+
+    expect(onVoiceSaved).not.toHaveBeenCalled();
   });
 
   it('navegar durante a gravação cancela a gravação em curso (libera o microfone)', async () => {

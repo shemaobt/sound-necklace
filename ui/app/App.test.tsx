@@ -287,6 +287,65 @@ describe('App shell', () => {
     expect(await screen.findByText('Parar')).toBeDefined();
   });
 
+  it('persiste o caminho da resposta de voz em meta.voice → o relatório exportado a referencia', async () => {
+    // Gravar voz no Mapeamento (§8.7) deve entrar no `meta.voice` da sessão persistida,
+    // de modo que o Export/relatório reflita a resposta como caminho `respostas/…` em vez
+    // de "sem resposta" (ENG-276). O gravador em si já funciona; o que faltava era o shell
+    // fiar o caminho salvo de volta ao DTO.
+    const store = appSessionStore();
+    const summary = await store.create({
+      projectId: 'p1',
+      storyName: 'H',
+      storySlug: 'h',
+      audioId: 'a1',
+      granularityLevel: 'media',
+      beadSec: 0.25,
+      manifestId: 'fnv1a32:deadbeef',
+      pipelineConsent: true,
+    });
+    store.autosave(
+      summary.id,
+      toSessionDto(completableSession(), {
+        granularityLevel: 'media',
+        bucketAudioId: 'a1',
+        voice: [],
+        pipelineConsent: true,
+      }),
+    );
+    await store.flush(summary.id);
+
+    act(() => navigate(`/session/${summary.id}`));
+    render(<App />);
+
+    // grava a resposta de voz da primeira pergunta (L1 "recontar")
+    const mic = await screen.findByRole('button', { name: 'gravar a resposta' });
+    await act(async () => {
+      mic.click();
+    });
+    const stop = await screen.findByText('Parar');
+    await act(async () => {
+      stop.click();
+    });
+
+    // o caminho canônico foi persistido no meta.voice da sessão
+    await waitFor(async () => {
+      expect((await store.load(summary.id)).voice).toContain('respostas/level1/recontar.webm');
+    });
+
+    // e o relatório concluído a referencia como caminho de voz (não "sem resposta")
+    await act(async () => {
+      screen.getByText('Guardar').click();
+    });
+    const concluir = await screen.findByRole('button', {
+      name: 'Concluir e guardar os documentos',
+    });
+    await act(async () => {
+      concluir.click();
+    });
+    const artifacts = await store.getArtifacts(summary.id);
+    expect(artifacts.relatorio).toContain('respostas/level1/recontar.webm');
+  });
+
   it('fia o player de áudio: tocar a cena acende a cabeça de reprodução no colar', async () => {
     // O shell re-decodifica o áudio do bucket da sessão e injeta o player na estação
     // ativa; a ponte de relógio (rAF→advance) é dirigida aqui de forma determinística.
