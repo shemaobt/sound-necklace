@@ -1536,3 +1536,61 @@ Correção de raiz de 1 caractere: anotar `audioFilename: string = SCENARIO.audi
 bucket fixture, não no tipo) e viraria manutenção a cada áudio novo. O teste do alargamento é a
 própria remoção do cast `as never` no consumidor: se o tipo não alargasse, o `pnpm typecheck` do
 `contract-identity.spec.ts` quebraria. Desbloqueia E6 255–258 dirigirem outros áudios sem cast.
+
+## ENG-257 — acceptance-6 resiliência (E2E: queda / expiração / trava)
+
+Verificado 2026-07-12. Test-only: um spec novo `tests/e2e/resilience.spec.ts` (3 testes),
+reusando o page object `ColarApp` + `readPersistedState` da ENG-252 e os seams da ENG-277.
+Nenhuma mudança de app. Gates: e2e 8/8, typecheck, lint (0 err/3 warns pré-existentes),
+depcruise 349, golden 18/18.
+
+**Os 3 gatilhos e como dirigi-los pela UI real (fixture):**
+
+- OFFLINE — `page.context().setOffline(true/false)`. No Chromium a emulação de rede dispara os
+  eventos `online`/`offline` da window, que o `useOnline` (App.tsx) reflete no gate. NÃO precisa
+  do seam. O aviso PT-BR é `/Sem conexão/` (organismo `connection-gate`), e a cobertura sela a
+  edição via `.cds-connection-gate[data-offline="true"]`.
+- EXPIRAÇÃO — `window.__cds.expireAuth()` (seam DEV-only, ui/app/test-seam.ts → `appAuth().simulateExpiry()`).
+  Requer estar logado (o `ColarApp.login` já dá token ao `appAuth()` singleton via `defaultAuth`→`appAuth`).
+  O `useAuthExpiry` roteia a `/login` com `replace`. **CRUX:** o seam só existe sob `import.meta.env.DEV`,
+  e o webServer E2E roda `vite` dev → `DEV` true → `window.__cds` instalado. Em build de produção some.
+- TRAVA — `window.__cds.seedForeignLock(id)` cria um 2º `FixtureSessionStore` sobre `appSessionBackend()`
+  como "Ana" e chama `acquireLock`. **CRUX:** `acquireLock` chama `#backend.persist()` → a trava vai ao
+  localStorage; logo `page.reload()` re-hidrata o backend COM a trava, e o `useSessionHydration` lê
+  `lockStatus` (holder ≠ `DEFAULT_FIXTURE_USER`) → banner "🔒 Modo de revisão — sessão em uso por Ana."
+  O app NÃO adquire trava própria, então não sobrescreve a de Ana.
+
+**Gotchas de asserção (2 falsos-negativos corrigidos na 1ª rodada):**
+
+- "sem controle de confirmar" é **errado** como prova de bloqueio: tanto Escuta 2 (`✓ Confirmar esta cena`)
+  quanto Segmentação (`✓ Confirmar esta frase`) renderizam o botão SEMPRE que há âncora ativa
+  (`activeAnchor(session)`), que existe por padrão — o botão não depende do clique. A prova real de
+  review/offline é comportamental: acionar a confirmação e afirmar que **nenhum colar de contas nasce**
+  (`.cds-escuta2-chips li` / `.cds-segmentacao-chips li` count 0) + estado persistido inalterado
+  (`toEqual(before)`). `apply` é no-op quando `!canEdit` (= `online && !review && lock===null`), então
+  a mutação não aterrissa.
+- OFFLINE o overlay (`z-index:2`) intercepta o ponteiro → o clique no botão de confirmar precisa de
+  `.click({ force: true })` para atravessar a cobertura e exercitar o guard do store (senão o Playwright
+  falha por actionability). Os cliques de conta do `ColarApp.clickBead` já usam `force`.
+
+**Playback continua offline (DoD "already-loaded playback still works"):** a iluminação `data-play` é
+CUMULATIVA (necklace.tsx: `idx<head`="played", `idx===head`="head", `idx>head` limpa), então
+`.cds-necklace-bead[data-play].first()` fica SEMPRE na conta 0 → inútil p/ provar avanço. Pior: afirmar que
+"uma conta segue acesa" após o offline NÃO prova continuação — um playhead CONGELADO deixaria o atributo
+igualzinho (imperativo, sem re-render que o limpe). A prova honesta é o **avanço do playhead**: rastreia a
+conta `[data-play="head"]`, captura o índice ONLINE logo após o play (`head≈0`), cai offline, e faz
+`expect.poll(headIndex).toBeGreaterThan(startHead)`. O clock bridge é rAF→`advance` (ENG-275) e o rAF tica
+offline (o gate só pausa mutações do store, não derruba o player) → o head progride 0→1→2→3 no clipe de ~1 s;
+o poll pega head≥1 (~0,25 s) com folga. Quando o clipe acaba, `emit(null)` limpa tudo (head→−1), então a
+asserção precisa mirar o avanço CEDO, não o estado aceso no fim. (Confirmado por auto-review + higiene de
+testes: a versão "conta acesa" era falso-negativo em potencial e não distinguia tocando de congelado.)
+
+**Zero-perda no reconecta:** escolhida a frase 0–3 (contida na 1ª cena, sem cruzar borda) → depois de
+voltar online, confirma-a e afirma `frases.length ≥ 1` (trabalho novo aterrissou) + `parts` deep-equal ao
+pré-queda (as cenas não sumiram nem mudaram). Um seam-move mexeria em `parts`, quebrando o deep-equal.
+
+**Re-login retoma no mesmo passo:** tudo in-SPA — expira → `/login` → preenche + Entrar → `/dashboard`
+("Minhas sessões") → botão `Retomar` do card lista a sessão persistida → `/session/:id` → hidratador
+mostra a Triagem (`Essa cena é sobre o quê?`) e `readPersistedState` deep-equal ao pré-expiração.
+scene_kind persistido é a chave EN (`APPEAL_SCENE`), não o rótulo PT `Apelo` (SK_PT é display-only) —
+por isso `taggedScenes` conta por `tag_state==='tagged'`, não pelo kind.
