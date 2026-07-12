@@ -1468,3 +1468,60 @@ metade-fluxo do critério 4: o ouvinte opera por som + forma + posição, sem le
   carregam `data-role="instruction"`/`"primary-action"` — asserções leves inline.
 - Gates: e2e 5/5 (as 4 specs prévias intactas), typecheck limpo, lint 0 err (3 warns complexity pré-existentes),
   depcruise 345 mód sem violação, golden 18/18. Roda em ~5s. `loop-ready` (só tests/) → merge on green.
+
+## ENG-277 — shell: fiar os seams de resiliência na sessão viva (offline/expiração/trava)
+
+Contexto: análogo de resiliência do ENG-275 (player) e ENG-276 (voz→relatório) — o shell só fiava um
+subconjunto dos seams de adapter. Os três comportamentos de §7.3/§13 existiam nos adapters mas não estavam
+ligados ao runtime da sessão nem eram dirigíveis de um teste. Desbloqueia a acceptance-6 (ENG-257). Scope:
+`ui/app/**`, `ui/pages/dashboard/ports.ts` (sem contracts/domain).
+
+Os três gaps e como cada um ficou dirigível de um teste (sem mudar o app no ENG-257):
+
+- **A — Offline.** `useOnline` (App.tsx) agora, ALÉM da assinatura da porta `connectivity`, ouve os eventos
+  `online`/`offline` da window (com cleanup no teardown do efeito). É o que o Playwright dirige por
+  `context.setOffline` — cair offline mostra o gate e pausa mutações (`sessionStore.setOnline`); voltar retoma
+  sem perda. **DECISÃO:** NÃO mexi na fixture (`FixtureConnectivityMonitor`) nem em `register.ts` — a ponte
+  window→estado no composition root É o "small dev/test connectivity hook" que a issue permitia, e evita o
+  vazamento de listeners que o binding-no-construtor da fixture teria (a fixture é construída direto pelo
+  autosaver `new FixtureConnectivityMonitor(true)`, sem cleanup). Menos arquivos, sem efeito colateral.
+- **B — Expiração de auth.** Novo singleton app-global `appAuth()` em `ui/app/auth-adapter.ts` (um
+  `FixtureAuthProvider` memoizado). `App` assina `appAuth().onAuthExpired(() => navigate('/login'))` num hook
+  `useAuthExpiry`, então expirar em QUALQUER rota (inclusive `/session/:id`) volta ao login sem tocar o estado
+  em memória. `dashboard/ports.ts` `defaultAuth()` agora DELEGA a `appAuth()` (antes construía o seu próprio
+  provider) → Login, Dashboard e a raiz de sessão partilham UMA instância, então um único gatilho de expiração
+  alcança toda superfície. O dashboard mantém sua própria assinatura também (inócuo — ambos só navegam a /login).
+  **GOTCHA:** `FixtureAuthProvider.simulateExpiry()` é no-op se não há token (`if (!this.#token) return`) — o
+  teste (e o ENG-257) precisa `login()` antes de expirar. `appAuth()` retorna o tipo concreto
+  `FixtureAuthProvider` (não a interface) porque `simulateExpiry` não está na interface `AuthProvider`.
+- **C — Trava consultiva.** `useSessionHydration` (App.tsx), após `load()`, lê `appSessionStore().lockStatus(id)`
+  e, se detida por holder com `user_id` ≠ `DEFAULT_FIXTURE_USER.user_id`, chama `sessionStore.setLock({holder:
+display_name})` → abre em revisão com "sessão em uso por <nome>". **CEILING (comentário ponytail):** este fluxo
+  NÃO adquire trava própria, então qualquer trava presente por user distinto do default é tratada como alheia.
+
+Seam de teste dev-only (`ui/app/test-seam.ts`, `window.__cds`): dois gatilhos SEM caminho natural de UI nem
+localStorage — `expireAuth()` (→ `simulateExpiry`) e `seedForeignLock(sessionId, holder?)` (constrói um 2º
+`FixtureSessionStore` sobre o MESMO backend como outro usuário "Ana" e `acquireLock`). Instalado só em DEV por
+`main.tsx` (`if (import.meta.env.DEV) void import('./test-seam').then(m => m.installTestSeam())`) → fora do bundle
+de produção. O e2e roda em Vite DEV (playwright.config webServer = `vite`), então DEV é true lá. Offline NÃO
+precisa de seam (context.setOffline). Para expor o backend ao seam, `session-adapter.ts` ganhou
+`appSessionBackend()` (singleton `FixtureSessionBackend` sobre o qual `appSessionStore()` é construído) — dois
+contextos de Playwright têm localStorage separado, então a trava alheia precisa de seeding no MESMO backend.
+
+Testes (jsdom, App.test.tsx + test-seam.test.ts): offline dispara `window.dispatchEvent(new Event('offline'/'online'))`
+e assere banner + `apply` no-op + retomada; expiração faz `appAuth().login()` então `simulateExpiry()` e assere
+`location.pathname==='/login'` + sessão preservada; trava semeia via 2ª store sobre `appSessionBackend()` e assere
+"em uso por Ana" + ausência de "Destravar". Gates: typecheck, lint 0 err (3 warns pré-existentes), depcruise 348
+sem violação, test 926/2skip, golden 18/18, browser 19/19, e2e 5/5. `loop-ready` → merge on green.
+
+**BUG pego no self-review (nori-code-reviewer) antes do merge — vazamento de trava:** `lock`/`review` são
+POR SESSÃO mas o `sessionStore` é singleton e `load()` NÃO os reseta; o ramo da trava só SETAVA, nunca limpava.
+Trocar in-SPA (voltar ao dashboard e abrir outra sessão, sem reload) de uma sessão travada por outro para uma
+saudável deixava a segunda presa no chrome "em uso por Ana". CORREÇÃO DE RAIZ na hidratação: a cada (re)carga,
+`setReview(false)` + `setLock(foreignHolder ? {holder} : null)` — estabelece o estado do zero (teste que falha
+primeiro em App.test.tsx: navega travada→saudável e assere que o aviso some). Também apliquei `navigate('/login',
+{replace:true})` na expiração (não se volta a uma sessão de auth caduca; reduz a entrada duplicada de histórico
+quando o dashboard também assina). Ceilings deixados de fora (não bloqueiam o MVP): comparação da trava ao
+`DEFAULT_FIXTURE_USER` re-derivada na UI quebrará quando o ENG-247 fiar o usuário logado real — ideal expor um
+"is-mine" no store; e o `isOnline()` estático da fixture sombreia `navigator.onLine` num load-já-offline (só
+transições pós-mount contam). GOTCHA p/ o autor do ENG-257: `expireAuth()` é no-op sem token → logar pela UI antes.

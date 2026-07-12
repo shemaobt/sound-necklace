@@ -12,13 +12,13 @@
  * produção, então ficam sem cobertura de teste de propósito.
  */
 
-import { FixtureAuthProvider, type AuthProvider } from '../../../adapters/api';
+import type { AuthProvider } from '../../../adapters/api';
 import type { SessionStore } from '../../../adapters/sessions';
+import { appAuth } from '../../app/auth-adapter';
 import { appSessionStore } from '../../app/session-adapter';
 
-let auth: AuthProvider | undefined;
 export function defaultAuth(): AuthProvider {
-  return (auth ??= new FixtureAuthProvider());
+  return appAuth();
 }
 
 export function defaultSessionStore(): SessionStore {

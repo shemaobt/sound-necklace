@@ -1,12 +1,42 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { FixtureSessionStore } from '../../adapters/sessions';
 import { fromSessionDto, toSessionDto } from '../../contracts';
 import { buildBeads, createSession, type SessionState } from '../../domain';
 import { sessionStore } from '../state';
 import { App } from './App';
+import { appAuth } from './auth-adapter';
 import { navigate } from './router';
-import { appSessionStore } from './session-adapter';
+import { appSessionBackend, appSessionStore } from './session-adapter';
+
+const FILL = 'senha-fixture';
+
+/** Persiste uma sessão de corte com estado salvo no store app-global; devolve o id. */
+async function persistCuttingSession(): Promise<string> {
+  const store = appSessionStore();
+  const summary = await store.create({
+    projectId: 'p1',
+    storyName: 'H',
+    storySlug: 'h',
+    audioId: 'a1',
+    granularityLevel: 'media',
+    beadSec: 0.25,
+    manifestId: 'fnv1a32:deadbeef',
+    pipelineConsent: true,
+  });
+  store.autosave(
+    summary.id,
+    toSessionDto(cuttingWithLockedScene(), {
+      granularityLevel: 'media',
+      bucketAudioId: 'a1',
+      voice: [],
+      pipelineConsent: true,
+    }),
+  );
+  await store.flush(summary.id);
+  return summary.id;
+}
 
 function sampleSession(): SessionState {
   return createSession({
@@ -337,5 +367,88 @@ describe('App shell', () => {
       sessionStore.getState().load(sampleSession());
     });
     expect(screen.queryByText('A história está inteira no colar.')).toBeNull();
+  });
+});
+
+describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
+  it('cai offline pelos eventos da window: mostra o aviso e pausa as mutações; volta online sem perda', async () => {
+    await act(async () => {
+      navigate('/session/s1');
+      sessionStore.getState().load(sampleSession());
+    });
+    render(<App />);
+    expect(screen.queryByText(/Sem conexão/)).toBeNull();
+
+    // context.setOffline do Playwright dispara o evento 'offline' na window.
+    act(() => window.dispatchEvent(new Event('offline')));
+    expect(screen.getByText(/Sem conexão/)).toBeDefined();
+
+    // edição pausada: uma mutação não altera o estado (mas nada se perde).
+    const before = sessionStore.getState().session;
+    act(() => sessionStore.getState().apply((s) => ({ ...s, slug: 'x' })));
+    expect(sessionStore.getState().session).toBe(before);
+
+    // volta online: o aviso some e a edição retoma sobre o MESMO estado preservado.
+    act(() => window.dispatchEvent(new Event('online')));
+    expect(screen.queryByText(/Sem conexão/)).toBeNull();
+    act(() => sessionStore.getState().apply((s) => ({ ...s, slug: 'retomada' })));
+    expect(sessionStore.getState().session?.slug).toBe('retomada');
+  });
+
+  it('expira a auth dentro de /session/:id: volta ao login preservando o estado em memória', async () => {
+    // A facilitadora está logada (tem token); só então a expiração tem o que caducar.
+    await appAuth().login({ username: 'facilitadora', password: FILL });
+    await act(async () => {
+      navigate('/session/s1');
+      sessionStore.getState().load(sampleSession());
+    });
+    render(<App />);
+    expect(screen.getByText('Ouvir')).toBeDefined();
+
+    await act(async () => {
+      appAuth().simulateExpiry();
+    });
+
+    expect(window.location.pathname).toBe('/login');
+    // estado em memória intocado: o re-login retoma no mesmo passo.
+    expect(sessionStore.getState().session).not.toBeNull();
+  });
+
+  it('abre uma sessão travada por outra pessoa: mostra "em uso por" + chrome de revisão', async () => {
+    const id = await persistCuttingSession();
+    // outra facilitadora detém a trava no MESMO backend (dois usuários, um servidor).
+    const other = new FixtureSessionStore({
+      backend: appSessionBackend(),
+      user: { user_id: 'u-ana', display_name: 'Ana' },
+    });
+    await other.acquireLock(id);
+
+    act(() => navigate(`/session/${id}`));
+    render(<App />);
+
+    expect(await screen.findByText(/Modo de revisão — sessão em uso por Ana\./)).toBeDefined();
+    // a trava força a revisão: NÃO se oferece "Destravar para editar".
+    expect(screen.queryByRole('button', { name: 'Destravar para editar' })).toBeNull();
+  });
+
+  it('trocar de uma sessão travada para uma saudável NÃO vaza o chrome de trava', async () => {
+    const locked = await persistCuttingSession();
+    const other = new FixtureSessionStore({
+      backend: appSessionBackend(),
+      user: { user_id: 'u-ana', display_name: 'Ana' },
+    });
+    await other.acquireLock(locked);
+    const healthy = await persistCuttingSession();
+
+    act(() => navigate(`/session/${locked}`));
+    render(<App />);
+    expect(await screen.findByText(/em uso por Ana/)).toBeDefined();
+
+    // troca in-SPA (voltar ao dashboard e abrir outra sessão, sem reload): a trava
+    // da sessão anterior não pode persistir no store singleton para esta saudável.
+    act(() => navigate(`/session/${healthy}`));
+    await waitFor(() => {
+      expect(screen.queryByText(/em uso por Ana/)).toBeNull();
+    });
   });
 });
