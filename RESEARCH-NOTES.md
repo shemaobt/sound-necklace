@@ -1428,3 +1428,43 @@ rodava com `player=null`, muda. Desbloqueia ENG-255 (acceptance-4 oral-mode).
   arranca APÓS decode OK, então sessão inválida não vaza rAF.
 - Gates: typecheck, lint (0 err, 3 warns de complexity pré-existentes), depcruise (344 mód, fronteiras intactas),
   test (921 pass/2 skip), test:browser (19), golden (18/18), e2e (4/4 — a fiação não quebra as specs 252/253/254).
+
+## ENG-255 — acceptance-4 oral-mode FLUXO (E2E, spy de som/texto/chrome)
+
+Escopo: 1 spec novo `tests/e2e/oral-mode.spec.ts` (uso read-only do `support/`; ZERO mudança no app). Prova a
+metade-fluxo do critério 4: o ouvinte opera por som + forma + posição, sem ler nem tocar em chrome.
+
+- **Sonda por `page.addInitScript`** (`window.__oral`): um `MutationObserver` no `body` registra, em ordem, `sound`
+  (uma `.cds-necklace-bead` ganha `data-play`) e `text` (nó de texto novo com conteúdo, FORA de `.cds-necklace`);
+  listeners de captura em `click`/`focusin` logam qualquer alvo que caia em `.cds-header`/`.cds-stepper` enquanto
+  `chromeOn`. `reset()` limpa só os `events`. O init script roda no 1º documento (`goto('/login')`) e sobrevive à
+  navegação client-side do SPA (body persiste) — não há outro `page.goto` no caminho.
+- **`data-play` é o ÚNICO sinal de áudio DOM-observável.** Não há hook global no `FixtureAudioEngine`/player (criados
+  dentro de `buildSessionPlayer`, não expostos em window). O playhead acende via a ponte rAF da ENG-275 → sob
+  Playwright/Chromium o rAF tica e `data-play` aparece; em jsdom não (por isso é E2E, não browser-test).
+- **CRUX — "som antes de texto" NÃO é literalmente observável em todo ponto de decisão** (a issue super-especifica):
+  1. **Toque que COMPLETA seleção** (fim de cena na Escuta 2; fim de frase na Segmentação): o confirm renderiza
+     SÍNCRONO no `apply` do domínio, ANTES de o playhead visual acender (o `player.play()` roda depois do `apply`, e
+     `data-play` só acende no rAF seguinte). Logo `data-play` fica DEPOIS do texto do confirm → asserção de ordering
+     falharia ali. (Em CÓDIGO o áudio arranca antes do paint — a chamada `play()` precede o flush do React 18/19 do
+     handler nativo de pointer — mas isso não é DOM-observável.)
+  2. **Mapeamento não tem colar** (usa `ConversationStage`) → sem conta, sem `data-play`; o ▶ "ouvir a história/cena/frase"
+     toca mas não muda o DOM (o rótulo é estático, não vira ⏸). Logo o som da pergunta tocada não é observável.
+     → Asserto ordering onde É observável e não há texto competindo: transporte + toque de conta (Escuta 1), toque-INÍCIO
+     de frase (Segmentação, antes do 2º toque que traz o confirm), e o nudge de borda (Escuta 2). Onde não é observável,
+     provo por sinal não-textual do controle + avanço in-station. Documentado no cabeçalho do spec.
+- **Pontos de decisão úteis:** só o TOQUE-INÍCIO (1º clique) dá som sem texto (o `anchor`/confirm só aparece quando a
+  seleção fecha — `activeAnchor`). O nudge de borda (`onEdgeHover`→`playEdge`) precisa de seleção VIVA + `pointermove`
+  mouse com dwell > 280ms: `mouse.move` p/ fora da borda e de volta ao centro da conta-borda agenda o timer; `playEdge`
+  não toca `session.selection` → bandas `.cds-necklace-selection-band` idênticas antes/depois (DoD #2).
+- **Zero chrome:** as transições Escuta1→2→Triagem→Segmentação→Mapeamento→relatório são por MODO de domínio e por
+  "Próxima pergunta" (in-station) — o stepper (`.cds-stepper`) NUNCA é clicado no caminho do ouvinte; o `<li>` do stepper
+  é não-focável e o botão de som do header não é auto-focado, então o log de chrome fica `[]`. Habilito `chromeOn` só
+  quando a Escuta 1 assume (login+setup são da facilitadora, fora do caminho).
+- **Gotcha que me custou 1 timeout:** ao inlinar o corte de frase para injetar a asserção de som no toque-início, é
+  preciso clicar "✓ Confirmar esta frase" ANTES de `moveSeam()` — é o confirm (`confirmFrase`→`'border'`) que abre o
+  seam modal ("Mover a borda até aqui"), não o 2º toque.
+- **Sinal não-textual:** `Pearl` é `aria-hidden` sem texto (a conta é posição/cor pura); instrução e ação dominante
+  carregam `data-role="instruction"`/`"primary-action"` — asserções leves inline.
+- Gates: e2e 5/5 (as 4 specs prévias intactas), typecheck limpo, lint 0 err (3 warns complexity pré-existentes),
+  depcruise 345 mód sem violação, golden 18/18. Roda em ~5s. `loop-ready` (só tests/) → merge on green.
