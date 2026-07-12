@@ -34,7 +34,11 @@ const LIST_BODY = {
       filename: 'x.wav',
       duration_sec: 12.5,
       consent_present: true,
-      acousteme: { version: 1, data: { anything: 'opaque' } },
+      acousteme: {
+        version: 1,
+        hop_sec: 0.02,
+        granularity_frames: { small: 10, medium: 25, large: 50 },
+      },
     },
   ],
 };

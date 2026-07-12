@@ -5,4 +5,4 @@
  */
 
 export type { GranularityResolution, GranularityResolver } from './types';
-export { StubGranularityResolver } from './stub';
+export { AcoustemeGranularityResolver } from './resolver';

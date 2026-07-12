@@ -13,8 +13,8 @@
  * acousteme presente/nulo, além de mono e multicanal. Áudio 100% sintético — nunca
  * comitar voz real de comunidade aqui (LGPD, PRD §12).
  *
- * O conteúdo de `acousteme.data.bead_sec` é fixture-authored e PROVISÓRIO (a
- * semântica O8 está em aberto, §15.2): só o stub do GranularityResolver o lê.
+ * O `acousteme` carrega a grade uniforme do tokenizador (hop 20 ms, presets 10/25/50
+ * frames, §6.1/O8 — tripod-api PR #100); só o GranularityResolver o lê.
  */
 
 import type { BucketAudio } from '../../contracts';
@@ -32,9 +32,31 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
       filename: 'conto-do-boto.wav',
       duration_sec: 3,
       consent_present: true,
-      acousteme: { version: 1, data: { bead_sec: { pequena: 0.15, media: 0.25, grande: 0.5 } } },
+      acousteme: {
+        version: 1,
+        hop_sec: 0.02,
+        granularity_frames: { small: 10, medium: 25, large: 50 },
+      },
     },
     pcm: { seed: 101, sampleRate: 8000, samples: 24000, channels: 1 },
+  },
+  // Áudio dedicado do roteiro E2E (tests/e2e/support/app.ts SCENARIO): 6 s a 8 kHz →
+  // Média (25 frames × 20 ms = 0.5 s) resolve para uma grade de 12 contas (índices
+  // 0–11), a grade que o ColarApp roteiriza. Separado do `conto-do-boto` (3 s) para
+  // não acoplar a duração do roteiro àquele áudio, que outros testes reutilizam.
+  {
+    audio: {
+      id: 'aud_roteiro_e2e',
+      filename: 'jornada-do-boto.wav',
+      duration_sec: 6,
+      consent_present: true,
+      acousteme: {
+        version: 1,
+        hop_sec: 0.02,
+        granularity_frames: { small: 10, medium: 25, large: 50 },
+      },
+    },
+    pcm: { seed: 606, sampleRate: 8000, samples: 48000, channels: 1 },
   },
   {
     audio: {
@@ -42,7 +64,11 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
       filename: 'lenda-da-vitoria-regia.wav',
       duration_sec: 4,
       consent_present: true,
-      acousteme: { version: 1, data: { bead_sec: { pequena: 0.2, media: 0.3, grande: 0.6 } } },
+      acousteme: {
+        version: 1,
+        hop_sec: 0.02,
+        granularity_frames: { small: 10, medium: 25, large: 50 },
+      },
     },
     pcm: { seed: 202, sampleRate: 8000, samples: 32000, channels: 2 },
   },
@@ -58,16 +84,19 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
   },
   // Espelham os casos golden `minimal-flow` e `seam-small-move` (mesmo PcmSpec do
   // caso → mesmo manifest_id), para a ENG-253 dirigir a UI real e provar identidade
-  // byte a byte do export contra tests/golden/expected/*. O `media` do acousteme é
-  // 0.5 de propósito: a granularidade Média que o Setup seleciona resolve para o
-  // beadSec 0.5 dos casos (grade de 24 contas em 12 s).
+  // byte a byte do export contra tests/golden/expected/*. A granularidade Média (25
+  // frames × 20 ms) resolve para o beadSec 0.5 dos casos (grade de 24 contas em 12 s).
   {
     audio: {
       id: 'aud_fluxo_minimo',
       filename: 'fluxo-minimo.wav',
       duration_sec: 12,
       consent_present: true,
-      acousteme: { version: 1, data: { bead_sec: { pequena: 0.25, media: 0.5, grande: 1 } } },
+      acousteme: {
+        version: 1,
+        hop_sec: 0.02,
+        granularity_frames: { small: 10, medium: 25, large: 50 },
+      },
     },
     pcm: { seed: 12345, sampleRate: 8000, samples: 96000, channels: 1 },
   },
@@ -77,7 +106,11 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
       filename: 'costura-pequena.wav',
       duration_sec: 12,
       consent_present: true,
-      acousteme: { version: 1, data: { bead_sec: { pequena: 0.25, media: 0.5, grande: 1 } } },
+      acousteme: {
+        version: 1,
+        hop_sec: 0.02,
+        granularity_frames: { small: 10, medium: 25, large: 50 },
+      },
     },
     pcm: { seed: 404, sampleRate: 8000, samples: 96000, channels: 1 },
   },

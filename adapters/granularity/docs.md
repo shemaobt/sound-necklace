@@ -5,7 +5,7 @@ Path: @/adapters/granularity
 ### Overview
 
 - The `GranularityResolver` port (ENG-241, PRD §6.1 / §8.1): the facilitator picks a LEVEL (Pequena/Média/Grande) and the system resolves it to ONE uniform `beadSec`. The port exists so the app never invents the derivation rule — it only calls `resolve(level, acousteme)`.
-- Shipped as a **STUB** (`StubGranularityResolver`): the real acousteme→beadSec rule is open item **O8** (§15.2, owner: pipeline team) and lands in ENG-242. There is deliberately **no derivation math** here.
+- Implements the now-resolved **O8 rule** (§15.2 / §6.1, source: tripod-api PR #100 "acousteme artifact + consumption API", ENG-242): `beadSec = granularity_frames[level] × hop_sec`. The resolver only applies the envelope's own fields — it never invents the derivation.
 - Self-registers via `register.ts` under the `granularity` port, same shape as @/adapters/audio (see @/adapters/docs.md).
 
 ### How it fits into the larger codebase
@@ -16,14 +16,14 @@ Path: @/adapters/granularity
 
 ### Core Implementation
 
-- **`StubGranularityResolver`** (@/adapters/granularity/stub.ts): `resolve` reads a fixture-authored `data.bead_sec[level]` from the acousteme envelope when present and positive; otherwise it falls back to PROVISIONAL fixed constants (`media = 0.25 s`, the v1 reference). `beadSec` is always > 0.
-- The envelope's `data` is opaque (`z.unknown()`, §15.2 O8): `readFixtureBeadSec` navigates it defensively and returns `null` on any shape mismatch, never interpreting it beyond "a number per level".
-- **`register.ts`** wires `fixture` and `real` to the SAME stub until ENG-242 supplies the O8 rule; only that one factory changes then.
+- **`AcoustemeGranularityResolver`** (@/adapters/granularity/resolver.ts): `resolve(level, acousteme)` maps the UI level (pequena/media/grande) to the backend frame key (small/medium/large) and returns `beadSec = acousteme.granularity_frames[key] × acousteme.hop_sec`. `beadSec` is always > 0.
+- Audios without an acousteme (`acousteme = null`, §6.1) fall back to the **same uniform tokenizer grid** the backend embeds in every envelope — `hop_sec = 0.02` (20 ms) and frames `{ small: 10, medium: 25, large: 50 }`, resolving to **0.20 / 0.50 / 1.00 s** for Pequena / Média / Grande.
+- **`register.ts`** points both `fixture()` and `real()` at the SAME `AcoustemeGranularityResolver` — the frames×hop rule is identical in both modes; only the `BucketSource` supplying the envelope differs.
 
 ### Things to Know
 
-- **This is a stub by design** — a grep-able `PROVISIONAL` marker lives in stub.ts (asserted by a test). Do not add O8 semantics here; that is ENG-242 (labelled blocked-O8).
-- The fallback constants are provisional placeholders, not a spec — the only documented anchor is `media ≈ 0.25 s` (CLAUDE.md / PRD §6.1).
-- Fixture bead durations are authored in @/fixtures/bucket/audios.ts (per-audio `acousteme.data.bead_sec`); the stub only reads them, so changing granularity behavior in fixture mode means editing that data, not this resolver.
+- The tokenizer grid is **fixed and uniform across all audios** (Pequena 0.20 s / Média 0.50 s / Grande 1.00 s) — the resolver reads `granularity_frames × hop_sec` from the envelope rather than hardcoding those durations.
+- Média = 0.50 s (25 frames × 20 ms) is the value the golden byte-identity cases assume (a 24-bead grid over 12 s), so the resolved grid keeps the harness green.
+- Fixture envelopes are authored in @/fixtures/bucket/audios.ts (each carrying `hop_sec` + `granularity_frames`); the resolver only applies them, so changing granularity behavior in fixture mode means editing that data, not this resolver.
 
 Created and maintained by Nori.

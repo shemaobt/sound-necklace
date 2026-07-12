@@ -21,14 +21,14 @@ export const STORAGE_KEY = 'colar-de-sons:sessions:v1';
 export const TYPED_ANSWER = 'observação-e2e-a1b2c3';
 
 /**
- * Roteiro determinístico de um ciclo completo sobre o áudio fixture `conto-do-boto`
- * (24000 amostras / 8000 Hz = 3 s; granularidade média 0.25 s → grade de 12 contas,
+ * Roteiro determinístico de um ciclo completo sobre o áudio fixture `jornada-do-boto`
+ * (48000 amostras / 8000 Hz = 6 s; granularidade média 0.5 s → grade de 12 contas,
  * índices 0–11). Três cenas, duas classificadas + uma "nenhum se encaixa", e uma
  * frase que cruza a borda (delta 2 ≤ max(3, 25%) → costura desliza), espelhando o
  * caso golden `seam-small-move`.
  */
 export const SCENARIO = {
-  audioFilename: 'conto-do-boto.wav',
+  audioFilename: 'jornada-do-boto.wav',
   totalBeads: 12,
   /** cortes de cena em Escuta 2: cada clique fixa o FIM da cena (o começo já está costurado). */
   sceneEndBeads: [3, 7, 11] as const,
