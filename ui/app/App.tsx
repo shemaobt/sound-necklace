@@ -4,11 +4,13 @@ import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
 import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto } from '../../contracts';
+import { DEFAULT_FIXTURE_USER } from '../../adapters/sessions';
 import { setMode, type Mode, type SessionState } from '../../domain';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
+import { appAuth } from './auth-adapter';
 import { buildSessionPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
@@ -18,7 +20,7 @@ import { appSessionStore } from './session-adapter';
 import { StationHost } from './station-host';
 import { Stepper } from './stepper';
 import { stepperStations } from './stepper-model';
-import { useRoute } from './router';
+import { navigate, useRoute } from './router';
 import './app.css';
 
 /** Player itinerante em repouso (sem áudio fiado): só o `stop()` que o slot chama. */
@@ -107,21 +109,43 @@ function SessionStations({
 /**
  * Assina a porta de conectividade (fixture por default) e reflete o estado tanto
  * localmente (para o gate visual) quanto no session store (que pausa as mutações).
+ * Além do monitor, reflete os eventos `online`/`offline` da window — é o que o
+ * Playwright dirige com `context.setOffline` (§7.3/§13), sem gambiarra de app: cair
+ * offline mostra o aviso e pausa as mutações; voltar retoma sem perda (o estado em
+ * memória nunca é limpo). Os listeners são removidos no cleanup do efeito.
  */
 function useOnline(): boolean {
   const [online, setOnline] = useState(true);
   useEffect(() => {
     const registration = buildAdapterRegistry().connectivity;
-    if (!registration) return;
-    const monitor = registration.fixture() as ConnectivityMonitor;
     const report = (value: boolean) => {
       setOnline(value);
       sessionStore.getState().setOnline(value);
     };
-    report(monitor.isOnline());
-    return monitor.subscribe(report);
+    const monitor = registration ? (registration.fixture() as ConnectivityMonitor) : null;
+    const unsub = monitor?.subscribe(report);
+    report(monitor ? monitor.isOnline() : navigator.onLine);
+    const goOffline = () => report(false);
+    const goOnline = () => report(true);
+    window.addEventListener('offline', goOffline);
+    window.addEventListener('online', goOnline);
+    return () => {
+      unsub?.();
+      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('online', goOnline);
+    };
   }, []);
   return online;
+}
+
+/**
+ * Expiração de auth (§7.1) dentro de uma sessão viva: o token do servidor caduca e o
+ * app volta ao login SEM tocar o estado em memória — o re-login retoma no mesmo passo.
+ * Assina o singleton de auth app-global (o mesmo que o Login/Dashboard usam), de modo
+ * que expirar em qualquer rota — inclusive `/session/:id` — roteie ao login.
+ */
+function useAuthExpiry(): void {
+  useEffect(() => appAuth().onAuthExpired(() => navigate('/login')), []);
 }
 
 /**
@@ -150,6 +174,15 @@ function useSessionHydration(routeId: string | null): void {
         loadedId.current = routeId;
         const { state, meta } = fromSessionDto(dto);
         sessionStore.getState().load(state);
+        // Trava consultiva (§7.3): se a sessão está em uso por OUTRA pessoa, abre em
+        // revisão com o aviso de quem a detém. Este fluxo não adquire trava própria,
+        // então qualquer trava por um holder distinto do usuário default da store é
+        // alheia. ponytail: sem auto-aquisição de trava — comparo o holder ao default.
+        const lock = await appSessionStore().lockStatus(routeId);
+        if (!alive) return;
+        if (lock.held && lock.holder && lock.holder.user_id !== DEFAULT_FIXTURE_USER.user_id) {
+          sessionStore.getState().setLock({ holder: lock.holder.display_name });
+        }
         // Liga o autosave contínuo (§7.3): a partir daqui cada mutação do domínio
         // persiste o estado INTEIRO no store app-global, sob o meta desta sessão
         // (granularidade/áudio/consentimento), de modo que um reload retome no passo
@@ -229,6 +262,7 @@ export function App() {
   const route = useRoute();
   const muted = useAppStore((s) => s.muted);
   const online = useOnline();
+  useAuthExpiry();
 
   const session = useSessionStore((s) => s.session);
   const review = useSessionStore((s) => s.review);

@@ -37,8 +37,20 @@ function persistentBackend(): FixtureSessionBackend {
   }
 }
 
+let backend: FixtureSessionBackend | undefined;
+
+/**
+ * O "servidor" fixture partilhado por baixo do store app-global. Exposto para o seam
+ * de teste (§7.3): uma segunda store sobre o MESMO backend é um segundo usuário no
+ * mesmo servidor — é o que permite semear a trava consultiva por outra pessoa sem
+ * dois contextos de browser com localStorage separado.
+ */
+export function appSessionBackend(): FixtureSessionBackend {
+  return (backend ??= persistentBackend());
+}
+
 let store: SessionStore | undefined;
 
 export function appSessionStore(): SessionStore {
-  return (store ??= new FixtureSessionStore({ backend: persistentBackend() }));
+  return (store ??= new FixtureSessionStore({ backend: appSessionBackend() }));
 }
