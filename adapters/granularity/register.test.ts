@@ -6,12 +6,12 @@
 import { describe, expect, it } from 'vitest';
 
 import registration from './register';
-import { StubGranularityResolver } from './stub';
+import { AcoustemeGranularityResolver } from './resolver';
 
 describe('registro do adapter de granularidade', () => {
   it('declara a porta "granularity" com fixture e real construíveis', () => {
     expect(registration.port).toBe('granularity');
-    expect(registration.fixture()).toBeInstanceOf(StubGranularityResolver);
+    expect(registration.fixture()).toBeInstanceOf(AcoustemeGranularityResolver);
     expect(() => registration.real()).not.toThrow();
   });
 

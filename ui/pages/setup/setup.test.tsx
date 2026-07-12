@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vite
 
 import { AudioDecodeError, FixtureAudioEngine, type AudioEngine } from '../../../adapters/audio';
 import { FixtureBucketSource } from '../../../adapters/bucket';
-import { StubGranularityResolver } from '../../../adapters/granularity';
+import { AcoustemeGranularityResolver } from '../../../adapters/granularity';
 import { FixtureSessionStore } from '../../../adapters/sessions';
 import { sessionStore } from '../../state';
 import Setup, { SETUP_GRID_WARNING, SETUP_TRUST_LINE } from './index';
@@ -16,13 +16,13 @@ import Setup, { SETUP_GRID_WARNING, SETUP_TRUST_LINE } from './index';
  */
 
 // Hash FNV-1a esperado do PCM da fixture `conto-do-boto` (seed 101, 24000 amostras,
-// 8000 Hz) com beadSec 0.25 (nível média do acousteme) — valor de referência
+// 8000 Hz) com beadSec 0.5 (Média: 25 frames × 20 ms, regra O8) — valor de referência
 // independente, computado da fórmula do domínio.
-const BOTO_MEDIA_HASH = 'fnv1a32:e8442b84';
+const BOTO_MEDIA_HASH = 'fnv1a32:9943a4ff';
 
 interface Ports {
   bucket: FixtureBucketSource;
-  resolver: StubGranularityResolver;
+  resolver: AcoustemeGranularityResolver;
   audioEngine: AudioEngine;
   store: FixtureSessionStore;
   navigate: Mock<(to: string) => void>;
@@ -31,7 +31,7 @@ interface Ports {
 function ports(over: Partial<Ports> = {}): Ports {
   return {
     bucket: new FixtureBucketSource(),
-    resolver: new StubGranularityResolver(),
+    resolver: new AcoustemeGranularityResolver(),
     audioEngine: new FixtureAudioEngine(),
     store: new FixtureSessionStore(),
     navigate: vi.fn<(to: string) => void>(),
@@ -84,7 +84,7 @@ describe('Setup — criação de sessão (§8.1)', () => {
     expect(createSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         manifestId: BOTO_MEDIA_HASH,
-        beadSec: 0.25,
+        beadSec: 0.5,
         granularityLevel: 'media',
         audioId: 'aud_conto_do_boto',
         storyName: 'conto-do-boto',
@@ -199,7 +199,7 @@ describe('Setup — validação (§8.1)', () => {
 
   it('um resolver que não devolve tamanho de conta positivo bloqueia a criação', async () => {
     const resolver = { resolve: () => ({ beadSec: 0 }) };
-    const p = ports({ resolver: resolver as unknown as StubGranularityResolver });
+    const p = ports({ resolver: resolver as unknown as AcoustemeGranularityResolver });
     const createSpy = vi.spyOn(p.store, 'create');
     renderSetup(p);
 

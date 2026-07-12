@@ -34,7 +34,11 @@ describe('BucketAudioSchema — válida e inválidas', () => {
     filename: 'conto.wav',
     duration_sec: 12.5,
     consent_present: true,
-    acousteme: { version: 1, data: { bead_sec: { media: 0.25 } } },
+    acousteme: {
+      version: 1,
+      hop_sec: 0.02,
+      granularity_frames: { small: 10, medium: 25, large: 50 },
+    },
   };
 
   it('aceita um áudio válido', () => {
@@ -57,21 +61,57 @@ describe('BucketAudioSchema — válida e inválidas', () => {
   });
 });
 
-describe('AcoustemeEnvelopeSchema — envelope versionado e opaco (§15.2 O8)', () => {
-  it('é version-tagged: rejeita sem version', () => {
-    expect(AcoustemeEnvelopeSchema.safeParse({ data: {} }).success).toBe(false);
+describe('AcoustemeEnvelopeSchema — grade de granularidade do tokenizador (§6.1/O8)', () => {
+  const env = {
+    version: 1,
+    hop_sec: 0.02,
+    granularity_frames: { small: 10, medium: 25, large: 50 },
+  };
+
+  it('aceita um envelope com version, hop_sec e as três presets', () => {
+    expect(AcoustemeEnvelopeSchema.safeParse(env).success).toBe(true);
   });
 
-  it('deixa passar chaves internas desconhecidas de data sem validar (semântica O8 em aberto)', () => {
-    const data = { foo: 1, aninhado: { bar: 'x' }, lista: [1, 2, 3], desconhecida: true };
-    const parsed = AcoustemeEnvelopeSchema.parse({ version: 2, data });
-    expect(parsed.data).toEqual(data);
+  it('exige version, hop_sec e granularity_frames', () => {
+    expect(
+      AcoustemeEnvelopeSchema.safeParse({
+        hop_sec: 0.02,
+        granularity_frames: { small: 10, medium: 25, large: 50 },
+      }).success,
+    ).toBe(false); // sem version
+    expect(
+      AcoustemeEnvelopeSchema.safeParse({
+        version: 1,
+        granularity_frames: { small: 10, medium: 25, large: 50 },
+      }).success,
+    ).toBe(false); // sem hop_sec
+    expect(AcoustemeEnvelopeSchema.safeParse({ version: 1, hop_sec: 0.02 }).success).toBe(false); // sem frames
   });
 
-  it('rejeita chave extra no próprio envelope (strict)', () => {
-    expect(AcoustemeEnvelopeSchema.safeParse({ version: 1, data: {}, extra: 1 }).success).toBe(
-      false,
-    );
+  it('rejeita hop_sec não positivo e frames não inteiros ou não positivos', () => {
+    expect(AcoustemeEnvelopeSchema.safeParse({ ...env, hop_sec: 0 }).success).toBe(false);
+    expect(
+      AcoustemeEnvelopeSchema.safeParse({
+        ...env,
+        granularity_frames: { small: 0, medium: 25, large: 50 },
+      }).success,
+    ).toBe(false);
+    expect(
+      AcoustemeEnvelopeSchema.safeParse({
+        ...env,
+        granularity_frames: { small: 10.5, medium: 25, large: 50 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejeita chave extra no envelope e nas presets (strict)', () => {
+    expect(AcoustemeEnvelopeSchema.safeParse({ ...env, extra: 1 }).success).toBe(false);
+    expect(
+      AcoustemeEnvelopeSchema.safeParse({
+        ...env,
+        granularity_frames: { small: 10, medium: 25, large: 50, huge: 99 },
+      }).success,
+    ).toBe(false);
   });
 });
 

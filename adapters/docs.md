@@ -28,7 +28,7 @@ ui/pages resolve ports by name; an absent port hides its affordance
 
 - Port signatures the app codes against are recorded in @/docs/architecture.md §3. Highlights:
   - `AudioEngine` — **implemented** (@/adapters/audio): decode bytes → duration + domain `PcmLike` PCM, plus the reference-faithful player (toggle/pause, single playback, head progress, edge windows). Details in @/adapters/audio/docs.md.
-  - `GranularityResolver` — **implemented as a stub** (@/adapters/granularity, see @/adapters/granularity/docs.md): reads fixture-authored `bead_sec[level]` from the acousteme envelope, else PROVISIONAL fallbacks (medium ≈ 0.25 s). The real acousteme → bead-duration rule is **pending open item O8** (PRD §15.2, ENG-242); never invent the derivation.
+  - `GranularityResolver` — **implemented** (@/adapters/granularity, see @/adapters/granularity/docs.md): resolves the level to `beadSec = granularity_frames[level] × hop_sec` from the audio's acousteme envelope (the now-closed O8 rule, PRD §15.2 / ENG-242). Audios without an acousteme fall back to the same uniform tokenizer grid (Pequena 0.20 / Média 0.50 / Grande 1.00 s); the resolver never invents the derivation.
   - `AuthProvider` — targets the shared API's existing JWT scheme (python-jose Bearer); introduces no scheme of its own; auth expiry must **not** clear app state on re-login.
   - `BucketSource` — **implemented** (@/adapters/bucket, see @/adapters/bucket/docs.md): the **only** MVP audio source (PRD §7.4). Lists entries with duration, consent flag, and acousteme envelope; fetches **opaque** audio bytes. Fixture bytes are `PcmSpec` JSON (what the fixture audio engine decodes); real HTTP serves WAV.
   - `SessionStore` — **implemented** (@/adapters/sessions, see @/adapters/sessions/docs.md): debounced full-state autosave that pauses offline and flushes on reconnect; `complete()` stores the three artifacts as **opaque** payload (never re-serialized — byte-identity rule, PRD §10.5); advisory editor lock; keyed blob resources for the `respostas/*.webm` voice answers.
@@ -37,7 +37,7 @@ ui/pages resolve ports by name; an absent port hides its affordance
 ### Things to Know
 
 - **Fixture is the default mode.** Do not gate app behavior on a real backend existing; a missing port is a hidden affordance, not an error.
-- Never hardcode behavior behind a stub port — especially granularity, which is blocked on O8. Issues carrying `blocked-O8` are ineligible for the loop.
+- Never hardcode behavior behind a port — resolve it through the interface (fixture or real). Granularity's O8 derivation rule is now resolved (ENG-242), so its resolver reads the acousteme envelope's `granularity_frames`/`hop_sec` directly; it is no longer a stub.
 - Testing: fixture-driven unit tests in the Vitest `unit` (node) project; no numeric coverage gate for this layer, but `register.ts` files are excluded from coverage (@/vitest.config.ts). Real-platform smoke tests (Web Audio, MediaRecorder) may live beside the adapter behind feature detection — they skip in node CI with the reason encoded in the test name (pattern set by @/adapters/audio/web-audio.test.ts); full jsdom/browser flows still belong to `ui/` browser tests.
 - Fixture-safe adapter PRs may merge autonomously on green (unlike @/domain and @/contracts).
 - Web-platform gotchas belong here, isolated behind the port: decode failures, MediaRecorder codec support, connectivity flapping. Failures should surface through the port's contract, not leak framework errors upward.

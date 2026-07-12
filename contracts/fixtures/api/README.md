@@ -7,8 +7,9 @@
 - Três entradas cobrem os casos: dois áudios **com** envelope de acousteme +
   consentimento presente, e um **sem** acousteme (`null`) e sem consentimento
   (`consent_present: false`) — os dois eixos que a setup precisa exercitar (§6.1, §12/O6).
-- O conteúdo de `acousteme.data` é **fixture-authored e provisório** (a semântica O8
-  está em aberto): traz `bead_sec` por nível só para o stub do GranularityResolver ler
-  (ENG-241). O schema mantém `data` opaco — nada aqui é imposto pelo contrato.
+- O `acousteme` de cada áudio traz a grade uniforme do tokenizador: `hop_sec: 0.02` e
+  `granularity_frames { small: 10, medium: 25, large: 50 }` (§6.1/§15.2 O8, resolvido —
+  tripod-api PR #100), da qual o GranularityResolver deriva `beadSec = frames[nível] × hop_sec`.
+  Sem mais `data` opaco: o `AcoustemeEnvelopeSchema` (contracts/bucket.ts) valida esses campos.
 
 Os bytes WAV reais desses áudios (por `id`) entram em `fixtures/bucket/` no ENG-241.

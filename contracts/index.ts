@@ -40,10 +40,12 @@ export {
 // do OpenAPI do tripod-api (ENG-211). Adapters importam SOMENTE os tipos daqui.
 export {
   AcoustemeEnvelopeSchema,
+  AcoustemeGranularityFramesSchema,
   BucketAudioSchema,
   BucketListResponseSchema,
   GranularityLevelSchema,
   type AcoustemeEnvelope,
+  type AcoustemeGranularityFrames,
   type BucketAudio,
   type BucketAudioBytes,
   type BucketListResponse,

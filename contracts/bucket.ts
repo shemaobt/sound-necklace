@@ -6,23 +6,36 @@
  * fixtures em contracts/fixtures/api/ destravam a trilha de adapters/UI. Os
  * adapters importam SOMENTE os tipos aqui, para que a troca seja contida.
  *
- * Importa apenas zod (raiz). Nada de semântica inventada sobre a granularidade:
- * o acousteme viaja como envelope versionado e opaco (§15.2 O8, em aberto).
+ * Importa apenas zod (raiz). O acousteme viaja como envelope versionado com a grade
+ * de granularidade do tokenizador (§6.1/§15.2 O8, resolvido — ver AcoustemeEnvelope).
  */
 
 import { z } from 'zod';
 
 /**
- * §6.1/§15.2 O8: os "acoustemes" acompanham cada áudio do bucket e são a fonte da
- * granularidade. A REGRA de derivação (acousteme → beadSec) e o formato interno de
- * `data` estão EM ABERTO (owner: time de pipeline). Modelamos como envelope
- * `{version, data}`: `data` é opaco (z.unknown) e passa sem validação — chaves
- * internas desconhecidas sobrevivem intactas; só o `version` é imposto. O
- * GranularityResolver (ENG-241/242) é quem interpreta `data`.
+ * §6.1/§15.2 O8 (resolvido — tripod-api PR #100 "acousteme artifact + consumption
+ * API"): a granularidade vem da grade fixa do tokenizador que acompanha cada áudio.
+ * `hop_sec` = segundos por frame (0.02 = 20 ms); `granularity_frames` = frames por
+ * conta em cada nível, espelhando as presets Small/Medium/Large do backend. O
+ * GranularityResolver (adapters/granularity) resolve beadSec = frames[nível] × hop_sec.
+ *
+ * `version` tolera codebooks futuros. NOTA (ENG-247): o tripod-api serve isto como
+ * `AcoustemeStreamResponse`, com `codebook_version: string` (aqui `version: int`) e
+ * campos extra (download_url, num_frames…) que o MVP não consome — os tipos gerados
+ * do OpenAPI reconciliam a divergência.
  */
+export const AcoustemeGranularityFramesSchema = z.strictObject({
+  small: z.int().positive(),
+  medium: z.int().positive(),
+  large: z.int().positive(),
+});
+
+export type AcoustemeGranularityFrames = z.infer<typeof AcoustemeGranularityFramesSchema>;
+
 export const AcoustemeEnvelopeSchema = z.strictObject({
   version: z.int().positive(),
-  data: z.unknown(),
+  hop_sec: z.number().positive(),
+  granularity_frames: AcoustemeGranularityFramesSchema,
 });
 
 export type AcoustemeEnvelope = z.infer<typeof AcoustemeEnvelopeSchema>;
