@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
 import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto } from '../../contracts';
@@ -8,6 +9,7 @@ import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
+import { buildSessionPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
 import { buildAdapterRegistry, buildStationRegistry, type StationComponent } from './registries';
@@ -18,6 +20,9 @@ import { Stepper } from './stepper';
 import { stepperStations } from './stepper-model';
 import { useRoute } from './router';
 import './app.css';
+
+/** Player itinerante em repouso (sem áudio fiado): só o `stop()` que o slot chama. */
+const NO_PLAYBACK: Player = { stop() {} };
 
 /** Estação (diretório em ui/pages) → modo do domínio, para a navegação do fio. */
 const KEY_TO_MODE: Record<string, Mode> = {
@@ -53,7 +58,7 @@ function SessionStations({
   online: boolean;
   registry: Record<string, StationComponent>;
   exportStore: ReturnType<typeof appSessionStore>;
-  player: Player;
+  player: AudioPlayer | null;
   recorder: VoiceRecorder | null;
 }) {
   const [viewingExport, setViewingExport] = useState(false);
@@ -70,14 +75,15 @@ function SessionStations({
     if (mode) sessionStore.getState().apply((s) => setMode(s, mode));
   };
   // Portas de wiring por estação: a Export conclui/baixa com o SessionStore
-  // app-global + o id da rota; o Mapeamento grava a resposta por voz com o
-  // recorder fixture (§8.7). As demais estações não precisam de props.
+  // app-global + o id da rota; o Mapeamento grava a resposta por voz (§8.7) E toca
+  // os trechos; as demais estações do colar (Escuta 1/2, Triagem, Segmentação)
+  // recebem o player para tocar contas/bordas/cenas (§8.2).
   const stationProps =
     currentKey === 'export'
       ? { store: exportStore, sessionId }
       : currentKey === 'mapeamento'
-        ? { recorder }
-        : undefined;
+        ? { recorder, player }
+        : { player };
 
   return (
     <>
@@ -85,7 +91,7 @@ function SessionStations({
       <ReviewBanner review={review} lock={lock} onUnlock={() => sessionStore.getState().unlock()} />
       <PlayerSlotProvider
         activeKey={currentKey}
-        player={player}
+        player={player ?? NO_PLAYBACK}
         playerNode={<div className="cds-player" />}
       >
         <ConnectionGate online={online}>
@@ -180,6 +186,40 @@ function useAutosaveFlush(routeId: string | null): void {
 }
 
 /**
+ * Constrói o player de áudio da sessão (ENG-275): re-decodifica o áudio do bucket
+ * e liga a ponte de relógio, entregando o `Player` à estação ativa. Reconstrói ao
+ * TROCAR de sessão; o cleanup para o player e cancela a ponte. Uma sessão sem áudio
+ * resolvível degrada para player dormente (`null`) — as estações lidam com isso.
+ */
+function useSessionPlayer(routeId: string | null): AudioPlayer | null {
+  const [player, setPlayer] = useState<AudioPlayer | null>(null);
+  useEffect(() => {
+    if (routeId === null) return;
+    let alive = true;
+    let audio: SessionAudio | null = null;
+    void (async () => {
+      try {
+        const built = await buildSessionPlayer(routeId);
+        if (!alive) {
+          built.stop();
+          return;
+        }
+        audio = built;
+        setPlayer(built.player);
+      } catch {
+        // sessão sem estado salvo ou áudio não resolvível — player dormente
+      }
+    })();
+    return () => {
+      alive = false;
+      audio?.stop();
+      setPlayer(null);
+    };
+  }, [routeId]);
+  return player;
+}
+
+/**
  * Composition root do Colar de Sons (ENG-224): cabeçalho + fio de contas + player
  * itinerante + chrome de revisão/trava + gate online-only, montados sobre as três
  * registries por glob (docs/architecture.md §4). As estações só ADICIONAM arquivos
@@ -197,9 +237,9 @@ export function App() {
   const routeId = route.name === 'session' ? route.id : null;
   useSessionHydration(routeId);
   useAutosaveFlush(routeId);
+  const player = useSessionPlayer(routeId);
 
   const registry = useMemo(() => buildStationRegistry(), []);
-  const player = useMemo<Player>(() => ({ stop() {} }), []);
   const recorder = useMemo<VoiceRecorder | null>(() => {
     const registration = buildAdapterRegistry().voice;
     return registration ? (registration.fixture() as VoiceRecorder) : null;

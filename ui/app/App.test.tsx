@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fromSessionDto, toSessionDto } from '../../contracts';
 import { buildBeads, createSession, type SessionState } from '../../domain';
@@ -17,6 +17,39 @@ function sampleSession(): SessionState {
     audioFilename: 'h.wav',
     slug: 'h',
   });
+}
+
+/**
+ * Sessão de corte (Escuta 2) com UMA cena travada — a grade casa o áudio fixture
+ * `aud_conto_do_boto` (3 s / beadSec 0,25 → 12 contas) para o player que o shell
+ * re-decodifica bater com o colar renderizado.
+ */
+function cuttingWithLockedScene(): SessionState {
+  const base = createSession({
+    durationSec: 3,
+    beadSec: 0.25,
+    beads: buildBeads(3, 0.25),
+    manifestId: 'fnv1a32:deadbeef',
+    audioFilename: 'conto-do-boto.wav',
+    slug: 'conto-do-boto',
+  });
+  return {
+    ...base,
+    mode: 'escuta',
+    whole: { id: 'S1', span: { s: 0, e: 11 }, confirmed: true },
+    partsConfirmed: false,
+    parts: [
+      {
+        part_id: 'PT1',
+        span: { s: 0, e: 9 },
+        locked: true,
+        scene_kind: null,
+        scene_kind_confidence: null,
+        tag_state: 'pending',
+      },
+    ],
+    current: { layer: 'parts', index: 0 },
+  };
 }
 
 /** Sessão pronta para concluir: história confirmada + cena produtiva com frase travada. */
@@ -222,6 +255,58 @@ describe('App shell', () => {
     });
     // A fixture inicia a gravação → surge o controle "Parar" (microfone vivo).
     expect(await screen.findByText('Parar')).toBeDefined();
+  });
+
+  it('fia o player de áudio: tocar a cena acende a cabeça de reprodução no colar', async () => {
+    // O shell re-decodifica o áudio do bucket da sessão e injeta o player na estação
+    // ativa; a ponte de relógio (rAF→advance) é dirigida aqui de forma determinística.
+    const frames: FrameRequestCallback[] = [];
+    const raf = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      frames.push(cb);
+      return frames.length;
+    });
+    const caf = vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    try {
+      const store = appSessionStore();
+      const summary = await store.create({
+        projectId: 'p1',
+        storyName: 'H',
+        storySlug: 'h',
+        audioId: 'aud_conto_do_boto',
+        granularityLevel: 'media',
+        beadSec: 0.25,
+        manifestId: 'fnv1a32:deadbeef',
+        pipelineConsent: true,
+      });
+      store.autosave(
+        summary.id,
+        toSessionDto(cuttingWithLockedScene(), {
+          granularityLevel: 'media',
+          bucketAudioId: 'aud_conto_do_boto',
+          voice: [],
+          pipelineConsent: true,
+        }),
+      );
+      await store.flush(summary.id);
+
+      act(() => navigate(`/session/${summary.id}`));
+      render(<App />);
+
+      // aguarda a hidratação + construção assíncrona do player (chip ▶ da cena travada)
+      const play = await screen.findByRole('button', { name: 'Tocar' });
+      await act(async () => {
+        play.click();
+      });
+
+      // dirige o relógio do fixture por rAF: baseline + 1 frame de 0,1 s → cabeça na conta 0
+      act(() => frames[0]?.(0));
+      act(() => frames[1]?.(100));
+
+      expect(document.querySelector('.cds-necklace-bead[data-play]')).not.toBeNull();
+    } finally {
+      raf.mockRestore();
+      caf.mockRestore();
+    }
   });
 
   it('não vaza viewingExport ao trocar de sessão (remonta por rota)', async () => {
