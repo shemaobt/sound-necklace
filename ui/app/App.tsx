@@ -143,9 +143,10 @@ function useOnline(): boolean {
  * app volta ao login SEM tocar o estado em memória — o re-login retoma no mesmo passo.
  * Assina o singleton de auth app-global (o mesmo que o Login/Dashboard usam), de modo
  * que expirar em qualquer rota — inclusive `/session/:id` — roteie ao login.
+ * `replace` porque não se volta a uma rota cuja sessão de auth já caducou.
  */
 function useAuthExpiry(): void {
-  useEffect(() => appAuth().onAuthExpired(() => navigate('/login')), []);
+  useEffect(() => appAuth().onAuthExpired(() => navigate('/login', { replace: true })), []);
 }
 
 /**
@@ -180,9 +181,15 @@ function useSessionHydration(routeId: string | null): void {
         // alheia. ponytail: sem auto-aquisição de trava — comparo o holder ao default.
         const lock = await appSessionStore().lockStatus(routeId);
         if (!alive) return;
-        if (lock.held && lock.holder && lock.holder.user_id !== DEFAULT_FIXTURE_USER.user_id) {
-          sessionStore.getState().setLock({ holder: lock.holder.display_name });
-        }
+        const foreignHolder =
+          lock.held && lock.holder && lock.holder.user_id !== DEFAULT_FIXTURE_USER.user_id
+            ? lock.holder.display_name
+            : null;
+        // Trava/revisão são POR SESSÃO, mas o store é singleton e `load` não os reseta:
+        // estabeleço o estado do zero a cada (re)hidratação para a trava/revisão de uma
+        // sessão não vazar para a próxima ao TROCAR de sessão in-SPA (sem reload).
+        sessionStore.getState().setReview(false);
+        sessionStore.getState().setLock(foreignHolder ? { holder: foreignHolder } : null);
         // Liga o autosave contínuo (§7.3): a partir daqui cada mutação do domínio
         // persiste o estado INTEIRO no store app-global, sob o meta desta sessão
         // (granularidade/áudio/consentimento), de modo que um reload retome no passo

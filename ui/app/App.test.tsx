@@ -430,4 +430,25 @@ describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
     // a trava força a revisão: NÃO se oferece "Destravar para editar".
     expect(screen.queryByRole('button', { name: 'Destravar para editar' })).toBeNull();
   });
+
+  it('trocar de uma sessão travada para uma saudável NÃO vaza o chrome de trava', async () => {
+    const locked = await persistCuttingSession();
+    const other = new FixtureSessionStore({
+      backend: appSessionBackend(),
+      user: { user_id: 'u-ana', display_name: 'Ana' },
+    });
+    await other.acquireLock(locked);
+    const healthy = await persistCuttingSession();
+
+    act(() => navigate(`/session/${locked}`));
+    render(<App />);
+    expect(await screen.findByText(/em uso por Ana/)).toBeDefined();
+
+    // troca in-SPA (voltar ao dashboard e abrir outra sessão, sem reload): a trava
+    // da sessão anterior não pode persistir no store singleton para esta saudável.
+    act(() => navigate(`/session/${healthy}`));
+    await waitFor(() => {
+      expect(screen.queryByText(/em uso por Ana/)).toBeNull();
+    });
+  });
 });

@@ -1512,4 +1512,16 @@ Testes (jsdom, App.test.tsx + test-seam.test.ts): offline dispara `window.dispat
 e assere banner + `apply` no-op + retomada; expiração faz `appAuth().login()` então `simulateExpiry()` e assere
 `location.pathname==='/login'` + sessão preservada; trava semeia via 2ª store sobre `appSessionBackend()` e assere
 "em uso por Ana" + ausência de "Destravar". Gates: typecheck, lint 0 err (3 warns pré-existentes), depcruise 348
-sem violação, test 925/2skip, golden 18/18, browser 19/19, e2e 5/5. `loop-ready` → merge on green.
+sem violação, test 926/2skip, golden 18/18, browser 19/19, e2e 5/5. `loop-ready` → merge on green.
+
+**BUG pego no self-review (nori-code-reviewer) antes do merge — vazamento de trava:** `lock`/`review` são
+POR SESSÃO mas o `sessionStore` é singleton e `load()` NÃO os reseta; o ramo da trava só SETAVA, nunca limpava.
+Trocar in-SPA (voltar ao dashboard e abrir outra sessão, sem reload) de uma sessão travada por outro para uma
+saudável deixava a segunda presa no chrome "em uso por Ana". CORREÇÃO DE RAIZ na hidratação: a cada (re)carga,
+`setReview(false)` + `setLock(foreignHolder ? {holder} : null)` — estabelece o estado do zero (teste que falha
+primeiro em App.test.tsx: navega travada→saudável e assere que o aviso some). Também apliquei `navigate('/login',
+{replace:true})` na expiração (não se volta a uma sessão de auth caduca; reduz a entrada duplicada de histórico
+quando o dashboard também assina). Ceilings deixados de fora (não bloqueiam o MVP): comparação da trava ao
+`DEFAULT_FIXTURE_USER` re-derivada na UI quebrará quando o ENG-247 fiar o usuário logado real — ideal expor um
+"is-mine" no store; e o `isOnline()` estático da fixture sombreia `navigator.onLine` num load-já-offline (só
+transições pós-mount contam). GOTCHA p/ o autor do ENG-257: `expireAuth()` é no-op sem token → logar pela UI antes.
