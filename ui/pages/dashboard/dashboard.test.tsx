@@ -86,8 +86,12 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
     expect(
       screen.getAllByText(new RegExp(escapeRe(formatWhen(doneSummary.last_modified)))).length,
     ).toBeGreaterThan(0);
-    // relance de progresso (§7.2): a capa do fio, nomeada pelo passo salvo
-    expect(screen.getAllByRole('img', { name: /progresso: .+ — passo \d de 6/ })).toHaveLength(2);
+    // relance de progresso (§7.2): a capa nomeia ONDE a sessão parou — a recém-criada
+    // fica no 1º passo e a concluída no último (a fixture põe 'ouvir' e 'guardar').
+    expect(screen.getByRole('img', { name: 'progresso: Ouvir — passo 1 de 6' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'progresso: Guardar — passo 6 de 6' })).toBeTruthy();
+    // a contagem da casa concorda com a grade
+    expect(screen.getByText('2 histórias')).toBeTruthy();
   });
 });
 
@@ -102,6 +106,9 @@ describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
     expect(screen.getByRole('heading', { name: 'Colar de Sons' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Suas histórias' })).toBeTruthy();
     expect(screen.getByText('facilitadora')).toBeTruthy();
+
+    // a listagem resolve depois do corpo do teste — aguardar evita o aviso de act()
+    await screen.findByRole('list', { name: 'sessões' });
   });
 
   it('“Sair” encerra a sessão e volta ao login', async () => {

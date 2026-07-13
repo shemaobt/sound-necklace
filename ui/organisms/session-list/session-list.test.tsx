@@ -92,16 +92,19 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
   it('a capa do fio é o relance de progresso: contas acesas na proporção, com nome acessível', () => {
     render(<SessionList sessions={[emProgresso, concluida]} />);
 
+    // Quantas contas a miniatura tem é ENFEITE (muda sem mudar comportamento) — o que
+    // importa é a PROPORÇÃO acesa e o passo anunciado no nome acessível.
+    const lit = (el: Element): number => el.querySelectorAll('[data-state="lit"]').length;
+    const total = (el: Element): number => el.querySelectorAll('.cds-pearl').length;
+
     const aberta = cardOf('A história de Rute');
     const capa = within(aberta).getByRole('img', { name: 'progresso: Cortar — passo 2 de 6' });
-    // a miniatura tem 22 contas; acesas ∝ progresso (2/6 de 22 ≈ 7)
-    expect(capa.querySelectorAll('.cds-pearl')).toHaveLength(22);
-    expect(capa.querySelectorAll('[data-state="lit"]')).toHaveLength(7);
+    expect(lit(capa) / total(capa)).toBeCloseTo(2 / 6, 1);
 
     // sessão concluída: o fio inteiro aceso
     const fechada = cardOf('O chamado do profeta');
     const capaFim = within(fechada).getByRole('img', { name: /passo 6 de 6/ });
-    expect(capaFim.querySelectorAll('[data-state="lit"]')).toHaveLength(22);
+    expect(lit(capaFim)).toBe(total(capaFim));
   });
 
   it('lista vazia renderiza sem cards e sem erro', () => {
@@ -112,21 +115,20 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('com onNew, a grade abre com o cartão "comece uma nova história"', () => {
+  it('com onNew, a grade ABRE com o cartão "comece uma nova história"', () => {
     const onNew = vi.fn();
     render(<SessionList sessions={[emProgresso]} onNew={onNew} />);
 
     const lista = screen.getByRole('list', { name: 'sessões' });
     expect(lista.querySelectorAll(':scope > li')).toHaveLength(2);
 
-    fireEvent.click(screen.getByRole('button', { name: /comece uma nova história/i }));
+    const botao = screen.getByRole('button', { name: /comece uma nova história/i });
+    // "abre com": é o PRIMEIRO item da grade (o teste da lista vazia cobre a ausência
+    // do cartão quando não há onNew — ele não renderiza botão nenhum).
+    expect(lista.firstElementChild).toBe(botao.closest('li'));
+
+    fireEvent.click(botao);
     expect(onNew).toHaveBeenCalledTimes(1);
-  });
-
-  it('sem onNew não há cartão de nova história', () => {
-    render(<SessionList sessions={[emProgresso]} />);
-
-    expect(screen.queryByRole('button', { name: /comece uma nova história/i })).toBeNull();
   });
 
   it('o card não aninha interativos: a única ação é o botão primário', () => {
