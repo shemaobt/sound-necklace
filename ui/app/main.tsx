@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import '../tokens/fonts';
 import '../tokens/tokens.css';
 import '../tokens/base.css';
+import '../i18n'; // init do i18next (default PT) antes do primeiro render — ENG-279
 import { App } from './App';
 
 const container = document.getElementById('root');

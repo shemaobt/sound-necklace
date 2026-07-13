@@ -1,0 +1,176 @@
+/**
+ * Dicionário PT-BR — o idioma default da UI (ENG-279). Estes valores reproduzem
+ * EXATAMENTE a cópia PT-BR que já vivia hardcoded nas telas: o golden e os testes
+ * de UI existentes provam byte-a-byte que nada mudou. Só o CHROME da UI passa por
+ * aqui — os artefatos exportados continuam PT-BR congelados, nunca roteados pelo i18n.
+ *
+ * Sem `as const`: os valores ficam tipados como `string` para que `en.ts` possa
+ * declarar `const en: Dict` e o typecheck exija PARIDADE de chaves (chave faltante
+ * ou sobrando = erro de compilação) sem travar os textos em literais.
+ */
+export const pt = {
+  header: {
+    eyebrow: 'Arquivo Oral · Tripod',
+    title: 'Colar de Sons',
+    subtitle: 'Mapeando as histórias do arquivo oral.',
+    mute: 'Desligar o som da interface',
+    unmute: 'Ligar o som da interface',
+    switchLanguage: 'Mudar para inglês',
+  },
+  login: {
+    title: 'Entrar',
+    username: 'Usuário',
+    password: 'Senha',
+    submit: 'Entrar',
+    refused: 'Não foi possível entrar. Confira o usuário e a senha.',
+  },
+  setup: {
+    title: 'Nova sessão',
+    trustLine:
+      'Seus áudios e respostas ficam guardados com segurança no seu projeto. Só a sua equipe tem acesso.',
+    gridWarning: 'Trave o tamanho da conta antes de ancorar. Mudá-lo depois desloca as fronteiras.',
+    noAudio: 'Escolha um arquivo de áudio primeiro.',
+    noConsent: 'Confirme o consentimento de uso no pipeline para continuar.',
+    noBeadSec: 'Não consegui definir o tamanho da conta para este áudio.',
+    createFailed: 'Não foi possível criar a sessão. Tente de novo.',
+    decodeError: 'Não consegui decodificar este áudio ({{detail}}). Tente um WAV PCM.',
+    doorsAria: 'Como começar',
+    doorZeroTitle: 'Começar do zero',
+    doorZeroDesc: 'Escolher um áudio e ancorar de ouvido.',
+    doorEntregaTitle: 'Confirmar uma entrega',
+    doorEntregaDesc: 'Carregar propostas do projeto.',
+    doorRetornoTitle: 'Retomar um retorno',
+    doorRetornoDesc: 'Continuar de um retorno salvo.',
+    levelPequenaTitle: 'Pequena',
+    levelPequenaDesc: 'contas mais curtas',
+    levelMediaTitle: 'Média',
+    levelMediaDesc: 'equilíbrio',
+    levelGrandeTitle: 'Grande',
+    levelGrandeDesc: 'contas mais longas',
+    audioHeading: 'Escolha um áudio do projeto',
+    loadingAudios: 'Carregando os áudios…',
+    consentOk: 'Consentimento de coleta registrado',
+    consentWarn: 'Sem registro de consentimento de coleta.',
+    audioReady: 'Áudio pronto',
+    granHeading: 'Tamanho da conta',
+    titleField: 'Título / nome curto do colar',
+    titlePlaceholder: 'ex.: jesus-mienoi',
+    consentCheck: 'Confirmo o consentimento de uso no pipeline do projeto.',
+    creating: 'Criando…',
+    create: 'Criar a sessão →',
+    importEntregaHint: 'Carregue uma entrega do projeto para confirmar de ouvido.',
+    importRetornoHint: 'Retome um retorno já salvo para continuar de onde parou.',
+    goToImports: 'Ir para os arquivos do pipeline →',
+  },
+  export: {
+    headline: 'A história está inteira no colar.',
+    retornoBlocked: 'Confirme o colar antes de exportar.',
+    semFim: '{{n}} frase(s) ainda sem fim travado.',
+    reopen: 'Destravar para editar',
+    complete: 'Concluir e guardar os documentos',
+  },
+  imports: {
+    guidanceNoSession: 'Abra uma sessão para carregar arquivos do pipeline.',
+    title: 'Arquivos do pipeline',
+    intro: 'Carregue uma entrega do projeto ou retome um retorno já salvo.',
+    doorEntrega: 'Carregar entrega do projeto (.json)',
+    doorRetorno: 'Retomar retorno salvo (.json)',
+    targetEntrega: 'a entrega',
+    targetRetorno: 'o retorno',
+    failure: 'Não consegui ler {{alvo}} ({{detail}}).',
+    deliveryOk:
+      '✓ Entrega carregada: {{cenas}} cena(s), {{frases}} frase(s). As cenas são propostas — confirme de ouvido.',
+    returnOk: '✓ Retomado: {{cenas}} cena(s), {{frases}} frase(s).',
+  },
+  dashboard: {
+    stepOuvir: 'Ouvir',
+    stepCortar: 'Cortar',
+    stepTriagem: 'Triagem',
+    stepFrases: 'Frases',
+    stepConversa: 'Conversa',
+    stepGuardar: 'Guardar',
+    title: 'Minhas sessões',
+    newSession: 'Nova sessão',
+    loading: 'Carregando as sessões…',
+    empty: 'Você ainda não tem sessões.',
+  },
+  sessionList: {
+    statusEmProgresso: 'em progresso',
+    statusConcluida: 'concluída',
+    resume: 'Retomar',
+    open: 'Abrir',
+    progressAria: 'progresso de {{name}}',
+    listAria: 'sessões',
+  },
+  escuta1: {
+    tagline: 'Ouça a história.',
+    listen: 'Ouvir a história',
+    reopen: 'Reabrir',
+    confirm: 'Já ouvi a história completa',
+  },
+  escuta2: {
+    instructionPre: 'Toque no colar onde ',
+    instructionEmph: 'esta cena termina',
+    instructionPost: '. O começo já está costurado.',
+    reopen: 'Reabrir',
+    back: '← Voltar',
+    confirmScene: '✓ Confirmar esta cena',
+    confirmAll: 'Confirmar as cenas →',
+  },
+  segmentacao: {
+    instruction: 'Toque no colar o começo e o fim de cada frase.',
+    playScene: '▶ ouvir a cena',
+    reopen: 'Reabrir',
+    flagMarked: '⚑ marcada',
+    flagReview: '⚑ revisar',
+    remove: 'Remover',
+    back: '← Voltar',
+    confirmPhrase: '✓ Confirmar esta frase',
+    doneLast: 'Já segmentei todas as cenas →',
+    doneMore: 'Pronto com esta cena →',
+  },
+  tutorial: {
+    tips: {
+      escuta1:
+        'Ouçam a história inteira, sem pressa. O botão grande toca e pausa; confirme quando a história tiver sido ouvida por completo.',
+      escuta2:
+        'Toque uma conta para ouvir dali. Marquem juntos onde cada cena termina e confirme uma cena de cada vez.',
+      triagem:
+        'Classifiquem cada cena ouvindo-a de novo. Quando nenhum tipo se encaixa, «nenhum se encaixa» também é um achado.',
+      segmentacao:
+        'Dentro de cada cena, marquem as frases: um toque onde começa, outro onde termina. Se a frase passar da borda, o colar oferece caminhos.',
+      mapeamento:
+        'Faça as perguntas em voz alta e grave as respostas de quem conta. Você pode escrever depois — nunca pelo ouvinte.',
+      export:
+        'A história está inteira no colar. Guarde a sessão para gerar os documentos do projeto.',
+    },
+    never: 'Não mostrar de novo',
+    triggerAria: 'Como funciona esta etapa',
+    contentAria: 'Dica desta etapa',
+    close: 'Fechar dica',
+  },
+  artifactCards: {
+    retorno: {
+      title: 'As decisões de vocês',
+      description: 'Onde cada cena e cada frase começa e termina, com o tipo e a confiança.',
+    },
+    manifesto: {
+      title: 'O mapa das contas',
+      description: 'Como o áudio foi fatiado: cada conta com seu tempo. O par exato deste áudio.',
+    },
+    relatorio: {
+      title: 'A conversa sobre o sentido',
+      description: 'O relatório editável, com as respostas em voz referenciadas por pergunta.',
+    },
+    saved: 'documentos salvos — nada saiu deste computador',
+  },
+  connectionGate: {
+    offline: 'Sem conexão',
+    rest: '— a edição está pausada e nada se perde. O áudio continua tocando; retomamos assim que a conexão voltar.',
+  },
+  guide: {
+    ariaLabel: 'o guia da conversa',
+  },
+};
+
+export type Dict = typeof pt;

@@ -1,5 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import './tutorial-popup.css';
 
@@ -17,19 +18,8 @@ import './tutorial-popup.css';
  * "?" permanece como rota de reencontro — dispensar nunca custa a informação.
  */
 
-const TIPS: Record<string, string> = {
-  escuta1:
-    'Ouçam a história inteira, sem pressa. O botão grande toca e pausa; confirme quando a história tiver sido ouvida por completo.',
-  escuta2:
-    'Toque uma conta para ouvir dali. Marquem juntos onde cada cena termina e confirme uma cena de cada vez.',
-  triagem:
-    'Classifiquem cada cena ouvindo-a de novo. Quando nenhum tipo se encaixa, «nenhum se encaixa» também é um achado.',
-  segmentacao:
-    'Dentro de cada cena, marquem as frases: um toque onde começa, outro onde termina. Se a frase passar da borda, o colar oferece caminhos.',
-  mapeamento:
-    'Faça as perguntas em voz alta e grave as respostas de quem conta. Você pode escrever depois — nunca pelo ouvinte.',
-  export: 'A história está inteira no colar. Guarde a sessão para gerar os documentos do projeto.',
-};
+/** Estações com dica (a cópia vive no dicionário i18n — ENG-279). */
+const STATIONS = ['escuta1', 'escuta2', 'triagem', 'segmentacao', 'mapeamento', 'export'];
 
 /** Chave do dismissal permanente (documentada no README deste organismo). */
 const STORAGE_KEY = 'colar-de-sons:tutorial:dismissed:v1';
@@ -57,24 +47,27 @@ export interface TutorialPopupProps {
 }
 
 export function TutorialPopup({ station }: TutorialPopupProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(() => !readDismissed());
-  const tip = TIPS[station];
-  if (!tip) return null;
+  if (!STATIONS.includes(station)) return null;
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger className="cds-tutorial-popup-trigger" aria-label="Como funciona esta etapa">
+      <Popover.Trigger
+        className="cds-tutorial-popup-trigger"
+        aria-label={t('tutorial.triggerAria')}
+      >
         <span aria-hidden="true">?</span>
       </Popover.Trigger>
       <Popover.Content
         className="cds-tutorial-popup"
-        aria-label="Dica desta etapa"
+        aria-label={t('tutorial.contentAria')}
         side="top"
         align="end"
         sideOffset={12}
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
-        <p className="cds-tutorial-popup-tip">{tip}</p>
+        <p className="cds-tutorial-popup-tip">{t(`tutorial.tips.${station}`)}</p>
         <button
           type="button"
           className="cds-tutorial-popup-never"
@@ -83,9 +76,9 @@ export function TutorialPopup({ station }: TutorialPopupProps) {
             setOpen(false);
           }}
         >
-          Não mostrar de novo
+          {t('tutorial.never')}
         </button>
-        <Popover.Close className="cds-tutorial-popup-close" aria-label="Fechar dica">
+        <Popover.Close className="cds-tutorial-popup-close" aria-label={t('tutorial.close')}>
           <span aria-hidden="true">✕</span>
         </Popover.Close>
       </Popover.Content>

@@ -28,8 +28,10 @@
     "@radix-ui/react-dialog": "^1.1.19",
     "@radix-ui/react-popover": "^1.1.19",
     "@radix-ui/react-radio-group": "^1.4.3",
+    "i18next": "^26.3.6",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.9",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },

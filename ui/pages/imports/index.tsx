@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   applyDelivery,
@@ -36,15 +37,16 @@ interface Notice {
 
 type Door = 'entrega' | 'retorno';
 
-function failure(door: Door, e: unknown): string {
-  const detail = e instanceof Error ? e.message : String(e);
-  const alvo = door === 'entrega' ? 'a entrega' : 'o retorno';
-  return `Não consegui ler ${alvo} (${detail}).`;
-}
-
 export function Imports() {
+  const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [notices, setNotices] = useState<Notice[]>([]);
+
+  const failure = (door: Door, e: unknown): string =>
+    t('imports.failure', {
+      alvo: door === 'entrega' ? t('imports.targetEntrega') : t('imports.targetRetorno'),
+      detail: e instanceof Error ? e.message : String(e),
+    });
 
   const onDelivery = async (file: File): Promise<void> => {
     // try/catch SÓ na fronteira de sistema (ler + parsear o arquivo); o mapper
@@ -69,7 +71,10 @@ export function Imports() {
     sessionStore.getState().apply(() => outcome.state);
     msgs.push({
       tone: 'ok',
-      text: `✓ Entrega carregada: ${outcome.state.parts.length} cena(s), ${outcome.state.frases.length} frase(s). As cenas são propostas — confirme de ouvido.`,
+      text: t('imports.deliveryOk', {
+        cenas: outcome.state.parts.length,
+        frases: outcome.state.frases.length,
+      }),
     });
     setNotices(msgs);
   };
@@ -93,7 +98,10 @@ export function Imports() {
     setNotices([
       {
         tone: 'ok',
-        text: `✓ Retomado: ${outcome.state.parts.length} cena(s), ${outcome.state.frases.length} frase(s).`,
+        text: t('imports.returnOk', {
+          cenas: outcome.state.parts.length,
+          frases: outcome.state.frases.length,
+        }),
       },
     ]);
   };
@@ -101,20 +109,18 @@ export function Imports() {
   if (!session) {
     return (
       <section className="cds-imports">
-        <p className="cds-imports-guidance">Abra uma sessão para carregar arquivos do pipeline.</p>
+        <p className="cds-imports-guidance">{t('imports.guidanceNoSession')}</p>
       </section>
     );
   }
 
   return (
     <section className="cds-imports">
-      <h2 className="cds-imports-title">Arquivos do pipeline</h2>
-      <p className="cds-imports-intro">
-        Carregue uma entrega do projeto ou retome um retorno já salvo.
-      </p>
+      <h2 className="cds-imports-title">{t('imports.title')}</h2>
+      <p className="cds-imports-intro">{t('imports.intro')}</p>
 
       <label className="cds-imports-door">
-        <span>Carregar entrega do projeto (.json)</span>
+        <span>{t('imports.doorEntrega')}</span>
         <input
           type="file"
           accept=".json,application/json"
@@ -126,7 +132,7 @@ export function Imports() {
       </label>
 
       <label className="cds-imports-door">
-        <span>Retomar retorno salvo (.json)</span>
+        <span>{t('imports.doorRetorno')}</span>
         <input
           type="file"
           accept=".json,application/json"
