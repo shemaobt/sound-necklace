@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
+import type { SpeechSynthesizer } from '../../adapters/tts/types';
 import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
 import { DEFAULT_FIXTURE_USER } from '../../adapters/sessions';
@@ -53,6 +54,7 @@ function SessionStations({
   exportStore,
   player,
   recorder,
+  speaker,
   onVoiceSaved,
 }: {
   session: SessionState;
@@ -64,6 +66,7 @@ function SessionStations({
   exportStore: ReturnType<typeof appSessionStore>;
   player: AudioPlayer | null;
   recorder: VoiceRecorder | null;
+  speaker: SpeechSynthesizer | null;
   onVoiceSaved: (path: string) => void;
 }) {
   const [viewingExport, setViewingExport] = useState(false);
@@ -87,7 +90,7 @@ function SessionStations({
     currentKey === 'export'
       ? { store: exportStore, sessionId }
       : currentKey === 'mapeamento'
-        ? { recorder, player, onVoiceSaved }
+        ? { recorder, player, speaker, onVoiceSaved }
         : { player };
 
   return (
@@ -316,6 +319,13 @@ export function App() {
     const registration = buildAdapterRegistry().voice;
     return registration ? (registration.fixture() as VoiceRecorder) : null;
   }, []);
+  // A voz do guia é a implementação REAL (Web Speech), não a fixture: falar de verdade
+  // É a feature (ENG-280). Ausência graciosa — num ambiente sem `speechSynthesis` o
+  // register não expõe a porta, `speaker` fica null e o botão "Ouvir a pergunta" some.
+  const speaker = useMemo<SpeechSynthesizer | null>(() => {
+    const registration = buildAdapterRegistry().tts;
+    return registration ? (registration.real() as SpeechSynthesizer) : null;
+  }, []);
 
   const header = <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />;
 
@@ -336,6 +346,7 @@ export function App() {
           exportStore={appSessionStore()}
           player={player}
           recorder={recorder}
+          speaker={speaker}
           onVoiceSaved={onVoiceSaved}
         />
       );

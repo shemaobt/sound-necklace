@@ -4,21 +4,26 @@
  * determinística. Falar uma nova pergunta cancela a anterior (encerra → inicia).
  */
 
-import type { SpeechSynthesizer, Unsubscribe } from './types';
+import {
+  DEFAULT_SPEECH_LANG,
+  type SpeechSynthesizer,
+  type SpokenUtterance,
+  type Unsubscribe,
+} from './types';
 
 export class FixtureSpeechSynthesizer implements SpeechSynthesizer {
   readonly #subs = new Set<(speaking: boolean) => void>();
-  readonly #spoken: string[] = [];
+  readonly #spoken: SpokenUtterance[] = [];
   #speaking = false;
 
-  /** Textos falados, em ordem (hook de teste). */
-  get spoken(): readonly string[] {
+  /** Falas registradas, em ordem, com o idioma de cada uma (hook de teste). */
+  get spoken(): readonly SpokenUtterance[] {
     return this.#spoken;
   }
 
-  speak(text: string): void {
+  speak(text: string, lang: string = DEFAULT_SPEECH_LANG): void {
     if (this.#speaking) this.#emit(false); // encerra a fala anterior
-    this.#spoken.push(text);
+    this.#spoken.push({ text, lang });
     this.#emit(true);
   }
 

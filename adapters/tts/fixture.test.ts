@@ -10,7 +10,7 @@ describe('FixtureSpeechSynthesizer', () => {
 
     tts.speak('Quem conta esta história?');
 
-    expect(tts.spoken).toEqual(['Quem conta esta história?']);
+    expect(tts.spoken).toEqual([{ text: 'Quem conta esta história?', lang: 'pt-BR' }]);
     expect(states).toEqual([true]);
   });
 
@@ -22,9 +22,21 @@ describe('FixtureSpeechSynthesizer', () => {
     tts.onSpeaking((s) => states.push(s));
     tts.speak('segunda');
 
-    expect(tts.spoken).toEqual(['primeira', 'segunda']);
+    expect(tts.spoken.map((u) => u.text)).toEqual(['primeira', 'segunda']);
     // encerra a fala anterior (false) e inicia a próxima (true)
     expect(states).toEqual([false, true]);
+  });
+
+  it('registra o IDIOMA de cada fala — a voz segue a UI (ENG-280)', () => {
+    const tts = new FixtureSpeechSynthesizer();
+
+    tts.speak('Onde essa história acontece?');
+    tts.speak('Where does this story take place?', 'en-US');
+
+    expect(tts.spoken).toEqual([
+      { text: 'Onde essa história acontece?', lang: 'pt-BR' },
+      { text: 'Where does this story take place?', lang: 'en-US' },
+    ]);
   });
 
   it('stop encerra a fala em curso', () => {

@@ -9,9 +9,22 @@
 
 export type Unsubscribe = () => void;
 
+/** Idioma default da fala — a linha de base pt-BR do MVP (§8.7). */
+export const DEFAULT_SPEECH_LANG = 'pt-BR';
+
+/** Uma fala registrada (hook de teste do fixture). */
+export interface SpokenUtterance {
+  text: string;
+  lang: string;
+}
+
 export interface SpeechSynthesizer {
-  /** Fala o texto em pt-BR; cancela qualquer fala em curso antes de começar. */
-  speak(text: string): void;
+  /**
+   * Fala o texto no idioma pedido (BCP-47; default pt-BR) e cancela a fala em curso
+   * antes de começar. O idioma acompanha a UI (ENG-279/280): a pergunta exibida em
+   * inglês é falada em inglês — texto e voz nunca divergem.
+   */
+  speak(text: string, lang?: string): void;
   /** Cancela a fala em curso (se houver). */
   stop(): void;
   /**
