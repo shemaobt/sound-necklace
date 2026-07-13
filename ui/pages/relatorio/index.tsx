@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import {
@@ -17,6 +18,7 @@ import {
   setAnswer,
   voiceAnswerPath,
 } from '../../../domain';
+import { questionTextFor } from '../../i18n/mapeamento-questions';
 import { Button, WaveformBar } from '../../atoms';
 import { sessionStore, useSessionStore } from '../../state';
 import './relatorio.css';
@@ -48,10 +50,12 @@ export interface RelatorioProps {
   saveBytes?: (filename: string, bytes: string) => void;
 }
 
-const SECTION: Record<1 | 2 | 3, string> = {
-  1: 'A história',
-  2: 'As cenas',
-  3: 'As frases',
+type Translate = (key: string, opts?: Record<string, unknown>) => string;
+
+const SECTION_KEY: Record<1 | 2 | 3, string> = {
+  1: 'relatorio.sectionStory',
+  2: 'relatorio.sectionScenes',
+  3: 'relatorio.sectionPhrases',
 };
 
 /** Prefixo da chave reservada da nota — fora do vocabulário de perguntas. */
@@ -104,14 +108,14 @@ interface Row {
 }
 
 /** Insere os cabeçalhos de seção (nível) e de grupo (cena/frase) na sequência. */
-function toRows(sequence: QuestionSlot[]): Row[] {
+function toRows(sequence: QuestionSlot[], t: Translate): Row[] {
   const rows: Row[] = [];
   let level = 0;
   let group = '';
   let sceneN = 0;
   let fraseN = 0;
   for (const slot of sequence) {
-    const section = slot.level !== level ? SECTION[slot.level] : null;
+    const section = slot.level !== level ? t(SECTION_KEY[slot.level]) : null;
     if (section) {
       level = slot.level;
       group = '';
@@ -120,7 +124,10 @@ function toRows(sequence: QuestionSlot[]): Row[] {
     let groupLabel: string | null = null;
     if (gid && gid !== group) {
       group = gid;
-      groupLabel = slot.level === 2 ? `Cena ${(sceneN += 1)}` : `Frase ${(fraseN += 1)}`;
+      groupLabel =
+        slot.level === 2
+          ? t('relatorio.groupScene', { n: (sceneN += 1) })
+          : t('relatorio.groupPhrase', { n: (fraseN += 1) });
     }
     rows.push({ slot, section, group: groupLabel });
   }
@@ -148,6 +155,7 @@ function ReportCard({
   onNote,
   onPlay,
 }: ReportCardProps) {
+  const { t, i18n } = useTranslation();
   const [showNote, setShowNote] = useState(note !== '');
   const q = slot.question;
   const facilitatorLed = slot.k === 'ausencia';
@@ -156,27 +164,27 @@ function ReportCard({
   return (
     <div className="cds-relatorio-card">
       {facilitatorLed ? (
-        <span className="cds-relatorio-role" role="img" aria-label="conduzida pela facilitadora">
+        <span className="cds-relatorio-role" role="img" aria-label={t('relatorio.facilitatorLed')}>
           🎙
         </span>
       ) : null}
 
       <p className="cds-relatorio-q">
-        {q.q}
+        {questionTextFor(slot, i18n.language)}
         {q.field ? <span className="cds-relatorio-field"> ({q.field})</span> : null}
       </p>
 
       {voiceOnly ? (
         <div className="cds-relatorio-voice">
           <Button variant="ghost" size="sm" onClick={onPlay}>
-            ▶ ouvir a resposta
+            {t('relatorio.playAnswer')}
           </Button>
           <span className="cds-relatorio-wave" aria-hidden="true">
             {WAVE_HEIGHTS.map((h, i) => (
               <WaveformBar key={i} height={h} />
             ))}
           </span>
-          <span className="cds-relatorio-duration" aria-label="duração da resposta">
+          <span className="cds-relatorio-duration" aria-label={t('relatorio.answerDuration')}>
             {durationSec === undefined ? '—' : formatDuration(durationSec)}
           </span>
         </div>
@@ -184,8 +192,8 @@ function ReportCard({
 
       <textarea
         className="cds-relatorio-typed"
-        aria-label="resposta"
-        placeholder={voiceOnly ? undefined : 'ainda sem resposta gravada'}
+        aria-label={t('relatorio.answer')}
+        placeholder={voiceOnly ? undefined : t('relatorio.noAnswerYet')}
         value={typed}
         onChange={(e) => onTyped(e.target.value)}
       />
@@ -193,13 +201,13 @@ function ReportCard({
       {showNote ? (
         <textarea
           className="cds-relatorio-note"
-          aria-label="observação da facilitadora"
+          aria-label={t('relatorio.typedAria')}
           value={note}
           onChange={(e) => onNote(e.target.value)}
         />
       ) : (
         <Button variant="ghost" size="sm" onClick={() => setShowNote(true)}>
-          acrescentar uma observação
+          {t('relatorio.addNote')}
         </Button>
       )}
     </div>
@@ -207,6 +215,7 @@ function ReportCard({
 }
 
 export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: RelatorioProps) {
+  const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [voiceSet, setVoiceSet] = useState<ReadonlySet<string>>(new Set());
   const [voiceDurations, setVoiceDurations] = useState<ReadonlyMap<string, number>>(new Map());
@@ -253,7 +262,7 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
 
   if (!session || !mapped || !sequence.length) return null;
 
-  const rows = toRows(sequence);
+  const rows = toRows(sequence, t);
   const confirmed = mapped.whole.confirmed;
 
   const writeTyped = (slot: QuestionSlot, text: string): void => {
@@ -297,10 +306,10 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
 
       <div className="cds-relatorio-nav">
         <Button variant="primary" size="sm" onClick={onDownloadReport}>
-          Baixar relatório (.md)
+          {t('relatorio.downloadReport')}
         </Button>
         <Button variant="ghost" size="sm" disabled={!confirmed} onClick={onDownloadRetorno}>
-          Baixar a ancoragem (.json)
+          {t('relatorio.downloadRetorno')}
         </Button>
       </div>
     </section>

@@ -1,5 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useLayoutEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { BorderOffer, Span } from '../../../domain';
 import { Button, Pearl } from '../../atoms';
@@ -15,14 +16,6 @@ import './seam-modal.css';
  * — delta/thr ficam internos; ESC e o overlay declinam para onReanchor, o
  * default que não muda nada (§9.5: guiar, nunca punir).
  */
-
-const HEADLINE = 'A frase passou da borda da cena.';
-const SUBLINE = 'Para onde vai a costura?';
-const CONSEQUENCE = 'A cena de hoje cresce, a vizinha encolhe';
-const MOVE = 'Mover a borda até aqui';
-const MOVE_ANYWAY = 'Mover mesmo assim';
-const BACK_TO_TRIAGEM = 'Voltar à Triagem';
-const REANCHOR = 'Reancorar dentro da cena';
 
 const BEAD = 46;
 const GAP = 10;
@@ -91,6 +84,7 @@ function stripModel(
 }
 
 function Marker({ kind, slideFromPx }: { kind: 'before' | 'after'; slideFromPx?: number }) {
+  const { t } = useTranslation();
   return (
     <span
       className="cds-seam-modal-marker"
@@ -100,7 +94,7 @@ function Marker({ kind, slideFromPx }: { kind: 'before' | 'after'; slideFromPx?:
       }
     >
       <span className="cds-seam-modal-marker-label">
-        {kind === 'before' ? 'borda de hoje' : 'borda nova'}
+        {kind === 'before' ? t('seamModal.markerBefore') : t('seamModal.markerAfter')}
       </span>
     </span>
   );
@@ -114,6 +108,7 @@ export function SeamModal({
   onReanchor,
   onGoTriagem,
 }: SeamModalProps) {
+  const { t } = useTranslation();
   const stripRef = useRef<HTMLDivElement>(null);
   const reanchorWrapRef = useRef<HTMLSpanElement>(null);
 
@@ -137,18 +132,46 @@ export function SeamModal({
         ? overshootTint
         : (neighbor?.tint ?? scene.tint);
 
-  const actions: { label: string; variant: 'primary' | 'ghost'; onClick: () => void }[] =
+  // `key` é o identificador ESTÁVEL da ação (o label traduz e não serve mais para isso).
+  const actions: {
+    key: string;
+    label: string;
+    variant: 'primary' | 'ghost';
+    onClick: () => void;
+  }[] =
     offer.kind === 'simple'
       ? [
-          { label: MOVE, variant: 'primary', onClick: onMove },
-          { label: REANCHOR, variant: 'ghost', onClick: onReanchor },
+          { key: 'move', label: t('seamModal.move'), variant: 'primary', onClick: onMove },
+          {
+            key: 'reanchor',
+            label: t('seamModal.reanchor'),
+            variant: 'ghost',
+            onClick: onReanchor,
+          },
         ]
       : [
-          { label: BACK_TO_TRIAGEM, variant: 'primary', onClick: onGoTriagem },
+          {
+            key: 'triagem',
+            label: t('seamModal.backToTriagem'),
+            variant: 'primary',
+            onClick: onGoTriagem,
+          },
           ...(offer.canMove
-            ? [{ label: MOVE_ANYWAY, variant: 'ghost' as const, onClick: onMove }]
+            ? [
+                {
+                  key: 'move-anyway',
+                  label: t('seamModal.moveAnyway'),
+                  variant: 'ghost' as const,
+                  onClick: onMove,
+                },
+              ]
             : []),
-          { label: REANCHOR, variant: 'ghost', onClick: onReanchor },
+          {
+            key: 'reanchor',
+            label: t('seamModal.reanchor'),
+            variant: 'ghost',
+            onClick: onReanchor,
+          },
         ];
 
   const markerAt = (edge: 'lead' | 'trail', index: number) => {
@@ -173,8 +196,10 @@ export function SeamModal({
             reanchorWrapRef.current?.querySelector('button')?.focus();
           }}
         >
-          <Dialog.Title className="cds-seam-modal-headline">{HEADLINE}</Dialog.Title>
-          <Dialog.Description className="cds-seam-modal-subline">{SUBLINE}</Dialog.Description>
+          <Dialog.Title className="cds-seam-modal-headline">{t('seamModal.headline')}</Dialog.Title>
+          <Dialog.Description className="cds-seam-modal-subline">
+            {t('seamModal.subline')}
+          </Dialog.Description>
           <div className="cds-seam-modal-strip" ref={stripRef}>
             {strip.beads.map(({ index, zone }) => (
               <span key={index} className="cds-seam-modal-slot">
@@ -187,25 +212,25 @@ export function SeamModal({
             ))}
           </div>
           <div className="cds-seam-modal-actions">
-            {actions.map(({ label, variant, onClick }) => {
+            {actions.map(({ key, label, variant, onClick }) => {
               const button = (
                 <Button variant={variant} onClick={onClick}>
                   {label}
                 </Button>
               );
-              return label === REANCHOR ? (
-                <span key={label} ref={reanchorWrapRef} style={{ display: 'contents' }}>
+              return key === 'reanchor' ? (
+                <span key={key} ref={reanchorWrapRef} style={{ display: 'contents' }}>
                   {button}
                 </span>
               ) : (
-                <span key={label} style={{ display: 'contents' }}>
+                <span key={key} style={{ display: 'contents' }}>
                   {button}
                 </span>
               );
             })}
           </div>
           {offer.kind === 'simple' ? (
-            <p className="cds-seam-modal-consequence">{CONSEQUENCE}</p>
+            <p className="cds-seam-modal-consequence">{t('seamModal.consequence')}</p>
           ) : null}
         </Dialog.Content>
       </Dialog.Portal>
