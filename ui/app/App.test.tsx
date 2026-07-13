@@ -129,7 +129,7 @@ describe('App shell', () => {
     // O fallback "estação em construção" para uma chave não construída é coberto
     // em station-host.test.tsx; aqui basta que o shell resolva a estação da rota.
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Minhas sessões' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Suas histórias' })).toBeDefined();
   });
 
   it('a rota /setup abre a estação Setup', async () => {
@@ -146,7 +146,7 @@ describe('App shell', () => {
     // sem sessão viva, a estação de imports orienta a abrir uma — o que importa é que
     // a rota resolve a estação imports (ENG-248), não recai no dashboard.
     expect(screen.getByText('Abra uma sessão para carregar arquivos do pipeline.')).toBeDefined();
-    expect(screen.queryByRole('heading', { name: 'Minhas sessões' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Suas histórias' })).toBeNull();
   });
 
   it('reidrata a sessão do store ao (re)abrir /session/:id com o ui/state vazio', async () => {
