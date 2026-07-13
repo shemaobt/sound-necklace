@@ -63,3 +63,34 @@ describe('Login — superfície creme (redesign §4.1)', () => {
     expect(loginCss).toMatch(/\.cds-login\s*\{[^}]*var\(--cds-cream\)/);
   });
 });
+
+// Auth pendente de propósito: expõe o estado de progresso da UI enquanto a porta
+// não resolve. Reusa a fixture e sobrescreve só `login` (evita mock gordo da porta).
+class PendingAuth extends FixtureAuthProvider {
+  login(): Promise<never> {
+    return new Promise<never>(() => {
+      /* pende de propósito */
+    });
+  }
+}
+
+describe('Login — abertura Shemá v2 (ENG-278, protótipo)', () => {
+  it('mostra a abertura cerimonial: boas-vindas, verso e a linha de privacidade', () => {
+    render(<Login auth={new FixtureAuthProvider()} />);
+
+    expect(screen.getByRole('heading', { name: 'Bem-vinda de volta.' })).toBeTruthy();
+    expect(screen.getByText('Assim na terra como no céu.')).toBeTruthy();
+    expect(screen.getByText('Nada do áudio sai deste computador.')).toBeTruthy();
+  });
+
+  it('enquanto autentica, o botão vira "Entrando…" e fica travado', async () => {
+    render(<Login auth={new PendingAuth()} />);
+
+    await userEvent.type(screen.getByLabelText('Usuário'), 'facilitadora');
+    await userEvent.type(screen.getByLabelText('Senha'), FILL);
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    const entrando = await screen.findByRole('button', { name: 'Entrando…' });
+    expect((entrando as HTMLButtonElement).disabled).toBe(true);
+  });
+});

@@ -15,10 +15,17 @@ export const en: Dict = {
     switchLanguage: 'Switch to Portuguese',
   },
   login: {
-    title: 'Sign in',
+    verse: 'On earth as it is in heaven.',
+    tagline:
+      'Every story told aloud becomes a necklace of beads — heard, cut and kept here, with you.',
+    privacy: 'No audio leaves this computer.',
+    eyebrow: 'Sign in',
+    title: 'Welcome back.',
+    subtitle: 'Pick up where you left off.',
     username: 'Username',
     password: 'Password',
     submit: 'Sign in',
+    busy: 'Signing in…',
     refused: 'Could not sign in. Check the username and password.',
   },
   setup: {

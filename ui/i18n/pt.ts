@@ -17,11 +17,19 @@ export const pt = {
     unmute: 'Ligar o som da interface',
     switchLanguage: 'Mudar para inglês',
   },
+  /** Abertura em dois painéis do protótipo Shemá v2 (ENG-278): herói cerimonial + formulário. */
   login: {
-    title: 'Entrar',
+    verse: 'Assim na terra como no céu.',
+    tagline:
+      'Cada história contada em voz alta vira um colar de contas — ouvida, cortada e guardada aqui, com vocês.',
+    privacy: 'Nada do áudio sai deste computador.',
+    eyebrow: 'Entrar',
+    title: 'Bem-vinda de volta.',
+    subtitle: 'Continue de onde vocês pararam.',
     username: 'Usuário',
     password: 'Senha',
     submit: 'Entrar',
+    busy: 'Entrando…',
     refused: 'Não foi possível entrar. Confira o usuário e a senha.',
   },
   setup: {
