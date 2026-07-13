@@ -67,7 +67,16 @@ function SessionCard({
             aria-label={t('sessionList.progressAria', { name: session.storyName })}
           >
             {session.stations.map((st) => (
-              <StepperStation key={st.key} label={st.label} state={st.state} />
+              <StepperStation
+                key={st.key}
+                label={st.label}
+                state={st.state}
+                stateLabels={{
+                  current: t('stationState.current'),
+                  done: t('stationState.done'),
+                  future: t('stationState.future'),
+                }}
+              />
             ))}
           </ol>
         )}

@@ -106,6 +106,7 @@ export function ConversationStage({
             facilitatorLed={facilitatorLed}
             onListen={onSpeakQuestion}
             listenLabel={t('conversationStage.listen')}
+            roleTitle={t('questionCard.roleTitle')}
           >
             {note ? <p className="cds-conversation-stage-note">{note}</p> : null}
 

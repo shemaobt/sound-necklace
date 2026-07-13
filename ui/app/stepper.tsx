@@ -19,6 +19,11 @@ export function Stepper({
   onNavigate: (key: string) => void;
 }) {
   const { t } = useTranslation();
+  const stateLabels = {
+    current: t('stationState.current'),
+    done: t('stationState.done'),
+    future: t('stationState.future'),
+  };
   const handleClick = (event: React.MouseEvent<HTMLOListElement>) => {
     const li = (event.target as HTMLElement).closest('li');
     const list = li?.parentElement;
@@ -31,7 +36,12 @@ export function Stepper({
   return (
     <ol className="cds-stepper" aria-label={t('shell.stepperAria')} onClick={handleClick}>
       {stations.map((s) => (
-        <StepperStation key={s.key} label={t(s.labelKey)} state={s.state} />
+        <StepperStation
+          key={s.key}
+          label={t(s.labelKey)}
+          state={s.state}
+          stateLabels={stateLabels}
+        />
       ))}
     </ol>
   );

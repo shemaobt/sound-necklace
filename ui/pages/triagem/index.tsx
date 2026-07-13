@@ -134,7 +134,12 @@ export function Triagem({ player = null }: TriagemProps) {
 
   return (
     <section className="cds-triagem">
-      <ProgressDots count={parts.length} current={idx} onSelect={setFocusIdx} />
+      <ProgressDots
+        count={parts.length}
+        current={idx}
+        onSelect={setFocusIdx}
+        dotLabel={t('progressDots.dotLabel')}
+      />
 
       <div className="cds-triagem-focus">
         <p className="cds-triagem-instruction" data-role="instruction">

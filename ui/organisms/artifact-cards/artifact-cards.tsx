@@ -48,6 +48,7 @@ export function ArtifactCards({ downloaded, onDownload }: ArtifactCardsProps) {
             title={t(`artifactCards.${d.kind}.title`)}
             description={t(`artifactCards.${d.kind}.description`)}
             downloadLabel={t('documentCard.download')}
+            downloadedLabel={t('documentCard.downloaded')}
             downloaded={downloaded[d.kind]}
             onDownload={onDownload ? () => onDownload(d.kind) : undefined}
           />

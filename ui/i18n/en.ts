@@ -101,6 +101,18 @@ export const en: Dict = {
   },
   documentCard: {
     download: 'Download',
+    downloaded: 'downloaded',
+  },
+  questionCard: {
+    roleTitle: 'facilitator-led',
+  },
+  progressDots: {
+    dotLabel: 'go to the scene',
+  },
+  stationState: {
+    current: 'current step',
+    done: 'done',
+    future: 'not done',
   },
   dashboard: {
     title: 'My sessions',
@@ -202,12 +214,14 @@ export const en: Dict = {
     advance: 'I have classified every scene →',
   },
   triagemPicker: {
-    'theme.indo-e-vindo': 'Coming and going',
-    'theme.fala-e-acordo': 'Speech and agreement',
-    'theme.trabalho-e-terra': 'Work and land',
-    'theme.sentimento': 'Feeling',
-    'theme.rito-e-alianca': 'Rite and covenant',
-    'theme.narracao': 'Narration',
+    theme: {
+      'indo-e-vindo': 'Coming and going',
+      'fala-e-acordo': 'Speech and agreement',
+      'trabalho-e-terra': 'Work and land',
+      sentimento: 'Feeling',
+      'rito-e-alianca': 'Rite and covenant',
+      narracao: 'Narration',
+    },
     swap: 'change type',
     confidenceQuestion: 'How right does that feel to you?',
     confirm: 'Confirm',

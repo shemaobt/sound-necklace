@@ -96,6 +96,26 @@ describe('TriagemPicker — grade "Mais comuns" e disclosure por tema', () => {
     expect([...all].sort()).toEqual(SCENE_KINDS.map((k) => k.value).sort());
   });
 
+  it('o título de cada tema renderiza traduzido (a chave aninhada resolve de verdade)', () => {
+    const { container } = render(<TriagemPicker />);
+    expand(container);
+
+    const titulos = Array.from(container.querySelectorAll('.cds-triagem-picker-theme-label')).map(
+      (el) => el.textContent?.trim() ?? '',
+    );
+
+    // Sem esta asserção, uma chave que NÃO resolve renderiza o próprio caminho
+    // ("triagemPicker.theme.indo-e-vindo") e a suíte seguiria verde.
+    expect(titulos).toEqual([
+      'Indo e vindo',
+      'Fala e acordo',
+      'Trabalho e terra',
+      'Sentimento',
+      'Rito e aliança',
+      'Narração',
+    ]);
+  });
+
   it('"recolher" fecha a lista por tema de volta aos comuns', () => {
     const { container, getByRole } = render(<TriagemPicker />);
     expand(container);

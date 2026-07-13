@@ -108,8 +108,25 @@ export const pt = {
     quase: 'Quase',
     duvida: 'Na dúvida',
   },
+  /**
+   * Cópia que vive em MOLECULES como default de prop. A molécula é presentacional: o
+   * organismo/página passa o texto traduzido. Sem isto, o default PT-BR vaza para a UI
+   * em EN (o botão dizia "baixado" em inglês).
+   */
   documentCard: {
     download: 'Baixar',
+    downloaded: 'baixado',
+  },
+  questionCard: {
+    roleTitle: 'conduzida pela facilitadora',
+  },
+  progressDots: {
+    dotLabel: 'ir para a cena',
+  },
+  stationState: {
+    current: 'etapa atual',
+    done: 'concluído',
+    future: 'não concluído',
   },
   dashboard: {
     title: 'Minhas sessões',
@@ -210,12 +227,17 @@ export const pt = {
     advance: 'Já classifiquei todas as cenas →',
   },
   triagemPicker: {
-    'theme.indo-e-vindo': 'Indo e vindo',
-    'theme.fala-e-acordo': 'Fala e acordo',
-    'theme.trabalho-e-terra': 'Trabalho e terra',
-    'theme.sentimento': 'Sentimento',
-    'theme.rito-e-alianca': 'Rito e aliança',
-    'theme.narracao': 'Narração',
+    // Aninhado de verdade: chaves planas com ponto só resolviam por um FALLBACK do
+    // i18next (ignoreJSONStructure). Se esse default mudar, os 6 títulos de tema viram
+    // a chave crua na tela — e nada quebraria.
+    theme: {
+      'indo-e-vindo': 'Indo e vindo',
+      'fala-e-acordo': 'Fala e acordo',
+      'trabalho-e-terra': 'Trabalho e terra',
+      sentimento: 'Sentimento',
+      'rito-e-alianca': 'Rito e aliança',
+      narracao: 'Narração',
+    },
     swap: 'trocar tipo',
     confidenceQuestion: 'O quanto isso parece certo pra você?',
     confirm: 'Confirmar',
