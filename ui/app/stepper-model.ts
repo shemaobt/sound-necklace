@@ -12,18 +12,19 @@ import type { StationState } from '../molecules';
 
 export interface StepperStationView {
   key: string;
-  label: string;
+  /** Chave i18n do rótulo (`ui/i18n` `stations.*`) — quem renderiza traduz. */
+  labelKey: string;
   state: StationState;
   reachable: boolean;
 }
 
-const STATIONS: readonly { key: string; label: string }[] = [
-  { key: 'escuta1', label: 'Ouvir' },
-  { key: 'escuta2', label: 'Cortar' },
-  { key: 'triagem', label: 'Triagem' },
-  { key: 'segmentacao', label: 'Frases' },
-  { key: 'mapeamento', label: 'Conversa' },
-  { key: 'export', label: 'Guardar' },
+const STATIONS: readonly { key: string; labelKey: string }[] = [
+  { key: 'escuta1', labelKey: 'stations.ouvir' },
+  { key: 'escuta2', labelKey: 'stations.cortar' },
+  { key: 'triagem', labelKey: 'stations.triagem' },
+  { key: 'segmentacao', labelKey: 'stations.frases' },
+  { key: 'mapeamento', labelKey: 'stations.conversa' },
+  { key: 'export', labelKey: 'stations.guardar' },
 ];
 
 function currentIndex(state: SessionState): number {
@@ -59,7 +60,7 @@ export function stepperStations(
   const ci = opts.viewingExport ? STATIONS.length - 1 : currentIndex(state);
   return STATIONS.map((def, i) => ({
     key: def.key,
-    label: def.label,
+    labelKey: def.labelKey,
     state: i === ci ? 'current' : i < ci ? 'done' : 'future',
     reachable: reachable[i]!,
   }));

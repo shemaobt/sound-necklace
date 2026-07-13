@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button, WaveformBar } from '../../atoms';
 import { BeadRow, type BeadCell, QuestionCard } from '../../molecules';
@@ -85,6 +86,7 @@ export function ConversationStage({
   onNext,
   onSpeakQuestion,
 }: ConversationStageProps) {
+  const { t } = useTranslation();
   const beads: BeadCell[] = Array.from({ length: progress.total }, (_, i) => ({
     key: i,
     state: i === progress.current ? 'head' : progress.answered.has(i) ? 'lit' : 'unplayed',
@@ -103,7 +105,8 @@ export function ConversationStage({
             question={question}
             facilitatorLed={facilitatorLed}
             onListen={onSpeakQuestion}
-            listenLabel="Ouvir a pergunta"
+            listenLabel={t('conversationStage.listen')}
+            roleTitle={t('questionCard.roleTitle')}
           >
             {note ? <p className="cds-conversation-stage-note">{note}</p> : null}
 
@@ -112,7 +115,7 @@ export function ConversationStage({
                 <button
                   type="button"
                   className="cds-conversation-stage-mic"
-                  aria-label="gravar a resposta"
+                  aria-label={t('conversationStage.record')}
                   onClick={onRecord}
                 >
                   <MicGlyph />
@@ -127,7 +130,7 @@ export function ConversationStage({
                     ))}
                   </div>
                   <Button variant="dark" onClick={onStop}>
-                    Parar
+                    {t('conversationStage.stop')}
                   </Button>
                 </>
               ) : null}
@@ -135,10 +138,10 @@ export function ConversationStage({
               {recorderState === 'recorded' ? (
                 <div className="cds-conversation-stage-review">
                   <Button variant="ghost" onClick={onPlay}>
-                    ouvir
+                    {t('conversationStage.play')}
                   </Button>
                   <Button variant="ghost" onClick={onRerecord}>
-                    de novo
+                    {t('conversationStage.again')}
                   </Button>
                 </div>
               ) : null}
@@ -147,7 +150,7 @@ export function ConversationStage({
             {typedAnswer !== undefined ? (
               <div className="cds-conversation-stage-typed">
                 <p className="cds-conversation-stage-typed-hint">
-                  A facilitadora pode escrever depois — nunca por você.
+                  {t('conversationStage.typedHint')}
                 </p>
                 {typedAnswer}
               </div>
@@ -160,19 +163,19 @@ export function ConversationStage({
         <div className="cds-conversation-stage-nav">
           {onPrev ? (
             <Button variant="ghost" size="sm" onClick={onPrev}>
-              Anterior
+              {t('conversationStage.prev')}
             </Button>
           ) : null}
           {onNext ? (
             <Button variant="dark" size="sm" onClick={onNext}>
-              Próxima pergunta
+              {t('conversationStage.next')}
             </Button>
           ) : null}
         </div>
         <div
           className="cds-conversation-stage-progress"
           role="group"
-          aria-label="progresso da conversa"
+          aria-label={t('conversationStage.progressAria')}
         >
           <BeadRow beads={beads} />
         </div>

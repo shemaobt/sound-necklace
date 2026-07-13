@@ -8,13 +8,19 @@ export type ConfidenceChoice = 'certeza' | 'quase' | 'duvida';
 
 const CHOICES: {
   choice: ConfidenceChoice;
-  label: string;
   variant: 'filled' | 'half' | 'dashed';
 }[] = [
-  { choice: 'certeza', label: 'Certeza', variant: 'filled' },
-  { choice: 'quase', label: 'Quase', variant: 'half' },
-  { choice: 'duvida', label: 'Na dúvida', variant: 'dashed' },
+  { choice: 'certeza', variant: 'filled' },
+  { choice: 'quase', variant: 'half' },
+  { choice: 'duvida', variant: 'dashed' },
 ];
+
+/** Cópia PT-BR default: molécula é presentacional — o organismo passa o texto traduzido. */
+const DEFAULT_CHOICE_LABELS: Record<ConfidenceChoice, string> = {
+  certeza: 'Certeza',
+  quase: 'Quase',
+  duvida: 'Na dúvida',
+};
 
 /**
  * O segundo gesto da Triagem (redesign §4.4, §6.4): confiança em três formas —
@@ -25,10 +31,12 @@ export function ConfidenceTrio({
   value,
   onSelect,
   label = 'O quanto isso parece certo pra você?',
+  choiceLabels = DEFAULT_CHOICE_LABELS,
 }: {
   value?: ConfidenceChoice;
   onSelect?: (choice: ConfidenceChoice) => void;
   label?: string;
+  choiceLabels?: Record<ConfidenceChoice, string>;
 }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const activeIndex = CHOICES.findIndex((c) => c.choice === value);
@@ -74,7 +82,7 @@ export function ConfidenceTrio({
           }}
         >
           <ConfidenceDisc variant={c.variant} size={64} />
-          <span className="cds-confidence-trio-label">{c.label}</span>
+          <span className="cds-confidence-trio-label">{choiceLabels[c.choice]}</span>
         </button>
       ))}
     </div>

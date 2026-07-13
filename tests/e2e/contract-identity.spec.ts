@@ -155,3 +155,58 @@ test('seam-small-move: manifesto+retorno exportados pela UI são byte-idênticos
     );
   }
 });
+
+test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate com o golden', async ({
+  page,
+}) => {
+  const app = new ColarApp(page);
+  const slug = 'fluxo-minimo';
+
+  // O fluxo inteiro em PT (reusa os helpers). O que este teste isola é o idioma na
+  // HORA de materializar e baixar os artefatos — o caso que o golden NÃO cobre (ele
+  // roda por domain+contracts, sem UI) e que o e2e em PT também não cobre.
+  await app.login();
+  await app.createSession('fluxo-minimo.wav');
+  await app.confirmWholeStory();
+  await app.cutScenes([9, 23]);
+  await triageGleaningThenNoneFit(page);
+  await app.cutPhrase(0, 4);
+  await page.getByRole('button', { name: '⚑ revisar' }).click();
+  await app.finishSegmentacao();
+  await typeAnswersAt(app, page, [
+    [0, 'Uma história sobre respiga e retorno ao lar.'],
+    [12, 'Duas mulheres e os ceifeiros.'],
+    [16, 'Um trecho que não se encaixa nos tipos.'],
+    [21, 'A chegada ao campo — com acentos: coração, você, média.'],
+  ]);
+
+  // Troca a UI para INGLÊS. De quebra isto é um smoke test do chrome EN: o fluxo só
+  // avança daqui pra frente se os rótulos ingleses existirem de verdade.
+  await page.getByRole('button', { name: 'Mudar para inglês' }).click();
+  await expect(page.getByRole('button', { name: 'Switch to Portuguese' })).toBeVisible();
+
+  // Conclui e baixa com a UI em inglês.
+  await app.gotoStep('Save');
+  const complete = page.getByRole('button', { name: 'Finish and save the documents' });
+  await expect(complete).toBeEnabled();
+  await complete.click();
+  await expect(page.getByRole('button', { name: 'Unlock to edit' })).toBeVisible();
+
+  for (const [shown, golden, filenameFor] of [
+    ['retorno-ancoragem.json', 'retorno-ancoragem.json', retornoFilename],
+    ['manifesto-contas.json', 'manifesto-contas.json', manifestoFilename],
+    ['relatorio-mapeamento.md', 'relatorio-mapeamento.md', relatorioFilename],
+  ] as const) {
+    // O nome EXIBIDO no card é o do contrato e nunca traduz — o locator vale nos dois idiomas.
+    const card = page.locator('.cds-export .cds-document-card', { hasText: shown });
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      card.getByRole('button', { name: 'Download' }).click(),
+    ]);
+    const bytes = readFileSync(await download.path());
+    expect(download.suggestedFilename()).toBe(filenameFor(slug));
+    const g = goldenBytes('minimal-flow', golden);
+    // Um byte diferente = o i18n vazou para o artefato (P0): o pipeline consome PT-BR.
+    expect(bytes.equals(g), `${golden} mudou só por a UI estar em inglês`).toBe(true);
+  }
+});

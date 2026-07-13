@@ -54,6 +54,16 @@ module.exports = {
       to: { path: '^(domain|contracts|adapters)(/|$)' },
     },
     {
+      name: 'atomos-e-moleculas-sem-i18n',
+      severity: 'error',
+      comment:
+        'ui/atoms e ui/molecules não traduzem: a cópia chega por prop, já traduzida pelo ' +
+        'organismo/página (ENG-279). A regra é própria porque ui/i18n importa domain/ — ' +
+        'uma molécula que importasse i18n arrastaria o domínio junto, por caminho indireto.',
+      from: { path: '^ui/(atoms|molecules)(/|$)' },
+      to: { path: '^ui/i18n(/|$)' },
+    },
+    {
       name: 'organismos-sem-adapters',
       severity: 'error',
       comment: 'Organismos consomem estado do domínio via props/hooks; nunca adapters.',

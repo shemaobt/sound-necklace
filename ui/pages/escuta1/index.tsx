@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import { confirmWhole, reopenWhole } from '../../../domain';
@@ -23,6 +24,7 @@ export interface Escuta1Props {
 }
 
 export function Escuta1({ player = null }: Escuta1Props) {
+  const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export function Escuta1({ player = null }: Escuta1Props) {
       </div>
 
       <p className="cds-escuta1-tagline" data-role="instruction">
-        Ouça a história.
+        {t('escuta1.tagline')}
       </p>
 
       <div className="cds-escuta1-stage">
@@ -84,17 +86,17 @@ export function Escuta1({ player = null }: Escuta1Props) {
       <div className="cds-escuta1-controls">
         <Button variant="dark" onClick={handlers?.onBig}>
           <PlayGlyph state="play" />
-          Ouvir a história
+          {t('escuta1.listen')}
         </Button>
 
         <div className="cds-escuta1-decision" data-role="primary-action">
           {session.whole.confirmed ? (
             <Button variant="ghost" onClick={reopen}>
-              Reabrir
+              {t('escuta1.reopen')}
             </Button>
           ) : (
             <Button variant="primary" onClick={confirm}>
-              Já ouvi a história completa
+              {t('escuta1.confirm')}
             </Button>
           )}
         </div>

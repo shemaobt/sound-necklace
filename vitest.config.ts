@@ -28,6 +28,8 @@ export default defineConfig({
           // css processado: sem isto, imports de .css (mesmo ?raw/?inline)
           // viram string vazia e testes de conteúdo de token não funcionam.
           css: true,
+          // init do i18n (default PT) para todo teste de UI — ENG-279.
+          setupFiles: ['./ui/i18n/test-setup.ts'],
           include: ['ui/**/*.test.{ts,tsx}'],
           exclude: ['ui/**/*.browser.test.{ts,tsx}'],
         },
@@ -38,6 +40,8 @@ export default defineConfig({
           // retry único: a 1ª execução em cache frio pode recarregar por
           // otimização de deps do Vite; as asserções não mudam.
           retry: 1,
+          // init do i18n (default PT) para os testes de interação — ENG-279.
+          setupFiles: ['./ui/i18n/test-setup.ts'],
           include: ['ui/**/*.browser.test.{ts,tsx}'],
           browser: {
             enabled: true,

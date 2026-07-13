@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { SessionStore } from '../../../adapters/sessions';
 import {
@@ -66,8 +67,6 @@ const DEFAULT_META: SessionMeta = {
 
 const NO_DOWNLOADS: ArtifactDownloads = { retorno: false, manifesto: false, relatorio: false };
 
-const RETORNO_BLOCKED = 'Confirme o colar antes de exportar.';
-
 function domSaveBytes(filename: string, bytes: string): void {
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
   const a = document.createElement('a');
@@ -86,6 +85,7 @@ function filenameFor(kind: ArtifactKind, slug: string): string {
 }
 
 export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportProps) {
+  const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [phase, setPhase] = useState<Phase>(store && sessionId ? 'loading' : 'edit');
   const [custody, setCustody] = useState<Custody | null>(null);
@@ -152,7 +152,7 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
   const onDownload = async (kind: ArtifactKind): Promise<void> => {
     if (!triple) return;
     if (kind === 'retorno' && !canExport) {
-      setNotice(RETORNO_BLOCKED);
+      setNotice(t('export.retornoBlocked'));
       return;
     }
     if (kind === 'manifesto' && !canExportManifesto(session)) return;
@@ -185,7 +185,7 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
   return (
     <section className="cds-export">
       <p className="cds-export-headline" data-role="instruction">
-        A história está inteira no colar.
+        {t('export.headline')}
       </p>
 
       <div className="cds-export-stage">
@@ -202,7 +202,7 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
         <>
           {phase === 'edit' && semFim > 0 ? (
             <p className="cds-export-warning" role="status">
-              {semFim} frase(s) ainda sem fim travado.
+              {t('export.semFim', { n: semFim })}
             </p>
           ) : null}
 
@@ -217,11 +217,11 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
           <div className="cds-export-action" data-role="primary-action">
             {phase === 'saved' ? (
               <Button variant="ghost" onClick={onReopen}>
-                Destravar para editar
+                {t('export.reopen')}
               </Button>
             ) : (
               <Button variant="dark" disabled={!canExport} onClick={onComplete}>
-                Concluir e guardar os documentos
+                {t('export.complete')}
               </Button>
             )}
           </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import {
@@ -9,10 +10,10 @@ import {
   markNoneFit,
   type ScenePart,
   setMode,
-  skShort,
   tagScene,
   triagemDone,
 } from '../../../domain';
+import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button } from '../../atoms';
 import { ProgressDots } from '../../molecules';
 import { CoverageDrawer } from '../../organisms/coverage-drawer/coverage-drawer';
@@ -38,17 +39,22 @@ export interface TriagemProps {
   player?: Player | null;
 }
 
+type Translate = (key: string) => string;
+
 /** Rótulo de confiança para o estado atual (referência L1211; sem dígitos, §9.2). */
-function confLabel(c: Confidence | null): string {
-  return c === 'alta' ? 'certeza' : c === 'média' ? 'quase' : c === 'baixa' ? 'na dúvida' : '';
+function confLabel(c: Confidence | null, t: Translate): string {
+  if (c === 'alta') return t('triagem.confAlta');
+  if (c === 'média') return t('triagem.confMedia');
+  if (c === 'baixa') return t('triagem.confBaixa');
+  return '';
 }
 
 /** Estado atual da cena em foco, sempre visível (PRD v2 §8.5). */
-function tagShow(scene: ScenePart): string {
-  if (scene.tag_state === 'none_fit') return '⌀ nenhum se encaixa';
+function tagShow(scene: ScenePart, t: Translate, lang: string): string {
+  if (scene.tag_state === 'none_fit') return t('triagem.tagNoneFit');
   if (scene.tag_state === 'tagged' && scene.scene_kind)
-    return `${skShort(scene.scene_kind)} · ${confLabel(scene.scene_kind_confidence)}`;
-  return '— por classificar';
+    return `${sceneKindLabel(scene.scene_kind, lang)} · ${confLabel(scene.scene_kind_confidence, t)}`;
+  return t('triagem.tagPending');
 }
 
 /** Próxima cena pendente a partir de `from`, dando a volta (referência do protótipo). */
@@ -59,6 +65,7 @@ function nextPending(parts: ScenePart[], from: number): number {
 }
 
 export function Triagem({ player = null }: TriagemProps) {
+  const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [focusIdx, setFocusIdx] = useState(0);
 
@@ -82,7 +89,7 @@ export function Triagem({ player = null }: TriagemProps) {
   if (parts.length === 0) {
     return (
       <section className="cds-triagem">
-        <p className="cds-triagem-empty">Nenhuma cena confirmada ainda.</p>
+        <p className="cds-triagem-empty">{t('triagem.empty')}</p>
       </section>
     );
   }
@@ -127,33 +134,33 @@ export function Triagem({ player = null }: TriagemProps) {
 
   return (
     <section className="cds-triagem">
-      <ProgressDots count={parts.length} current={idx} onSelect={setFocusIdx} />
+      <ProgressDots
+        count={parts.length}
+        current={idx}
+        onSelect={setFocusIdx}
+        dotLabel={t('progressDots.dotLabel')}
+      />
 
       <div className="cds-triagem-focus">
         <p className="cds-triagem-instruction" data-role="instruction">
-          Essa cena é sobre o quê?
+          {t('triagem.instruction')}
         </p>
         <div className="cds-triagem-play">
           <Button variant="primary" onClick={playScene}>
-            ▶ Ouvir esta cena
+            {t('triagem.playScene')}
           </Button>
         </div>
         <p className="cds-triagem-tag" data-tag={scene.tag_state}>
-          {tagShow(scene)}
+          {tagShow(scene, t, i18n.language)}
         </p>
         <TriagemPicker key={scene.part_id} onConfirm={classify} onNoneFit={noneFit} />
       </div>
 
-      {coverage.noneFit > 0 ? (
-        <p className="cds-triagem-finding">
-          ⌀ Nenhum se encaixa — evidência para nomear um tipo nativo quando o padrão se repetir.
-        </p>
-      ) : null}
+      {coverage.noneFit > 0 ? <p className="cds-triagem-finding">{t('triagem.finding')}</p> : null}
 
       {coverage.allNoneFit ? (
         <p className="cds-triagem-lockout" role="status">
-          ⚠ Nenhuma cena se encaixa em Rute. Segmentação e Mapeamento ficam travadas — esta história
-          não rende cobertura de Rute. As marcas ficam salvas como evidência de tipo nativo.
+          {t('triagem.lockout')}
         </p>
       ) : null}
 
@@ -165,7 +172,7 @@ export function Triagem({ player = null }: TriagemProps) {
         ) : null}
         <div data-role="primary-action">
           <Button variant="dark" disabled={!gate.enabled} onClick={advance}>
-            Já classifiquei todas as cenas →
+            {t('triagem.advance')}
           </Button>
         </div>
       </div>

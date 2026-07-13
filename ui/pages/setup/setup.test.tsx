@@ -7,7 +7,8 @@ import { FixtureBucketSource } from '../../../adapters/bucket';
 import { AcoustemeGranularityResolver } from '../../../adapters/granularity';
 import { FixtureSessionStore } from '../../../adapters/sessions';
 import { sessionStore } from '../../state';
-import Setup, { SETUP_GRID_WARNING, SETUP_TRUST_LINE } from './index';
+import { pt } from '../../i18n/pt';
+import Setup from './index';
 
 /**
  * Estação Setup (PRD v2 §8.1): escolha de áudio do bucket + nível de granularidade +
@@ -259,8 +260,8 @@ describe('Setup — cópias fixadas (§8.1/O7)', () => {
   it('mostra a linha de confiança e a nota de trava da conta', async () => {
     renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
-    expect(screen.getByText(SETUP_TRUST_LINE)).toBeTruthy();
-    expect(screen.getByText(SETUP_GRID_WARNING)).toBeTruthy();
+    expect(screen.getByText(pt.setup.trustLine)).toBeTruthy();
+    expect(screen.getByText(pt.setup.gridWarning)).toBeTruthy();
   });
 });
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import {
@@ -34,6 +35,7 @@ export interface Escuta2Props {
 }
 
 export function Escuta2({ player = null }: Escuta2Props) {
+  const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -130,8 +132,9 @@ export function Escuta2({ player = null }: Escuta2Props) {
   return (
     <section className="cds-escuta2">
       <p className="cds-escuta2-instruction" data-role="instruction">
-        Toque no colar onde <span className="cds-escuta2-emph">esta cena termina</span>. O começo já
-        está costurado.
+        {t('escuta2.instructionPre')}
+        <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
+        {t('escuta2.instructionPost')}
       </p>
 
       <div className="cds-escuta2-stage">
@@ -160,7 +163,7 @@ export function Escuta2({ player = null }: Escuta2Props) {
                   onPlay={() => playScene(pt)}
                   actions={
                     <Button variant="ghost" size="sm" onClick={() => reopen(i)}>
-                      Reabrir
+                      {t('escuta2.reopen')}
                     </Button>
                   }
                 />
@@ -172,20 +175,20 @@ export function Escuta2({ player = null }: Escuta2Props) {
 
       <div className="cds-escuta2-controls">
         <Button variant="ghost" size="sm" onClick={back}>
-          ← Voltar
+          {t('escuta2.back')}
         </Button>
 
         {anchor ? (
           <div className="cds-escuta2-confirm-scene" data-role="primary-action">
             <Button variant="primary" onClick={confirmScene}>
-              ✓ Confirmar esta cena
+              {t('escuta2.confirmScene')}
             </Button>
           </div>
         ) : null}
 
         {hasLocked ? (
           <Button variant="dark" onClick={confirmAll}>
-            Confirmar as cenas →
+            {t('escuta2.confirmAll')}
           </Button>
         ) : null}
       </div>

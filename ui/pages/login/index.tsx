@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { AuthError, type AuthProvider } from '../../../adapters/api';
 import { defaultAuth } from '../dashboard/ports';
@@ -18,9 +19,8 @@ export interface LoginProps {
   auth?: AuthProvider;
 }
 
-const RECUSADO = 'Não foi possível entrar. Confira o usuário e a senha.';
-
 export function Login({ auth = defaultAuth() }: LoginProps) {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export function Login({ auth = defaultAuth() }: LoginProps) {
       // Fronteira de sistema: só a recusa de credencial vira orientação; qualquer
       // outra falha sobe (não é para ser mascarada aqui).
       if (err instanceof AuthError) {
-        setError(RECUSADO);
+        setError(t('login.refused'));
         return;
       }
       throw err;
@@ -49,10 +49,10 @@ export function Login({ auth = defaultAuth() }: LoginProps) {
   return (
     <section className="cds-login">
       <form className="cds-login-card" onSubmit={onSubmit}>
-        <h1 className="cds-login-title">Entrar</h1>
+        <h1 className="cds-login-title">{t('login.title')}</h1>
 
         <label className="cds-login-field">
-          <span className="cds-login-label">Usuário</span>
+          <span className="cds-login-label">{t('login.username')}</span>
           <input
             className="cds-login-input"
             type="text"
@@ -64,7 +64,7 @@ export function Login({ auth = defaultAuth() }: LoginProps) {
         </label>
 
         <label className="cds-login-field">
-          <span className="cds-login-label">Senha</span>
+          <span className="cds-login-label">{t('login.password')}</span>
           <input
             className="cds-login-input"
             type="password"
@@ -82,7 +82,7 @@ export function Login({ auth = defaultAuth() }: LoginProps) {
         ) : null}
 
         <button type="submit" className="cds-login-submit" disabled={busy}>
-          Entrar
+          {t('login.submit')}
         </button>
       </form>
     </section>

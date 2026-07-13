@@ -1,6 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog';
+import { useTranslation } from 'react-i18next';
 
-import { skShort, type Coverage, type KindCoverage } from '../../../domain';
+import { type Coverage, type KindCoverage } from '../../../domain';
+import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import './coverage-drawer.css';
 
 /**
@@ -25,11 +27,12 @@ export interface CoverageDrawerProps {
 }
 
 export function CoverageDrawer({ coverage }: CoverageDrawerProps) {
+  const { t, i18n } = useTranslation();
   const rows = coverage.kinds.filter((k) => k.firm + k.hesitant > 0);
   const absent = coverage.kinds.filter((k) => k.candidateAbsence);
   return (
     <Dialog.Root>
-      <Dialog.Trigger className="cds-coverage-drawer-tab" aria-label="Cobertura (facilitadora)">
+      <Dialog.Trigger className="cds-coverage-drawer-tab" aria-label={t('coverageDrawer.tabAria')}>
         <svg
           width="15"
           height="15"
@@ -46,38 +49,46 @@ export function CoverageDrawer({ coverage }: CoverageDrawerProps) {
           <path d="M12 20V4" />
           <path d="M18 20v-8" />
         </svg>
-        <span className="cds-coverage-drawer-tab-label">cobertura</span>
+        <span className="cds-coverage-drawer-tab-label">{t('coverageDrawer.tabLabel')}</span>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="cds-coverage-drawer-overlay" />
         <Dialog.Content className="cds-coverage-drawer-panel" aria-describedby={undefined}>
           <div className="cds-coverage-drawer-head">
             <Dialog.Title className="cds-coverage-drawer-title">
-              Cobertura · só facilitadora
+              {t('coverageDrawer.title')}
             </Dialog.Title>
-            <Dialog.Close className="cds-coverage-drawer-close" aria-label="fechar">
+            <Dialog.Close
+              className="cds-coverage-drawer-close"
+              aria-label={t('coverageDrawer.close')}
+            >
               ×
             </Dialog.Close>
           </div>
           <p className="cds-coverage-drawer-intro">
-            Cenas produtivas: <strong>{coverage.productive}</strong>. Contagem por tipo (dado da
-            facilitadora, escondido do ouvinte).
+            {t('coverageDrawer.introPre')}
+            <strong>{coverage.productive}</strong>
+            {t('coverageDrawer.introPost')}
           </p>
           <div className="cds-coverage-drawer-rows">
             {rows.map((k) => (
               <div key={k.value} className="cds-coverage-drawer-row" data-status={k.status}>
                 <span className="cds-coverage-drawer-kind">{k.value}</span>
                 <span className="cds-coverage-drawer-counts">
-                  firme {k.firm} · hesitante {k.hesitant} · alvo {targetLabel(k)}
+                  {t('coverageDrawer.counts', {
+                    firm: k.firm,
+                    hesitant: k.hesitant,
+                    target: targetLabel(k),
+                  })}
                 </span>
               </div>
             ))}
           </div>
-          <div className="cds-coverage-drawer-absence">Candidatos a ausência (raras em aberto)</div>
+          <div className="cds-coverage-drawer-absence">{t('coverageDrawer.absence')}</div>
           <div className="cds-coverage-drawer-chips">
             {absent.map((k) => (
               <span key={k.value} className="cds-coverage-drawer-chip">
-                {skShort(k.value)}
+                {sceneKindLabel(k.value, i18n.language)}
               </span>
             ))}
           </div>

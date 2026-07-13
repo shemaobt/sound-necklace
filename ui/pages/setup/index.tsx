@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 
 import { AudioDecodeError, type AudioEngine } from '../../../adapters/audio';
@@ -30,31 +31,19 @@ import './setup.css';
  * navegação assíncrona sem tocar o histórico.
  */
 
-/** §O7 — a linha de confiança fixada e proeminente. */
-export const SETUP_TRUST_LINE =
-  'Seus áudios e respostas ficam guardados com segurança no seu projeto. Só a sua equipe tem acesso.';
-
-/** §6.1 — o sentido do aviso de grade da referência, preservado sem o campo numérico. */
-export const SETUP_GRID_WARNING =
-  'Trave o tamanho da conta antes de ancorar. Mudá-lo depois desloca as fronteiras.';
-
-const NO_AUDIO_MSG = 'Escolha um arquivo de áudio primeiro.';
-const NO_CONSENT_MSG = 'Confirme o consentimento de uso no pipeline para continuar.';
-const NO_BEADSEC_MSG = 'Não consegui definir o tamanho da conta para este áudio.';
-const CREATE_FAILED_MSG = 'Não foi possível criar a sessão. Tente de novo.';
-
 type Door = 'zero' | 'entrega' | 'retorno';
 
-const DOORS: readonly { value: Door; title: string; desc: string }[] = [
-  { value: 'zero', title: 'Começar do zero', desc: 'Escolher um áudio e ancorar de ouvido.' },
-  { value: 'entrega', title: 'Confirmar uma entrega', desc: 'Carregar propostas do projeto.' },
-  { value: 'retorno', title: 'Retomar um retorno', desc: 'Continuar de um retorno salvo.' },
+/** As portas e os níveis guardam CHAVES i18n (a cópia vive no dicionário — ENG-279). */
+const DOORS: readonly { value: Door; titleKey: string; descKey: string }[] = [
+  { value: 'zero', titleKey: 'setup.doorZeroTitle', descKey: 'setup.doorZeroDesc' },
+  { value: 'entrega', titleKey: 'setup.doorEntregaTitle', descKey: 'setup.doorEntregaDesc' },
+  { value: 'retorno', titleKey: 'setup.doorRetornoTitle', descKey: 'setup.doorRetornoDesc' },
 ];
 
-const LEVELS: readonly { value: GranularityLevel; title: string; desc: string }[] = [
-  { value: 'pequena', title: 'Pequena', desc: 'contas mais curtas' },
-  { value: 'media', title: 'Média', desc: 'equilíbrio' },
-  { value: 'grande', title: 'Grande', desc: 'contas mais longas' },
+const LEVELS: readonly { value: GranularityLevel; titleKey: string; descKey: string }[] = [
+  { value: 'pequena', titleKey: 'setup.levelPequenaTitle', descKey: 'setup.levelPequenaDesc' },
+  { value: 'media', titleKey: 'setup.levelMediaTitle', descKey: 'setup.levelMediaDesc' },
+  { value: 'grande', titleKey: 'setup.levelGrandeTitle', descKey: 'setup.levelGrandeDesc' },
 ];
 
 export interface SetupProps {
@@ -67,11 +56,6 @@ export interface SetupProps {
   navigate?: (to: string) => void;
 }
 
-function decodeErrorMessage(e: unknown): string {
-  const detail = e instanceof Error ? e.message : String(e);
-  return `Não consegui decodificar este áudio (${detail}). Tente um WAV PCM.`;
-}
-
 export function Setup({
   bucket = defaultBucket(),
   resolver = defaultResolver(),
@@ -80,6 +64,7 @@ export function Setup({
   projectId = 'projeto',
   navigate = routerNavigate,
 }: SetupProps) {
+  const { t } = useTranslation();
   const [audios, setAudios] = useState<BucketAudio[] | null>(null);
   const [door, setDoor] = useState<Door>('zero');
   const [audioId, setAudioId] = useState<string | null>(null);
@@ -103,11 +88,11 @@ export function Setup({
     setError(null);
     const audio = audios?.find((a) => a.id === audioId) ?? null;
     if (!audio) {
-      setError(NO_AUDIO_MSG);
+      setError(t('setup.noAudio'));
       return;
     }
     if (!consent) {
-      setError(NO_CONSENT_MSG);
+      setError(t('setup.noConsent'));
       return;
     }
     // Fronteira da AÇÃO do usuário: uma criação orquestra várias portas de IO
@@ -119,7 +104,7 @@ export function Setup({
     try {
       const { beadSec } = resolver.resolve(level, audio.acousteme);
       if (!(beadSec > 0)) {
-        setError(NO_BEADSEC_MSG);
+        setError(t('setup.noBeadSec'));
         return;
       }
 
@@ -163,7 +148,11 @@ export function Setup({
 
       navigate(`/session/${summary.id}`);
     } catch (e) {
-      setError(e instanceof AudioDecodeError ? decodeErrorMessage(e) : CREATE_FAILED_MSG);
+      setError(
+        e instanceof AudioDecodeError
+          ? t('setup.decodeError', { detail: e instanceof Error ? e.message : String(e) })
+          : t('setup.createFailed'),
+      );
     } finally {
       setBusy(false);
     }
@@ -171,21 +160,21 @@ export function Setup({
 
   return (
     <section className="cds-setup">
-      <h1 className="cds-setup-title">Nova sessão</h1>
+      <h1 className="cds-setup-title">{t('setup.title')}</h1>
       <p className="cds-setup-trust" role="note">
-        {SETUP_TRUST_LINE}
+        {t('setup.trustLine')}
       </p>
 
       <RadioGroup.Root
         className="cds-setup-doors"
-        aria-label="Como começar"
+        aria-label={t('setup.doorsAria')}
         value={door}
         onValueChange={(v) => setDoor(v as Door)}
       >
         {DOORS.map((d) => (
           <RadioGroup.Item key={d.value} value={d.value} className="cds-setup-door">
-            <span className="cds-setup-door-title">{d.title}</span>
-            <span className="cds-setup-door-desc">{d.desc}</span>
+            <span className="cds-setup-door-title">{t(d.titleKey)}</span>
+            <span className="cds-setup-door-desc">{t(d.descKey)}</span>
           </RadioGroup.Item>
         ))}
       </RadioGroup.Root>
@@ -195,11 +184,11 @@ export function Setup({
           <div className="cds-setup-cols">
             <div className="cds-setup-col">
               <h2 id="cds-setup-audio-label" className="cds-setup-heading">
-                Escolha um áudio do projeto
+                {t('setup.audioHeading')}
               </h2>
               {audios === null ? (
                 <p className="cds-setup-loading" role="status">
-                  Carregando os áudios…
+                  {t('setup.loadingAudios')}
                 </p>
               ) : (
                 <RadioGroup.Root
@@ -212,16 +201,14 @@ export function Setup({
                     <RadioGroup.Item key={a.id} value={a.id} className="cds-setup-audio">
                       <span className="cds-setup-audio-name">{a.filename}</span>
                       {a.consent_present ? (
-                        <span className="cds-setup-consent-ok">
-                          Consentimento de coleta registrado
-                        </span>
+                        <span className="cds-setup-consent-ok">{t('setup.consentOk')}</span>
                       ) : (
                         <span className="cds-setup-consent-warn" data-role="warning">
-                          Sem registro de consentimento de coleta.
+                          {t('setup.consentWarn')}
                         </span>
                       )}
                       {audioId === a.id ? (
-                        <span className="cds-setup-audio-ready">Áudio pronto</span>
+                        <span className="cds-setup-audio-ready">{t('setup.audioReady')}</span>
                       ) : null}
                     </RadioGroup.Item>
                   ))}
@@ -231,7 +218,7 @@ export function Setup({
 
             <div className="cds-setup-col">
               <h2 id="cds-setup-gran-label" className="cds-setup-heading">
-                Tamanho da conta
+                {t('setup.granHeading')}
               </h2>
               <RadioGroup.Root
                 className="cds-setup-levels"
@@ -243,25 +230,25 @@ export function Setup({
                   <RadioGroup.Item
                     key={l.value}
                     value={l.value}
-                    aria-label={l.title}
+                    aria-label={t(l.titleKey)}
                     className="cds-setup-level"
                   >
-                    <span className="cds-setup-level-title">{l.title}</span>
-                    <span className="cds-setup-level-desc">{l.desc}</span>
+                    <span className="cds-setup-level-title">{t(l.titleKey)}</span>
+                    <span className="cds-setup-level-desc">{t(l.descKey)}</span>
                   </RadioGroup.Item>
                 ))}
               </RadioGroup.Root>
               <p className="cds-setup-note" role="note">
-                {SETUP_GRID_WARNING}
+                {t('setup.gridWarning')}
               </p>
 
               <label className="cds-setup-field">
-                <span>Título / nome curto do colar</span>
+                <span>{t('setup.titleField')}</span>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="ex.: jesus-mienoi"
+                  placeholder={t('setup.titlePlaceholder')}
                 />
               </label>
 
@@ -271,7 +258,7 @@ export function Setup({
                   checked={consent}
                   onChange={(e) => setConsent(e.target.checked)}
                 />
-                <span>Confirmo o consentimento de uso no pipeline do projeto.</span>
+                <span>{t('setup.consentCheck')}</span>
               </label>
             </div>
           </div>
@@ -288,18 +275,16 @@ export function Setup({
             onClick={() => void create()}
             disabled={busy}
           >
-            {busy ? 'Criando…' : 'Criar a sessão →'}
+            {busy ? t('setup.creating') : t('setup.create')}
           </button>
         </div>
       ) : (
         <div className="cds-setup-import-door">
           <p className="cds-setup-import-hint">
-            {door === 'entrega'
-              ? 'Carregue uma entrega do projeto para confirmar de ouvido.'
-              : 'Retome um retorno já salvo para continuar de onde parou.'}
+            {door === 'entrega' ? t('setup.importEntregaHint') : t('setup.importRetornoHint')}
           </p>
           <button type="button" className="cds-setup-create" onClick={() => navigate('/imports')}>
-            Ir para os arquivos do pipeline →
+            {t('setup.goToImports')}
           </button>
         </div>
       )}

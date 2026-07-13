@@ -41,6 +41,28 @@
   color: var(--cds-warning-ink);
 }
 
+.cds-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cds-header-lang {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--cds-hairline);
+  border-radius: var(--cds-radius-pill);
+  background: transparent;
+  color: var(--cds-olive);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
 .cds-header-sound {
   display: inline-flex;
   align-items: center;

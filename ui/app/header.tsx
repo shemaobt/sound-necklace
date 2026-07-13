@@ -1,31 +1,48 @@
+import { useTranslation } from 'react-i18next';
+
 import { ShemaIcon } from '../tokens';
+import { setLang, type Lang } from '../i18n';
 import './header.css';
 
 /**
- * Cabeçalho do app (referência L203–212 + PRD §9/§13): a marca Shemá e o toggle de
- * som que silencia todo som da UI. O toggle é presentacional aqui — o shell liga o
- * app store (`muted`); o áudio das estações consulta esse estado.
+ * Cabeçalho do app (referência L203–212 + PRD §9/§13): a marca Shemá, o toggle de
+ * idioma PT/EN (ENG-279) e o toggle de som que silencia todo som da UI. O som é
+ * presentacional aqui — o shell liga o app store (`muted`); o idioma é resolvido pelo
+ * i18n (camada de wiring) e persiste no reload.
  */
 export function Header({ muted, onToggleMuted }: { muted: boolean; onToggleMuted: () => void }) {
+  const { t, i18n } = useTranslation();
+  const other: Lang = i18n.language.startsWith('en') ? 'pt' : 'en';
+
   return (
     <header className="cds-header">
       <div className="cds-header-brand">
         <ShemaIcon colorway="telha" size={44} />
         <div>
-          <p className="cds-header-eyebrow">Arquivo Oral · Tripod</p>
-          <h1 className="cds-header-title">Colar de Sons</h1>
-          <p className="cds-header-subtitle">Mapeando as histórias do arquivo oral.</p>
+          <p className="cds-header-eyebrow">{t('header.eyebrow')}</p>
+          <h1 className="cds-header-title">{t('header.title')}</h1>
+          <p className="cds-header-subtitle">{t('header.subtitle')}</p>
         </div>
       </div>
-      <button
-        type="button"
-        className="cds-header-sound"
-        aria-pressed={muted}
-        aria-label={muted ? 'Ligar o som da interface' : 'Desligar o som da interface'}
-        onClick={onToggleMuted}
-      >
-        <SoundGlyph muted={muted} />
-      </button>
+      <div className="cds-header-actions">
+        <button
+          type="button"
+          className="cds-header-lang"
+          aria-label={t('header.switchLanguage')}
+          onClick={() => setLang(other)}
+        >
+          {other.toUpperCase()}
+        </button>
+        <button
+          type="button"
+          className="cds-header-sound"
+          aria-pressed={muted}
+          aria-label={muted ? t('header.unmute') : t('header.mute')}
+          onClick={onToggleMuted}
+        >
+          <SoundGlyph muted={muted} />
+        </button>
+      </div>
     </header>
   );
 }

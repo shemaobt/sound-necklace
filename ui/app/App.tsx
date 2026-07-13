@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
@@ -277,6 +278,7 @@ function useSessionPlayer(routeId: string | null): AudioPlayer | null {
  * em ui/pages — este shell nunca muda depois.
  */
 export function App() {
+  const { t } = useTranslation();
   const route = useRoute();
   const muted = useAppStore((s) => s.muted);
   const online = useOnline();
@@ -320,7 +322,7 @@ export function App() {
   let body: React.ReactNode;
   if (route.name === 'session') {
     if (!session) {
-      body = <p className="cds-station-fallback">carregando a sessão…</p>;
+      body = <p className="cds-station-fallback">{t('shell.loadingSession')}</p>;
     } else {
       body = (
         <SessionStations

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { SCENE_KINDS, SK_PT, skShort, type Confidence } from '../../../domain';
+import { SCENE_KINDS, SK_PT, type Confidence } from '../../../domain';
+import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button, Pearl } from '../../atoms';
 import { ConfidenceTrio, KindCard, type ConfidenceChoice } from '../../molecules';
 import { scenePalette, type PaletteEntry } from '../../tokens';
@@ -33,7 +35,8 @@ import './triagem-picker.css';
  */
 
 interface Theme {
-  name: string;
+  /** id ESTÁVEL (não traduzível): identifica o bloco no DOM (`data-theme`). */
+  id: string;
   kinds: string[];
   tint: PaletteEntry;
 }
@@ -41,7 +44,7 @@ interface Theme {
 /** Cores por tema = as 6 primeiras entradas do scenePalette (protótipo). */
 const THEMES: Theme[] = [
   {
-    name: 'Indo e vindo',
+    id: 'indo-e-vindo',
     kinds: [
       'DEPARTURE_SCENE',
       'ARRIVAL_SCENE',
@@ -52,7 +55,7 @@ const THEMES: Theme[] = [
     tint: scenePalette[0]!,
   },
   {
-    name: 'Fala e acordo',
+    id: 'fala-e-acordo',
     kinds: [
       'APPEAL_SCENE',
       'INSTRUCTION_SCENE',
@@ -65,10 +68,10 @@ const THEMES: Theme[] = [
     ],
     tint: scenePalette[1]!,
   },
-  { name: 'Trabalho e terra', kinds: ['GLEANING_SCENE', 'MEAL_SCENE'], tint: scenePalette[2]! },
-  { name: 'Sentimento', kinds: ['LAMENT_SCENE', 'BEREAVEMENT_SCENE'], tint: scenePalette[3]! },
+  { id: 'trabalho-e-terra', kinds: ['GLEANING_SCENE', 'MEAL_SCENE'], tint: scenePalette[2]! },
+  { id: 'sentimento', kinds: ['LAMENT_SCENE', 'BEREAVEMENT_SCENE'], tint: scenePalette[3]! },
   {
-    name: 'Rito e aliança',
+    id: 'rito-e-alianca',
     kinds: [
       'MARRIAGE_SCENE',
       'VOW_SCENE',
@@ -80,7 +83,7 @@ const THEMES: Theme[] = [
     tint: scenePalette[4]!,
   },
   {
-    name: 'Narração',
+    id: 'narracao',
     kinds: [
       'NARRATOR_INTRODUCTION_SCENE',
       'NARRATOR_FRAMING_CLOSE_SCENE',
@@ -131,6 +134,7 @@ export interface TriagemPickerProps {
 }
 
 export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
+  const { t, i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState('');
   const [picked, setPicked] = useState<string | null>(null);
@@ -164,7 +168,7 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
   }, [expanded]);
 
   if (picked) {
-    const label = skShort(picked);
+    const label = sceneKindLabel(picked, i18n.language);
     return (
       <div className="cds-triagem-picker" data-stage="confianca" ref={rootRef}>
         <div className="cds-triagem-picker-chosen">
@@ -180,15 +184,24 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
               setChoice(null);
             }}
           >
-            trocar tipo
+            {t('triagemPicker.swap')}
           </button>
         </div>
-        <p className="cds-triagem-picker-question">O quanto isso parece certo pra você?</p>
-        <ConfidenceTrio value={choice ?? undefined} onSelect={setChoice} />
+        <p className="cds-triagem-picker-question">{t('triagemPicker.confidenceQuestion')}</p>
+        <ConfidenceTrio
+          value={choice ?? undefined}
+          onSelect={setChoice}
+          label={t('triagemPicker.confidenceQuestion')}
+          choiceLabels={{
+            certeza: t('confidence.certeza'),
+            quase: t('confidence.quase'),
+            duvida: t('confidence.duvida'),
+          }}
+        />
         {choice ? (
           <div className="cds-triagem-picker-confirm">
             <Button onClick={() => onConfirm?.(picked, CONFIDENCE_BY_CHOICE[choice])}>
-              Confirmar
+              {t('triagemPicker.confirm')}
             </Button>
           </div>
         ) : null}
@@ -197,8 +210,12 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
   }
 
   const query = fold(filter.trim());
+  // Casa com o rótulo EXIBIDO (PT ou EN), com o rótulo PT-BR e com o valor de contrato:
+  // filtrar nunca fica pior por trocar de idioma.
   const matches = (value: string) =>
-    fold(SK_PT[value] ?? '').includes(query) || fold(value).includes(query);
+    fold(SK_PT[value] ?? '').includes(query) ||
+    fold(sceneKindLabel(value, i18n.language)).includes(query) ||
+    fold(value).includes(query);
 
   const commonCards: CardModel[] = SCENE_KINDS.filter((k) => k.tier === 'comum').map((k) => ({
     value: k.value,
@@ -242,7 +259,7 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
     cards.map((m, i) => (
       <KindCard
         key={m.value}
-        label={skShort(m.value)}
+        label={sceneKindLabel(m.value, i18n.language)}
         en={m.value}
         tint={m.tint}
         tabbable={start + i === tabIdx}
@@ -259,19 +276,19 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
   const noneFitIdx = radioCount - 1;
 
   const grid = renderCards(gridCards, 0);
-  const themeBlocks = themeSections.map((t, i) => (
-    <div key={t.name} className="cds-triagem-picker-theme" data-theme={t.name}>
+  const themeBlocks = themeSections.map((theme, i) => (
+    <div key={theme.id} className="cds-triagem-picker-theme" data-theme={theme.id}>
       <div className="cds-triagem-picker-theme-label">
         <span
           className="cds-triagem-picker-theme-dot"
-          style={{ background: t.tint.base }}
+          style={{ background: theme.tint.base }}
           aria-hidden="true"
         />
-        {t.name}
+        {t(`triagemPicker.theme.${theme.id}`)}
       </div>
       <div className="cds-triagem-picker-grid">
         {renderCards(
-          t.kinds.map((value) => ({ value, tint: t.tint })),
+          theme.kinds.map((value) => ({ value, tint: theme.tint })),
           themeStart(i),
         )}
       </div>
@@ -283,8 +300,8 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
       <input
         className="cds-triagem-picker-filter"
         type="search"
-        aria-label="filtrar tipos"
-        placeholder="filtrar…"
+        aria-label={t('triagemPicker.filterAria')}
+        placeholder={t('triagemPicker.filterPlaceholder')}
         value={filter}
         onChange={(e) => {
           setFilter(e.target.value);
@@ -294,7 +311,7 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
       <div
         ref={groupRef}
         role="radiogroup"
-        aria-label="Tipos de cena"
+        aria-label={t('triagemPicker.groupAria')}
         className="cds-triagem-picker-group"
         onKeyDown={onGroupKeyDown}
       >
@@ -302,7 +319,7 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
           <div className="cds-triagem-picker-grid">{grid}</div>
         ) : (
           <>
-            <div className="cds-triagem-picker-section">Mais comuns</div>
+            <div className="cds-triagem-picker-section">{t('triagemPicker.common')}</div>
             <div className="cds-triagem-picker-grid">{grid}</div>
             {expanded ? (
               <>
@@ -316,7 +333,7 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
                     setFocusedIdx(0);
                   }}
                 >
-                  recolher
+                  {t('triagemPicker.collapse')}
                 </button>
               </>
             ) : (
@@ -329,14 +346,14 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
                   setFocusedIdx(0);
                 }}
               >
-                Ver todos os tipos por tema
+                {t('triagemPicker.seeAll')}
               </button>
             )}
           </>
         )}
         <KindCard
           noneFit
-          label="Nenhum se encaixa"
+          label={t('triagemPicker.noneFit')}
           tabbable={tabIdx === noneFitIdx}
           onSelect={() => onNoneFit?.()}
         />

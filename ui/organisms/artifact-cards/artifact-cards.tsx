@@ -1,5 +1,7 @@
 import './artifact-cards.css';
 
+import { useTranslation } from 'react-i18next';
+
 import { DocumentCard } from '../../molecules';
 
 export type ArtifactKind = 'retorno' | 'manifesto' | 'relatorio';
@@ -13,32 +15,14 @@ export interface ArtifactCardsProps {
 
 /**
  * Os três documentos do §8.8, explicados em linguagem humana (cópia contratual
- * do redesign §6.7 / protótipos Claude Design — verbatim, não parafrasear).
+ * do redesign §6.7 / protótipos Claude Design — verbatim, não parafrasear; a cópia
+ * vive no dicionário i18n desde a ENG-279). O `filename` EXIBIDO é o do contrato e
+ * nunca traduz.
  */
-const DOCUMENTOS: readonly {
-  kind: ArtifactKind;
-  filename: string;
-  title: string;
-  description: string;
-}[] = [
-  {
-    kind: 'retorno',
-    filename: 'retorno-ancoragem.json',
-    title: 'As decisões de vocês',
-    description: 'Onde cada cena e cada frase começa e termina, com o tipo e a confiança.',
-  },
-  {
-    kind: 'manifesto',
-    filename: 'manifesto-contas.json',
-    title: 'O mapa das contas',
-    description: 'Como o áudio foi fatiado: cada conta com seu tempo. O par exato deste áudio.',
-  },
-  {
-    kind: 'relatorio',
-    filename: 'relatorio-mapeamento.md',
-    title: 'A conversa sobre o sentido',
-    description: 'O relatório editável, com as respostas em voz referenciadas por pergunta.',
-  },
+const DOCUMENTOS: readonly { kind: ArtifactKind; filename: string }[] = [
+  { kind: 'retorno', filename: 'retorno-ancoragem.json' },
+  { kind: 'manifesto', filename: 'manifesto-contas.json' },
+  { kind: 'relatorio', filename: 'relatorio-mapeamento.md' },
 ];
 
 /**
@@ -51,6 +35,7 @@ const DOCUMENTOS: readonly {
  * montado junto com a mensagem não é anunciado).
  */
 export function ArtifactCards({ downloaded, onDownload }: ArtifactCardsProps) {
+  const { t } = useTranslation();
   const todosBaixados = DOCUMENTOS.every((d) => downloaded[d.kind]);
 
   return (
@@ -60,8 +45,10 @@ export function ArtifactCards({ downloaded, onDownload }: ArtifactCardsProps) {
           <DocumentCard
             key={d.kind}
             filename={d.filename}
-            title={d.title}
-            description={d.description}
+            title={t(`artifactCards.${d.kind}.title`)}
+            description={t(`artifactCards.${d.kind}.description`)}
+            downloadLabel={t('documentCard.download')}
+            downloadedLabel={t('documentCard.downloaded')}
             downloaded={downloaded[d.kind]}
             onDownload={onDownload ? () => onDownload(d.kind) : undefined}
           />
@@ -83,7 +70,7 @@ export function ArtifactCards({ downloaded, onDownload }: ArtifactCardsProps) {
             >
               <path d="M20 6L9 17l-5-5" />
             </svg>
-            documentos salvos — nada saiu deste computador
+            {t('artifactCards.saved')}
           </span>
         )}
       </div>

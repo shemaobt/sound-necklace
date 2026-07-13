@@ -1,5 +1,7 @@
 import './session-list.css';
 
+import { useTranslation } from 'react-i18next';
+
 import { Button } from '../../atoms';
 import { StepperStation, type StationState } from '../../molecules';
 
@@ -32,9 +34,10 @@ export interface SessionListProps {
   onOpen?: (id: string) => void;
 }
 
-const STATUS_PT: Record<SessionStatus, string> = {
-  'em-progresso': 'em progresso',
-  concluida: 'concluída',
+/** Status → chave i18n (a cópia vive no dicionário — ENG-279). */
+const STATUS_KEY: Record<SessionStatus, string> = {
+  'em-progresso': 'sessionList.statusEmProgresso',
+  concluida: 'sessionList.statusConcluida',
 };
 
 function SessionCard({
@@ -46,21 +49,34 @@ function SessionCard({
   onResume?: (id: string) => void;
   onOpen?: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const emProgresso = session.status === 'em-progresso';
   const onAction = emProgresso ? onResume : onOpen;
 
   return (
     <li className="cds-session-card" data-status={session.status}>
       <div className="cds-session-card-main">
-        <span className="cds-session-card-status">{STATUS_PT[session.status]}</span>
+        <span className="cds-session-card-status">{t(STATUS_KEY[session.status])}</span>
         <h3 className="cds-session-card-title">{session.storyName}</h3>
         <p className="cds-session-card-meta">
           {session.slug} · {session.project} · {session.lastModified}
         </p>
         {session.stations.length > 0 && (
-          <ol className="cds-session-card-fio" aria-label={`progresso de ${session.storyName}`}>
+          <ol
+            className="cds-session-card-fio"
+            aria-label={t('sessionList.progressAria', { name: session.storyName })}
+          >
             {session.stations.map((st) => (
-              <StepperStation key={st.key} label={st.label} state={st.state} />
+              <StepperStation
+                key={st.key}
+                label={st.label}
+                state={st.state}
+                stateLabels={{
+                  current: t('stationState.current'),
+                  done: t('stationState.done'),
+                  future: t('stationState.future'),
+                }}
+              />
             ))}
           </ol>
         )}
@@ -71,7 +87,7 @@ function SessionCard({
           size="sm"
           onClick={onAction ? () => onAction(session.id) : undefined}
         >
-          {emProgresso ? 'Retomar' : 'Abrir'}
+          {emProgresso ? t('sessionList.resume') : t('sessionList.open')}
           <span className="cds-session-card-vh">{session.storyName}</span>
         </Button>
       </div>
@@ -92,8 +108,9 @@ function SessionCard({
  * clicável.
  */
 export function SessionList({ sessions, onResume, onOpen }: SessionListProps) {
+  const { t } = useTranslation();
   return (
-    <ul className="cds-session-list" aria-label="sessões">
+    <ul className="cds-session-list" aria-label={t('sessionList.listAria')}>
       {sessions.map((s) => (
         <SessionCard key={s.id} session={s} onResume={onResume} onOpen={onOpen} />
       ))}
