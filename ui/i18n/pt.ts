@@ -82,13 +82,36 @@ export const pt = {
       '✓ Entrega carregada: {{cenas}} cena(s), {{frases}} frase(s). As cenas são propostas — confirme de ouvido.',
     returnOk: '✓ Retomado: {{cenas}} cena(s), {{frases}} frase(s).',
   },
+  /**
+   * Os SEIS rótulos das estações, numa fonte ÚNICA: o fio de contas do shell e o
+   * relance do dashboard leem daqui. Duplicar isto fazia o stepper dizer "Ouvir"
+   * enquanto o dashboard dizia "Listen".
+   */
+  stations: {
+    ouvir: 'Ouvir',
+    cortar: 'Cortar',
+    triagem: 'Triagem',
+    frases: 'Frases',
+    conversa: 'Conversa',
+    guardar: 'Guardar',
+  },
+  shell: {
+    stepperAria: 'Progresso da sessão',
+    loadingSession: 'carregando a sessão…',
+    stationUnderConstruction: 'estação em construção',
+    reviewLocked: '🔒 Modo de revisão — sessão em uso por {{holder}}.',
+    reviewOwn: '🔒 Modo de revisão — a segmentação está travada.',
+    unlock: 'Destravar para editar',
+  },
+  confidence: {
+    certeza: 'Certeza',
+    quase: 'Quase',
+    duvida: 'Na dúvida',
+  },
+  documentCard: {
+    download: 'Baixar',
+  },
   dashboard: {
-    stepOuvir: 'Ouvir',
-    stepCortar: 'Cortar',
-    stepTriagem: 'Triagem',
-    stepFrases: 'Frases',
-    stepConversa: 'Conversa',
-    stepGuardar: 'Guardar',
     title: 'Minhas sessões',
     newSession: 'Nova sessão',
     loading: 'Carregando as sessões…',

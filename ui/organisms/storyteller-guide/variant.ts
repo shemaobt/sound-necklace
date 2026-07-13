@@ -12,8 +12,8 @@ export type GuideVariant = (props: GuideVariantProps) => ReactNode;
 
 /**
  * Escolhe a variante visual do guia: prefere `animated` quando o arquivo existir
- * (a ENG-232 acrescenta um em `variants/`, sem editar nada), senão usa `static`.
- * Mecanismo aditivo do doc de arquitetura §4 — igual às três registries do shell.
+ * — desde a ENG-232 ele existe, então `static` é o fallback. Mecanismo aditivo do
+ * doc de arquitetura §4 — igual às três registries do shell.
  */
 export function pickVariantPath(paths: string[]): string {
   const chosen =

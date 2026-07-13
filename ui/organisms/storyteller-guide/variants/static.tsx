@@ -6,8 +6,8 @@ import './static.css';
 /**
  * Variante estática do guia (E1): uma figura humana calorosa desenhada em SVG —
  * cabeça, ombros, olhos e um leve sorriso — que olha para você (§6.6, §9.7).
- * NÃO abstrata, NÃO geométrica. A variante animada (bob/blink/lip-sync) chega na
- * ENG-232 como `variants/animated.tsx`, sem tocar este arquivo.
+ * NÃO abstrata, NÃO geométrica. É o FALLBACK: `variants/animated.tsx` (ENG-232,
+ * bob/blink/lip-sync) existe e é a variante preferida pelo glob.
  */
 export default function StaticGuide({ size = 220 }: GuideVariantProps) {
   const { t } = useTranslation();

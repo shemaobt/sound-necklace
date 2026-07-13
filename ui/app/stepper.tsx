@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { StepperStation } from '../molecules';
 import type { StepperStationView } from './stepper-model';
 import './stepper.css';
@@ -16,6 +18,7 @@ export function Stepper({
   stations: StepperStationView[];
   onNavigate: (key: string) => void;
 }) {
+  const { t } = useTranslation();
   const handleClick = (event: React.MouseEvent<HTMLOListElement>) => {
     const li = (event.target as HTMLElement).closest('li');
     const list = li?.parentElement;
@@ -26,9 +29,9 @@ export function Stepper({
   };
 
   return (
-    <ol className="cds-stepper" aria-label="Progresso da sessão" onClick={handleClick}>
+    <ol className="cds-stepper" aria-label={t('shell.stepperAria')} onClick={handleClick}>
       {stations.map((s) => (
-        <StepperStation key={s.key} label={s.label} state={s.state} />
+        <StepperStation key={s.key} label={t(s.labelKey)} state={s.state} />
       ))}
     </ol>
   );

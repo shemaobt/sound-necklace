@@ -30,7 +30,8 @@ We follow a **clean architecture in the general sense** — dependencies always 
   - `ui/molecules/` — bead row, selection band + edge beads, scene/phrase chip, confidence trio, question card, document card, stepper station.
   - `ui/organisms/` — the necklace (rendering + interaction), the "fio de contas" stepper, the Triagem picker, the coverage drawer, the seam modal, the conversation stage (guide + mic + thread), the dashboard session list.
   - `ui/templates/` + `ui/pages/` — station layouts and the wired screens (Setup, Escuta 1/2, Triagem, Segmentação, Mapeamento, Export, Dashboard, Login).
-  - Dependency rule inside ui/: atoms and molecules are **purely presentational** (props in, events out — no domain or adapter imports); organisms may consume domain state via props/hooks; only pages/templates/`ui/app` (the wiring layer / composition root) wire adapters. `ui/` may be merged autonomously when tests pass.
+  - `ui/i18n/` — the language layer (PT default + EN): i18next init, the two dictionaries, and the display translators for scene-kind labels and the interview questions. Chrome only — see the UI rules below.
+  - Dependency rule inside ui/: atoms and molecules are **purely presentational** (props in, events out — no domain, adapter or i18n imports — copy arrives as props); organisms may consume domain state via props/hooks and may pull copy from `ui/i18n`; only pages/templates/`ui/app` (the wiring layer / composition root) wire adapters. `ui/` may be merged autonomously when tests pass.
 
 Stubs behind interfaces (do not hardcode): `GranularityResolver` (acousteme → bead duration; rule pending O8 — use fixture values, medium ≈ 0.25 s), auth mechanism (follows the shared API standard), bucket access.
 
@@ -51,7 +52,7 @@ Stubs behind interfaces (do not hardcode): `GranularityResolver` (acousteme → 
 
 ## UI rules
 
-- **All UI copy is PT-BR.** Quoted strings in the PRDs are contract-level copy — reuse them.
+- **PT-BR is the default UI language and the artifact language; the UI chrome is PT/EN** (`ui/i18n/`, react-i18next). Quoted strings in the PRDs remain contract-level copy — reuse them verbatim, but as values in `ui/i18n/pt.ts` (never hardcoded in a component; `en.ts` is key-parity-checked by the typechecker). Exported artifacts are NEVER routed through i18n: they are built by `contracts/` from `domain/` PT-BR data. Copy defined inside `domain/`/`contracts/` (gate/error messages) still renders PT-BR under an EN UI — translating it is a frozen-layer change.
 - Listener-facing screens: max ONE short instruction line, one dominant action, **no counters/numbers/IDs/tables**. Audio responds before text (bead click plays the bead; edge nudge plays ~1 s around the boundary only). Facilitator surfaces (dashboard, coverage drawer, setup) may be denser.
 - Never punish: errors guide, warnings allow a second-click proceed, border-crossing offers choices.
 - Respect `prefers-reduced-motion`; visible focus outlines; header sound toggle.

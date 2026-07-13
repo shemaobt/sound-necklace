@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { Button } from '../atoms';
 import type { EditorLock } from '../state';
 import './review-banner.css';
@@ -17,21 +19,20 @@ export function ReviewBanner({
   lock: EditorLock | null;
   onUnlock: () => void;
 }) {
+  const { t } = useTranslation();
   if (!review && !lock) return null;
 
   return (
     <div className="cds-review-banner" role="status">
       {lock ? (
         <span className="cds-review-banner-text">
-          🔒 Modo de revisão — sessão em uso por {lock.holder}.
+          {t('shell.reviewLocked', { holder: lock.holder })}
         </span>
       ) : (
         <>
-          <span className="cds-review-banner-text">
-            🔒 Modo de revisão — a segmentação está travada.
-          </span>
+          <span className="cds-review-banner-text">{t('shell.reviewOwn')}</span>
           <Button variant="ghost" size="sm" onClick={onUnlock}>
-            Destravar para editar
+            {t('shell.unlock')}
           </Button>
         </>
       )}

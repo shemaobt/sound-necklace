@@ -188,7 +188,16 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
           </button>
         </div>
         <p className="cds-triagem-picker-question">{t('triagemPicker.confidenceQuestion')}</p>
-        <ConfidenceTrio value={choice ?? undefined} onSelect={setChoice} />
+        <ConfidenceTrio
+          value={choice ?? undefined}
+          onSelect={setChoice}
+          label={t('triagemPicker.confidenceQuestion')}
+          choiceLabels={{
+            certeza: t('confidence.certeza'),
+            quase: t('confidence.quase'),
+            duvida: t('confidence.duvida'),
+          }}
+        />
         {choice ? (
           <div className="cds-triagem-picker-confirm">
             <Button onClick={() => onConfirm?.(picked, CONFIDENCE_BY_CHOICE[choice])}>

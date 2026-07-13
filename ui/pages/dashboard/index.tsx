@@ -43,14 +43,17 @@ export interface DashboardProps {
   saveBytes?: (filename: string, bytes: string) => void;
 }
 
-/** As seis estações guardam CHAVES i18n (a cópia vive no dicionário — ENG-279). */
+/**
+ * As seis estações leem do namespace `stations` — a MESMA fonte do fio de contas do
+ * shell (ENG-279). Duplicar a cópia fazia o stepper dizer "Ouvir" e o dashboard "Listen".
+ */
 const STEPS: readonly { key: SessionStep; labelKey: string }[] = [
-  { key: 'ouvir', labelKey: 'dashboard.stepOuvir' },
-  { key: 'cortar', labelKey: 'dashboard.stepCortar' },
-  { key: 'triagem', labelKey: 'dashboard.stepTriagem' },
-  { key: 'frases', labelKey: 'dashboard.stepFrases' },
-  { key: 'conversa', labelKey: 'dashboard.stepConversa' },
-  { key: 'guardar', labelKey: 'dashboard.stepGuardar' },
+  { key: 'ouvir', labelKey: 'stations.ouvir' },
+  { key: 'cortar', labelKey: 'stations.cortar' },
+  { key: 'triagem', labelKey: 'stations.triagem' },
+  { key: 'frases', labelKey: 'stations.frases' },
+  { key: 'conversa', labelKey: 'stations.conversa' },
+  { key: 'guardar', labelKey: 'stations.guardar' },
 ];
 
 const STATUS: Record<SessionSummary['status'], SessionStatus> = {

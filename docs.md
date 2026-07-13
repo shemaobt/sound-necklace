@@ -34,7 +34,7 @@ ui/ ──▶ adapters/ ──▶ contracts/ ──▶ domain/
 | Tests             | Vitest 4 with three projects: `unit` (node), `dom` (jsdom), `browser` (real Chromium via Playwright) |
 | Tooling           | pnpm 10 · Node ≥ 22.12 · ESLint 10 flat + Prettier pinned exact                                      |
 
-- App entry: @/index.html → @/ui/app/main.tsx → @/ui/app/App.tsx (placeholder shell until the real shell issue lands).
+- App entry: @/index.html → @/ui/app/main.tsx (design-token + i18n init side effects) → @/ui/app/App.tsx, the real composition-root shell (router, stepper, itinerant player, station host — see @/ui/app/docs.md).
 - CI (@/.github/workflows/ci.yml) defines the required checks; **job names are the required-check names — never rename**: `golden-harness`, `typecheck`, `lint`, `depcruise`, `test`. The `test` job also runs the browser project after installing Chromium.
 - Coverage is **per layer, not global** (glob-keyed thresholds in @/vitest.config.ts): `domain/` and `contracts/` ≥ 90% line+branch; `adapters/` reported without a number; `ui/` has no numeric gate — mandatory interaction tests for critical organisms instead.
 - Complexity lint is warn-only (@/eslint.config.js): the domain port mirrors reference logic 1:1, and splitting a faithful port to satisfy a number is worse than the number. Never run eslint with `--max-warnings 0`.
@@ -47,6 +47,7 @@ ui/ ──▶ adapters/ ──▶ contracts/ ──▶ domain/
 - Loop contract: one issue = one branch (`feat/<issue-id>-<slug>`) = one small PR; the issue body is the complete brief; stay strictly in the issue's file scope. Integration points are **add-a-file** by design (three `import.meta.glob` registries, see @/docs/architecture.md) so parallel issues never edit the same file.
 - @/docs is excluded from linting entirely (it contains the untouchable reference); `coverage/` in the working tree is gitignored local output.
 - Doc-name drift to be aware of: @/CLAUDE.md cites `docs/PRD-redesign-v2.md` and `docs/PRD-colar-de-sons-as-built.md`; on disk the redesign PRD is @/docs/PRD-redesign.md and no as-built PRD is committed — the executable reference itself fills that role.
-- Privacy is a product rule: no telemetry/analytics on listener behavior, no AI-generated content inside the app, no network calls from `domain/`. All UI copy is PT-BR.
+- Privacy is a product rule: no telemetry/analytics on listener behavior, no AI-generated content inside the app, no network calls from `domain/`.
+- **Language: PT-BR is the default UI language AND the artifact language; the UI chrome is PT/EN** (ENG-279, @/ui/i18n/docs.md). The exported artifacts are built by @/contracts from @/domain PT-BR data and are never routed through i18n — structurally so, since the dependency-cruiser rules forbid `contracts/` from importing `ui/`. User-facing copy defined inside the frozen layers (gate/error messages, import preconditions) therefore still renders PT-BR under an EN UI.
 
 Created and maintained by Nori.

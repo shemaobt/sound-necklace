@@ -8,7 +8,8 @@ import { defineConfig } from '@playwright/test';
  * fora dos globs de unit/dom/browser).
  */
 
-const PORT = 5173;
+/** Sobrescrevível: uma árvore cujo 5173 já está ocupado sobe o e2e noutra porta. */
+const PORT = Number(process.env.CDS_E2E_PORT ?? 5173);
 const HOST = '127.0.0.1';
 
 export default defineConfig({
@@ -34,7 +35,12 @@ export default defineConfig({
   webServer: {
     command: `vite --host ${HOST} --port ${PORT} --strictPort`,
     url: `http://${HOST}:${PORT}`,
-    reuseExistingServer: !process.env.CI,
+    // NUNCA reusar um servidor já no ar. Este repo trabalha em worktrees: um Vite de
+    // OUTRA árvore atende nesta mesma porta e o e2e passa a testar o código ERRADO —
+    // verde falso, o pior tipo de falha de gate. (Aconteceu de verdade na ENG-279: a
+    // suíte passava 10/10 contra a `main`.) Com `--strictPort`, porta ocupada falha
+    // ALTO em vez de mentir; use CDS_E2E_PORT para escolher outra.
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

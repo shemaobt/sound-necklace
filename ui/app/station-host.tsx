@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { StationComponent } from './registries';
 import './station-host.css';
@@ -23,9 +24,10 @@ export function StationHost({
   registry: Record<string, StationComponent>;
   stationProps?: Record<string, unknown>;
 }) {
+  const { t } = useTranslation();
   const Station = registry[stationKey] as ComponentType<Record<string, unknown>> | undefined;
   if (!Station) {
-    return <p className="cds-station-fallback">estação em construção</p>;
+    return <p className="cds-station-fallback">{t('shell.stationUnderConstruction')}</p>;
   }
   return <Station {...stationProps} />;
 }
