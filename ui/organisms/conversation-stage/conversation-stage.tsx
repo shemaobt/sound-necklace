@@ -38,6 +38,12 @@ export interface ConversationStageProps {
   onNext?: () => void;
   /** porta de fala (TTS): o botão "Ouvir a pergunta" só aparece quando fornecida */
   onSpeakQuestion?: () => void;
+  /**
+   * O guia está FALANDO agora (ENG-280) — dirige o lip-sync. Vem do estado real da porta
+   * de voz (`onSpeaking`: start/end do utterance), nunca de um palpite: até a ENG-280 isto
+   * era `recorderState === 'idle'`, ou seja, o guia mexia a boca em silêncio.
+   */
+  speaking?: boolean;
 }
 
 /** Microfone como SVG inline (nunca unicode), herdando a cor do botão. */
@@ -85,6 +91,7 @@ export function ConversationStage({
   onPrev,
   onNext,
   onSpeakQuestion,
+  speaking = false,
 }: ConversationStageProps) {
   const { t } = useTranslation();
   const beads: BeadCell[] = Array.from({ length: progress.total }, (_, i) => ({
@@ -97,7 +104,7 @@ export function ConversationStage({
     <div className="cds-conversation-stage">
       <div className="cds-conversation-stage-main">
         <div className="cds-conversation-stage-guide">
-          <StorytellerGuide speaking={recorderState === 'idle'} />
+          <StorytellerGuide speaking={speaking} />
         </div>
 
         <div className="cds-conversation-stage-panel">

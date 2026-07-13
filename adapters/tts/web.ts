@@ -7,9 +7,7 @@
  * (sem síntese real no CI); num ambiente sem a API, `speak`/`stop` são no-ops.
  */
 
-import type { SpeechSynthesizer, Unsubscribe } from './types';
-
-const LANG = 'pt-BR';
+import { DEFAULT_SPEECH_LANG, type SpeechSynthesizer, type Unsubscribe } from './types';
 
 export interface WebSpeechDeps {
   synth?: SpeechSynthesis;
@@ -39,12 +37,15 @@ export class WebSpeechSynthesizer implements SpeechSynthesizer {
       (typeof SpeechSynthesisUtterance !== 'undefined' ? SpeechSynthesisUtterance : undefined);
   }
 
-  speak(text: string): void {
+  // ponytail: sem keep-alive para o corte de ~15 s de fala longa do Chrome (pause/resume
+  // periódico). As perguntas do roteiro são curtas; a mais longa (L1 `ausencia`) é o único
+  // risco real. Se ela cortar em campo, o upgrade é um setInterval pausa/retoma no onstart.
+  speak(text: string, lang: string = DEFAULT_SPEECH_LANG): void {
     if (!this.#synth || !this.#UtteranceCtor) return;
     this.#synth.cancel(); // encerra a fala anterior antes de começar
     const utterance = new this.#UtteranceCtor(text);
-    utterance.lang = LANG;
-    const voice = this.#pickVoice();
+    utterance.lang = lang;
+    const voice = this.#pickVoice(lang);
     if (voice) utterance.voice = voice;
     utterance.onstart = () => this.#emit(true);
     utterance.onend = () => this.#emit(false);
@@ -62,11 +63,19 @@ export class WebSpeechSynthesizer implements SpeechSynthesizer {
     return () => this.#subs.delete(cb);
   }
 
-  #pickVoice(): SpeechSynthesisVoice | undefined {
+  /**
+   * Voz do idioma PEDIDO: casamento exato (`pt-BR`), senão qualquer variante da mesma
+   * língua (`pt-PT`). Sem nenhuma, devolve `undefined` e o motor escolhe — NUNCA se
+   * empresta a voz de outra língua: uma voz pt-BR lendo texto inglês sai ininteligível.
+   */
+  #pickVoice(lang: string): SpeechSynthesisVoice | undefined {
     const voices = this.#synth?.getVoices() ?? [];
-    const lower = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-').toLowerCase();
+    const norm = (s: string) => s.replace('_', '-').toLowerCase();
+    const want = norm(lang);
+    const base = want.split('-')[0]!;
     return (
-      voices.find((v) => lower(v) === 'pt-br') ?? voices.find((v) => lower(v).startsWith('pt'))
+      voices.find((v) => norm(v.lang) === want) ??
+      voices.find((v) => norm(v.lang) === base || norm(v.lang).startsWith(`${base}-`))
     );
   }
 

@@ -2,6 +2,7 @@ import { type ComponentType, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { SpeechSynthesizer } from '../../../adapters/tts/types';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
 import {
   ensureMapping,
@@ -20,7 +21,7 @@ import {
   type ConversationProgress,
   type RecorderState,
 } from '../../organisms/conversation-stage/conversation-stage';
-import { sessionStore, useSessionStore } from '../../state';
+import { sessionStore, useAppStore, useSessionStore } from '../../state';
 import './mapeamento.css';
 
 /**
@@ -42,6 +43,8 @@ import './mapeamento.css';
 export interface MapeamentoProps {
   player?: Player | null;
   recorder?: VoiceRecorder | null;
+  /** Porta de fala (ENG-280): ausente = sem voz (ambiente sem Web Speech) e o botão some. */
+  speaker?: SpeechSynthesizer | null;
   /** O shell registra o caminho `respostas/…` recém-gravado no `meta.voice` da sessão (ENG-276). */
   onVoiceSaved?: (path: string) => void;
 }
@@ -99,6 +102,9 @@ interface QuestionScreenProps {
   onNext: () => void;
   player: Player | null;
   recorder: VoiceRecorder | null;
+  speaker: SpeechSynthesizer | null;
+  /** Toggle de som do cabeçalho: mudo = a voz nunca toca (§13 — nunca falar sem consentimento). */
+  muted: boolean;
   onVoiceSaved?: (path: string) => void;
 }
 
@@ -118,14 +124,37 @@ function QuestionScreen({
   onNext,
   player,
   recorder,
+  speaker,
+  muted,
   onVoiceSaved,
 }: QuestionScreenProps) {
   const { t, i18n } = useTranslation();
   const [recorderState, setRecorderState] = useState<RecorderState>('idle');
   const [levels, setLevels] = useState<number[]>([]);
+  const [speaking, setSpeaking] = useState(false);
   const recordingRef = useRef<Recording | null>(null);
   const unsubRef = useRef<Unsubscribe | null>(null);
   const mountedRef = useRef(true);
+
+  // A pergunta EXIBIDA é a que se fala: texto e voz nunca divergem (ENG-279/280).
+  const questionText = questionTextFor(slot, i18n.language);
+  const speechLang = i18n.language.startsWith('en') ? 'en-US' : 'pt-BR';
+  const canSpeak = speaker !== null && !muted;
+
+  // O lip-sync segue o estado REAL da porta (start/end do utterance), nunca um palpite.
+  // Assina ANTES do efeito que fala — senão a 1ª transição sai antes de haver ouvinte.
+  useEffect(() => {
+    if (!speaker) return;
+    return speaker.onSpeaking(setSpeaking);
+  }, [speaker]);
+
+  // Chegar numa pergunta a faz ser falada (a tela remonta por `key={path}`). Com o som
+  // desligado não fala; sair da pergunta cancela a fala em curso (nada de voz órfã).
+  useEffect(() => {
+    if (!speaker || muted) return;
+    speaker.speak(questionText, speechLang);
+    return () => speaker.stop();
+  }, [speaker, muted, questionText, speechLang]);
 
   useEffect(() => {
     let alive = true;
@@ -210,7 +239,7 @@ function QuestionScreen({
       ) : null}
 
       <ConversationStage
-        question={questionTextFor(slot, i18n.language)}
+        question={questionText}
         note={questionNoteFor(slot, i18n.language)}
         facilitatorLed={slot.k === 'ausencia'}
         recorderState={recorderState}
@@ -223,13 +252,21 @@ function QuestionScreen({
         progress={progress}
         onPrev={onPrev}
         onNext={onNext}
+        speaking={speaking}
+        onSpeakQuestion={canSpeak ? () => speaker.speak(questionText, speechLang) : undefined}
       />
     </section>
   );
 }
 
-export function Mapeamento({ player = null, recorder = null, onVoiceSaved }: MapeamentoProps) {
+export function Mapeamento({
+  player = null,
+  recorder = null,
+  speaker = null,
+  onVoiceSaved,
+}: MapeamentoProps) {
   const { t } = useTranslation();
+  const muted = useAppStore((s) => s.muted);
   const session = useSessionStore((s) => s.session);
   const [index, setIndex] = useState(0);
   const [atReport, setAtReport] = useState(false);
@@ -309,6 +346,8 @@ export function Mapeamento({ player = null, recorder = null, onVoiceSaved }: Map
       onNext={goNext}
       player={player}
       recorder={recorder}
+      speaker={speaker}
+      muted={muted}
       onVoiceSaved={onVoiceSaved}
     />
   );

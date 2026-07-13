@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Player } from '../../../adapters/audio';
+import { FixtureSpeechSynthesizer } from '../../../adapters/tts/fixture';
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
 import {
   buildBeads,
@@ -16,7 +17,8 @@ import {
   type SessionState,
   type Span,
 } from '../../../domain';
-import { sessionStore } from '../../state';
+import i18n from '../../i18n';
+import { appStore, sessionStore } from '../../state';
 import mapeamentoCss from './mapeamento.css?raw';
 import Mapeamento from './index';
 
@@ -332,5 +334,85 @@ describe('Mapeamento — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
     const { container } = render(<Mapeamento />);
     expect(container.querySelector('.cds-mapeamento')).not.toBeNull();
     expect(mapeamentoCss).toMatch(/\.cds-mapeamento\s*\{[^}]*var\(--cds-cream\)/);
+  });
+});
+
+describe('Mapeamento — a voz do guia (ENG-280)', () => {
+  beforeEach(() => {
+    if (appStore.getState().muted) appStore.getState().toggleMuted(); // som LIGADO por padrão
+  });
+  afterEach(() => {
+    if (appStore.getState().muted) appStore.getState().toggleMuted();
+  });
+
+  it('com o som ligado, o guia fala a pergunta ao chegar nela, em pt-BR', () => {
+    const tts = new FixtureSpeechSynthesizer();
+    load(mapping());
+    render(<Mapeamento speaker={tts} />);
+
+    expect(tts.spoken).toEqual([{ text: questionText(), lang: 'pt-BR' }]);
+  });
+
+  it('"Ouvir a pergunta" repete a pergunta em foco', async () => {
+    const tts = new FixtureSpeechSynthesizer();
+    load(mapping());
+    render(<Mapeamento speaker={tts} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ouvir a pergunta' }));
+
+    expect(tts.spoken).toHaveLength(2);
+    expect(tts.spoken.at(-1)!.text).toBe(questionText());
+  });
+
+  it('avançar fala a pergunta NOVA', async () => {
+    const tts = new FixtureSpeechSynthesizer();
+    load(mapping());
+    render(<Mapeamento speaker={tts} />);
+    const primeira = questionText();
+
+    await next();
+
+    expect(questionText()).not.toBe(primeira);
+    expect(tts.spoken.at(-1)).toEqual({ text: questionText(), lang: 'pt-BR' });
+  });
+
+  it('com a UI em inglês fala a pergunta EM INGLÊS — texto e voz nunca divergem', async () => {
+    const tts = new FixtureSpeechSynthesizer();
+    await act(() => i18n.changeLanguage('en'));
+    load(mapping());
+    render(<Mapeamento speaker={tts} />);
+
+    expect(tts.spoken).toEqual([
+      {
+        text: 'Tell this story in your own words, as if to someone who has never heard it.',
+        lang: 'en-US',
+      },
+    ]);
+    expect(tts.spoken[0]!.text).toBe(questionText());
+  });
+
+  it('o guia anima enquanto a VOZ fala (não enquanto o gravador está ocioso)', async () => {
+    const tts = new FixtureSpeechSynthesizer();
+    load(mapping());
+    render(<Mapeamento speaker={tts} />);
+    const speaking = () => document.querySelector('[data-speaking]')?.getAttribute('data-speaking');
+
+    // a fala de chegada já acendeu o lip-sync
+    expect(speaking()).toBe('true');
+
+    act(() => tts.stop());
+
+    expect(speaking()).toBe('false');
+  });
+
+  it('som DESLIGADO silencia a voz e some com o botão — nunca fala sem consentimento', () => {
+    const tts = new FixtureSpeechSynthesizer();
+    appStore.getState().toggleMuted(); // som desligado
+    load(mapping());
+    render(<Mapeamento speaker={tts} />);
+
+    expect(tts.spoken).toEqual([]);
+    expect(screen.queryByRole('button', { name: 'Ouvir a pergunta' })).toBeNull();
+    expect(document.querySelector('[data-speaking]')?.getAttribute('data-speaking')).toBe('false');
   });
 });

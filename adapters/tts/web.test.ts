@@ -123,3 +123,32 @@ describe('speechSynthesisSupported', () => {
     expect(speechSynthesisSupported({ speechSynthesis: {} })).toBe(false);
   });
 });
+
+describe('WebSpeechSynthesizer — o idioma segue a UI (ENG-280)', () => {
+  it('fala em inglês quando pedido, escolhendo uma voz inglesa', () => {
+    const { tts, spoken } = build([voice('pt-BR'), voice('en-US')]);
+
+    tts.speak('Where does this story take place?', 'en-US');
+
+    expect(spoken[0]!.lang).toBe('en-US');
+    expect(spoken[0]!.voice?.lang).toBe('en-US');
+  });
+
+  it('sem voz do idioma pedido, NÃO empresta a voz de outro idioma', () => {
+    // uma voz pt-BR lendo texto inglês sai como sotaque ininteligível: melhor deixar
+    // o motor escolher (voice = null) do que forçar o idioma errado.
+    const { tts, spoken } = build([voice('pt-BR')]);
+
+    tts.speak('Where does this story take place?', 'en-US');
+
+    expect(spoken[0]!.lang).toBe('en-US');
+    expect(spoken[0]!.voice).toBeNull();
+  });
+
+  it('sem idioma explícito, segue falando pt-BR (o default do MVP)', () => {
+    const { tts, spoken } = build([voice('pt-BR'), voice('en-US')]);
+    tts.speak('Onde essa história acontece?');
+    expect(spoken[0]!.lang).toBe('pt-BR');
+    expect(spoken[0]!.voice?.lang).toBe('pt-BR');
+  });
+});
