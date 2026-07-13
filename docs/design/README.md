@@ -2,7 +2,7 @@
 
 Imported 2026-07-09 from the Claude Design project **"Colar de Sons redesign"**
 (claude.ai/design/p/2b0236b1-fb71-452b-b49c-425b116e5c68). `Protótipo.dc.html`
-refreshed 2026-07-13 (ENG-278): the team added full **Login** and **Dashboard**
+refreshed 2026-07-12 (ENG-278): the team added full **Login** and **Dashboard**
 screens to the end-to-end flow and restyled **Setup** (centered single column).
 These are the
 prototypes listed in `docs/PRD-redesign.md` §11 — **the normative reference for

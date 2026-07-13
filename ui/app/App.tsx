@@ -317,7 +317,12 @@ export function App() {
     return registration ? (registration.fixture() as VoiceRecorder) : null;
   }, []);
 
-  const header = <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />;
+  // O login é a abertura full-bleed (protótipo Shemá v2, ENG-278): sem o header
+  // utilitário por cima. As demais rotas mantêm o cabeçalho do shell.
+  const header =
+    route.name === 'login' ? null : (
+      <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />
+    );
 
   let body: React.ReactNode;
   if (route.name === 'session') {

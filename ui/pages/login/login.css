@@ -15,6 +15,7 @@
   min-width: 380px;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
   gap: 1.25rem;
   padding: clamp(2.5rem, 6vw, 4rem);
