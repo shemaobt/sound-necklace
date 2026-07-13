@@ -33,14 +33,16 @@ const STATUS_PT: Record<SessionStatus, string> = {
 };
 
 /** A capa do cartão: o fio da história em miniatura, aceso na proporção do progresso. */
-const THUMB_BEADS = 22;
+const THUMB_ROWS = 2;
 const THUMB_ROW = 11;
+/** total DERIVADO — senão o quanto se acende e o quanto se desenha divergem */
+const THUMB_BEADS = THUMB_ROWS * THUMB_ROW;
 /** contas por cena na miniatura — só ritmo visual, não é a grade real */
 const THUMB_GROUP = 4;
 
 function Thumbnail({ progress, label }: { progress: number; label: string }) {
   const lit = Math.round(Math.min(1, Math.max(0, progress)) * THUMB_BEADS);
-  const rows = [0, 1];
+  const rows = Array.from({ length: THUMB_ROWS }, (_, r) => r);
   return (
     <div className="cds-session-card-thumb" role="img" aria-label={label}>
       {rows.map((row) => (
@@ -143,7 +145,7 @@ function NewStoryCard({ onNew }: { onNew: () => void }) {
  */
 export function SessionList({ sessions, onResume, onOpen, onNew }: SessionListProps) {
   return (
-    <ul className="cds-session-list" aria-label="sessões">
+    <ul className="cds-session-list" aria-label="histórias">
       {onNew && <NewStoryCard onNew={onNew} />}
       {sessions.map((s) => (
         <SessionCard key={s.id} session={s} onResume={onResume} onOpen={onOpen} />

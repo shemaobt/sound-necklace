@@ -20,7 +20,7 @@
   flex-direction: column;
   background: #ffffff;
   border-radius: var(--cds-radius-card);
-  box-shadow: 0 2px 8px rgba(63, 62, 32, 0.09);
+  box-shadow: var(--cds-shadow-card);
   overflow: hidden;
 }
 
@@ -65,7 +65,7 @@
   margin: -8px 0 0;
   font-family: var(--cds-font-quiet-voice);
   font-size: 12px;
-  color: #8a8970;
+  color: #6d6c56;
   overflow-wrap: anywhere;
 }
 
@@ -112,13 +112,13 @@
 }
 
 .cds-session-card[data-status='concluida'] .cds-session-card-dot {
-  background: var(--cds-confidence-filled);
+  background: #777d45; /* oliva-médio do protótipo — NÃO a escala de confiança */
 }
 
 .cds-session-card-when {
   font-family: var(--cds-font-load-bearing);
   font-size: 12px;
-  color: #8a8970;
+  color: #6d6c56;
 }
 
 /* invólucro de layout — o visual do botão é do átomo Button (primary) */
@@ -190,5 +190,5 @@
   margin-top: -9px;
   font-family: var(--cds-font-load-bearing);
   font-size: 13px;
-  color: #8a8970;
+  color: #6d6c56;
 }

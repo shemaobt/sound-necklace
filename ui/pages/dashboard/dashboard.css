@@ -59,7 +59,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--cds-confidence-filled);
+  background: #777d45; /* oliva-médio do protótipo — NÃO a escala de confiança */
   color: var(--cds-cream);
   font-family: var(--cds-font-load-bearing);
   font-weight: 700;
@@ -100,7 +100,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #8a8970;
+  color: #6d6c56;
 }
 
 .cds-dashboard-title {

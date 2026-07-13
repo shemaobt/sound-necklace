@@ -36,7 +36,7 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
   it('renderiza uma lista nomeada com um card por sessão e os campos da sessão', () => {
     render(<SessionList sessions={[emProgresso, concluida]} />);
 
-    const lista = screen.getByRole('list', { name: 'sessões' });
+    const lista = screen.getByRole('list', { name: 'histórias' });
     expect(lista.querySelectorAll(':scope > li')).toHaveLength(2);
     expect(screen.getByRole('heading', { name: 'A história de Rute' })).toBeDefined();
     // §7.2 pede slug E projeto no card
@@ -110,7 +110,7 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
   it('lista vazia renderiza sem cards e sem erro', () => {
     render(<SessionList sessions={[]} />);
 
-    const lista = screen.getByRole('list', { name: 'sessões' });
+    const lista = screen.getByRole('list', { name: 'histórias' });
     expect(lista.querySelectorAll(':scope > li')).toHaveLength(0);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
@@ -119,7 +119,7 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
     const onNew = vi.fn();
     render(<SessionList sessions={[emProgresso]} onNew={onNew} />);
 
-    const lista = screen.getByRole('list', { name: 'sessões' });
+    const lista = screen.getByRole('list', { name: 'histórias' });
     expect(lista.querySelectorAll(':scope > li')).toHaveLength(2);
 
     const botao = screen.getByRole('button', { name: /comece uma nova história/i });
