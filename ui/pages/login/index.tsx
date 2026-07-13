@@ -57,7 +57,8 @@ export function Login({ auth = defaultAuth() }: LoginProps) {
   };
 
   return (
-    <section className="cds-login">
+    // o shell não embrulha esta rota: a página é o próprio landmark `main`
+    <main className="cds-login">
       <aside className="cds-login-hero">
         <ShemaIcon colorway="branco" size={60} />
         <p className="cds-login-verse">{t('login.verse')}</p>
@@ -122,7 +123,7 @@ export function Login({ auth = defaultAuth() }: LoginProps) {
           {busy ? t('login.busy') : t('login.submit')}
         </button>
       </form>
-    </section>
+    </main>
   );
 }
 

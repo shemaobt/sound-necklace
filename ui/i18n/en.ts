@@ -128,7 +128,7 @@ export const en: Dict = {
     countOne: '1 story',
     countMany: '{{count}} stories',
     progressLabel: 'progress: {{station}} — step {{step}} of {{total}}',
-    loading: 'Loading the sessions…',
+    loading: 'Loading the stories…',
   },
   sessionList: {
     statusEmProgresso: 'In progress',
@@ -138,7 +138,7 @@ export const en: Dict = {
     newStorySub: 'Load audio and segment',
     resume: 'Resume',
     open: 'Open',
-    listAria: 'sessions',
+    listAria: 'stories',
   },
   escuta1: {
     tagline: 'Listen to the story.',

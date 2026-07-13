@@ -144,7 +144,7 @@ export const pt = {
     countOne: '1 história',
     countMany: '{{count}} histórias',
     progressLabel: 'progresso: {{station}} — passo {{step}} de {{total}}',
-    loading: 'Carregando as sessões…',
+    loading: 'Carregando as histórias…',
   },
   sessionList: {
     statusEmProgresso: 'Em andamento',
@@ -154,7 +154,7 @@ export const pt = {
     newStorySub: 'Carregar áudio e segmentar',
     resume: 'Retomar',
     open: 'Abrir',
-    listAria: 'sessões',
+    listAria: 'histórias',
   },
   escuta1: {
     tagline: 'Ouça a história.',

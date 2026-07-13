@@ -108,7 +108,7 @@ describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
     expect(screen.getByText('facilitadora')).toBeTruthy();
 
     // a listagem resolve depois do corpo do teste — aguardar evita o aviso de act()
-    await screen.findByRole('list', { name: 'sessões' });
+    await screen.findByRole('list', { name: 'histórias' });
   });
 
   it('“Sair” encerra a sessão e volta ao login', async () => {

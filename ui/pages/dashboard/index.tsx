@@ -147,7 +147,8 @@ export function Dashboard({
   }, [store]);
 
   // §7.1: a expiração volta ao login SEM limpar o estado do app (não tocamos o store).
-  useEffect(() => auth.onAuthExpired(() => navigate('/login')), [auth]);
+  // `replace`: não se volta a uma rota cuja sessão de auth já caducou.
+  useEffect(() => auth.onAuthExpired(() => navigate('/login', { replace: true })), [auth]);
 
   const cards = useMemo(
     () => (sessions ?? []).map((s) => toCard(s, t, locale)),
@@ -162,7 +163,8 @@ export function Dashboard({
 
   const onLogout = async (): Promise<void> => {
     await auth.logout();
-    navigate('/login');
+    // `replace`: o Voltar não deve reabrir o dashboard de uma sessão já encerrada.
+    navigate('/login', { replace: true });
   };
 
   const onDownload = async (s: SessionSummary, kind: ArtifactKind): Promise<void> => {
@@ -181,7 +183,9 @@ export function Dashboard({
   const countLabel = count === 1 ? t('dashboard.countOne') : t('dashboard.countMany', { count });
 
   return (
-    <section className="cds-dashboard">
+    // <div>, não <section>: um <header> descendente de section/main não é exposto como
+    // `banner` (HTML-AAM). Aqui ele é banner de verdade, e o corpo é o `main`.
+    <div className="cds-dashboard">
       <header className="cds-dashboard-bar">
         <div className="cds-dashboard-brand">
           <ShemaIcon colorway="telha" size={30} />
@@ -203,13 +207,14 @@ export function Dashboard({
         </div>
       </header>
 
-      <div className="cds-dashboard-body">
+      <main className="cds-dashboard-body">
         <div className="cds-dashboard-head">
           <div className="cds-dashboard-headings">
             <p className="cds-dashboard-eyebrow">{t('dashboard.eyebrow')}</p>
             <h2 className="cds-dashboard-title">{t('dashboard.title')}</h2>
           </div>
-          {sessions !== null && <p className="cds-dashboard-count">{countLabel}</p>}
+          {/* casa vazia não estampa um "0 histórias" frio — o cartão tracejado fala por si */}
+          {count > 0 && <p className="cds-dashboard-count">{countLabel}</p>}
         </div>
 
         {sessions === null ? (
@@ -240,8 +245,8 @@ export function Dashboard({
             )}
           </>
         )}
-      </div>
-    </section>
+      </main>
+    </div>
   );
 }
 

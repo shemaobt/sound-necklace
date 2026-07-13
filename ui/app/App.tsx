@@ -352,11 +352,12 @@ export function App() {
     // no fallback "em construção" quando não há página.
     const stationKey =
       route.name === 'unknown' ? (/^\/([^/]+)/.exec(route.path)?.[1] ?? 'dashboard') : route.name;
-    body = (
-      <main className="cds-app-main">
-        <StationHost stationKey={stationKey} registry={registry} />
-      </main>
-    );
+    const station = <StationHost stationKey={stationKey} registry={registry} />;
+    // Login e dashboard trazem os PRÓPRIOS landmarks (o dashboard um <header> banner + um
+    // <main>; o login um <main>). Embrulhá-los no <main> do shell aninharia esse header
+    // dentro de main — e um <header> descendente de main/section não é exposto como
+    // `banner` (HTML-AAM). Por isso, quem tem cabeçalho próprio não é embrulhado.
+    body = ownsHeader ? station : <main className="cds-app-main">{station}</main>;
   }
 
   return (

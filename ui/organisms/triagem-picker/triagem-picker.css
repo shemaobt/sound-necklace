@@ -21,7 +21,7 @@
 }
 
 .cds-triagem-picker-filter::placeholder {
-  color: #8a8970;
+  color: #6d6c56;
 }
 
 .cds-triagem-picker-group {
@@ -40,7 +40,7 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #8a8970;
+  color: #6d6c56;
 }
 
 .cds-triagem-picker-theme-dot {
