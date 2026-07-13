@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -69,7 +69,8 @@ afterEach(() => goto('/dashboard'));
 describe('Dashboard — lista de sessões (§7.2)', () => {
   it('renderiza status, última modificação e o relance de progresso', async () => {
     const store = new FixtureSessionStore();
-    await seedInProgress(store, { storyName: 'Em andamento', storySlug: 'em-andamento' });
+    // o nome da história não pode colidir com o rótulo do chip de status ("Em andamento")
+    await seedInProgress(store, { storyName: 'História em curso', storySlug: 'em-curso' });
     const done = await store.create(
       createInput({ storyName: 'Terminada', storySlug: 'terminada' }),
     );
@@ -78,15 +79,49 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
 
-    await screen.findAllByText('Em andamento');
-    expect(screen.getByText('em progresso')).toBeTruthy();
-    expect(screen.getByText('concluída')).toBeTruthy();
+    await screen.findAllByText('História em curso');
+    expect(screen.getByText('Em andamento')).toBeTruthy();
+    expect(screen.getByText('Concluída')).toBeTruthy();
     // última modificação: o texto formatado da própria sessão aparece no card
     expect(
       screen.getAllByText(new RegExp(escapeRe(formatWhen(doneSummary.last_modified)))).length,
     ).toBeGreaterThan(0);
-    // relance de progresso: as estações do fio aparecem
-    expect(screen.getAllByText('Ouvir').length).toBeGreaterThan(0);
+    // relance de progresso (§7.2): a capa nomeia ONDE a sessão parou — a recém-criada
+    // fica no 1º passo e a concluída no último (a fixture põe 'ouvir' e 'guardar').
+    expect(screen.getByRole('img', { name: 'progresso: Ouvir — passo 1 de 6' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'progresso: Guardar — passo 6 de 6' })).toBeTruthy();
+    // a contagem da casa concorda com a grade
+    expect(screen.getByText('2 histórias')).toBeTruthy();
+  });
+});
+
+describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
+  it('mostra a marca, a usuária autenticada e o título da casa', async () => {
+    const store = new FixtureSessionStore();
+    const auth = new FixtureAuthProvider();
+    await auth.login({ username: 'facilitadora', password: FILL });
+
+    render(<Dashboard store={store} auth={auth} saveBytes={vi.fn()} />);
+
+    expect(screen.getByRole('heading', { name: 'Colar de Sons' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Suas histórias' })).toBeTruthy();
+    expect(screen.getByText('facilitadora')).toBeTruthy();
+
+    // a listagem resolve depois do corpo do teste — aguardar evita o aviso de act()
+    await screen.findByRole('list', { name: 'histórias' });
+  });
+
+  it('“Sair” encerra a sessão e volta ao login', async () => {
+    const store = new FixtureSessionStore();
+    const auth = new FixtureAuthProvider();
+    await auth.login({ username: 'facilitadora', password: FILL });
+
+    render(<Dashboard store={store} auth={auth} saveBytes={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
+
+    await waitFor(() => expect(window.location.pathname).toBe('/login'));
+    expect(auth.currentUser()).toBeNull();
   });
 });
 
@@ -141,13 +176,14 @@ describe('Dashboard — downloads diretos de sessão concluída (§7.2/§10.5)',
   });
 });
 
-describe('Dashboard — nova sessão (§7.2)', () => {
-  it('“Nova sessão” roteia para o setup', async () => {
+describe('Dashboard — nova história (§7.2)', () => {
+  it('“Comece uma nova história” roteia para o setup', async () => {
     const store = new FixtureSessionStore();
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Nova sessão' }));
+    // o cartão de nova história vive na grade — só nasce quando a listagem resolve
+    await userEvent.click(await screen.findByRole('button', { name: /Comece uma nova história/i }));
     expect(window.location.pathname).toBe('/setup');
   });
 });

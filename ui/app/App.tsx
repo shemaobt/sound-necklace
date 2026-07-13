@@ -317,12 +317,13 @@ export function App() {
     return registration ? (registration.fixture() as VoiceRecorder) : null;
   }, []);
 
-  // O login é a abertura full-bleed (protótipo Shemá v2, ENG-278): sem o header
-  // utilitário por cima. As demais rotas mantêm o cabeçalho do shell.
-  const header =
-    route.name === 'login' ? null : (
-      <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />
-    );
+  // Login e dashboard são superfícies full-bleed com cabeçalho PRÓPRIO (protótipo
+  // Shemá v2, ENG-278) — o shell não empilha o dele por cima. As estações mantêm-no
+  // (é lá que vive o botão de som).
+  const ownsHeader = route.name === 'login' || route.name === 'dashboard';
+  const header = ownsHeader ? null : (
+    <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />
+  );
 
   let body: React.ReactNode;
   if (route.name === 'session') {
@@ -351,11 +352,12 @@ export function App() {
     // no fallback "em construção" quando não há página.
     const stationKey =
       route.name === 'unknown' ? (/^\/([^/]+)/.exec(route.path)?.[1] ?? 'dashboard') : route.name;
-    body = (
-      <main className="cds-app-main">
-        <StationHost stationKey={stationKey} registry={registry} />
-      </main>
-    );
+    const station = <StationHost stationKey={stationKey} registry={registry} />;
+    // Login e dashboard trazem os PRÓPRIOS landmarks (o dashboard um <header> banner + um
+    // <main>; o login um <main>). Embrulhá-los no <main> do shell aninharia esse header
+    // dentro de main — e um <header> descendente de main/section não é exposto como
+    // `banner` (HTML-AAM). Por isso, quem tem cabeçalho próprio não é embrulhado.
+    body = ownsHeader ? station : <main className="cds-app-main">{station}</main>;
   }
 
   return (

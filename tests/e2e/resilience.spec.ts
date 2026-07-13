@@ -124,7 +124,7 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     await page.locator('input[name="username"]').fill('facilitadora');
     await page.locator('input[name="password"]').fill('senha');
     await page.getByRole('button', { name: 'Entrar' }).click();
-    await expect(page.getByRole('heading', { name: 'Minhas sessões' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Suas histórias' })).toBeVisible();
     await page.getByRole('button', { name: /Retomar/ }).click();
     await expect(page).toHaveURL(new RegExp(`/session/${id}$`));
 

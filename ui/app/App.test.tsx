@@ -120,16 +120,30 @@ beforeEach(() => {
 });
 
 describe('App shell', () => {
-  it('mostra a marca no cabeçalho', () => {
+  it('as estações montam o cabeçalho do shell (marca + botão de som)', () => {
+    // a rota default cai no dashboard, que tem cabeçalho PRÓPRIO — o shell só monta o
+    // dele nas estações; /imports é uma delas.
+    act(() => navigate('/imports'));
     render(<App />);
+
     expect(screen.getByRole('heading', { name: 'Colar de Sons' })).toBeDefined();
+    expect(screen.getByRole('button', { name: /som da interface/i })).toBeDefined();
+  });
+
+  it('login e dashboard têm cabeçalho próprio: o shell não empilha o dele (ENG-278)', () => {
+    render(<App />); // rota default = dashboard
+
+    // uma ÚNICA marca na página: a do cabeçalho do dashboard. E sem o botão de som do
+    // shell, que vive nas estações (é lá que há áudio).
+    expect(screen.getAllByRole('heading', { name: 'Colar de Sons' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /som da interface/i })).toBeNull();
   });
 
   it('resolve a estação da rota (a rota default abre o dashboard)', () => {
     // O fallback "estação em construção" para uma chave não construída é coberto
     // em station-host.test.tsx; aqui basta que o shell resolva a estação da rota.
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Minhas sessões' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Suas histórias' })).toBeDefined();
   });
 
   it('a rota /setup abre a estação Setup', async () => {
@@ -146,7 +160,7 @@ describe('App shell', () => {
     // sem sessão viva, a estação de imports orienta a abrir uma — o que importa é que
     // a rota resolve a estação imports (ENG-248), não recai no dashboard.
     expect(screen.getByText('Abra uma sessão para carregar arquivos do pipeline.')).toBeDefined();
-    expect(screen.queryByRole('heading', { name: 'Minhas sessões' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Suas histórias' })).toBeNull();
   });
 
   it('reidrata a sessão do store ao (re)abrir /session/:id com o ui/state vazio', async () => {
