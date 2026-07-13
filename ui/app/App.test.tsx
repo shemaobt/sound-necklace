@@ -120,9 +120,23 @@ beforeEach(() => {
 });
 
 describe('App shell', () => {
-  it('mostra a marca no cabeçalho', () => {
+  it('as estações montam o cabeçalho do shell (marca + botão de som)', () => {
+    // a rota default cai no dashboard, que tem cabeçalho PRÓPRIO — o shell só monta o
+    // dele nas estações; /imports é uma delas.
+    act(() => navigate('/imports'));
     render(<App />);
+
     expect(screen.getByRole('heading', { name: 'Colar de Sons' })).toBeDefined();
+    expect(screen.getByRole('button', { name: /som da interface/i })).toBeDefined();
+  });
+
+  it('login e dashboard têm cabeçalho próprio: o shell não empilha o dele (ENG-278)', () => {
+    render(<App />); // rota default = dashboard
+
+    // uma ÚNICA marca na página: a do cabeçalho do dashboard. E sem o botão de som do
+    // shell, que vive nas estações (é lá que há áudio).
+    expect(screen.getAllByRole('heading', { name: 'Colar de Sons' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /som da interface/i })).toBeNull();
   });
 
   it('resolve a estação da rota (a rota default abre o dashboard)', () => {
