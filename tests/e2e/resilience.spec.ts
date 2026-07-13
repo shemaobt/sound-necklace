@@ -116,13 +116,15 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     // ——— o token do servidor caduca dentro de /session/:id ———
     await expireAuth(page);
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible();
+    // de volta ao login — asserção estável à abertura Shemá v2 (ENG-278 trocou o
+    // heading para "Bem-vinda de volta."; o campo de usuário prova o formulário montado).
+    await expect(page.locator('input[name="username"]')).toBeVisible();
 
     // ——— re-login → dashboard → retomar a mesma sessão (tudo in-SPA) ———
     await page.locator('input[name="username"]').fill('facilitadora');
     await page.locator('input[name="password"]').fill('senha');
     await page.getByRole('button', { name: 'Entrar' }).click();
-    await expect(page.getByRole('heading', { name: 'Minhas sessões' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Suas histórias' })).toBeVisible();
     await page.getByRole('button', { name: /Retomar/ }).click();
     await expect(page).toHaveURL(new RegExp(`/session/${id}$`));
 
