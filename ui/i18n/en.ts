@@ -23,8 +23,7 @@ export const en: Dict = {
   },
   setup: {
     title: 'New session',
-    trustLine:
-      'Your audio and answers are kept safely in your project. Only your team has access.',
+    trustLine: 'Your audio and answers are kept safely in your project. Only your team has access.',
     gridWarning: 'Lock the bead size before anchoring. Changing it later shifts the boundaries.',
     noAudio: 'Choose an audio file first.',
     noConsent: 'Confirm consent to use this in the pipeline to continue.',
@@ -149,7 +148,8 @@ export const en: Dict = {
   artifactCards: {
     retorno: {
       title: 'Your decisions',
-      description: 'Where each scene and each phrase begins and ends, with the type and confidence.',
+      description:
+        'Where each scene and each phrase begins and ends, with the type and confidence.',
     },
     manifesto: {
       title: 'The map of the beads',
@@ -168,5 +168,68 @@ export const en: Dict = {
   },
   guide: {
     ariaLabel: 'the conversation guide',
+  },
+  triagem: {
+    empty: 'No scene confirmed yet.',
+    instruction: 'What is this scene about?',
+    playScene: '▶ Listen to this scene',
+    tagNoneFit: '⌀ none fits',
+    tagPending: '— to classify',
+    confAlta: 'certain',
+    confMedia: 'almost',
+    confBaixa: 'in doubt',
+    finding: '⌀ None fits — evidence for naming a native type when the pattern repeats.',
+    lockout:
+      '⚠ No scene fits Ruth. Segmentation and Mapping stay locked — this story yields no Ruth coverage. The marks are kept as evidence of a native type.',
+    advance: 'I have classified every scene →',
+  },
+  triagemPicker: {
+    'theme.indo-e-vindo': 'Coming and going',
+    'theme.fala-e-acordo': 'Speech and agreement',
+    'theme.trabalho-e-terra': 'Work and land',
+    'theme.sentimento': 'Feeling',
+    'theme.rito-e-alianca': 'Rite and covenant',
+    'theme.narracao': 'Narration',
+    swap: 'change type',
+    confidenceQuestion: 'How right does that feel to you?',
+    confirm: 'Confirm',
+    common: 'Most common',
+    seeAll: 'See all types by theme',
+    collapse: 'collapse',
+    noneFit: 'None fits',
+    filterAria: 'filter types',
+    filterPlaceholder: 'filter…',
+    groupAria: 'Scene types',
+  },
+  coverageDrawer: {
+    tabAria: 'Coverage (facilitator)',
+    tabLabel: 'coverage',
+    title: 'Coverage · facilitator only',
+    close: 'close',
+    introPre: 'Productive scenes: ',
+    introPost: '. Count by type (facilitator data, hidden from the listener).',
+    counts: 'firm {{firm}} · hesitant {{hesitant}} · target {{target}}',
+    absence: 'Absence candidates (rare ones still open)',
+  },
+  mapeamento: {
+    listenStory: '▶ listen to the story',
+    listenScene: '▶ listen to the scene',
+    listenPhrase: '▶ listen to the phrase',
+    instruction: 'Listen to the stretch and answer calmly, in your own voice.',
+    typedAria: 'facilitator note',
+    reportAria: 'report',
+    reportFallback: 'The conversation is over. The report opens here.',
+    prev: '← previous',
+  },
+  conversationStage: {
+    listen: 'Listen to the question',
+    record: 'record the answer',
+    stop: 'Stop',
+    play: 'listen',
+    again: 'again',
+    typedHint: 'The facilitator can write later — never for you.',
+    prev: 'Previous',
+    next: 'Next question',
+    progressAria: 'conversation progress',
   },
 };

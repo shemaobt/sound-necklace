@@ -1,4 +1,5 @@
 import { type ComponentType, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
@@ -12,6 +13,7 @@ import {
   type SessionState,
   voiceAnswerPath,
 } from '../../../domain';
+import { questionNoteFor, questionTextFor } from '../../i18n/mapeamento-questions';
 import { Button } from '../../atoms';
 import {
   ConversationStage,
@@ -67,18 +69,22 @@ interface ListenTarget {
   label: string;
 }
 
+type Translate = (key: string) => string;
+
 /** O ▶ da pergunta atual: a história inteira (N1), a cena (N2) ou a frase (N3). */
-function listenFor(state: SessionState, slot: QuestionSlot): ListenTarget | null {
+function listenFor(state: SessionState, slot: QuestionSlot, t: Translate): ListenTarget | null {
   if (slot.level === 1) {
-    return { key: 'historia', s: 0, e: state.totalBeads - 1, label: '▶ ouvir a história' };
+    return { key: 'historia', s: 0, e: state.totalBeads - 1, label: t('mapeamento.listenStory') };
   }
   if (slot.level === 2) {
     const p = state.parts.find((x) => x.part_id === slot.partId);
-    return p?.span ? { key: p.part_id, s: p.span.s, e: p.span.e, label: '▶ ouvir a cena' } : null;
+    return p?.span
+      ? { key: p.part_id, s: p.span.s, e: p.span.e, label: t('mapeamento.listenScene') }
+      : null;
   }
   const fr = state.frases.find((x) => x.prop_id === slot.propId);
   return fr?.span
-    ? { key: fr.prop_id, s: fr.span.s, e: fr.span.e, label: '▶ ouvir a frase' }
+    ? { key: fr.prop_id, s: fr.span.s, e: fr.span.e, label: t('mapeamento.listenPhrase') }
     : null;
 }
 
@@ -114,6 +120,7 @@ function QuestionScreen({
   recorder,
   onVoiceSaved,
 }: QuestionScreenProps) {
+  const { t, i18n } = useTranslation();
   const [recorderState, setRecorderState] = useState<RecorderState>('idle');
   const [levels, setLevels] = useState<number[]>([]);
   const recordingRef = useRef<Recording | null>(null);
@@ -179,11 +186,10 @@ function QuestionScreen({
     setRecorderState('idle');
   };
 
-  const q = slot.question;
   const typed = (
     <textarea
       className="cds-mapeamento-typed"
-      aria-label="observação da facilitadora"
+      aria-label={t('mapeamento.typedAria')}
       value={typedValue}
       onChange={(e) => onTyped(e.target.value)}
     />
@@ -192,7 +198,7 @@ function QuestionScreen({
   return (
     <section className="cds-mapeamento">
       <p className="cds-mapeamento-instruction" data-role="instruction">
-        Ouça o trecho e responda com calma, com a sua voz.
+        {t('mapeamento.instruction')}
       </p>
 
       {listen ? (
@@ -204,9 +210,9 @@ function QuestionScreen({
       ) : null}
 
       <ConversationStage
-        question={q.q}
-        note={q.note}
-        facilitatorLed={q.k === 'ausencia'}
+        question={questionTextFor(slot, i18n.language)}
+        note={questionNoteFor(slot, i18n.language)}
+        facilitatorLed={slot.k === 'ausencia'}
         recorderState={recorderState}
         levels={levels}
         onRecord={onRecord}
@@ -223,6 +229,7 @@ function QuestionScreen({
 }
 
 export function Mapeamento({ player = null, recorder = null, onVoiceSaved }: MapeamentoProps) {
+  const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [index, setIndex] = useState(0);
   const [atReport, setAtReport] = useState(false);
@@ -252,17 +259,17 @@ export function Mapeamento({ player = null, recorder = null, onVoiceSaved }: Map
 
   if (atReport) {
     return (
-      <section className="cds-mapeamento" aria-label="relatório">
+      <section className="cds-mapeamento" aria-label={t('mapeamento.reportAria')}>
         {RelatorioStation ? (
           <RelatorioStation />
         ) : (
           <div className="cds-mapeamento-report-fallback">
-            <p>A conversa terminou. O relatório abre aqui.</p>
+            <p>{t('mapeamento.reportFallback')}</p>
           </div>
         )}
         <div className="cds-mapeamento-controls">
           <Button variant="ghost" size="sm" onClick={() => setAtReport(false)}>
-            ← anterior
+            {t('mapeamento.prev')}
           </Button>
         </div>
       </section>
@@ -294,7 +301,7 @@ export function Mapeamento({ player = null, recorder = null, onVoiceSaved }: Map
       key={path}
       slot={slot}
       path={path}
-      listen={listenFor(mapped, slot)}
+      listen={listenFor(mapped, slot, t)}
       typedValue={readAnswer(mapped.mapping, slot)}
       onTyped={writeTyped}
       progress={{ total, answered, current: idx }}

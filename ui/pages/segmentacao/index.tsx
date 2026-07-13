@@ -20,9 +20,9 @@ import {
   reopenFrase,
   sceneIndexOf,
   setMode,
-  skShort,
   toggleFlag,
 } from '../../../domain';
+import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button } from '../../atoms';
 import { ScenePhraseChip } from '../../molecules';
 import { Necklace, type NecklaceSegment, SeamModal, type SeamCordSide } from '../../organisms';
@@ -51,7 +51,7 @@ export interface SegmentacaoProps {
 }
 
 export function Segmentacao({ player = null }: SegmentacaoProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -216,7 +216,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
 
   return (
     <section className="cds-segmentacao">
-      <p className="cds-segmentacao-title">{`${sceneLabel(sceneIdx)} · ${skShort(sc.scene_kind!)}`}</p>
+      <p className="cds-segmentacao-title">{`${sceneLabel(sceneIdx)} · ${sceneKindLabel(sc.scene_kind!, i18n.language)}`}</p>
       <p className="cds-segmentacao-instruction" data-role="instruction">
         {t('segmentacao.instruction')}
       </p>

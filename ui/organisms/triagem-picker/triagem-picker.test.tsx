@@ -8,14 +8,14 @@ import pickerCss from './triagem-picker.css?raw';
 
 /** Mapeamento de temas decidido no planejamento (issue ENG-225) — display-only. */
 const EXPECTED_THEMES: Record<string, string[]> = {
-  'Indo e vindo': [
+  'indo-e-vindo': [
     'DEPARTURE_SCENE',
     'ARRIVAL_SCENE',
     'NIGHT_APPROACH_SCENE',
     'PROVISION_HOMECOMING_SCENE',
     'INITIATIVE_SCENE',
   ],
-  'Fala e acordo': [
+  'fala-e-acordo': [
     'APPEAL_SCENE',
     'INSTRUCTION_SCENE',
     'CONSENT_SCENE',
@@ -25,9 +25,9 @@ const EXPECTED_THEMES: Record<string, string[]> = {
     'REDEMPTION_DECLINE_SCENE',
     'REPORT_SCENE',
   ],
-  'Trabalho e terra': ['GLEANING_SCENE', 'MEAL_SCENE'],
-  Sentimento: ['LAMENT_SCENE', 'BEREAVEMENT_SCENE'],
-  'Rito e aliança': [
+  'trabalho-e-terra': ['GLEANING_SCENE', 'MEAL_SCENE'],
+  sentimento: ['LAMENT_SCENE', 'BEREAVEMENT_SCENE'],
+  'rito-e-alianca': [
     'MARRIAGE_SCENE',
     'VOW_SCENE',
     'BIRTH_SCENE',
@@ -35,7 +35,7 @@ const EXPECTED_THEMES: Record<string, string[]> = {
     'BLESSING_SCENE',
     'REDEEMER_RECOGNITION_SCENE',
   ],
-  Narração: [
+  narracao: [
     'NARRATOR_INTRODUCTION_SCENE',
     'NARRATOR_FRAMING_CLOSE_SCENE',
     'OPENING_CHRONICLE_SCENE',
