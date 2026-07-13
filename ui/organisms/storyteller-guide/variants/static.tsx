@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import type { GuideVariantProps } from '../variant';
 import './static.css';
 
@@ -8,11 +10,12 @@ import './static.css';
  * ENG-232 como `variants/animated.tsx`, sem tocar este arquivo.
  */
 export default function StaticGuide({ size = 220 }: GuideVariantProps) {
+  const { t } = useTranslation();
   return (
     <svg
       className="cds-guide-figure"
       role="img"
-      aria-label="o guia da conversa"
+      aria-label={t('guide.ariaLabel')}
       width={size}
       height={size}
       viewBox="0 0 220 220"

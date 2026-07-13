@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import {
@@ -50,6 +51,7 @@ export interface SegmentacaoProps {
 }
 
 export function Segmentacao({ player = null }: SegmentacaoProps) {
+  const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -216,7 +218,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
     <section className="cds-segmentacao">
       <p className="cds-segmentacao-title">{`${sceneLabel(sceneIdx)} · ${skShort(sc.scene_kind!)}`}</p>
       <p className="cds-segmentacao-instruction" data-role="instruction">
-        Toque no colar o começo e o fim de cada frase.
+        {t('segmentacao.instruction')}
       </p>
 
       <div className="cds-segmentacao-stage">
@@ -236,7 +238,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
 
       <div className="cds-segmentacao-scene-controls">
         <Button variant="ghost" size="sm" onClick={playScene}>
-          ▶ ouvir a cena
+          {t('segmentacao.playScene')}
         </Button>
       </div>
 
@@ -251,13 +253,13 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
                 actions={
                   <>
                     <Button variant="ghost" size="sm" onClick={() => reopen(index)}>
-                      Reabrir
+                      {t('segmentacao.reopen')}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => flag(index)}>
-                      {f.flagged ? '⚑ marcada' : '⚑ revisar'}
+                      {f.flagged ? t('segmentacao.flagMarked') : t('segmentacao.flagReview')}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => remove(index)}>
-                      Remover
+                      {t('segmentacao.remove')}
                     </Button>
                   </>
                 }
@@ -269,19 +271,19 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
 
       <div className="cds-segmentacao-controls">
         <Button variant="ghost" size="sm" onClick={back}>
-          ← Voltar
+          {t('segmentacao.back')}
         </Button>
 
         {anchor ? (
           <div className="cds-segmentacao-confirm" data-role="primary-action">
             <Button variant="primary" onClick={confirmPhrase}>
-              ✓ Confirmar esta frase
+              {t('segmentacao.confirmPhrase')}
             </Button>
           </div>
         ) : null}
 
         <Button variant="dark" onClick={done}>
-          {isLast ? 'Já segmentei todas as cenas →' : 'Pronto com esta cena →'}
+          {isLast ? t('segmentacao.doneLast') : t('segmentacao.doneMore')}
         </Button>
       </div>
 

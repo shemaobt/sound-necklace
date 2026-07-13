@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { AuthProvider } from '../../../adapters/api';
 import type { SessionStore } from '../../../adapters/sessions';
@@ -42,13 +43,14 @@ export interface DashboardProps {
   saveBytes?: (filename: string, bytes: string) => void;
 }
 
-const STEPS: readonly { key: SessionStep; label: string }[] = [
-  { key: 'ouvir', label: 'Ouvir' },
-  { key: 'cortar', label: 'Cortar' },
-  { key: 'triagem', label: 'Triagem' },
-  { key: 'frases', label: 'Frases' },
-  { key: 'conversa', label: 'Conversa' },
-  { key: 'guardar', label: 'Guardar' },
+/** As seis estações guardam CHAVES i18n (a cópia vive no dicionário — ENG-279). */
+const STEPS: readonly { key: SessionStep; labelKey: string }[] = [
+  { key: 'ouvir', labelKey: 'dashboard.stepOuvir' },
+  { key: 'cortar', labelKey: 'dashboard.stepCortar' },
+  { key: 'triagem', labelKey: 'dashboard.stepTriagem' },
+  { key: 'frases', labelKey: 'dashboard.stepFrases' },
+  { key: 'conversa', labelKey: 'dashboard.stepConversa' },
+  { key: 'guardar', labelKey: 'dashboard.stepGuardar' },
 ];
 
 const STATUS: Record<SessionSummary['status'], SessionStatus> = {
@@ -56,30 +58,35 @@ const STATUS: Record<SessionSummary['status'], SessionStatus> = {
   concluida: 'concluida',
 };
 
+type Translate = (key: string) => string;
+
 /** Relance do progresso (§7.2): as seis estações, atual no passo salvo. */
-function glance(step: SessionStep): SessionStationGlance[] {
+function glance(step: SessionStep, t: Translate): SessionStationGlance[] {
   const ci = STEPS.findIndex((s) => s.key === step);
   return STEPS.map((s, i) => ({
     key: s.key,
-    label: s.label,
+    label: t(s.labelKey),
     state: i === ci ? 'current' : i < ci ? 'done' : 'future',
   }));
 }
 
-/** O organismo não faz aritmética de datas — a página entrega o texto pronto. */
-export function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+/**
+ * O organismo não faz aritmética de datas — a página entrega o texto pronto. O locale
+ * acompanha o idioma da UI (ENG-279); o default PT-BR preserva o comportamento anterior.
+ */
+export function formatWhen(iso: string, locale = 'pt-BR'): string {
+  return new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' });
 }
 
-function toCard(s: SessionSummary): SessionCardData {
+function toCard(s: SessionSummary, t: Translate, locale: string): SessionCardData {
   return {
     id: s.id,
     storyName: s.story_name,
     slug: s.story_slug,
     project: s.project_id,
     status: STATUS[s.status],
-    lastModified: formatWhen(s.last_modified),
-    stations: glance(s.progress.current_step),
+    lastModified: formatWhen(s.last_modified, locale),
+    stations: glance(s.progress.current_step, t),
   };
 }
 
@@ -105,6 +112,8 @@ export function Dashboard({
   store = defaultSessionStore(),
   saveBytes = domSaveBytes,
 }: DashboardProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.startsWith('en') ? 'en-US' : 'pt-BR';
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [downloaded, setDownloaded] = useState<Set<string>>(new Set());
 
@@ -121,7 +130,10 @@ export function Dashboard({
   // §7.1: a expiração volta ao login SEM limpar o estado do app (não tocamos o store).
   useEffect(() => auth.onAuthExpired(() => navigate('/login')), [auth]);
 
-  const cards = useMemo(() => (sessions ?? []).map(toCard), [sessions]);
+  const cards = useMemo(
+    () => (sessions ?? []).map((s) => toCard(s, t, locale)),
+    [sessions, t, locale],
+  );
   const completed = useMemo(
     () => (sessions ?? []).filter((s) => s.status === 'concluida'),
     [sessions],
@@ -142,18 +154,18 @@ export function Dashboard({
   return (
     <section className="cds-dashboard">
       <header className="cds-dashboard-head">
-        <h1 className="cds-dashboard-title">Minhas sessões</h1>
+        <h1 className="cds-dashboard-title">{t('dashboard.title')}</h1>
         <button type="button" className="cds-dashboard-new" onClick={() => navigate('/setup')}>
-          Nova sessão
+          {t('dashboard.newSession')}
         </button>
       </header>
 
       {sessions === null ? (
         <p className="cds-dashboard-empty" role="status">
-          Carregando as sessões…
+          {t('dashboard.loading')}
         </p>
       ) : sessions.length === 0 ? (
-        <p className="cds-dashboard-empty">Você ainda não tem sessões.</p>
+        <p className="cds-dashboard-empty">{t('dashboard.empty')}</p>
       ) : (
         <>
           <SessionList

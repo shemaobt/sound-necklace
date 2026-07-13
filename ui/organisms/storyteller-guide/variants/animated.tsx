@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import type { GuideVariantProps } from '../variant';
 import './animated.css';
 
@@ -11,11 +13,12 @@ import './animated.css';
  * arquivo à estática sem que nada mais mude.
  */
 export default function AnimatedGuide({ speaking = false, size = 220 }: GuideVariantProps) {
+  const { t } = useTranslation();
   return (
     <svg
       className="cds-guide-figure cds-guide-anim"
       role="img"
-      aria-label="o guia da conversa"
+      aria-label={t('guide.ariaLabel')}
       data-guide-variant="animated"
       data-speaking={speaking ? 'true' : 'false'}
       width={size}

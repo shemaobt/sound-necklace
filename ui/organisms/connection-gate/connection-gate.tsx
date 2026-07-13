@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import './connection-gate.css';
 
@@ -18,12 +19,12 @@ export interface ConnectionGateProps {
 }
 
 export function ConnectionGate({ online, children }: ConnectionGateProps) {
+  const { t } = useTranslation();
   return (
     <div className="cds-connection-gate" data-offline={online ? undefined : true}>
       {!online && (
         <div className="cds-connection-gate-banner" role="status">
-          <strong>Sem conexão</strong> — a edição está pausada e nada se perde. O áudio continua
-          tocando; retomamos assim que a conexão voltar.
+          <strong>{t('connectionGate.offline')}</strong> {t('connectionGate.rest')}
         </div>
       )}
       <div className="cds-connection-gate-content">
