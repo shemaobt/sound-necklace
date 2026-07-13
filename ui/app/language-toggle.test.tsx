@@ -33,14 +33,14 @@ describe('Idioma da UI (ENG-279)', () => {
       </>,
     );
 
-    // PT por padrão
-    expect(screen.getByRole('heading', { name: 'Entrar' })).toBeTruthy();
+    // PT por padrão (o h1 da abertura Shemá v2 — ENG-278)
+    expect(screen.getByRole('heading', { name: 'Bem-vinda de volta.' })).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Mudar para inglês' }));
 
     // Agora EN — a mesma tela de login em inglês
-    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Entrar' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Bem-vinda de volta.' })).toBeNull();
   });
 
   it('persiste a escolha de idioma para o próximo reload', async () => {
