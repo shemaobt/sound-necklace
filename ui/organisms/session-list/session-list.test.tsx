@@ -10,11 +10,8 @@ const emProgresso: SessionCardData = {
   project: 'Projeto Sul',
   status: 'em-progresso',
   lastModified: 'hoje, 14h02',
-  stations: [
-    { key: 'escuta1', label: 'Ouvir', state: 'done' },
-    { key: 'escuta2', label: 'Cortar', state: 'current' },
-    { key: 'triagem', label: 'Triagem', state: 'future' },
-  ],
+  progress: 2 / 6,
+  progressLabel: 'progresso: Cortar — passo 2 de 6',
 };
 
 const concluida: SessionCardData = {
@@ -24,7 +21,8 @@ const concluida: SessionCardData = {
   project: 'Projeto Norte',
   status: 'concluida',
   lastModified: 'ontem, 09h40',
-  stations: [],
+  progress: 1,
+  progressLabel: 'progresso: Guardar — passo 6 de 6',
 };
 
 function cardOf(storyName: string): HTMLElement {
@@ -41,6 +39,7 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
     const lista = screen.getByRole('list', { name: 'sessões' });
     expect(lista.querySelectorAll(':scope > li')).toHaveLength(2);
     expect(screen.getByRole('heading', { name: 'A história de Rute' })).toBeDefined();
+    // §7.2 pede slug E projeto no card
     expect(screen.getByText(/historia-de-rute/)).toBeDefined();
     expect(screen.getByText(/Projeto Sul/)).toBeDefined();
     expect(screen.getByText(/hoje, 14h02/)).toBeDefined();
@@ -55,15 +54,15 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
 
     expect(aberta.getAttribute('data-status')).toBe('em-progresso');
     expect(fechada.getAttribute('data-status')).toBe('concluida');
-    expect(within(aberta).getByText('em progresso')).toBeDefined();
-    expect(within(fechada).getByText('concluída')).toBeDefined();
+    expect(within(aberta).getByText('Em andamento')).toBeDefined();
+    expect(within(fechada).getByText('Concluída')).toBeDefined();
 
     expect(within(aberta).getByRole('button', { name: /retomar/i })).toBeDefined();
     expect(within(aberta).queryByRole('button', { name: /abrir/i })).toBeNull();
     expect(within(fechada).getByRole('button', { name: /abrir/i })).toBeDefined();
     expect(within(fechada).queryByRole('button', { name: /retomar/i })).toBeNull();
 
-    // sessão sem estações não renderiza um fio vazio
+    // o card não aninha listas (a capa do fio é uma imagem, não uma lista)
     expect(within(fechada).queryByRole('list')).toBeNull();
   });
 
@@ -90,18 +89,19 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
     expect(onResume).toHaveBeenCalledTimes(1);
   });
 
-  it('o relance de progresso renderiza as estações com os estados vindos das props', () => {
-    render(<SessionList sessions={[emProgresso]} />);
+  it('a capa do fio é o relance de progresso: contas acesas na proporção, com nome acessível', () => {
+    render(<SessionList sessions={[emProgresso, concluida]} />);
 
-    const card = cardOf('A história de Rute');
-    const fio = within(card).getByRole('list');
-    const estacoes = within(fio).getAllByRole('listitem');
+    const aberta = cardOf('A história de Rute');
+    const capa = within(aberta).getByRole('img', { name: 'progresso: Cortar — passo 2 de 6' });
+    // a miniatura tem 22 contas; acesas ∝ progresso (2/6 de 22 ≈ 7)
+    expect(capa.querySelectorAll('.cds-pearl')).toHaveLength(22);
+    expect(capa.querySelectorAll('[data-state="lit"]')).toHaveLength(7);
 
-    expect(estacoes).toHaveLength(3);
-    expect(estacoes[0]?.getAttribute('data-state')).toBe('done');
-    expect(estacoes[1]?.getAttribute('data-state')).toBe('current');
-    expect(estacoes[1]?.getAttribute('aria-current')).toBe('step');
-    expect(estacoes[2]?.getAttribute('data-state')).toBe('future');
+    // sessão concluída: o fio inteiro aceso
+    const fechada = cardOf('O chamado do profeta');
+    const capaFim = within(fechada).getByRole('img', { name: /passo 6 de 6/ });
+    expect(capaFim.querySelectorAll('[data-state="lit"]')).toHaveLength(22);
   });
 
   it('lista vazia renderiza sem cards e sem erro', () => {
@@ -110,6 +110,23 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
     const lista = screen.getByRole('list', { name: 'sessões' });
     expect(lista.querySelectorAll(':scope > li')).toHaveLength(0);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('com onNew, a grade abre com o cartão "comece uma nova história"', () => {
+    const onNew = vi.fn();
+    render(<SessionList sessions={[emProgresso]} onNew={onNew} />);
+
+    const lista = screen.getByRole('list', { name: 'sessões' });
+    expect(lista.querySelectorAll(':scope > li')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: /comece uma nova história/i }));
+    expect(onNew).toHaveBeenCalledTimes(1);
+  });
+
+  it('sem onNew não há cartão de nova história', () => {
+    render(<SessionList sessions={[emProgresso]} />);
+
+    expect(screen.queryByRole('button', { name: /comece uma nova história/i })).toBeNull();
   });
 
   it('o card não aninha interativos: a única ação é o botão primário', () => {

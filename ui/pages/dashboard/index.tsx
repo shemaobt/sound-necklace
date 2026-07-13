@@ -9,6 +9,8 @@ import {
   type SessionStep,
   type SessionSummary,
 } from '../../../contracts';
+import { Button } from '../../atoms';
+import { ShemaIcon } from '../../tokens';
 import {
   ArtifactCards,
   type ArtifactDownloads,
@@ -17,7 +19,6 @@ import {
 import {
   SessionList,
   type SessionCardData,
-  type SessionStationGlance,
   type SessionStatus,
 } from '../../organisms/session-list/session-list';
 import { navigate } from '../../app/router';
@@ -25,12 +26,21 @@ import { defaultAuth, defaultSessionStore } from './ports';
 import './dashboard.css';
 
 /**
- * Sessions dashboard (PRD v2 §7.2): a casa pós-login. Lista TODAS as sessões da
- * facilitadora com status, última modificação e o relance de progresso pelo fio de
- * contas; retoma uma sessão em progresso direto no passo salvo (§7.3, via o guard do
- * shell); baixa os três artefatos de uma sessão concluída SEM abri-la, reusando os
- * bytes opacos guardados (§10.5); e abre uma nova sessão. A expiração de auth (§7.1)
- * volta ao login sem tocar o estado em memória do app.
+ * Sessions dashboard (PRD v2 §7.2, protótipo Shemá v2 / ENG-278): a casa pós-login.
+ * Lista TODAS as sessões da facilitadora em cartões — nome, slug, projeto, status,
+ * última modificação e o relance de progresso pela capa do fio (contas acesas na
+ * proporção do passo salvo); retoma direto no passo salvo (§7.3); baixa os três
+ * artefatos de uma sessão concluída SEM abri-la (§10.5); e abre uma nova história. A
+ * expiração de auth (§7.1) volta ao login sem tocar o estado em memória do app.
+ *
+ * Tem cabeçalho PRÓPRIO (o shell suprime o dele em `/dashboard`, como no `/login`):
+ * marca + a usuária autenticada + sair. Reconciliações protótipo↔contrato (dado vence):
+ * o protótipo mostra nome completo e e-mail ("Marcia Alencar / marcia@shema.org"), mas
+ * `AuthUser` só tem `{id, username, roles}` — mostramos o `username` e a inicial, sem
+ * inventar dados. O menu kebab do protótipo (renomear/duplicar/excluir) NÃO foi portado:
+ * `SessionStore` não expõe essas operações e o §7.2 não as pede; os downloads, que o
+ * protótipo punha nesse menu, seguem nos ArtifactCards (§7.2/§10.5); estender o
+ * contrato para suportá-las é um follow-up contract-critical, fora do escopo `ui/`.
  *
  * Camada de wiring: as portas `auth`/`store` chegam por prop nos testes; em produção
  * resolvem os singletons fixture (ports.ts). O download real é a fronteira `saveBytes`.
@@ -42,6 +52,7 @@ export interface DashboardProps {
   saveBytes?: (filename: string, bytes: string) => void;
 }
 
+/** As seis estações do fio — a posição do passo salvo vira a proporção da capa. */
 const STEPS: readonly { key: SessionStep; label: string }[] = [
   { key: 'ouvir', label: 'Ouvir' },
   { key: 'cortar', label: 'Cortar' },
@@ -56,22 +67,26 @@ const STATUS: Record<SessionSummary['status'], SessionStatus> = {
   concluida: 'concluida',
 };
 
-/** Relance do progresso (§7.2): as seis estações, atual no passo salvo. */
-function glance(step: SessionStep): SessionStationGlance[] {
-  const ci = STEPS.findIndex((s) => s.key === step);
-  return STEPS.map((s, i) => ({
-    key: s.key,
-    label: s.label,
-    state: i === ci ? 'current' : i < ci ? 'done' : 'future',
-  }));
-}
-
 /** O organismo não faz aritmética de datas — a página entrega o texto pronto. */
 export function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
+/** Relance do progresso (§7.2): quanto do fio já foi enfiado, e o passo por extenso. */
+export function progressOf(step: SessionStep): { progress: number; label: string } {
+  const i = Math.max(
+    0,
+    STEPS.findIndex((s) => s.key === step),
+  );
+  const station = STEPS[i]?.label ?? STEPS[0]!.label;
+  return {
+    progress: (i + 1) / STEPS.length,
+    label: `progresso: ${station} — passo ${i + 1} de ${STEPS.length}`,
+  };
+}
+
 function toCard(s: SessionSummary): SessionCardData {
+  const { progress, label } = progressOf(s.progress.current_step);
   return {
     id: s.id,
     storyName: s.story_name,
@@ -79,7 +94,8 @@ function toCard(s: SessionSummary): SessionCardData {
     project: s.project_id,
     status: STATUS[s.status],
     lastModified: formatWhen(s.last_modified),
-    stations: glance(s.progress.current_step),
+    progress,
+    progressLabel: label,
   };
 }
 
@@ -127,6 +143,13 @@ export function Dashboard({
     [sessions],
   );
 
+  const user = auth.currentUser();
+
+  const onLogout = async (): Promise<void> => {
+    await auth.logout();
+    navigate('/login');
+  };
+
   const onDownload = async (s: SessionSummary, kind: ArtifactKind): Promise<void> => {
     const bytes = (await store.getArtifacts(s.id))[kind];
     saveBytes(filenameFor(kind, s.story_slug), bytes);
@@ -139,44 +162,70 @@ export function Dashboard({
     relatorio: downloaded.has(`${id}:relatorio`),
   });
 
+  const count = cards.length;
+  const countLabel = count === 1 ? '1 história' : `${count} histórias`;
+
   return (
     <section className="cds-dashboard">
-      <header className="cds-dashboard-head">
-        <h1 className="cds-dashboard-title">Minhas sessões</h1>
-        <button type="button" className="cds-dashboard-new" onClick={() => navigate('/setup')}>
-          Nova sessão
-        </button>
+      <header className="cds-dashboard-bar">
+        <div className="cds-dashboard-brand">
+          <ShemaIcon colorway="telha" size={30} />
+          <h1 className="cds-dashboard-brand-title">Colar de Sons</h1>
+        </div>
+
+        <div className="cds-dashboard-user">
+          {user ? (
+            <>
+              <span className="cds-dashboard-username">{user.username}</span>
+              <span className="cds-dashboard-avatar" aria-hidden="true">
+                {user.username.slice(0, 1).toUpperCase()}
+              </span>
+            </>
+          ) : null}
+          <Button variant="ghost" size="sm" onClick={() => void onLogout()}>
+            Sair
+          </Button>
+        </div>
       </header>
 
-      {sessions === null ? (
-        <p className="cds-dashboard-empty" role="status">
-          Carregando as sessões…
-        </p>
-      ) : sessions.length === 0 ? (
-        <p className="cds-dashboard-empty">Você ainda não tem sessões.</p>
-      ) : (
-        <>
-          <SessionList
-            sessions={cards}
-            onResume={(id) => navigate(`/session/${id}`)}
-            onOpen={(id) => navigate(`/session/${id}`)}
-          />
+      <div className="cds-dashboard-body">
+        <div className="cds-dashboard-head">
+          <div className="cds-dashboard-headings">
+            <p className="cds-dashboard-eyebrow">Arquivo oral</p>
+            <h2 className="cds-dashboard-title">Suas histórias</h2>
+          </div>
+          {sessions !== null && <p className="cds-dashboard-count">{countLabel}</p>}
+        </div>
 
-          {completed.length > 0 && (
-            <div className="cds-dashboard-downloads">
-              {completed.map((s) => (
-                <section key={s.id} className="cds-dashboard-download-group">
-                  <h2 className="cds-dashboard-download-title">{s.story_name}</h2>
-                  <ArtifactCards
-                    downloaded={downloadsFor(s.id)}
-                    onDownload={(kind) => void onDownload(s, kind)}
-                  />
-                </section>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+        {sessions === null ? (
+          <p className="cds-dashboard-loading" role="status">
+            Carregando as sessões…
+          </p>
+        ) : (
+          <>
+            <SessionList
+              sessions={cards}
+              onNew={() => navigate('/setup')}
+              onResume={(id) => navigate(`/session/${id}`)}
+              onOpen={(id) => navigate(`/session/${id}`)}
+            />
+
+            {completed.length > 0 && (
+              <div className="cds-dashboard-downloads">
+                {completed.map((s) => (
+                  <section key={s.id} className="cds-dashboard-download-group">
+                    <h3 className="cds-dashboard-download-title">{s.story_name}</h3>
+                    <ArtifactCards
+                      downloaded={downloadsFor(s.id)}
+                      onDownload={(kind) => void onDownload(s, kind)}
+                    />
+                  </section>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </section>
   );
 }

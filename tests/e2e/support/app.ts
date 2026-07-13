@@ -85,7 +85,7 @@ export class ColarApp {
     await this.page.locator('input[name="username"]').fill(username);
     await this.page.locator('input[name="password"]').fill(password);
     await this.page.getByRole('button', { name: 'Entrar' }).click();
-    await expect(this.page.getByRole('heading', { name: 'Minhas sessões' })).toBeVisible();
+    await expect(this.page.getByRole('heading', { name: 'Suas histórias' })).toBeVisible();
   }
 
   /**
@@ -93,7 +93,7 @@ export class ColarApp {
    * Sem file-picker (só bucket). Devolve o id da sessão criada, lido da rota.
    */
   async createSession(audioFilename: string = SCENARIO.audioFilename): Promise<string> {
-    await this.page.getByRole('button', { name: 'Nova sessão' }).click();
+    await this.page.getByRole('button', { name: 'Comece uma nova história' }).click();
     await expect(this.page.getByRole('heading', { name: 'Nova sessão' })).toBeVisible();
     // bucket-only: nenhuma entrada de arquivo em lugar nenhum.
     await expect(this.page.locator('input[type="file"]')).toHaveCount(0);

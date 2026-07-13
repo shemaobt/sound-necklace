@@ -77,7 +77,7 @@ test('baixa os três artefatos direto do dashboard, byte-idênticos, sem abrir a
 
   // ——— vai ao Dashboard (SEM abrir a sessão) ———
   await page.goto('/dashboard');
-  await expect(page.getByRole('heading', { name: 'Minhas sessões' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Suas histórias' })).toBeVisible();
 
   const group = page.locator('.cds-dashboard-download-group');
   await expect(group).toHaveCount(1); // exatamente a sessão concluída
