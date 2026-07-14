@@ -112,12 +112,11 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
     render(<Escuta1 player={player} />);
 
     const totalBeads = sessionStore.getState().session?.totalBeads ?? 0;
-    const heardTarget = (): Element | null => {
-      const button = screen.getByRole('button', { name: 'Já ouvi a história completa' });
-      return button.hasAttribute('data-heard')
-        ? button
-        : (button.closest('[data-role="primary-action"]') ?? button);
-    };
+    // data-heard vive no wrapper [data-role="primary-action"] (index.tsx)
+    const heardTarget = (): Element | null =>
+      screen
+        .getByRole('button', { name: 'Já ouvi a história completa' })
+        .closest('[data-role="primary-action"]');
 
     expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
 
