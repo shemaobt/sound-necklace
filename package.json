@@ -20,7 +20,8 @@
     "e2e": "playwright test",
     "golden": "vitest run --project unit tests/golden/golden.test.ts",
     "golden:generate": "node tests/golden/generate.mjs",
-    "golden:verify": "node tests/golden/generate.mjs --verify"
+    "golden:verify": "node tests/golden/generate.mjs --verify",
+    "voz:aquecer": "node --experimental-strip-types scripts/warm-tts.mjs"
   },
   "dependencies": {
     "@fontsource/merriweather": "^5.2.11",
