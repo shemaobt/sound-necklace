@@ -134,13 +134,13 @@ export type AutosaveResponse = z.infer<typeof AutosaveResponseSchema>;
 export const OpaqueArtifactSchema = z.string();
 export type OpaqueArtifact = z.infer<typeof OpaqueArtifactSchema>;
 
-export const ArtifactKindSchema = z.enum(['manifesto', 'retorno', 'relatorio']);
+export const ArtifactKindSchema = z.enum(['manifest', 'anchoring', 'report']);
 export type ArtifactKind = z.infer<typeof ArtifactKindSchema>;
 
 export const ArtifactTripleSchema = z.strictObject({
-  manifesto: OpaqueArtifactSchema,
-  retorno: OpaqueArtifactSchema,
-  relatorio: OpaqueArtifactSchema,
+  manifest: OpaqueArtifactSchema,
+  anchoring: OpaqueArtifactSchema,
+  report: OpaqueArtifactSchema,
 });
 export type ArtifactTriple = z.infer<typeof ArtifactTripleSchema>;
 

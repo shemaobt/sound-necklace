@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { DocumentCard } from '../../molecules';
 
-export type ArtifactKind = 'retorno' | 'manifesto' | 'relatorio';
+export type ArtifactKind = 'anchoring' | 'manifest' | 'report';
 
 export type ArtifactDownloads = Record<ArtifactKind, boolean>;
 
@@ -20,9 +20,9 @@ export interface ArtifactCardsProps {
  * nunca traduz.
  */
 const DOCUMENTOS: readonly { kind: ArtifactKind; filename: string }[] = [
-  { kind: 'retorno', filename: 'retorno-ancoragem.json' },
-  { kind: 'manifesto', filename: 'manifesto-contas.json' },
-  { kind: 'relatorio', filename: 'relatorio-mapeamento.md' },
+  { kind: 'anchoring', filename: 'retorno-ancoragem.json' },
+  { kind: 'manifest', filename: 'manifesto-contas.json' },
+  { kind: 'report', filename: 'relatorio-mapeamento.md' },
 ];
 
 /**

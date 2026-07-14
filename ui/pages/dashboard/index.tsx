@@ -110,8 +110,8 @@ function toCard(s: SessionSummary, t: Translate, locale: string): SessionCardDat
 }
 
 function filenameFor(kind: ArtifactKind, slug: string): string {
-  if (kind === 'retorno') return retornoFilename(slug);
-  if (kind === 'manifesto') return manifestoFilename(slug);
+  if (kind === 'anchoring') return retornoFilename(slug);
+  if (kind === 'manifest') return manifestoFilename(slug);
   return relatorioFilename(slug);
 }
 
@@ -174,9 +174,9 @@ export function Dashboard({
   };
 
   const downloadsFor = (id: string): ArtifactDownloads => ({
-    retorno: downloaded.has(`${id}:retorno`),
-    manifesto: downloaded.has(`${id}:manifesto`),
-    relatorio: downloaded.has(`${id}:relatorio`),
+    anchoring: downloaded.has(`${id}:retorno`),
+    manifest: downloaded.has(`${id}:manifesto`),
+    report: downloaded.has(`${id}:relatorio`),
   });
 
   const count = cards.length;

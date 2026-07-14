@@ -94,9 +94,9 @@ function exportable(over: Partial<SessionState> = {}): SessionState {
 
 function tripleOf(state: SessionState): ArtifactTriple {
   return {
-    manifesto: serializeArtifact(buildManifesto(state)),
-    retorno: serializeArtifact(buildRetorno(state)),
-    relatorio: buildMapReport(state),
+    manifest: serializeArtifact(buildManifesto(state)),
+    anchoring: serializeArtifact(buildRetorno(state)),
+    report: buildMapReport(state),
   };
 }
 
@@ -178,9 +178,9 @@ describe('Export — downloads reusam os bytes guardados (PRD v2 §10.5)', () =>
     await userEvent.click(cardButton('relatorio-mapeamento.md'));
 
     const sent = Object.fromEntries(save.mock.calls.map(([name, bytes]) => [name, bytes]));
-    expect(sent['historia-retorno-ancoragem.json']).toBe(stored.retorno);
-    expect(sent['historia-manifesto-contas.json']).toBe(stored.manifesto);
-    expect(sent['historia-relatorio-mapeamento.md']).toBe(stored.relatorio);
+    expect(sent['historia-retorno-ancoragem.json']).toBe(stored.anchoring);
+    expect(sent['historia-manifesto-contas.json']).toBe(stored.manifest);
+    expect(sent['historia-relatorio-mapeamento.md']).toBe(stored.report);
 
     expect(cardButton('retorno-ancoragem.json').textContent).toContain('baixado');
   });

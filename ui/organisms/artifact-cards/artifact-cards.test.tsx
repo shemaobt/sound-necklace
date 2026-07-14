@@ -5,8 +5,8 @@ import { splitByGuard } from '../../atoms/testing/css';
 import { ArtifactCards, type ArtifactDownloads } from './artifact-cards';
 import cardsCss from './artifact-cards.css?raw';
 
-const nenhum: ArtifactDownloads = { retorno: false, manifesto: false, relatorio: false };
-const todos: ArtifactDownloads = { retorno: true, manifesto: true, relatorio: true };
+const nenhum: ArtifactDownloads = { anchoring: false, manifest: false, report: false };
+const todos: ArtifactDownloads = { anchoring: true, manifest: true, report: true };
 
 const CHIP = 'documentos salvos — nada saiu deste computador';
 
@@ -32,7 +32,7 @@ describe('ArtifactCards (PRD §8.8 / redesign §6.7 — os três documentos)', (
     const { rerender } = render(<ArtifactCards downloaded={nenhum} />);
     expect(screen.getAllByRole('button', { name: 'Baixar' })).toHaveLength(3);
 
-    rerender(<ArtifactCards downloaded={{ ...nenhum, retorno: true }} />);
+    rerender(<ArtifactCards downloaded={{ ...nenhum, anchoring: true }} />);
     const retorno = cardByTitle('As decisões de vocês');
     expect(within(retorno).getByRole('button', { name: 'baixado' })).toBeDefined();
     expect(screen.getAllByRole('button', { name: 'Baixar' })).toHaveLength(2);
@@ -48,14 +48,14 @@ describe('ArtifactCards (PRD §8.8 / redesign §6.7 — os três documentos)', (
     fireEvent.click(botao);
 
     expect(onDownload).toHaveBeenCalledTimes(1);
-    expect(onDownload).toHaveBeenCalledWith('manifesto');
+    expect(onDownload).toHaveBeenCalledWith('manifest');
   });
 
   it('a live region existe desde o início e só recebe o texto do chip com os três baixados (ARIA22)', () => {
     const { rerender } = render(<ArtifactCards downloaded={nenhum} />);
     expect(screen.getByRole('status').textContent).not.toContain(CHIP);
 
-    rerender(<ArtifactCards downloaded={{ ...todos, relatorio: false }} />);
+    rerender(<ArtifactCards downloaded={{ ...todos, report: false }} />);
     expect(screen.getByRole('status').textContent).not.toContain(CHIP);
 
     rerender(<ArtifactCards downloaded={todos} />);

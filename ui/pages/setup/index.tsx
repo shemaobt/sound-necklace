@@ -31,13 +31,13 @@ import './setup.css';
  * navegação assíncrona sem tocar o histórico.
  */
 
-type Door = 'zero' | 'entrega' | 'retorno';
+type Door = 'zero' | 'entrega' | 'anchoring';
 
 /** As portas e os níveis guardam CHAVES i18n (a cópia vive no dicionário — ENG-279). */
 const DOORS: readonly { value: Door; titleKey: string; descKey: string }[] = [
   { value: 'zero', titleKey: 'setup.doorZeroTitle', descKey: 'setup.doorZeroDesc' },
   { value: 'entrega', titleKey: 'setup.doorEntregaTitle', descKey: 'setup.doorEntregaDesc' },
-  { value: 'retorno', titleKey: 'setup.doorRetornoTitle', descKey: 'setup.doorRetornoDesc' },
+  { value: 'anchoring', titleKey: 'setup.doorRetornoTitle', descKey: 'setup.doorRetornoDesc' },
 ];
 
 const LEVELS: readonly { value: GranularityLevel; titleKey: string; descKey: string }[] = [

@@ -72,7 +72,7 @@ export const pt = {
   },
   export: {
     headline: 'A história está inteira no colar.',
-    retornoBlocked: 'Confirme o colar antes de exportar.',
+    anchoringBlocked: 'Confirme o colar antes de exportar.',
     semFim: '{{n}} frase(s) ainda sem fim travado.',
     reopen: 'Destravar para editar',
     complete: 'Concluir e guardar os documentos',
@@ -204,15 +204,15 @@ export const pt = {
     close: 'Fechar dica',
   },
   artifactCards: {
-    retorno: {
+    anchoring: {
       title: 'As decisões de vocês',
       description: 'Onde cada cena e cada frase começa e termina, com o tipo e a confiança.',
     },
-    manifesto: {
+    manifest: {
       title: 'O mapa das contas',
       description: 'Como o áudio foi fatiado: cada conta com seu tempo. O par exato deste áudio.',
     },
-    relatorio: {
+    report: {
       title: 'A conversa sobre o sentido',
       description: 'O relatório editável, com as respostas em voz referenciadas por pergunta.',
     },
