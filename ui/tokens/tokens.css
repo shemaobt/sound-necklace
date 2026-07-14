@@ -1,11 +1,25 @@
 /* Tokens Shemá como custom properties — espelho 1:1 de tokens.ts (o teste
-   colocalizado congela os valores). Prefixo --cds- = Colar de Sons. */
+   colocalizado congela os valores). Prefixo --cds- = Colar de Sons.
+   Valores do protótipo normativo docs/design/Protótipo.dc.html. */
 :root {
   /* fundos e acento (§4.1) */
   --cds-cream: #f6f5eb;
   --cds-olive: #3f3e20;
   --cds-telha: #be4a01;
   --cds-telha-deep: #8f3701;
+
+  /* tintas de texto em fundo claro */
+  --cds-ink: #0a0703;
+  --cds-olive-soft: #5a5a3e;
+  /* substituto AA do #8A8970 do protótipo (PRD §13 vence: 4.95:1 no creme) */
+  --cds-ink-subtle: #6d6c56;
+
+  /* superfícies */
+  --cds-surface-muted: #eceadf;
+  --cds-frame: #edebe0;
+  --cds-accent-soft: #f2d8c2;
+  --cds-sand: #c5c29f;
+  --cds-sand-muted: #b8b79e;
 
   /* intenções (§4.4) */
   --cds-confidence-filled: #777d45;
@@ -25,10 +39,20 @@
   --cds-font-load-bearing: 'Montserrat', system-ui, sans-serif;
   --cds-font-quiet-voice: 'Merriweather', Georgia, serif;
 
-  /* raios generosos e sombras baixas e quentes (§4.1) */
-  --cds-radius-card: 20px;
+  /* escala de raios do protótipo (inputs 12 · tiles 14 · cards 18/22 · molduras 26) */
+  --cds-radius-input: 12px;
+  --cds-radius-tile: 14px;
+  --cds-radius-card-sm: 18px;
+  --cds-radius-card: 22px;
+  --cds-radius-frame: 26px;
   --cds-radius-pill: 999px;
-  --cds-shadow-card: 0 8px 26px -12px rgba(10, 7, 3, 0.22);
+
+  /* sombras do protótipo: baixas e quentes nos cards; menu/modal mais fundos */
+  --cds-shadow-card: 0 2px 6px rgba(63, 62, 32, 0.08);
+  --cds-shadow-menu: 0 8px 26px rgba(10, 7, 3, 0.18);
+  --cds-shadow-modal: 0 24px 60px -12px rgba(10, 7, 3, 0.5);
+  --cds-shadow-cta: 0 4px 14px rgba(190, 74, 1, 0.28);
+  --cds-shadow-play: 0 6px 20px rgba(190, 74, 1, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.16);
 
   /* movimento (§4.5) */
   --cds-motion-duration: 220ms;

@@ -28,7 +28,7 @@
   background: var(--cds-olive, #3f3e20);
   color: var(--cds-cream, #f6f5eb);
   font-family: var(--cds-font-load-bearing, 'Montserrat', sans-serif);
-  box-shadow: var(--cds-shadow-card, 0 10px 30px rgba(0, 0, 0, 0.25));
+  box-shadow: var(--cds-shadow-modal, 0 24px 60px -12px rgba(10, 7, 3, 0.5));
 }
 
 .cds-seam-modal-headline {

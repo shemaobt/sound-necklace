@@ -6,7 +6,6 @@
 export { ShemaIcon } from './icon';
 export {
   colors,
-  darken30,
   iconColorways,
   motion,
   phrasePalette,
