@@ -53,7 +53,14 @@ export class HttpSpeechSynthesizer implements SpeechSynthesizer {
   #speaking = false;
   /** Geração da fala em curso: uma resposta que chega tarde (o ouvinte já avançou) é descartada. */
   #generation = 0;
-  /** A requisição não alcançou um endpoint vivo — não insista a cada pergunta. */
+  /**
+   * O endpoint não EXISTE (404/501) — não insista a cada pergunta. Só falhas estruturais
+   * prendem aqui; rede, 401 e 500 são transitórios (ver #load).
+   *
+   * ponytail: prende pela vida da aba. Uma aba aberta ATRAVÉS do deploy do backend segue na
+   * voz robótica do navegador até um F5 — aceitável para uma entrevista de uma sentada. Se
+   * incomodar, zere a trava no evento `online` ou num TTL curto.
+   */
   #apiDown = false;
 
   constructor(deps: HttpSpeechDeps) {
@@ -84,18 +91,22 @@ export class HttpSpeechSynthesizer implements SpeechSynthesizer {
     const key = `${lang}|${text}`;
     const cached = this.#clips.get(key);
     if (cached !== undefined) {
-      this.#play(cached);
+      this.#play(cached, text, lang);
       return;
     }
 
     void this.#load(text, lang).then((url) => {
-      if (generation !== this.#generation) return; // o ouvinte já avançou
+      // Cacheia ANTES de checar a geração: o clipe é válido tenha ou não quem ouvir agora.
+      // Descartá-lo porque o ouvinte avançou vazaria o objectURL e re-baixaria a mesma
+      // pergunta na próxima vez — e a chave é uma string congelada, esse é o ponto do cache.
+      if (url !== null) this.#clips.set(key, url);
+
+      if (generation !== this.#generation) return; // o ouvinte já avançou: não toca
       if (url === null) {
         this.#fallback.speak(text, lang);
         return;
       }
-      this.#clips.set(key, url);
-      this.#play(url);
+      this.#play(url, text, lang);
     });
   }
 
@@ -143,18 +154,37 @@ export class HttpSpeechSynthesizer implements SpeechSynthesizer {
     }
   }
 
-  #play(url: string): void {
+  #play(url: string, text: string, lang: string): void {
     const audio = new this.#AudioCtor!(url);
     this.#audio = audio;
-    audio.onended = () => this.#emit(false);
-    audio.onerror = () => this.#emit(false);
+
+    // A guarda `#audio !== audio` descarta eventos de um <audio> já abandonado: sem ela,
+    // o erro tardio de um clipe obsoleto faria o guia falar a pergunta ANTERIOR.
+    audio.onended = () => {
+      if (this.#audio === audio) this.#emit(false);
+    };
+
+    // O <audio> falhou a decodificar bytes que a API deu como bons (200 com corpo que não
+    // é áudio — proxy servindo HTML, resposta truncada). Isso É falha da API: descarta o
+    // clipe ruim do cache e cai no fallback, senão o guia fica MUDO a entrevista inteira.
+    audio.onerror = () => {
+      if (this.#audio !== audio) return;
+      this.#emit(false);
+      this.#clips.delete(`${lang}|${text}`);
+      this.#fallback.speak(text, lang);
+    };
 
     // O autoplay bloqueado (sem gesto do usuário — ex.: reload direto na URL do
-    // Mapeamento) REJEITA o play(). Não é falha da API: não cai no fallback, apenas não
-    // anuncia uma fala que não aconteceu. O botão "Ouvir a pergunta" é um gesto e resolve.
+    // Mapeamento) REJEITA o play(). Isso NÃO é falha da API: não cai no fallback (que
+    // sofre da mesma política), apenas não anuncia uma fala que não aconteceu. O botão
+    // "Ouvir a pergunta" é um gesto e resolve.
     void audio.play().then(
-      () => this.#emit(true),
-      () => this.#emit(false),
+      () => {
+        if (this.#audio === audio) this.#emit(true);
+      },
+      () => {
+        if (this.#audio === audio) this.#emit(false);
+      },
     );
   }
 

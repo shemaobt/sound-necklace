@@ -164,7 +164,7 @@ export function Setup({
       <p className="cds-setup-trust" role="note">
         {t('setup.trustLine')}
       </p>
-      <p className="cds-setup-trust cds-setup-ai-notice" role="note">
+      <p className="cds-setup-ai-notice" role="note">
         {t('setup.aiVoiceNotice')}
       </p>
 

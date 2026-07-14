@@ -4,18 +4,24 @@ import { FixtureSpeechSynthesizer } from './fixture';
 import { HttpSpeechSynthesizer } from './http';
 
 /**
- * Audio falso: expõe play/pause e os handlers, e deixa o teste decidir se o play
- * RESOLVE (tocou) ou REJEITA (bloqueio de autoplay — sem gesto do usuário).
+ * Audio falso. `play()` tem três modos, e o terceiro é o que importa: `deferPlay` deixa a
+ * promise PENDENTE até o teste resolvê-la à mão, para conseguir exprimir a corrida real —
+ * o play do clipe 1 ainda em voo quando o clipe 2 já começou. Sem isso a suíte não
+ * consegue nem enunciar o bug, e o guard vira sorte em vez de correção.
  */
 class FakeAudio {
   static instances: FakeAudio[] = [];
-  static rejectPlay: Error | null = null;
+  /** play() rejeita na hora (autoplay bloqueado). */
+  static autoRejectWith: Error | null = null;
+  /** play() fica pendente; o teste chama `settlePlay(ok)`. */
+  static deferPlay = false;
 
   paused = false;
   currentTime = 0;
   onended: (() => void) | null = null;
   onerror: (() => void) | null = null;
   readonly playCalls: number[] = [];
+  settlePlay: ((started: boolean) => void) | null = null;
 
   constructor(readonly src: string) {
     FakeAudio.instances.push(this);
@@ -23,7 +29,12 @@ class FakeAudio {
 
   play(): Promise<void> {
     this.playCalls.push(1);
-    return FakeAudio.rejectPlay ? Promise.reject(FakeAudio.rejectPlay) : Promise.resolve();
+    if (FakeAudio.autoRejectWith) return Promise.reject(FakeAudio.autoRejectWith);
+    if (!FakeAudio.deferPlay) return Promise.resolve();
+    return new Promise<void>((resolve, reject) => {
+      this.settlePlay = (started) =>
+        started ? resolve() : reject(new DOMException('interrupted by pause()', 'AbortError'));
+    });
   }
 
   pause(): void {
@@ -43,7 +54,8 @@ function status(code: number): Response {
 
 function build(responses: Array<Response | Error> = [ok()]) {
   FakeAudio.instances = [];
-  FakeAudio.rejectPlay = null;
+  FakeAudio.autoRejectWith = null;
+  FakeAudio.deferPlay = false;
 
   const queue = [...responses];
   const fetch = vi.fn(() => {
@@ -125,13 +137,68 @@ describe('HttpSpeechSynthesizer', () => {
 
   it('autoplay bloqueado (sem gesto do usuário) não quebra e NÃO cai no fallback', async () => {
     const { tts, fallback, speaking } = build();
-    FakeAudio.rejectPlay = new DOMException('play() failed', 'NotAllowedError');
+    FakeAudio.autoRejectWith = new DOMException('play() failed', 'NotAllowedError');
 
     tts.speak(Q);
     await settle();
 
     expect(speaking).not.toContain(true); // não anuncia fala que não aconteceu
     expect(fallback.spoken).toEqual([]); // o botão "Ouvir a pergunta" (gesto) resolve
+  });
+
+  it('o play() abortado de um clipe obsoleto não apaga o lip-sync do clipe em curso', async () => {
+    // O ouvinte avança enquanto o clipe 1 ainda está começando. O pause() faz o play() do
+    // clipe 1 rejeitar com AbortError DEPOIS que o clipe 2 já está tocando — sem a guarda,
+    // esse erro tardio congelaria a boca do guia pela pergunta inteira.
+    const { tts, speaking } = build();
+    FakeAudio.deferPlay = true;
+
+    tts.speak('primeira');
+    await settle();
+    const first = FakeAudio.instances[0]!;
+
+    tts.speak('segunda');
+    await settle();
+    FakeAudio.instances[1]!.settlePlay!(true); // o clipe 2 começa a tocar
+    await settle();
+    expect(speaking).toEqual([true]);
+
+    first.settlePlay!(false); // só agora o play() do clipe 1 rejeita
+    await settle();
+
+    expect(speaking).toEqual([true]); // o guia continua falando
+  });
+
+  it('stop() com o play() em voo não deixa o guia falando para sempre', async () => {
+    // O toggle de som é um GATE DE CONSENTIMENTO (§12). Se o play() cumpre depois do stop()
+    // — a reprodução já tinha começado, então o pause() não desfaz a promise — o estado
+    // "falando" grudava em true e nada mais podia zerá-lo: um <audio> pausado nunca emite
+    // `ended`. O guia seguiria mexendo a boca depois de você mutar o som.
+    const { tts, speaking } = build();
+    FakeAudio.deferPlay = true;
+
+    tts.speak(Q);
+    await settle();
+    const audio = FakeAudio.instances[0]!;
+
+    tts.stop();
+    audio.settlePlay!(true);
+    await settle();
+
+    expect(speaking).toEqual([]); // nunca anunciou fala depois do stop
+  });
+
+  it('um clipe que chega tarde ainda entra no cache: a pergunta não é re-baixada', async () => {
+    const { tts, fetch } = build();
+
+    tts.speak(Q, 'pt-BR'); // fetch em voo
+    tts.stop(); // o ouvinte saiu antes de o clipe chegar
+    await settle();
+
+    tts.speak(Q, 'pt-BR'); // volta para a mesma pergunta
+    await settle();
+
+    expect(fetch).toHaveBeenCalledTimes(1); // o clipe valia, tenha ou não quem ouvir
   });
 
   it('erro de rede cai no Web Speech de fallback', async () => {
@@ -198,6 +265,45 @@ describe('HttpSpeechSynthesizer', () => {
     expect(FakeAudio.instances).toHaveLength(1); // a segunda tocou pela API
   });
 
+  it('um 200 que não é áudio (proxy servindo HTML) cai no fallback em vez de silenciar o guia', async () => {
+    // fetch passa, blob() passa, createObjectURL passa — e o <audio> falha ao decodificar.
+    // Sem isto o guia fica mudo a entrevista inteira, com o clipe ruim ainda cacheado.
+    const { tts, fallback } = build();
+
+    tts.speak(Q, 'pt-BR');
+    await settle();
+    FakeAudio.instances[0]!.onerror?.();
+
+    expect(fallback.spoken).toEqual([{ text: Q, lang: 'pt-BR' }]);
+  });
+
+  it('o clipe que falhou não fica cacheado: a mesma pergunta tenta a API de novo', async () => {
+    const { tts, fetch } = build();
+
+    tts.speak(Q, 'pt-BR');
+    await settle();
+    FakeAudio.instances[0]!.onerror?.();
+
+    tts.speak(Q, 'pt-BR');
+    await settle();
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('o erro de um clipe obsoleto não faz o guia falar a pergunta anterior', async () => {
+    const { tts, fallback } = build();
+
+    tts.speak('primeira');
+    await settle();
+    const stale = FakeAudio.instances[0]!;
+    tts.speak('segunda'); // o ouvinte avançou
+    await settle();
+
+    stale.onerror?.(); // o <audio> abandonado falha agora
+
+    expect(fallback.spoken).toEqual([]);
+  });
+
   it('a fala do fallback propaga o estado "falando" para os assinantes (lip-sync do guia)', async () => {
     const { tts, speaking } = build([new TypeError('offline')]);
 
@@ -230,7 +336,7 @@ describe('HttpSpeechSynthesizer', () => {
     await settle();
 
     expect(FakeAudio.instances[0]!.paused).toBe(true);
-    expect(FakeAudio.instances[1]!.paused).toBe(false);
+    expect(FakeAudio.instances[1]!.playCalls).toHaveLength(1); // `paused` nasce false: não prova nada
   });
 
   it('avançar antes do clipe chegar descarta a resposta obsoleta: só a última pergunta toca', async () => {

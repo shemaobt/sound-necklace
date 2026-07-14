@@ -319,9 +319,10 @@ export function App() {
     const registration = buildAdapterRegistry().voice;
     return registration ? (registration.fixture() as VoiceRecorder) : null;
   }, []);
-  // A voz do guia é a implementação REAL (Web Speech), não a fixture: falar de verdade
-  // É a feature (ENG-280). Ausência graciosa — num ambiente sem `speechSynthesis` o
-  // register não expõe a porta, `speaker` fica null e o botão "Ouvir a pergunta" some.
+  // A voz do guia é a implementação REAL, não a fixture: falar de verdade É a feature
+  // (ENG-280). Hoje ela busca o clipe ElevenLabs na API e carrega o Web Speech dentro de
+  // si como fallback (ENG-284), então a porta é registrada SEMPRE e `speaker` nunca é
+  // null — o `registration ?` abaixo é só a forma compartilhada da registry.
   const speaker = useMemo<SpeechSynthesizer | null>(() => {
     const registration = buildAdapterRegistry().tts;
     return registration ? (registration.real() as SpeechSynthesizer) : null;

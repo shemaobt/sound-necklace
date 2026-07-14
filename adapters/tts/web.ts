@@ -1,10 +1,13 @@
 /**
- * Implementação real do SpeechSynthesizer sobre a Web Speech API. Fala em pt-BR
- * (seleciona uma voz `pt-BR`, com fallback documentado para qualquer voz `pt-*` e,
- * na ausência de ambas, a voz padrão do sistema), cancela a fala anterior antes de
- * cada nova, e reflete os eventos `start`/`end`/`error` do utterance no estado
- * "falando". As dependências de plataforma são injetáveis para os testes de nó
- * (sem síntese real no CI); num ambiente sem a API, `speak`/`stop` são no-ops.
+ * SpeechSynthesizer sobre a Web Speech API — o FALLBACK da voz da entrevista (ENG-284).
+ * A voz de verdade é ElevenLabs e vem da API (http.ts); esta aqui entra quando a API não
+ * responde, ainda não está deployada, ou erra, para que o guia nunca fique mudo.
+ *
+ * Seleciona uma voz do idioma pedido (com fallback para qualquer variante da mesma língua
+ * e, na ausência de ambas, a voz padrão do sistema), cancela a fala anterior antes de cada
+ * nova, e reflete os eventos `start`/`end`/`error` do utterance no estado "falando". As
+ * dependências de plataforma são injetáveis para os testes de nó (sem síntese real no CI);
+ * num ambiente sem a API, `speak`/`stop` são no-ops.
  */
 
 import { DEFAULT_SPEECH_LANG, type SpeechSynthesizer, type Unsubscribe } from './types';
@@ -12,16 +15,6 @@ import { DEFAULT_SPEECH_LANG, type SpeechSynthesizer, type Unsubscribe } from '.
 export interface WebSpeechDeps {
   synth?: SpeechSynthesis;
   UtteranceCtor?: typeof SpeechSynthesisUtterance;
-}
-
-/** Feature-detect da Web Speech API (§8.7): a porta só é registrada quando presente. */
-export function speechSynthesisSupported(
-  scope: { speechSynthesis?: unknown; SpeechSynthesisUtterance?: unknown } = globalThis,
-): boolean {
-  return (
-    typeof scope.speechSynthesis !== 'undefined' &&
-    typeof scope.SpeechSynthesisUtterance !== 'undefined'
-  );
 }
 
 export class WebSpeechSynthesizer implements SpeechSynthesizer {

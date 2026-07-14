@@ -32,9 +32,9 @@
 
 /* Divulgação de uso de IA (§12): informa sem competir com a linha de confiança. */
 .cds-setup-ai-notice {
-  padding-block: 0;
-  background: none;
-  font-weight: 400;
+  margin: 0;
+  padding: 0 1rem;
+  color: var(--cds-warning-ink, #5a4a2a);
   font-size: 0.875rem;
 }
 
