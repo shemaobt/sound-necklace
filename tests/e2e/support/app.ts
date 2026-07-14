@@ -178,7 +178,7 @@ export class ColarApp {
   async recordVoiceAnswer(): Promise<void> {
     await this.page.getByRole('button', { name: 'gravar a resposta' }).click();
     await this.page.getByRole('button', { name: 'Parar' }).click();
-    await expect(this.page.getByRole('button', { name: 'listen', exact: true })).toBeVisible();
+    await expect(this.page.getByRole('button', { name: 'ouvir', exact: true })).toBeVisible();
   }
 
   async typeAnswer(text: string): Promise<void> {
