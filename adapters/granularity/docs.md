@@ -16,7 +16,7 @@ Path: @/adapters/granularity
 
 ### Core Implementation
 
-- **`AcoustemeGranularityResolver`** (@/adapters/granularity/resolver.ts): `resolve(level, acousteme)` maps the UI level (pequena/media/grande) to the backend frame key (small/medium/large) and returns `beadSec = acousteme.granularity_frames[key] × acousteme.hop_sec`. `beadSec` is always > 0.
+- **`AcoustemeGranularityResolver`** (@/adapters/granularity/resolver.ts): `resolve(level, acousteme)` indexes the backend frame grid with the level itself (`small`/`medium`/`large` — since ENG-285 the wire values and the grid keys are the same word, so the old PT→EN `FRAME_KEY` map is gone) and returns `beadSec = acousteme.granularity_frames[level] × acousteme.hop_sec`. `beadSec` is always > 0.
 - Audios without an acousteme (`acousteme = null`, §6.1) fall back to the **same uniform tokenizer grid** the backend embeds in every envelope — `hop_sec = 0.02` (20 ms) and frames `{ small: 10, medium: 25, large: 50 }`, resolving to **0.20 / 0.50 / 1.00 s** for Pequena / Média / Grande.
 - **`register.ts`** points both `fixture()` and `real()` at the SAME `AcoustemeGranularityResolver` — the frames×hop rule is identical in both modes; only the `BucketSource` supplying the envelope differs.
 

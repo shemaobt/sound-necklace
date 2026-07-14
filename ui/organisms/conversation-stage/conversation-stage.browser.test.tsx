@@ -80,7 +80,7 @@ describe('ConversationStage — fluxo do gravador (Chromium real; CLAUDE.md gate
 
     // gravado → ouvir / de novo
     update(base({ recorderState: 'recorded', ...handlers }));
-    byText(el, 'listen').click();
+    byText(el, 'ouvir').click();
     byText(el, 'de novo').click();
     expect(handlers.onPlay).toHaveBeenCalledTimes(1);
     expect(handlers.onRerecord).toHaveBeenCalledTimes(1);
