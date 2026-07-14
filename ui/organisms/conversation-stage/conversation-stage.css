@@ -10,6 +10,9 @@
   gap: 24px;
   min-height: 100%;
   padding: 24px clamp(24px, 7vw, 90px);
+  /* auto-contido: o :has() do shell só SINCRONIZA o chrome — sem suporte a
+     :has(), o palco continua legível por conta própria (review da reforma) */
+  background: var(--cds-olive);
   color: var(--cds-cream);
 }
 

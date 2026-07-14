@@ -36,6 +36,36 @@ describe('ConversationStage — marcador de papel (§8.7)', () => {
  * Fio de progresso (§8.7): uma conta por pergunta, respondida e atual distintas,
  * jamais um número (§9.2) — é conversa, não formulário.
  */
+describe('ConversationStage — fio de progresso janelado (roteiro real de 41)', () => {
+  const pearls = (el: HTMLElement) =>
+    el.querySelectorAll('.cds-conversation-stage-progress .cds-pearl');
+  const headCount = (el: HTMLElement) =>
+    el.querySelectorAll('.cds-conversation-stage-progress .cds-pearl[data-state="head"]').length;
+
+  it('com 41 perguntas mostra no máximo 23 contas e a atual SEMPRE visível (início/meio/fim)', () => {
+    for (const current of [0, 20, 40]) {
+      const { container, unmount } = render(
+        <ConversationStage
+          {...baseProps({ progress: { total: 41, answered: new Set(), current } })}
+        />,
+      );
+      expect(pearls(container).length).toBe(23);
+      expect(headCount(container)).toBe(1);
+      unmount();
+    }
+  });
+
+  it('com poucas perguntas o fio mostra todas (sem janela)', () => {
+    const { container } = render(
+      <ConversationStage
+        {...baseProps({ progress: { total: 11, answered: new Set(), current: 5 } })}
+      />,
+    );
+    expect(pearls(container).length).toBe(11);
+    expect(headCount(container)).toBe(1);
+  });
+});
+
 describe('ConversationStage — fio de progresso', () => {
   it('rende uma conta por pergunta, respondida e atual distintas, sem dígitos', () => {
     const { container } = render(

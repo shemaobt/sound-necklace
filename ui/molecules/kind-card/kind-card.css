@@ -74,7 +74,8 @@
   border: 1.5px dashed rgba(63, 62, 32, 0.4);
   border-radius: 50%;
   font-size: 14px;
-  color: var(--cds-ink-subtle);
+  /* ink-subtle dá 4.43:1 no surface-muted (calibrado p/ creme) — olive-soft passa AA */
+  color: var(--cds-olive-soft);
 }
 
 .cds-kind-card[data-variant='none-fit'][data-selected='true'] {
