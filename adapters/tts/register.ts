@@ -1,17 +1,22 @@
 /**
  * Auto-registro do adapter de TTS (docs/architecture.md §4): o composition root
  * (ENG-224) colhe todos os adapters/*\/register.ts via import.meta.glob e resolve
- * portas por nome — fixture é o default; o modo real liga por configuração de
- * ambiente (ENG-247).
+ * portas por nome.
  *
- * Ausência graciosa (§8.7): num ambiente sem a Web Speech API o default export é
- * `null` — a porta "tts" não entra na registry e o botão "Ouvir a pergunta"
- * (já plumbado na estação Conversa, ENG-249) fica oculto por ausência de porta.
+ * O modo real fala com o serviço de TTS da plataforma (ENG-283, voz ElevenLabs) e leva
+ * o Web Speech DENTRO de si como fallback — se a API não responde ou ainda não está
+ * deployada, o guia continua falando. Por isso a porta é registrada incondicionalmente:
+ * antes ela sumia num ambiente sem `speechSynthesis`, o que hoje apagaria também os
+ * clipes da API, que não dependem dele.
+ *
+ * baseUrl/token reais são injetados pelo wiring (ENG-247); até lá vale o mesmo esqueleto
+ * dos outros adapters (adapters/bucket/register.ts) — baseUrl relativo e o fetch do browser.
  */
 
 import { FixtureSpeechSynthesizer } from './fixture';
+import { HttpSpeechSynthesizer } from './http';
 import type { SpeechSynthesizer } from './types';
-import { speechSynthesisSupported, WebSpeechSynthesizer } from './web';
+import { WebSpeechSynthesizer } from './web';
 
 export interface AdapterRegistration<TPort> {
   port: string;
@@ -19,12 +24,15 @@ export interface AdapterRegistration<TPort> {
   real: () => TPort;
 }
 
-const registration: AdapterRegistration<SpeechSynthesizer> | null = speechSynthesisSupported()
-  ? {
-      port: 'tts',
-      fixture: () => new FixtureSpeechSynthesizer(),
-      real: () => new WebSpeechSynthesizer(),
-    }
-  : null;
+const registration: AdapterRegistration<SpeechSynthesizer> = {
+  port: 'tts',
+  fixture: () => new FixtureSpeechSynthesizer(),
+  real: () =>
+    new HttpSpeechSynthesizer({
+      baseUrl: '/api',
+      fetch: globalThis.fetch.bind(globalThis),
+      fallback: new WebSpeechSynthesizer(),
+    }),
+};
 
 export default registration;

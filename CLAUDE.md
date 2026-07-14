@@ -75,7 +75,8 @@ Anti-gaming rules (for autonomous sessions): never lower a threshold, delete a f
 - "Done" = unit tests green + golden harness green + lint/typecheck green + Linear issue updated with a one-line result.
 - Never touch a module another active session owns. `contracts/` and `domain/` PRs require human review; `ui/` and `adapters/` (fixture-safe) may merge on green.
 - Sacrifice order if time runs out: tutorial popup → animated guide (static human figure is acceptable) → TTS → audit-log UI. Domain and contracts never give.
-- Never add telemetry/analytics on listener behavior. No network calls from `domain/`. No AI-generated content inside the app.
+- Never add telemetry/analytics on listener behavior. No network calls from `domain/`.
+- **No AI-generated *content*.** The app never transcribes, translates, or invents anything the story contains or the listener said. The interview's spoken voice is the one carve-out and it is not an exception to the rule: it reads **human-authored frozen strings** (`domain/mapeamento-scripts.ts`), is synthesized **by our API**, never by the SPA, and its use is disclosed on the setup screen (PRD v2 §4, §8.7, §12). Anything beyond that — a model touching the story, an answer, or a classification — is still forbidden.
 
 ## Loop execution contract (read every iteration)
 

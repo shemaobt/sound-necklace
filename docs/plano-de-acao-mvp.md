@@ -57,6 +57,7 @@ This effort is **two repositories meeting at the contract**, not a full-stack ap
 
 - **Contract-first via FastAPI's OpenAPI:** the API's Pydantic DTOs are the source of truth; the SPA generates its TS types from the emitted schema. Agreeing the DTOs early unblocks both tracks — the SPA builds against fixtures (§2.1), the endpoints build against the same DTOs, and they meet at the contract.
 - **Persistence areas to design** (DB models + DTOs + endpoints, under `tripod-api` conventions): sessions (autosave state + lifecycle + editor lock), audio+acousteme references, artifacts, consent records, audit log.
+- **Platform TTS (decided 2026-07-13):** the interview's spoken prompts come from a **shared, app-agnostic TTS service** in `tripod-api` — a new `platform/` layer, not owned by any app. `POST /api/platform/tts/speak` takes `{text, language}` and returns raw `audio/mpeg` from an **ElevenLabs** voice, cached durably in a **generic bucket** keyed by content hash, so each question is synthesized **once, ever, for every app**. This replaces the browser speech synthesis (redesign O2) and consolidates the two already-forked ElevenLabs clients in the API (project-health and translation-helper). The SPA never contacts the provider — PRD v2 §12.
 - **Opaque artifact storage (hard rule, PRD §10.5):** the API stores/serves the three artifacts as opaque bytes — never re-serialized — or byte-identity breaks.
 - **Auth reuse:** the API's existing JWT scheme (O1 closed); no new auth work in the SPA.
 - The API repo has its **own `CLAUDE.md` and conventions**; API sessions run separately from the SPA sessions, sharing only the contract.
@@ -91,12 +92,13 @@ Ordered by expected value, not by commitment:
 1. **Offline tolerance** (§13) — revisit the online-only decision with field data: a local write-behind buffer with sync on reconnect, if connection drops prove frequent in real sessions. *The MVP's connection-drop warnings should log frequency (aggregate, non-listener telemetry) to inform this.*
 2. **Full project audio library via the API** (§7.4 "beyond MVP") — generalize the specific bucket into the browsable Oral Collector library, with search and metadata.
 3. **Audio upload** (§7.4) — upload as a secondary source, stored to the project; requires defining granularity fallback durations for audios without acoustemes.
-4. **Pre-recorded human question prompts** (§8.7; redesign O2 upgrade) — replace/augment speech synthesis with the facilitator's recorded voice.
-5. **Project admin surfaces** (§3, §7.1) — a dedicated in-app admin UI for membership and audio management.
-6. **Facilitator note on review flags** — an input for `flags[].note_pt` (today always empty; the UI says "descreva o ajuste no chat"). Schema-compatible: the field already exists in the contract.
-7. **Retention & compliance automation** (§12) — the MVP ships audit logging and manual deletion on request; automated retention SLAs, audit reporting, and community-withdrawal tooling mature after validation.
-8. **Ecosystem conveniences** — artifact push directly to the Compilador (instead of download), session hand-off between facilitators, cross-story coverage views for the project.
-9. **Graceful small-screen degradation** (§4 non-goal for mobile-first stands) — improvements only if validation shows real tablet/small-notebook use.
+4. **Project admin surfaces** (§3, §7.1) — a dedicated in-app admin UI for membership and audio management.
+5. **Facilitator note on review flags** — an input for `flags[].note_pt` (today always empty; the UI says "descreva o ajuste no chat"). Schema-compatible: the field already exists in the contract.
+6. **Retention & compliance automation** (§12) — the MVP ships audit logging and manual deletion on request; automated retention SLAs, audit reporting, and community-withdrawal tooling mature after validation.
+7. **Ecosystem conveniences** — artifact push directly to the Compilador (instead of download), session hand-off between facilitators, cross-story coverage views for the project.
+8. **Graceful small-screen degradation** (§4 non-goal for mobile-first stands) — improvements only if validation shows real tablet/small-notebook use.
+
+> **Removed from this list (2026-07-13):** *"Pre-recorded human question prompts — replace/augment speech synthesis with the facilitator's recorded voice."* The MVP now ships an **ElevenLabs voice** served by the platform's TTS service (PRD v2 §8.7; redesign O2, closed). The synthetic voice is the decision, not a step toward a human one, so there is no upgrade left to schedule. Note the tension this resolves against, deliberately: §8.7 still asks the guide to read as "a real, warm human being" — that requirement now rests on the animation and the voice's warmth, not on a human having recorded it.
 
 Items here must not leak into the MVP without re-cutting this plan; conversely, nothing in §2 should silently slip out — the MVP is the smallest product that still validates §1.
 

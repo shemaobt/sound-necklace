@@ -88,7 +88,7 @@ A user belongs to one or more **projects**; everything they can see — audios, 
 7. Produce pipeline-consumable artifacts bit-identical to the established contracts (§10).
 
 ### Non-goals
-- Transcription, translation, or AI-generated content inside the app.
+- Transcription, translation, or AI-generated **content**: the app never transcribes, translates, or invents anything the story contains or the listener said. (Scope note, since the question voice is now synthetic: the scripted prompts are **human-authored frozen strings** — §10.4 — and speaking them aloud creates no content. No AI model runs inside the app; the voice is synthesized and cached server-side, and its use is disclosed — §8.7, §12.)
 - Changing the Ruth ontology, coverage targets, or confidence model.
 - Telemetry or analytics on listener behavior.
 - Mobile-first layout (desktop-first; graceful degradation is enough).
@@ -279,7 +279,7 @@ The full necklace renders; the whole audio plays with beads lighting progressive
 
 ### 8.7 Mapeamento — the conversation
 
-A guided **conversation, not a questionnaire** (redesign §6.6): full-bleed ceremonial stage; an animated **storyteller guide** that must read as a **real, warm human being** (not abstract or geometric — it looks at the user, breathes, blinks, and lip-syncs); "Ouvir a pergunta" speaks each question aloud (speech synthesis pt-BR baseline; pre-recorded human prompts as an upgrade); one question at a time; the listener **answers by voice** (mic button, live waveform, ouvir / de novo; recorded with MediaRecorder as **WebM/Opus**, one file per question, stored as session resources named by question key — `respostas/level1/<k>.webm`, `respostas/level2/<part_id>/<k>.webm`, `respostas/level3/<prop_id>/<k>.webm`); typing is the optional facilitator channel ("a facilitadora pode escrever depois — nunca por você"); progress is a thread of beads, one per question; facilitator-led questions carry a **wordless role marker**.
+A guided **conversation, not a questionnaire** (redesign §6.6): full-bleed ceremonial stage; an animated **storyteller guide** that must read as a **real, warm human being** (not abstract or geometric — it looks at the user, breathes, blinks, and lip-syncs); "Ouvir a pergunta" speaks each question aloud (**decided: an ElevenLabs voice**, synthesized and cached by the platform's shared TTS service — one *native* voice per UI language, so the spoken language never diverges from the displayed one; the browser's own speech synthesis survives **only as a fallback** when the API is unreachable. The app never contacts the provider directly — §12); one question at a time; the listener **answers by voice** (mic button, live waveform, ouvir / de novo; recorded with MediaRecorder as **WebM/Opus**, one file per question, stored as session resources named by question key — `respostas/level1/<k>.webm`, `respostas/level2/<part_id>/<k>.webm`, `respostas/level3/<prop_id>/<k>.webm`); typing is the optional facilitator channel ("a facilitadora pode escrever depois — nunca por você"); progress is a thread of beads, one per question; facilitator-led questions carry a **wordless role marker**.
 
 **The conversation must carry 100% of the question scripts** — order and wording exactly as in §10.4:
 - **Level 1 — the whole story:** 11 questions, one per screen, with "▶ ouvir a história".
@@ -451,6 +451,7 @@ The data is unusually sensitive: **voices of speakers from small oral communitie
 - **Access control:** all audio, session state, and artifacts scoped to project membership (§3); no cross-project visibility; least-privilege roles; **server-side authorization on every resource** (never client-side only).
 - **Encryption:** TLS for all transport; encryption at rest for audio, voice answers, and session data.
 - **Voice-data handling:** recordings (story audio and Mapeamento voice answers) are never used for model training, voice identification, or any purpose beyond the pipeline; no third-party analytics or telemetry on listener behavior.
+- **Synthetic question voice (decided — and its boundary):** the interview prompts are spoken by an **ElevenLabs** voice, synthesized and cached by **our own API** (§5, §8.7). The SPA never contacts the provider: **no third party sits in the session's data path**, and no listener audio, story audio, or answer ever leaves our control. What reaches the provider is only the *fixed, human-authored question text* (§10.4) — the same 21 strings for every session, cached after the first synthesis. **Disclosure is mandatory**, both because the provider's use policy requires it and because the honesty rule below demands it anyway: the setup screen states plainly that the guide's voice is synthetic and that the questions are written by people.
 - **Auditability:** access and download of audios/artifacts is logged (who, what, when).
 - **Retention & deletion:** defined retention policy; deleting a session/audio removes it and its derivatives from active storage within a defined SLA; communities/projects can request full withdrawal of their material.
 - **Account/session hygiene:** per the shared API's standards — expiring sessions, secure credential storage, rate limiting.
@@ -462,7 +463,7 @@ The data is unusually sensitive: **voices of speakers from small oral communitie
 
 - **Client-side audio processing:** decode, bead grid, and `manifest_id` computed in the browser (§6.1–§6.2); by-ear interaction is local and instant regardless of network.
 - **Performance:** responsive with multi-minute audio at 0.25 s beads (thousands of rendered beads).
-- **Connectivity (decided): online-only.** Sessions require an active connection (§7.3). On a drop, the app pauses editing with a clear PT-BR warning, preserves in-memory state, and resumes when the connection returns; client-side playback of the loaded audio keeps working meanwhile.
+- **Connectivity (decided): online-only.** Sessions require an active connection (§7.3). On a drop, the app pauses editing with a clear PT-BR warning, preserves in-memory state, and resumes when the connection returns; client-side playback of the loaded audio keeps working meanwhile. The guide's spoken question comes from the API (§8.7), so a drop silences it — the browser's own speech synthesis takes over as the fallback, and the story audio (already decoded locally) is unaffected.
 - **Accessibility:** visible `:focus-visible` outlines; `prefers-reduced-motion` respected (decorative loops disabled); comfortable base text size for facilitator UI; a header **sound toggle** muting all UI sound.
 - **Desktop-first:** notebook screens, mouse + keyboard, two people side by side; graceful degradation elsewhere.
 
@@ -470,7 +471,7 @@ The data is unusually sensitive: **voices of speakers from small oral communitie
 
 ## 14. Out of scope
 
-- Transcription, translation, or AI-generated content inside the app.
+- Transcription, translation, or AI-generated **content** — nothing about the story or the listener's answers is ever invented, transcribed, or translated by a model. The synthetic question voice is not an exception to this: it reads human-authored frozen strings (§4, §8.7, §12).
 - Changing the Ruth ontology, coverage targets, or confidence model.
 - Telemetry/analytics on listener behavior.
 - Mobile-first layout.

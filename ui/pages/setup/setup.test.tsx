@@ -263,6 +263,12 @@ describe('Setup — cópias fixadas (§8.1/O7)', () => {
     expect(screen.getByText(pt.setup.trustLine)).toBeTruthy();
     expect(screen.getByText(pt.setup.gridWarning)).toBeTruthy();
   });
+
+  it('divulga que a voz do guia é sintética (§12; exigência da policy da ElevenLabs)', async () => {
+    renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+    expect(screen.getByText(pt.setup.aiVoiceNotice)).toBeTruthy();
+  });
 });
 
 describe('Setup — portas de entrada (§8.9)', () => {
