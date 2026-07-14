@@ -5,9 +5,9 @@ import { Stepper } from './stepper';
 import type { StepperStationView } from './stepper-model';
 
 const stations: StepperStationView[] = [
-  { key: 'escuta1', labelKey: 'stations.ouvir', state: 'done', reachable: true },
-  { key: 'triagem', labelKey: 'stations.triagem', state: 'current', reachable: true },
-  { key: 'segmentacao', labelKey: 'stations.frases', state: 'future', reachable: false },
+  { key: 'escuta1', labelKey: 'stations.listen', state: 'done', reachable: true },
+  { key: 'triagem', labelKey: 'stations.triage', state: 'current', reachable: true },
+  { key: 'segmentacao', labelKey: 'stations.phrases', state: 'future', reachable: false },
 ];
 
 describe('Stepper — fio de contas (redesign §5.1)', () => {

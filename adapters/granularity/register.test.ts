@@ -16,6 +16,6 @@ describe('registro do adapter de granularidade', () => {
   });
 
   it('a fixture resolve um beadSec > 0', () => {
-    expect(registration.fixture().resolve('media', null).beadSec).toBeGreaterThan(0);
+    expect(registration.fixture().resolve('medium', null).beadSec).toBeGreaterThan(0);
   });
 });

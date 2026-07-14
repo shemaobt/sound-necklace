@@ -15,7 +15,7 @@ describe('test-seam (dev-only)', () => {
       storyName: 'H',
       storySlug: 'h',
       audioId: 'a1',
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       beadSec: 0.25,
       manifestId: 'fnv1a32:deadbeef',
       pipelineConsent: true,

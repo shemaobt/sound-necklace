@@ -21,7 +21,7 @@
   "pendingStart": null,
   "mode": "escuta",
   "review": false,
-  "granularityLevel": "media",
+  "granularityLevel": "medium",
   "bucketAudioId": "aud-1",
   "pipelineConsent": true,
   "voice": []

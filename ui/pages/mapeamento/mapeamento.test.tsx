@@ -187,7 +187,7 @@ describe('Mapeamento — o ▶ do span de cada nível (PRD v2 §8.7)', () => {
 });
 
 describe('Mapeamento — resposta por voz e canal digitado (PRD v2 §8.7, §10.4)', () => {
-  it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "ouvir" toca; digitar grava no texto — e ambos coexistem', async () => {
+  it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "listen" toca; digitar grava no texto — e ambos coexistem', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
     render(<Mapeamento recorder={recorder} />);
@@ -205,8 +205,8 @@ describe('Mapeamento — resposta por voz e canal digitado (PRD v2 §8.7, §10.4
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     expect(await recorder.has(path)).toBe(true);
 
-    // "ouvir" toca a gravação deste caminho
-    await userEvent.click(screen.getByRole('button', { name: 'ouvir' }));
+    // "listen" toca a gravação deste caminho
+    await userEvent.click(screen.getByRole('button', { name: 'listen' }));
     expect(recorder.playing).toBe(path);
 
     // o canal digitado escreve na resposta de texto do domínio (coexiste com a voz)

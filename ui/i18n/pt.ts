@@ -96,12 +96,12 @@ export const pt = {
    * enquanto o dashboard dizia "Listen".
    */
   stations: {
-    ouvir: 'Ouvir',
-    cortar: 'Cortar',
-    triagem: 'Triagem',
-    frases: 'Frases',
-    conversa: 'Conversa',
-    guardar: 'Guardar',
+    listen: 'Ouvir',
+    cut: 'Cortar',
+    triage: 'Triagem',
+    phrases: 'Frases',
+    conversation: 'Conversa',
+    save: 'Guardar',
   },
   shell: {
     stepperAria: 'Progresso da sessão',
@@ -147,8 +147,8 @@ export const pt = {
     loading: 'Carregando as histórias…',
   },
   sessionList: {
-    statusEmProgresso: 'Em andamento',
-    statusConcluida: 'Concluída',
+    statusInProgress: 'Em andamento',
+    statusCompleted: 'Concluída',
     editedAt: 'Editado {{when}}',
     newStoryTitle: 'Comece uma nova história',
     newStorySub: 'Carregar áudio e segmentar',
@@ -314,7 +314,7 @@ export const pt = {
     listen: 'Ouvir a pergunta',
     record: 'gravar a resposta',
     stop: 'Parar',
-    play: 'ouvir',
+    play: 'listen',
     again: 'de novo',
     typedHint: 'A facilitadora pode escrever depois — nunca por você.',
     prev: 'Anterior',

@@ -10,7 +10,7 @@ const input: CreateSessionInput = {
   storyName: 'A lenda do rio',
   storySlug: 'a-lenda-do-rio',
   audioId: 'aud-1',
-  granularityLevel: 'media',
+  granularityLevel: 'medium',
   beadSec: 0.25,
   manifestId: 'fnv1a32:5a1b22f1',
   pipelineConsent: true,
@@ -21,9 +21,9 @@ const summary: SessionSummary = {
   project_id: 'proj-1',
   story_name: 'A lenda do rio',
   story_slug: 'a-lenda-do-rio',
-  status: 'em_progresso',
+  status: 'in_progress',
   last_modified: '2026-07-10T00:00:00.000Z',
-  progress: { current_step: 'ouvir' },
+  progress: { current_step: 'listen' },
 };
 
 describe('HttpSessionStore', () => {
@@ -53,7 +53,7 @@ describe('HttpSessionStore', () => {
     expect(call.init?.method).toBe('POST');
     const body = JSON.parse(String(call.init?.body)) as CreateSessionRequest;
     expect(body.audio_id).toBe('aud-1');
-    expect(body.granularity_level).toBe('media');
+    expect(body.granularity_level).toBe('medium');
     expect(body.pipeline_consent).toBe(true);
     expect(out.id).toBe('sess-9');
   });

@@ -55,7 +55,7 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
   expect(conversation.voicedLevels).toEqual([1, 2, 3]); // ≥1 por nível por voz
 
   await app.completeSession();
-  await expect.poll(() => readPersistedStatus(page, sessionId)).toBe('concluida');
+  await expect.poll(() => readPersistedStatus(page, sessionId)).toBe('completed');
 
   // Zero-perda de ponta a ponta: o estado FINAL (após o reload + todo o trabalho do
   // assento 2) ainda carrega as três cenas classificadas no assento 1 E a resposta

@@ -59,17 +59,17 @@ export interface DashboardProps {
  * (ENG-279): duplicar a cópia fazia o stepper dizer "Ouvir" e o dashboard "Listen".
  */
 const STEPS: readonly { key: SessionStep; labelKey: string }[] = [
-  { key: 'ouvir', labelKey: 'stations.ouvir' },
-  { key: 'cortar', labelKey: 'stations.cortar' },
-  { key: 'triagem', labelKey: 'stations.triagem' },
-  { key: 'frases', labelKey: 'stations.frases' },
-  { key: 'conversa', labelKey: 'stations.conversa' },
-  { key: 'guardar', labelKey: 'stations.guardar' },
+  { key: 'listen', labelKey: 'stations.listen' },
+  { key: 'cut', labelKey: 'stations.cut' },
+  { key: 'triage', labelKey: 'stations.triage' },
+  { key: 'phrases', labelKey: 'stations.phrases' },
+  { key: 'conversation', labelKey: 'stations.conversation' },
+  { key: 'save', labelKey: 'stations.save' },
 ];
 
 const STATUS: Record<SessionSummary['status'], SessionStatus> = {
-  em_progresso: 'em-progresso',
-  concluida: 'concluida',
+  in_progress: 'in-progress',
+  completed: 'completed',
 };
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string;
@@ -155,7 +155,7 @@ export function Dashboard({
     [sessions, t, locale],
   );
   const completed = useMemo(
-    () => (sessions ?? []).filter((s) => s.status === 'concluida'),
+    () => (sessions ?? []).filter((s) => s.status === 'completed'),
     [sessions],
   );
 

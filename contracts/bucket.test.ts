@@ -116,7 +116,7 @@ describe('AcoustemeEnvelopeSchema — grade de granularidade do tokenizador (§6
 });
 
 describe('GranularityLevelSchema — três níveis (§8.1)', () => {
-  it.each(['pequena', 'media', 'grande'])('aceita %s', (lvl) => {
+  it.each(['small', 'medium', 'large'])('aceita %s', (lvl) => {
     expect(GranularityLevelSchema.safeParse(lvl).success).toBe(true);
   });
 

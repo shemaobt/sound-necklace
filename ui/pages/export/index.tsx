@@ -59,7 +59,7 @@ interface Custody {
 }
 
 const DEFAULT_META: SessionMeta = {
-  granularityLevel: 'media',
+  granularityLevel: 'medium',
   bucketAudioId: '',
   voice: [],
   pipelineConsent: true,
@@ -100,7 +100,7 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
       let voice = new Set<string>();
       let concluida = false;
       try {
-        concluida = (await store.get(sessionId)).status === 'concluida';
+        concluida = (await store.get(sessionId)).status === 'completed';
         const dto = await store.load(sessionId);
         meta = {
           granularityLevel: dto.granularityLevel,

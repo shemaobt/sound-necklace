@@ -22,7 +22,7 @@ describe('store de sessão unificada', () => {
       storyName: 'Colar',
       storySlug: 'colar',
       audioId: 'a',
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       beadSec: 0.25,
       manifestId: 'fnv1a32:deadbeef',
       pipelineConsent: true,

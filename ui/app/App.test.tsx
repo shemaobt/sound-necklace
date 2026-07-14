@@ -20,7 +20,7 @@ async function persistCuttingSession(): Promise<string> {
     storyName: 'H',
     storySlug: 'h',
     audioId: 'a1',
-    granularityLevel: 'media',
+    granularityLevel: 'medium',
     beadSec: 0.25,
     manifestId: 'fnv1a32:deadbeef',
     pipelineConsent: true,
@@ -28,7 +28,7 @@ async function persistCuttingSession(): Promise<string> {
   store.autosave(
     summary.id,
     toSessionDto(cuttingWithLockedScene(), {
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       bucketAudioId: 'a1',
       voice: [],
       pipelineConsent: true,
@@ -173,7 +173,7 @@ describe('App shell', () => {
       storyName: 'H',
       storySlug: 'h',
       audioId: 'a1',
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       beadSec: 0.25,
       manifestId: 'fnv1a32:deadbeef',
       pipelineConsent: true,
@@ -181,7 +181,7 @@ describe('App shell', () => {
     store.autosave(
       summary.id,
       toSessionDto(sampleSession(), {
-        granularityLevel: 'media',
+        granularityLevel: 'medium',
         bucketAudioId: 'a1',
         voice: [],
         pipelineConsent: true,
@@ -214,7 +214,7 @@ describe('App shell', () => {
       storyName: 'H',
       storySlug: 'h',
       audioId: 'a1',
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       beadSec: 0.25,
       manifestId: 'fnv1a32:deadbeef',
       pipelineConsent: true,
@@ -238,7 +238,7 @@ describe('App shell', () => {
       concluir.click();
     });
     const after = await store.get(summary.id);
-    expect(after.status).toBe('concluida');
+    expect(after.status).toBe('completed');
   });
 
   it('persiste continuamente cada decisão no store app-global e retoma no passo exato', async () => {
@@ -251,7 +251,7 @@ describe('App shell', () => {
       storyName: 'H',
       storySlug: 'h',
       audioId: 'a1',
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       beadSec: 0.25,
       manifestId: 'fnv1a32:deadbeef',
       pipelineConsent: true,
@@ -259,7 +259,7 @@ describe('App shell', () => {
     store.autosave(
       summary.id,
       toSessionDto(sampleSession(), {
-        granularityLevel: 'media',
+        granularityLevel: 'medium',
         bucketAudioId: 'a1',
         voice: [],
         pipelineConsent: true,
@@ -312,7 +312,7 @@ describe('App shell', () => {
       storyName: 'H',
       storySlug: 'h',
       audioId: 'a1',
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       beadSec: 0.25,
       manifestId: 'fnv1a32:deadbeef',
       pipelineConsent: true,
@@ -320,7 +320,7 @@ describe('App shell', () => {
     store.autosave(
       summary.id,
       toSessionDto(completableSession(), {
-        granularityLevel: 'media',
+        granularityLevel: 'medium',
         bucketAudioId: 'a1',
         voice: [],
         pipelineConsent: true,
@@ -376,7 +376,7 @@ describe('App shell', () => {
         storyName: 'H',
         storySlug: 'h',
         audioId: 'aud_conto_do_boto',
-        granularityLevel: 'media',
+        granularityLevel: 'medium',
         beadSec: 0.25,
         manifestId: 'fnv1a32:deadbeef',
         pipelineConsent: true,
@@ -384,7 +384,7 @@ describe('App shell', () => {
       store.autosave(
         summary.id,
         toSessionDto(cuttingWithLockedScene(), {
-          granularityLevel: 'media',
+          granularityLevel: 'medium',
           bucketAudioId: 'aud_conto_do_boto',
           voice: [],
           pipelineConsent: true,
@@ -419,7 +419,7 @@ describe('App shell', () => {
       storyName: 'A',
       storySlug: 'a',
       audioId: 'a1',
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       beadSec: 0.25,
       manifestId: 'fnv1a32:deadbeef',
       pipelineConsent: true,

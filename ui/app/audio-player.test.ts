@@ -24,7 +24,7 @@ async function seed(bucketAudioId: string): Promise<string> {
     storyName: 'H',
     storySlug: 'h',
     audioId: bucketAudioId,
-    granularityLevel: 'media',
+    granularityLevel: 'medium',
     beadSec: 0.25,
     manifestId: 'fnv1a32:deadbeef',
     pipelineConsent: true,
@@ -32,7 +32,7 @@ async function seed(bucketAudioId: string): Promise<string> {
   store.autosave(
     summary.id,
     toSessionDto(sample(), {
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       bucketAudioId,
       voice: [],
       pipelineConsent: true,

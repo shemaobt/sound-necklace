@@ -62,7 +62,7 @@ function frase(overrides: Partial<Frase> & { prop_id: string }): Frase {
 }
 
 const meta = (overrides: Partial<SessionMeta> = {}): SessionMeta => ({
-  granularityLevel: 'media',
+  granularityLevel: 'medium',
   bucketAudioId: 'aud-123',
   pipelineConsent: true,
   voice: [],
@@ -102,7 +102,7 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
       activeSceneId: 'PT1',
       mode: 'triagem',
     }),
-    meta: meta({ granularityLevel: 'pequena' }),
+    meta: meta({ granularityLevel: 'small' }),
   },
   {
     name: 'frases + flag + seleção + pendingStart + mapping + review + voz',
@@ -144,7 +144,7 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
       review: true,
     }),
     meta: meta({
-      granularityLevel: 'grande',
+      granularityLevel: 'large',
       voice: ['respostas/level1/recontar.webm', 'respostas/level3/P1/oque.webm'],
     }),
   },

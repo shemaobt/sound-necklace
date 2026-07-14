@@ -27,7 +27,7 @@ function createInput(over: Partial<CreateSessionInput> = {}): CreateSessionInput
     storyName: 'A raposa e o tambor',
     storySlug: 'a-raposa-e-o-tambor',
     audioId: 'aud-1',
-    granularityLevel: 'media',
+    granularityLevel: 'medium',
     beadSec: 0.25,
     manifestId: 'fnv1a32:00000000',
     pipelineConsent: true,
@@ -87,7 +87,7 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
       screen.getAllByText(new RegExp(escapeRe(formatWhen(doneSummary.last_modified)))).length,
     ).toBeGreaterThan(0);
     // relance de progresso (§7.2): a capa nomeia ONDE a sessão parou — a recém-criada
-    // fica no 1º passo e a concluída no último (a fixture põe 'ouvir' e 'guardar').
+    // fica no 1º passo e a concluída no último (a fixture põe 'listen' e 'save').
     expect(screen.getByRole('img', { name: 'progresso: Ouvir — passo 1 de 6' })).toBeTruthy();
     expect(screen.getByRole('img', { name: 'progresso: Guardar — passo 6 de 6' })).toBeTruthy();
     // a contagem da casa concorda com a grade
