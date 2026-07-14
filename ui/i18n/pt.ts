@@ -314,7 +314,7 @@ export const pt = {
     listen: 'Ouvir a pergunta',
     record: 'gravar a resposta',
     stop: 'Parar',
-    play: 'listen',
+    play: 'ouvir',
     again: 'de novo',
     typedHint: 'A facilitadora pode escrever depois — nunca por você.',
     prev: 'Anterior',

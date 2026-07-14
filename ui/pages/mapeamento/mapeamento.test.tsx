@@ -206,7 +206,7 @@ describe('Mapeamento — resposta por voz e canal digitado (PRD v2 §8.7, §10.4
     expect(await recorder.has(path)).toBe(true);
 
     // "listen" toca a gravação deste caminho
-    await userEvent.click(screen.getByRole('button', { name: 'listen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'ouvir' }));
     expect(recorder.playing).toBe(path);
 
     // o canal digitado escreve na resposta de texto do domínio (coexiste com a voz)
