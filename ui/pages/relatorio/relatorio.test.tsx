@@ -121,6 +121,16 @@ afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
 });
 
+describe('Relatório — cabeçalho do protótipo (redesign §6.6)', () => {
+  it('mostra o cabeçalho do protótipo (eyebrow + manchete serifada)', () => {
+    load(report());
+    render(<Relatorio />);
+
+    expect(screen.getByText('A conversa sobre o sentido')).toBeTruthy();
+    expect(screen.getByText('Tudo que vocês falaram, reunido.')).toBeTruthy();
+  });
+});
+
 describe('Relatório — renderização por tipo de resposta (redesign §6.6)', () => {
   it('digitada mostra texto editável; só-voz mostra a linha de voz; vazia mostra "ainda sem resposta gravada"; conduzida traz o marcador de papel', async () => {
     const typedQ = L1_Q[0]!; // recontar

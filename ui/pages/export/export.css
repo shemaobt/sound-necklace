@@ -18,10 +18,13 @@
 .cds-export-headline {
   margin: 0;
   max-width: 24ch;
-  font-family: var(--cds-font-load-bearing);
-  font-size: clamp(1.4rem, 3.6vw, 2rem);
+  /* protótipo: manchete serifada itálica leve */
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(26px, 3.6vh, 34px);
   line-height: 1.2;
-  color: var(--cds-ink, #0a0703);
+  color: var(--cds-ink);
 }
 
 .cds-export-stage {

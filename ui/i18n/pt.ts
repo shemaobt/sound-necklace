@@ -300,6 +300,8 @@ export const pt = {
     markerAfter: 'borda nova',
   },
   relatorio: {
+    eyebrow: 'A conversa sobre o sentido',
+    headline: 'Tudo que vocês falaram, reunido.',
     facilitatorLed: 'conduzida pela facilitadora',
     answerDuration: 'duração da resposta',
     answer: 'resposta',

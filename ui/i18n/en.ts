@@ -282,6 +282,8 @@ export const en: Dict = {
     markerAfter: 'new border',
   },
   relatorio: {
+    eyebrow: 'The conversation about meaning',
+    headline: 'Everything you said, gathered.',
     facilitatorLed: 'facilitator-led',
     answerDuration: 'answer length',
     answer: 'answer',

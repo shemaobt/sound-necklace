@@ -284,6 +284,10 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
 
   return (
     <section className="cds-relatorio">
+      <header className="cds-relatorio-header">
+        <p className="cds-relatorio-eyebrow">{t('relatorio.eyebrow')}</p>
+        <p className="cds-relatorio-headline">{t('relatorio.headline')}</p>
+      </header>
       {rows.map(({ slot, section, group }) => {
         const path = voiceAnswerPath(slot);
         return (

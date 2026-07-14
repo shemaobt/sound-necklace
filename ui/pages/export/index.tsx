@@ -23,7 +23,7 @@ import {
   type ArtifactDownloads,
   type ArtifactKind,
 } from '../../organisms/artifact-cards/artifact-cards';
-import { Necklace, type NecklaceSegment } from '../../organisms';
+import { Necklace, type NecklaceSegment, SIZE_EXPORT } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import './export.css';
 
@@ -190,6 +190,7 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
 
       <div className="cds-export-stage">
         <Necklace
+          size={SIZE_EXPORT}
           totalBeads={session.totalBeads}
           beadSec={session.beadSec}
           segments={segments}

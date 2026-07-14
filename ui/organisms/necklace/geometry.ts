@@ -22,6 +22,9 @@ export const SIZE_L: Size = { slot: 34, bead: 26, row: 33 };
 /** Tamanho da Segmentação do Protótipo.dc.html: conta 30, gap 8, fio a 19px. */
 export const SIZE_SEG: Size = { slot: 38, bead: 30, row: 35 };
 
+/** Tamanho do colar do Export no Protótipo.dc.html: conta 22, gap 7, fio a 14px. */
+export const SIZE_EXPORT: Size = { slot: 29, bead: 22, row: 30 };
+
 export interface WindowRange {
   winS: number;
   winE: number;
