@@ -105,7 +105,7 @@ export function Escuta1({ player = null }: Escuta1Props) {
           data-heard={heardEnough || undefined}
         >
           {session.whole.confirmed ? (
-            <Button variant="ghost" onClick={reopen}>
+            <Button key="reopen" variant="ghost" onClick={reopen}>
               {t('escuta1.reopen')}
             </Button>
           ) : (

@@ -35,7 +35,7 @@ ui/tokens ──▶ ui/atoms ──▶ ui/molecules ──▶ ui/organisms ─�
 - Tests assert the public contract only (data attributes, aria semantics, custom properties, click pass-through) — no snapshots, per the repo rule that snapshot-only tests are not acceptable coverage for atoms.
 - Pearl is never clickable itself; the bead row (a molecule) owns the pointer handling. This matches the necklace performance pattern in @/ui/docs.md where per-frame lighting is driven imperatively above the atom.
 - Pearl's scene-end variant (`data-scene-end`) renders square-ish with a flat deep fill; Button's primary hover/active/focus-visible all darken to `--cds-telha-deep` — press darkens, never lightens (redesign §4.1). PlayGlyph is inline SVG (viewBox 24, `currentColor`), never a unicode character.
-- Known divergence (recorded in @/RESEARCH-NOTES.md, not an atoms concern): the prototypes ship hand-tuned per-hue lit/deep tones, while @/ui/tokens froze `lit = base` and `deep = darken30(base)`. Atoms simply render whatever `PaletteEntry` they are handed, so a future tokens fix requires no atom change.
+- The prototype-divergence this used to record is resolved: @/ui/tokens now ships the prototypes' hand-tuned per-hue `{base, lit, deep}` triples verbatim (no more `lit = base` / a formula-derived `deep`) — see @/ui/tokens/README.md. Atoms simply render whatever `PaletteEntry` they are handed, so that fix required no atom change.
 - Atoms render no text of their own — every label/child is supplied by the caller, already in the active UI language. Atoms never import @/ui/i18n (that would break the props-in/events-out purity rule); the organism or page above them resolves the copy. See @/ui/i18n/docs.md.
 
 Created and maintained by Nori.

@@ -18,7 +18,8 @@ Path: @/ui/pages/escuta1
 
 ### Core Implementation
 
-- **`Escuta1({ player })`** (@/ui/pages/escuta1/index.tsx): subscribes `session` from the store; renders `null` until a session exists. Local React state holds only the `playbackHead` (mirrored from the player) and the last domain error string.
+- **`Escuta1({ player })`** (@/ui/pages/escuta1/index.tsx): subscribes `session` from the store; renders `null` until a session exists. Local React state holds only the `playbackHead` (mirrored from the player), a `heardEnough` flag and the last domain error string.
+- **`heardEnough` is a presentational nudge, not a gate** — a port of the Protótipo's `heardEnough`: once the playhead reaches within 6 beads of the story's end, `data-heard` flips on the decision wrapper (`.cds-escuta1-decision`), lighting the confirm pill. It never blocks confirming earlier — the domain's `confirmWhole` is the only real gate. The necklace uses the @/ui/organisms/necklace size preset `SIZE_L` (26px beads), shared with @/ui/pages/escuta2.
 - **Transport wiring** — the necklace runs in `transportOnly` mode (the whole colar is the play control, PRD §8.2). Bead pointer-downs, the big "Ouvir a história" button, and taps on the bright playback head route through pure handlers from @/ui/pages/escuta1/transport.ts.
 - **`makeTransportHandlers(player, totalBeads)`** (@/ui/pages/escuta1/transport.ts): the big button plays `[0, N-1]` under a stable key `historia` so a second press toggles pause via the audio gate; each bead tap gets a fresh key `conta:<n>` so tapping any bead always restarts from there instead of pausing; `onHead` re-toggles the last started playback, which the gate reads as pause/resume because the key matches.
 - **Head + cleanup effects** — one `useEffect` subscribes `player.onHead(setHead)` (the returned unsubscribe is the cleanup); another registers `player.stop()` on unmount. The `playbackHead` flows down to the `Necklace` for imperative lighting.

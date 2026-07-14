@@ -30,6 +30,8 @@ playwright.config.ts ──webServer──> vite (SPA fallback, real app, fixtur
   - `readPersistedState` / `readPersistedStatus` — pull the autosaved session DTO / summary status out of `localStorage`.
 - Each spec targets one acceptance criterion — the full listener cycle across sittings, artifact **byte-identity** through the UI (crosschecked against @/tests/golden `expected/`), Dashboard artifact retrieval, the oral-mode behavior, and mid-session **resilience** (connection drop, auth expiry, advisory lock) — composing `ColarApp` for the shared path and adding its own assertions.
 
+- @/tests/e2e/design-capture.spec.ts is a **manual visual-parity tool, not a test**: `test.skip(!process.env.CDS_CAPTURE, ...)` means the whole spec is skipped unless run with `CDS_CAPTURE=1` (CI never sets it, so this spec never runs there). It walks `ColarApp` through every station and screenshots each one to `.parity-shots/` (gitignored) for a human to eyeball against `docs/design/Colar de Sons - Protótipo.dc.html` — there is no pixel-diff assertion, because the point is human review of the CLAUDE.md precedence-rule-2 realignment, not a regression gate.
+
 ### Things to Know
 
 - **Byte-identity specs compare raw bytes** (`Buffer.equals`, PRD §10.5) between UI-triggered downloads and the committed golden artifacts; reproducing a golden case through the UI needs a bucket fixture whose `PcmSpec` yields the same `manifest_id` and bead grid, not `SCENARIO`.

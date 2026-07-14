@@ -217,11 +217,14 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
 
           <div className="cds-export-action" data-role="primary-action">
             {phase === 'saved' ? (
-              <Button variant="ghost" onClick={onReopen}>
+              // key: o swap dark→ghost NUNCA reaproveita o <button> — reaproveitado, a
+              // transição de background-color fica presa no valor inicial (oliva) e o
+              // rótulo some (oliva sobre oliva).
+              <Button key="reopen" variant="ghost" onClick={onReopen}>
                 {t('export.reopen')}
               </Button>
             ) : (
-              <Button variant="dark" disabled={!canExport} onClick={onComplete}>
+              <Button key="complete" variant="dark" disabled={!canExport} onClick={onComplete}>
                 {t('export.complete')}
               </Button>
             )}
