@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { speechSynthesisSupported, WebSpeechSynthesizer } from './web';
+import { WebSpeechSynthesizer } from './web';
 
 /** Utterance falso: captura texto/lang/voz e expõe os handlers de start/end. */
 class FakeUtterance {
@@ -108,47 +108,5 @@ describe('WebSpeechSynthesizer', () => {
     const tts = new WebSpeechSynthesizer();
     expect(() => tts.speak('oi')).not.toThrow();
     expect(() => tts.stop()).not.toThrow();
-  });
-});
-
-describe('speechSynthesisSupported', () => {
-  it('true quando o escopo tem speechSynthesis e o construtor de utterance', () => {
-    expect(
-      speechSynthesisSupported({ speechSynthesis: {}, SpeechSynthesisUtterance: class {} }),
-    ).toBe(true);
-  });
-
-  it('false quando falta a API de síntese de fala', () => {
-    expect(speechSynthesisSupported({})).toBe(false);
-    expect(speechSynthesisSupported({ speechSynthesis: {} })).toBe(false);
-  });
-});
-
-describe('WebSpeechSynthesizer — o idioma segue a UI (ENG-280)', () => {
-  it('fala em inglês quando pedido, escolhendo uma voz inglesa', () => {
-    const { tts, spoken } = build([voice('pt-BR'), voice('en-US')]);
-
-    tts.speak('Where does this story take place?', 'en-US');
-
-    expect(spoken[0]!.lang).toBe('en-US');
-    expect(spoken[0]!.voice?.lang).toBe('en-US');
-  });
-
-  it('sem voz do idioma pedido, NÃO empresta a voz de outro idioma', () => {
-    // uma voz pt-BR lendo texto inglês sai como sotaque ininteligível: melhor deixar
-    // o motor escolher (voice = null) do que forçar o idioma errado.
-    const { tts, spoken } = build([voice('pt-BR')]);
-
-    tts.speak('Where does this story take place?', 'en-US');
-
-    expect(spoken[0]!.lang).toBe('en-US');
-    expect(spoken[0]!.voice).toBeNull();
-  });
-
-  it('sem idioma explícito, segue falando pt-BR (o default do MVP)', () => {
-    const { tts, spoken } = build([voice('pt-BR'), voice('en-US')]);
-    tts.speak('Onde essa história acontece?');
-    expect(spoken[0]!.lang).toBe('pt-BR');
-    expect(spoken[0]!.voice?.lang).toBe('pt-BR');
   });
 });

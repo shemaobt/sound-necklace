@@ -238,7 +238,7 @@ Any redesign, however deep, must leave these bit-identical:
 ## 9. Out of scope
 
 - Any server, account, sync, or telemetry.
-- Transcription, translation, or AI-generated content inside the app.
+- Transcription, translation, or AI-generated **content** inside the app — nothing about the story or the listener's answers is invented, transcribed, or translated by a model. The synthetic question voice (O2) is not an exception: it reads human-authored frozen strings, and its use is disclosed (PRD v2 §4, §12).
 - Changing the Ruth ontology, targets, or confidence model.
 - Mobile-first layout (desktop is primary; graceful degradation is enough).
 
@@ -247,8 +247,8 @@ Any redesign, however deep, must leave these bit-identical:
 ## 10. Open questions — **updated**
 
 - **O1 — Audio answers in the report.** *Direction chosen, pending pipeline sign-off.* The report references each voice answer by question key; the working assumption is to export a zip with `respostas/<question-key>.webm` linked from the `.md`, keeping the Markdown structure valid when answers are typed instead. **Confirm the file/link convention with the pipeline owner before the audio-answer build.**
-- **O2 — Spoken question prompts.** *Direction chosen: speech synthesis (pt-BR voice) as the baseline* ("Ouvir a pergunta"), because it adds no asset weight to the single-file build. Pre-recorded facilitator prompts remain a later, more-human upgrade if the single-file constraint (O3) relaxes.
-- **O3 — Single-file constraint.** *Still open.* Confirm the redesign must remain one self-contained HTML file (current deployment: `colar-de-sons.vercel.app`). This constrains font embedding and any audio assets (and bears on O2). The prototype embeds Montserrat + Merriweather locally on this assumption.
+- **O2 — Spoken question prompts.** ***Closed (2026-07-13): an ElevenLabs voice, served by the platform's shared TTS service.*** The original rationale for speech synthesis — "adds no asset weight to the single-file build" — died with the premise behind it (O3): the shipped v2 is a multi-file SPA, and the voice is neither bundled nor shipped. It is synthesized and cached **by our own API** and fetched per question, so the app never contacts the provider (PRD v2 §12). **One native voice per UI language** (pt-BR and en-US), so the spoken language never diverges from the displayed one — a single multilingual voice was rejected because it carries its accent across languages. The browser's speech synthesis survives **only as a fallback** when the API is unreachable. Pre-recorded *human* prompts are no longer the planned upgrade: the synthetic voice is the decision, not a step toward one (plano-de-acao §4). AI-use disclosure is mandatory — PRD v2 §12.
+- **O3 — Single-file constraint.** ***Closed by the build (2026-07-13): it does not apply to the v2 app.*** The shipped v2 is a **multi-file Vite SPA** — fonts arrive as npm packages (`@fontsource/…`), not embedded — so the constraint described a property of the v1 prototype that the implementation never inherited. It no longer bears on anything: no audio asset is bundled at all (O2's voice comes from the API).
 - **O4 — Scene/phrase swatch palettes.** *Closed.* The two palettes are defined in §4.2 (8 scene hues, 6 phrase tints), derived from the Shemá earth range for adjacent-segment contrast on the cord.
 
 ---

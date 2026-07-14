@@ -164,6 +164,9 @@ export function Setup({
       <p className="cds-setup-trust" role="note">
         {t('setup.trustLine')}
       </p>
+      <p className="cds-setup-ai-notice" role="note">
+        {t('setup.aiVoiceNotice')}
+      </p>
 
       <RadioGroup.Root
         className="cds-setup-doors"

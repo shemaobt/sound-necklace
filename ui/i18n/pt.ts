@@ -36,6 +36,8 @@ export const pt = {
     title: 'Nova sessão',
     trustLine:
       'Seus áudios e respostas ficam guardados com segurança no seu projeto. Só a sua equipe tem acesso.',
+    aiVoiceNotice:
+      'A voz do guia é sintética, gerada por IA. As perguntas são escritas por pessoas — a ferramenta não inventa conteúdo.',
     gridWarning: 'Trave o tamanho da conta antes de ancorar. Mudá-lo depois desloca as fronteiras.',
     noAudio: 'Escolha um arquivo de áudio primeiro.',
     noConsent: 'Confirme o consentimento de uso no pipeline para continuar.',

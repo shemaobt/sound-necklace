@@ -106,7 +106,7 @@ interface SessionStore {
 }
 ```
 
-Also port-shaped (same pattern): `AudioEngine` (decode + playback state machine), `ConnectivityMonitor`, `VoiceRecorder` (WebM/Opus per question key), `SpeechSynthesizer` (optional — its absence hides "Ouvir a pergunta").
+Also port-shaped (same pattern): `AudioEngine` (decode + playback state machine), `ConnectivityMonitor`, `VoiceRecorder` (WebM/Opus per question key), `SpeechSynthesizer` (speaks the interview questions — the real implementation fetches an **ElevenLabs** clip from the platform's shared TTS service and carries the browser's Web Speech inside itself as a **fallback**, so the guide never goes mute; PRD v2 §8.7).
 
 ---
 
@@ -117,7 +117,7 @@ Every adapter ships a **fixture implementation that is the default**; the real i
 **Auto-registration (the loop's no-file-conflict guarantee).** Three `import.meta.glob` registries, created once by the shell (ENG-224) and **never edited again** — later issues only ADD files:
 
 1. **Stations:** `import.meta.glob('/ui/pages/*/index.tsx')` — a route for a missing station renders a quiet "estação em construção" fallback. A station issue lands by adding its own `ui/pages/<station>/` dir.
-2. **Adapters:** `import.meta.glob('/adapters/*/register.ts')` — each adapter self-registers its port name + fixture/real factories; pages resolve ports by name. A port that is absent (e.g. TTS before ENG-251) simply hides its affordance.
+2. **Adapters:** `import.meta.glob('/adapters/*/register.ts')` — each adapter self-registers its port name + fixture/real factories; pages resolve ports by name. A port that is absent simply hides its affordance (the mechanism stands; TTS no longer uses it — its real implementation degrades internally to a fallback instead of vanishing).
 3. **App addons:** `import.meta.glob('/ui/app/addons/*.tsx')` — app-level chrome (e.g., the tutorial popup) mounts into a dedicated overlay layer by adding one file.
 
 Same additive pattern inside components where an upgrade is planned: the storyteller guide reads `variants/*` and prefers `animated` when the file exists (ENG-232 adds one file, edits none).
