@@ -65,7 +65,7 @@ const DEFAULT_META: SessionMeta = {
   pipelineConsent: true,
 };
 
-const NO_DOWNLOADS: ArtifactDownloads = { retorno: false, manifesto: false, relatorio: false };
+const NO_DOWNLOADS: ArtifactDownloads = { anchoring: false, manifest: false, report: false };
 
 function domSaveBytes(filename: string, bytes: string): void {
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
@@ -79,8 +79,8 @@ function domSaveBytes(filename: string, bytes: string): void {
 }
 
 function filenameFor(kind: ArtifactKind, slug: string): string {
-  if (kind === 'retorno') return retornoFilename(slug);
-  if (kind === 'manifesto') return manifestoFilename(slug);
+  if (kind === 'anchoring') return retornoFilename(slug);
+  if (kind === 'manifest') return manifestoFilename(slug);
   return relatorioFilename(slug);
 }
 
@@ -138,9 +138,9 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
     () =>
       session
         ? {
-            manifesto: serializeArtifact(buildManifesto(session)),
-            retorno: serializeArtifact(buildRetorno(session)),
-            relatorio: buildMapReport(session, custody?.voice ?? new Set<string>()),
+            manifest: serializeArtifact(buildManifesto(session)),
+            anchoring: serializeArtifact(buildRetorno(session)),
+            report: buildMapReport(session, custody?.voice ?? new Set<string>()),
           }
         : null,
     [session, custody],
@@ -151,11 +151,11 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
 
   const onDownload = async (kind: ArtifactKind): Promise<void> => {
     if (!triple) return;
-    if (kind === 'retorno' && !canExport) {
-      setNotice(t('export.retornoBlocked'));
+    if (kind === 'anchoring' && !canExport) {
+      setNotice(t('export.anchoringBlocked'));
       return;
     }
-    if (kind === 'manifesto' && !canExportManifesto(session)) return;
+    if (kind === 'manifest' && !canExportManifesto(session)) return;
     // §10.5: já concluída, o download REUSA os bytes guardados (sem rebuild); antes
     // de concluir, baixa a prévia construída da sessão viva.
     const bytes =

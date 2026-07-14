@@ -357,7 +357,7 @@ describe('App shell', () => {
       concluir.click();
     });
     const artifacts = await store.getArtifacts(summary.id);
-    expect(artifacts.relatorio).toContain('respostas/level1/recontar.webm');
+    expect(artifacts.report).toContain('respostas/level1/recontar.webm');
   });
 
   it('fia o player de áudio: tocar a cena acende a cabeça de reprodução no colar', async () => {

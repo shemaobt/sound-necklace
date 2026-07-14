@@ -35,7 +35,7 @@ interface Notice {
   text: string;
 }
 
-type Door = 'entrega' | 'retorno';
+type Door = 'entrega' | 'anchoring';
 
 export function Imports() {
   const { t } = useTranslation();
@@ -84,7 +84,7 @@ export function Imports() {
     try {
       dto = ReturnSchema.parse(JSON.parse(await file.text()));
     } catch (e) {
-      setNotices([{ tone: 'err', text: failure('retorno', e) }]);
+      setNotices([{ tone: 'err', text: failure('anchoring', e) }]);
       return;
     }
     const current = sessionStore.getState().session;

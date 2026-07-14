@@ -71,9 +71,9 @@ describe('FixtureSessionStore — autosave & resume', () => {
 
 describe('FixtureSessionStore — lifecycle & artifact custody', () => {
   const artifacts: ArtifactTriple = {
-    manifesto: '{"channels":1,"rate":48000}',
-    retorno: '{"parts":[]}',
-    relatorio: '# Relatório\n\nlinha\n',
+    manifest: '{"channels":1,"rate":48000}',
+    anchoring: '{"parts":[]}',
+    report: '# Relatório\n\nlinha\n',
   };
 
   it('completes → concluída and returns the artifacts byte-identical', async () => {
@@ -85,9 +85,9 @@ describe('FixtureSessionStore — lifecycle & artifact custody', () => {
     expect((await store.get(s.id)).status).toBe('completed');
     const got = await store.getArtifacts(s.id);
     expect(got).toEqual(artifacts);
-    expect(got.manifesto).toBe(artifacts.manifesto);
-    expect(got.retorno).toBe(artifacts.retorno);
-    expect(got.relatorio).toBe(artifacts.relatorio);
+    expect(got.manifest).toBe(artifacts.manifest);
+    expect(got.anchoring).toBe(artifacts.anchoring);
+    expect(got.report).toBe(artifacts.report);
   });
 
   it('reopen returns a completed session to em_progresso', async () => {

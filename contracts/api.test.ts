@@ -154,17 +154,17 @@ describe('artifacts — payload OPACO (§10.5): nunca desserializar/reserializar
   });
 
   it('kind é o trio de artefatos', () => {
-    expect(ArtifactKindSchema.safeParse('manifesto').success).toBe(true);
-    expect(ArtifactKindSchema.safeParse('retorno').success).toBe(true);
-    expect(ArtifactKindSchema.safeParse('relatorio').success).toBe(true);
+    expect(ArtifactKindSchema.safeParse('manifest').success).toBe(true);
+    expect(ArtifactKindSchema.safeParse('anchoring').success).toBe(true);
+    expect(ArtifactKindSchema.safeParse('report').success).toBe(true);
     expect(ArtifactKindSchema.safeParse('outro').success).toBe(false);
   });
 
   it('valida o trio na conclusão da sessão (§8.8)', () => {
-    const triple = { manifesto: '{...}', retorno: '{...}', relatorio: '# md' };
+    const triple = { manifest: '{...}', anchoring: '{...}', report: '# md' };
     expect(ArtifactTripleSchema.safeParse(triple).success).toBe(true);
     expect(CompleteSessionRequestSchema.safeParse({ artifacts: triple }).success).toBe(true);
-    expect(ArtifactTripleSchema.safeParse({ manifesto: '{...}', retorno: '{...}' }).success).toBe(
+    expect(ArtifactTripleSchema.safeParse({ manifest: '{...}', anchoring: '{...}' }).success).toBe(
       false,
     );
   });
