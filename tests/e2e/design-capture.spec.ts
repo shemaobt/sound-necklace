@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { ColarApp } from './support/app';
+import { ColarApp, SCENARIO } from './support/app';
 
 /**
  * Captura de telas para a revisão de paridade com o protótipo
@@ -17,8 +17,7 @@ test.skip(!process.env.CDS_CAPTURE, 'captura manual: rode com CDS_CAPTURE=1');
 const OUT = '.parity-shots';
 
 test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
-  const shot = (name: string) =>
-    page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
+  const shot = (name: string) => page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
   const app = new ColarApp(page);
 
   await page.goto('/login');
@@ -32,7 +31,7 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await shot('03-setup');
 
   // mesmo preenchimento do ColarApp.createSession, com foto do estado preenchido
-  await page.getByText('conto-do-boto.wav').click();
+  await page.getByText(SCENARIO.audioFilename).click();
   await page.getByRole('radio', { name: 'Média', exact: true }).click();
   await page.getByRole('checkbox').check();
   await shot('04-setup-preenchido');
@@ -47,7 +46,11 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await app.triage();
   await shot('08-segmentacao');
 
-  await app.cutPhrase(0, 1);
+  await app.cutPhrase(SCENARIO.crossingPhrase.s, SCENARIO.crossingPhrase.e);
+  await shot('08b-seam-modal');
+  await app.moveSeam();
+  await app.nextScene();
+  await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishSegmentacao();
   await shot('09-mapeamento');
 

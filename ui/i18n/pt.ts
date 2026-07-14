@@ -10,9 +10,9 @@
  */
 export const pt = {
   header: {
-    eyebrow: 'Arquivo Oral · Tripod',
     title: 'Colar de Sons',
-    subtitle: 'Mapeando as histórias do arquivo oral.',
+    back: 'Histórias',
+    backAria: 'Voltar às histórias',
     mute: 'Desligar o som da interface',
     unmute: 'Ligar o som da interface',
     switchLanguage: 'Mudar para inglês',

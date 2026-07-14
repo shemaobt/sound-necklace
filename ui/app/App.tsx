@@ -333,7 +333,11 @@ export function App() {
   // (é lá que vive o botão de som).
   const ownsHeader = route.name === 'login' || route.name === 'dashboard';
   const header = ownsHeader ? null : (
-    <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />
+    <Header
+      muted={muted}
+      onToggleMuted={() => appStore.getState().toggleMuted()}
+      onBack={() => navigate('/dashboard')}
+    />
   );
 
   let body: React.ReactNode;

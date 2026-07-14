@@ -1,33 +1,35 @@
 /*
- * Estação do fio de contas (protótipo journey): conta + rótulo em caixa alta
- * pequena; a atual ganha um halo suave e o nome em oliva forte, as outras esmaecem.
+ * Estação do fio de contas (Protótipo.dc.html, steps): a bolinha É a estação —
+ * feitas/atual em pérola telha (PAL[0]), futuras ocas; a atual ganha o halo
+ * --cds-chrome-halo. O rótulo fica no DOM só para leitores de tela e para os
+ * seletores de teste; o nome visível da etapa atual vive no organismo.
  */
 .cds-stepper-station {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
   list-style: none;
+  position: relative;
+  z-index: 1;
 }
 
-.cds-stepper-station-label {
-  font-family: var(--cds-font-load-bearing);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--cds-olive) 50%, var(--cds-cream));
+/* pérola telha do protótipo (scenePalette[0]): lit #E8813E sobre base telha */
+.cds-stepper-station:not([data-state='future']) .cds-pearl {
+  --cds-pearl-lit: #e8813e;
+  --cds-pearl-base: var(--cds-telha);
 }
 
-.cds-stepper-station[data-state='current'] .cds-stepper-station-label {
-  color: var(--cds-olive);
-}
-
-/* halo suave da conta atual (protótipo journey box-shadow 0 0 0 4px) */
 .cds-stepper-station[data-state='current'] .cds-pearl {
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cds-telha) 22%, transparent);
+  box-shadow: 0 0 0 3px var(--cds-chrome-halo);
 }
 
-/* estado também em texto, escondido do olho mas lido por leitores de tela */
+/* futura: bolinha oca chapada, sem gradiente de pérola */
+.cds-stepper-station[data-state='future'] .cds-pearl {
+  background: var(--cds-chrome-dot-future-bg);
+  border: 1.5px solid var(--cds-chrome-dot-future-border);
+}
+
+/* rótulo e estado: escondidos do olho, lidos por leitores de tela */
+.cds-stepper-station-label,
 .cds-stepper-station-state {
   position: absolute;
   width: 1px;

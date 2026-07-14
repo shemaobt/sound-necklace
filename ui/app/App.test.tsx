@@ -120,13 +120,14 @@ beforeEach(() => {
 });
 
 describe('App shell', () => {
-  it('as estações montam o cabeçalho do shell (marca + botão de som)', () => {
+  it('as estações montam o cabeçalho do shell (pill Histórias + botão de som)', () => {
     // a rota default cai no dashboard, que tem cabeçalho PRÓPRIO — o shell só monta o
-    // dele nas estações; /imports é uma delas.
+    // dele nas estações; /imports é uma delas. O header do shell é só ícone + pill de
+    // voltar (protótipo Shemá v2) — sem título.
     act(() => navigate('/imports'));
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Colar de Sons' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Voltar às histórias' })).toBeDefined();
     expect(screen.getByRole('button', { name: /som da interface/i })).toBeDefined();
   });
 
@@ -193,7 +194,8 @@ describe('App shell', () => {
       navigate(`/session/${summary.id}`);
     });
     render(<App />);
-    expect(await screen.findByText('Ouvir')).toBeDefined();
+    // 'Ouvir' aparece 2×: no rótulo sr-only do li E no nome visível da etapa atual
+    expect((await screen.findAllByText('Ouvir')).length).toBeGreaterThan(0);
     expect(screen.getByText('Guardar')).toBeDefined();
   });
 
@@ -203,7 +205,7 @@ describe('App shell', () => {
       sessionStore.getState().load(sampleSession());
     });
     render(<App />);
-    expect(screen.getByText('Ouvir')).toBeDefined();
+    expect(screen.getAllByText('Ouvir').length).toBeGreaterThan(0);
     expect(screen.getByText('Guardar')).toBeDefined();
   });
 
@@ -269,7 +271,7 @@ describe('App shell', () => {
 
     act(() => navigate(`/session/${summary.id}`));
     render(<App />);
-    await screen.findByText('Ouvir'); // hidratado na Escuta 1
+    await screen.findAllByText('Ouvir'); // hidratado na Escuta 1
 
     // Uma decisão pós-Setup, sem flush explícito (o app real não chama flush).
     act(() => sessionStore.getState().apply((s) => ({ ...s, slug: 'avancada' })));
@@ -476,7 +478,7 @@ describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
       sessionStore.getState().load(sampleSession());
     });
     render(<App />);
-    expect(screen.getByText('Ouvir')).toBeDefined();
+    expect(screen.getAllByText('Ouvir').length).toBeGreaterThan(0);
 
     await act(async () => {
       appAuth().simulateExpiry();

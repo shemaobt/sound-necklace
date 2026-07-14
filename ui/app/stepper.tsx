@@ -5,11 +5,12 @@ import type { StepperStationView } from './stepper-model';
 import './stepper.css';
 
 /**
- * O fio de contas (redesign §5.1): uma fita fina abaixo do cabeçalho com as seis
- * estações. Indicador de progresso, não navegação livre — uma estação só é
- * clicável quando o modo já foi legitimamente alcançado (`reachable`); clicar
- * numa travada não faz nada. O clique é delegado no `<ol>` e mapeado por posição,
- * porque a conta em si (a molécula StepperStation) é um `<li>` não-focável.
+ * O fio de contas (Protótipo.dc.html, ui.wizardStyle): faixa de 46px centrada com
+ * o NOME da etapa atual em cima e as seis bolinhas ligadas por uma linha contínua.
+ * Indicador de progresso, não navegação livre — uma estação só é clicável quando o
+ * modo já foi legitimamente alcançado (`reachable`); clicar numa travada não faz
+ * nada. O clique é delegado no `<ol>` e mapeado por posição, porque a conta em si
+ * (a molécula StepperStation) é um `<li>` não-focável.
  */
 export function Stepper({
   stations,
@@ -24,6 +25,7 @@ export function Stepper({
     done: t('stationState.done'),
     future: t('stationState.future'),
   };
+  const current = stations.find((s) => s.state === 'current');
   const handleClick = (event: React.MouseEvent<HTMLOListElement>) => {
     const li = (event.target as HTMLElement).closest('li');
     const list = li?.parentElement;
@@ -34,15 +36,21 @@ export function Stepper({
   };
 
   return (
-    <ol className="cds-stepper" aria-label={t('shell.stepperAria')} onClick={handleClick}>
-      {stations.map((s) => (
-        <StepperStation
-          key={s.key}
-          label={t(s.labelKey)}
-          state={s.state}
-          stateLabels={stateLabels}
-        />
-      ))}
-    </ol>
+    <div className="cds-stepper">
+      {/* o <ol> abaixo já nomeia cada etapa para leitores de tela */}
+      <p className="cds-stepper-name" aria-hidden="true">
+        {current ? t(current.labelKey) : ''}
+      </p>
+      <ol className="cds-stepper-dots" aria-label={t('shell.stepperAria')} onClick={handleClick}>
+        {stations.map((s) => (
+          <StepperStation
+            key={s.key}
+            label={t(s.labelKey)}
+            state={s.state}
+            stateLabels={stateLabels}
+          />
+        ))}
+      </ol>
+    </div>
   );
 }

@@ -7,9 +7,9 @@ import type { Dict } from './pt';
  */
 export const en: Dict = {
   header: {
-    eyebrow: 'Oral Archive · Tripod',
     title: 'Colar de Sons',
-    subtitle: 'Mapping the oral archive stories.',
+    back: 'Stories',
+    backAria: 'Back to stories',
     mute: 'Turn interface sound off',
     unmute: 'Turn interface sound on',
     switchLanguage: 'Switch to Portuguese',
