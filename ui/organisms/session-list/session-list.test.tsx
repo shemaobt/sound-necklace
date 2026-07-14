@@ -8,7 +8,7 @@ const emProgresso: SessionCardData = {
   storyName: 'A história de Rute',
   slug: 'historia-de-rute',
   project: 'Projeto Sul',
-  status: 'em-progresso',
+  status: 'in-progress',
   lastModified: 'hoje, 14h02',
   progress: 2 / 6,
   progressLabel: 'progresso: Cortar — passo 2 de 6',
@@ -19,7 +19,7 @@ const concluida: SessionCardData = {
   storyName: 'O chamado do profeta',
   slug: 'chamado-do-profeta',
   project: 'Projeto Norte',
-  status: 'concluida',
+  status: 'completed',
   lastModified: 'ontem, 09h40',
   progress: 1,
   progressLabel: 'progresso: Guardar — passo 6 de 6',
@@ -52,8 +52,8 @@ describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
     const aberta = cardOf('A história de Rute');
     const fechada = cardOf('O chamado do profeta');
 
-    expect(aberta.getAttribute('data-status')).toBe('em-progresso');
-    expect(fechada.getAttribute('data-status')).toBe('concluida');
+    expect(aberta.getAttribute('data-status')).toBe('in-progress');
+    expect(fechada.getAttribute('data-status')).toBe('completed');
     expect(within(aberta).getByText('Em andamento')).toBeDefined();
     expect(within(fechada).getByText('Concluída')).toBeDefined();
 

@@ -41,9 +41,9 @@ const DOORS: readonly { value: Door; titleKey: string; descKey: string }[] = [
 ];
 
 const LEVELS: readonly { value: GranularityLevel; titleKey: string; descKey: string }[] = [
-  { value: 'pequena', titleKey: 'setup.levelPequenaTitle', descKey: 'setup.levelPequenaDesc' },
-  { value: 'media', titleKey: 'setup.levelMediaTitle', descKey: 'setup.levelMediaDesc' },
-  { value: 'grande', titleKey: 'setup.levelGrandeTitle', descKey: 'setup.levelGrandeDesc' },
+  { value: 'small', titleKey: 'setup.levelPequenaTitle', descKey: 'setup.levelPequenaDesc' },
+  { value: 'medium', titleKey: 'setup.levelMediaTitle', descKey: 'setup.levelMediaDesc' },
+  { value: 'large', titleKey: 'setup.levelGrandeTitle', descKey: 'setup.levelGrandeDesc' },
 ];
 
 export interface SetupProps {
@@ -68,7 +68,7 @@ export function Setup({
   const [audios, setAudios] = useState<BucketAudio[] | null>(null);
   const [door, setDoor] = useState<Door>('zero');
   const [audioId, setAudioId] = useState<string | null>(null);
-  const [level, setLevel] = useState<GranularityLevel>('media');
+  const [level, setLevel] = useState<GranularityLevel>('medium');
   const [title, setTitle] = useState('');
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);

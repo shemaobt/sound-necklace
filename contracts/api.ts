@@ -52,17 +52,17 @@ export type MeResponse = z.infer<typeof MeResponseSchema>;
 // ── Sessions (§7.2/§7.3) ──
 
 /** Estados do ciclo de vida (§7.3), em ascii no fio (rótulo acentuado é display). */
-export const SessionStatusSchema = z.enum(['em_progresso', 'concluida']);
+export const SessionStatusSchema = z.enum(['in_progress', 'completed']);
 export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 
 /** As seis estações do fio de contas (§8.0), como indicador de progresso glanceável. */
 export const SessionStepSchema = z.enum([
-  'ouvir',
-  'cortar',
-  'triagem',
-  'frases',
-  'conversa',
-  'guardar',
+  'listen',
+  'cut',
+  'triage',
+  'phrases',
+  'conversation',
+  'save',
 ]);
 export type SessionStep = z.infer<typeof SessionStepSchema>;
 

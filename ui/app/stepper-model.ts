@@ -19,12 +19,12 @@ export interface StepperStationView {
 }
 
 const STATIONS: readonly { key: string; labelKey: string }[] = [
-  { key: 'escuta1', labelKey: 'stations.ouvir' },
-  { key: 'escuta2', labelKey: 'stations.cortar' },
-  { key: 'triagem', labelKey: 'stations.triagem' },
-  { key: 'segmentacao', labelKey: 'stations.frases' },
-  { key: 'mapeamento', labelKey: 'stations.conversa' },
-  { key: 'export', labelKey: 'stations.guardar' },
+  { key: 'escuta1', labelKey: 'stations.listen' },
+  { key: 'escuta2', labelKey: 'stations.cut' },
+  { key: 'triagem', labelKey: 'stations.triage' },
+  { key: 'segmentacao', labelKey: 'stations.phrases' },
+  { key: 'mapeamento', labelKey: 'stations.conversation' },
+  { key: 'export', labelKey: 'stations.save' },
 ];
 
 function currentIndex(state: SessionState): number {

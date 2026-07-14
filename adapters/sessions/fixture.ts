@@ -90,17 +90,17 @@ export interface FixtureSessionStoreOptions {
 
 /** Deriva o passo do dashboard (§7.2) do status + modo do estado salvo. */
 function stepFor(status: SessionStatus, state: SessionStateDto | undefined): SessionStep {
-  if (status === 'concluida') return 'guardar';
+  if (status === 'completed') return 'save';
   const s = state as { mode?: string; whole?: { confirmed?: boolean } } | undefined;
   switch (s?.mode) {
     case 'triagem':
-      return 'triagem';
+      return 'triage';
     case 'segmentacao':
-      return 'frases';
+      return 'phrases';
     case 'mapeamento':
-      return 'conversa';
+      return 'conversation';
     default:
-      return s?.whole?.confirmed ? 'cortar' : 'ouvir';
+      return s?.whole?.confirmed ? 'cut' : 'listen';
   }
 }
 
@@ -131,9 +131,9 @@ export class FixtureSessionStore implements SessionStore {
       project_id: input.projectId,
       story_name: input.storyName,
       story_slug: input.storySlug,
-      status: 'em_progresso',
+      status: 'in_progress',
       last_modified: new Date().toISOString(),
-      progress: { current_step: 'ouvir' },
+      progress: { current_step: 'listen' },
     };
     this.#backend.sessions.set(id, { summary });
     this.#backend.persist();
@@ -175,9 +175,9 @@ export class FixtureSessionStore implements SessionStore {
     rec.artifacts = { ...artifacts }; // strings opacas — byte-idênticas
     rec.summary = {
       ...rec.summary,
-      status: 'concluida',
+      status: 'completed',
       last_modified: new Date().toISOString(),
-      progress: { current_step: 'guardar' },
+      progress: { current_step: 'save' },
     };
     this.#backend.persist();
   }
@@ -188,9 +188,9 @@ export class FixtureSessionStore implements SessionStore {
     const rec = this.#requireRec(id);
     rec.summary = {
       ...rec.summary,
-      status: 'em_progresso',
+      status: 'in_progress',
       last_modified: new Date().toISOString(),
-      progress: { current_step: stepFor('em_progresso', rec.state) },
+      progress: { current_step: stepFor('in_progress', rec.state) },
     };
     this.#backend.persist();
   }

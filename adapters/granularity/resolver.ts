@@ -9,13 +9,6 @@
 import type { AcoustemeEnvelope, GranularityLevel } from '../../contracts';
 import type { GranularityResolution, GranularityResolver } from './types';
 
-/** Nível da UI → chave da grade do backend (small/medium/large). */
-const FRAME_KEY: Record<GranularityLevel, 'small' | 'medium' | 'large'> = {
-  pequena: 'small',
-  media: 'medium',
-  grande: 'large',
-};
-
 /**
  * Grade uniforme do tokenizador (tripod-api PR #100): hop de 20 ms e presets
  * 10/25/50 frames — idêntica à que o backend embute em cada envelope, aplicada aos
@@ -30,8 +23,7 @@ const TOKENIZER_FRAMES: Record<'small' | 'medium' | 'large', number> = {
 
 export class AcoustemeGranularityResolver implements GranularityResolver {
   resolve(level: GranularityLevel, acousteme: AcoustemeEnvelope | null): GranularityResolution {
-    const key = FRAME_KEY[level];
-    if (acousteme) return { beadSec: acousteme.granularity_frames[key] * acousteme.hop_sec };
-    return { beadSec: TOKENIZER_FRAMES[key] * TOKENIZER_HOP_SEC };
+    if (acousteme) return { beadSec: acousteme.granularity_frames[level] * acousteme.hop_sec };
+    return { beadSec: TOKENIZER_FRAMES[level] * TOKENIZER_HOP_SEC };
   }
 }

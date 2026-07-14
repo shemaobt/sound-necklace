@@ -11,7 +11,7 @@ const input = (over: Partial<CreateSessionInput> = {}): CreateSessionInput => ({
   storyName: 'A lenda do rio',
   storySlug: 'a-lenda-do-rio',
   audioId: 'aud-1',
-  granularityLevel: 'media',
+  granularityLevel: 'medium',
   beadSec: 0.25,
   manifestId: 'fnv1a32:5a1b22f1',
   pipelineConsent: true,
@@ -61,11 +61,11 @@ describe('FixtureSessionStore — autosave & resume', () => {
 
     store.autosave(s.id, dto({ mode: 'triagem' }));
     await store.flush(s.id);
-    expect((await store.get(s.id)).progress.current_step).toBe('triagem');
+    expect((await store.get(s.id)).progress.current_step).toBe('triage');
 
     store.autosave(s.id, dto({ mode: 'escuta', confirmed: false }));
     await store.flush(s.id);
-    expect((await store.get(s.id)).progress.current_step).toBe('ouvir');
+    expect((await store.get(s.id)).progress.current_step).toBe('listen');
   });
 });
 
@@ -82,7 +82,7 @@ describe('FixtureSessionStore — lifecycle & artifact custody', () => {
 
     await store.complete(s.id, dto(), artifacts);
 
-    expect((await store.get(s.id)).status).toBe('concluida');
+    expect((await store.get(s.id)).status).toBe('completed');
     const got = await store.getArtifacts(s.id);
     expect(got).toEqual(artifacts);
     expect(got.manifesto).toBe(artifacts.manifesto);
@@ -97,7 +97,7 @@ describe('FixtureSessionStore — lifecycle & artifact custody', () => {
 
     await store.reopen(s.id);
 
-    expect((await store.get(s.id)).status).toBe('em_progresso');
+    expect((await store.get(s.id)).status).toBe('in_progress');
   });
 });
 

@@ -66,7 +66,7 @@ describe('sessions — create/list/summary/status', () => {
     project_id: 'proj_1',
     story_name: 'O Conto',
     story_slug: 'o-conto',
-    granularity_level: 'media',
+    granularity_level: 'medium',
     bead_sec: 0.25,
     manifest_id: manifestId,
     pipeline_consent: true,
@@ -88,8 +88,8 @@ describe('sessions — create/list/summary/status', () => {
   });
 
   it('status é o par de estados de §7.3', () => {
-    expect(SessionStatusSchema.safeParse('em_progresso').success).toBe(true);
-    expect(SessionStatusSchema.safeParse('concluida').success).toBe(true);
+    expect(SessionStatusSchema.safeParse('in_progress').success).toBe(true);
+    expect(SessionStatusSchema.safeParse('completed').success).toBe(true);
     expect(SessionStatusSchema.safeParse('pausada').success).toBe(false);
   });
 
@@ -98,9 +98,9 @@ describe('sessions — create/list/summary/status', () => {
     project_id: 'proj_1',
     story_name: 'O Conto',
     story_slug: 'o-conto',
-    status: 'em_progresso',
+    status: 'in_progress',
     last_modified: '2026-07-10T12:00:00Z',
-    progress: { current_step: 'triagem' },
+    progress: { current_step: 'triage' },
   };
 
   it('valida o resumo do dashboard e rejeita passo inválido', () => {

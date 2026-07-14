@@ -86,7 +86,7 @@ describe('Setup — criação de sessão (§8.1)', () => {
       expect.objectContaining({
         manifestId: BOTO_MEDIA_HASH,
         beadSec: 0.5,
-        granularityLevel: 'media',
+        granularityLevel: 'medium',
         audioId: 'aud_conto_do_boto',
         storyName: 'conto-do-boto',
         storySlug: 'conto-do-boto',

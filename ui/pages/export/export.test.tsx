@@ -38,7 +38,7 @@ const DURATION = 2.5;
 const BEAD_SEC = 0.25; // 10 contas (0…9)
 
 const META: SessionMeta = {
-  granularityLevel: 'media',
+  granularityLevel: 'medium',
   bucketAudioId: 'aud-1',
   voice: [],
   pipelineConsent: true,
@@ -156,7 +156,7 @@ describe('Export — conclusão guarda o trio byte-idêntico (PRD v2 §8.8/§10.
     );
 
     expect(await store.getArtifacts(id)).toEqual(tripleOf(state));
-    expect((await store.get(id)).status).toBe('concluida');
+    expect((await store.get(id)).status).toBe('completed');
   });
 });
 
@@ -232,12 +232,12 @@ describe('Export — modo de revisão / reabrir (PRD v2 §7.3/§8.10)', () => {
     render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Destravar para editar' }));
-    expect((await store.get(id)).status).toBe('em_progresso');
+    expect((await store.get(id)).status).toBe('in_progress');
 
     await userEvent.click(
       await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
     );
-    expect((await store.get(id)).status).toBe('concluida');
+    expect((await store.get(id)).status).toBe('completed');
     expect(await store.getArtifacts(id)).toEqual(tripleOf(state));
   });
 });

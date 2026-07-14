@@ -122,7 +122,7 @@ describe('FixtureVoiceRecorder', () => {
       storyName: 'História',
       storySlug: 'historia',
       audioId: 'aud-1',
-      granularityLevel: 'media',
+      granularityLevel: 'medium',
       beadSec: 0.25,
       manifestId: 'fnv1a32:00000000',
       pipelineConsent: true,

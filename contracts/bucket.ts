@@ -44,7 +44,7 @@ export type AcoustemeEnvelope = z.infer<typeof AcoustemeEnvelopeSchema>;
  * Nível de granularidade escolhido no setup (§8.1): NÃO há campo numérico de
  * "segundos por conta" — o usuário escolhe o nível e o resolver dá o beadSec.
  */
-export const GranularityLevelSchema = z.enum(['pequena', 'media', 'grande']);
+export const GranularityLevelSchema = z.enum(['small', 'medium', 'large']);
 
 export type GranularityLevel = z.infer<typeof GranularityLevelSchema>;
 

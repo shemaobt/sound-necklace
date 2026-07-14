@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Pearl } from '../../atoms';
 import { scenePalette } from '../../tokens';
 
-export type SessionStatus = 'em-progresso' | 'concluida';
+export type SessionStatus = 'in-progress' | 'completed';
 
 export interface SessionCardData {
   id: string;
@@ -31,8 +31,8 @@ export interface SessionListProps {
 
 /** Status → chave i18n (a cópia vive no dicionário — ENG-279). */
 const STATUS_KEY: Record<SessionStatus, string> = {
-  'em-progresso': 'sessionList.statusEmProgresso',
-  concluida: 'sessionList.statusConcluida',
+  'in-progress': 'sessionList.statusInProgress',
+  completed: 'sessionList.statusCompleted',
 };
 
 /** A capa do cartão: o fio da história em miniatura, aceso na proporção do progresso. */
@@ -80,7 +80,7 @@ function SessionCard({
   onOpen?: (id: string) => void;
 }) {
   const { t } = useTranslation();
-  const emProgresso = session.status === 'em-progresso';
+  const emProgresso = session.status === 'in-progress';
   const onAction = emProgresso ? onResume : onOpen;
 
   return (
