@@ -69,7 +69,7 @@ export const en: Dict = {
   },
   export: {
     headline: 'The whole story is in the necklace.',
-    retornoBlocked: 'Confirm the necklace before exporting.',
+    anchoringBlocked: 'Confirm the necklace before exporting.',
     semFim: '{{n}} phrase(s) still without a locked end.',
     reopen: 'Unlock to edit',
     complete: 'Finish and save the documents',
@@ -190,17 +190,17 @@ export const en: Dict = {
     close: 'Close tip',
   },
   artifactCards: {
-    retorno: {
+    anchoring: {
       title: 'Your decisions',
       description:
         'Where each scene and each phrase begins and ends, with the type and confidence.',
     },
-    manifesto: {
+    manifest: {
       title: 'The map of the beads',
       description:
         'How the audio was sliced: each bead with its time. The exact match for this audio.',
     },
-    relatorio: {
+    report: {
       title: 'The conversation about meaning',
       description: 'The editable report, with the voice answers referenced by question.',
     },

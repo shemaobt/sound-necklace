@@ -74,7 +74,7 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
     const done = await store.create(
       createInput({ storyName: 'Terminada', storySlug: 'terminada' }),
     );
-    await store.complete(done.id, STATE, { retorno: 'r', manifesto: 'm', relatorio: 'l' });
+    await store.complete(done.id, STATE, { anchoring: 'r', manifest: 'm', report: 'l' });
     const doneSummary = await store.get(done.id);
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
@@ -140,9 +140,9 @@ describe('Dashboard — retomar (§7.3)', () => {
 describe('Dashboard — downloads diretos de sessão concluída (§7.2/§10.5)', () => {
   it('expõe exatamente três downloads byte-idênticos aos guardados, com os nomes exatos', async () => {
     const triple: ArtifactTriple = {
-      retorno: '{"retorno":true}',
-      manifesto: '{"manifesto":true}',
-      relatorio: '# relatório',
+      anchoring: '{"anchoring":true}',
+      manifest: '{"manifest":true}',
+      report: '# relatório',
     };
     const store = new FixtureSessionStore();
     await seedCompleted(store, triple, { storyName: 'Concluída', storySlug: 'concluida-x' });
@@ -160,9 +160,9 @@ describe('Dashboard — downloads diretos de sessão concluída (§7.2/§10.5)',
     await userEvent.click(downloadCard('relatorio-mapeamento.md'));
 
     const sent = Object.fromEntries(save.mock.calls.map(([name, bytes]) => [name, bytes]));
-    expect(sent['concluida-x-retorno-ancoragem.json']).toBe(triple.retorno);
-    expect(sent['concluida-x-manifesto-contas.json']).toBe(triple.manifesto);
-    expect(sent['concluida-x-relatorio-mapeamento.md']).toBe(triple.relatorio);
+    expect(sent['concluida-x-retorno-ancoragem.json']).toBe(triple.anchoring);
+    expect(sent['concluida-x-manifesto-contas.json']).toBe(triple.manifest);
+    expect(sent['concluida-x-relatorio-mapeamento.md']).toBe(triple.report);
   });
 
   it('uma sessão em progresso não expõe downloads', async () => {

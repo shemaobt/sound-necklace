@@ -69,9 +69,9 @@ async function readState(page: Page, id: string): Promise<PersistedState> {
 async function readRelatorioMd(page: Page, id: string): Promise<string> {
   const raw = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
   const parsed = JSON.parse(raw!) as {
-    sessions: [string, { artifacts?: { relatorio?: string } }][];
+    sessions: [string, { artifacts?: { report?: string } }][];
   };
-  const md = parsed.sessions.find(([sid]) => sid === id)?.[1]?.artifacts?.relatorio;
+  const md = parsed.sessions.find(([sid]) => sid === id)?.[1]?.artifacts?.report;
   if (!md) throw new Error(`sem relatório guardado para ${id}`);
   return md;
 }

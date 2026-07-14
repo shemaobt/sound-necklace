@@ -13,7 +13,7 @@ import { ColarApp, STORAGE_KEY } from './support';
  * a UI real e captura os bytes do download.
  */
 
-type ArtifactBytes = { retorno: string; manifesto: string; relatorio: string };
+type ArtifactBytes = { anchoring: string; manifest: string; report: string };
 
 /** O que a conclusão gravou no localStorage: o slug + o trio de artefatos opaco. */
 async function readStored(
@@ -45,9 +45,9 @@ async function downloadFrom(
 
 /** Os três documentos §8.8: nome exibido no card, chave guardada, helper do filename. */
 const ARTIFACTS = [
-  { shown: 'retorno-ancoragem.json', key: 'retorno', filenameFor: retornoFilename },
-  { shown: 'manifesto-contas.json', key: 'manifesto', filenameFor: manifestoFilename },
-  { shown: 'relatorio-mapeamento.md', key: 'relatorio', filenameFor: relatorioFilename },
+  { shown: 'retorno-ancoragem.json', key: 'anchoring', filenameFor: retornoFilename },
+  { shown: 'manifesto-contas.json', key: 'manifest', filenameFor: manifestoFilename },
+  { shown: 'relatorio-mapeamento.md', key: 'report', filenameFor: relatorioFilename },
 ] as const;
 
 test('baixa os três artefatos direto do dashboard, byte-idênticos, sem abrir a sessão', async ({
