@@ -16,6 +16,9 @@ export interface Size {
 /** Tamanho M da referência (L484). O seletor de tamanho fica oculto (minimalismo). */
 export const SIZE_M: Size = { slot: 25, bead: 18, row: 31 };
 
+/** Tamanho das telas de escuta do Protótipo.dc.html: conta 26, gap 8, fio a 17px. */
+export const SIZE_L: Size = { slot: 34, bead: 26, row: 33 };
+
 export interface WindowRange {
   winS: number;
   winE: number;
@@ -106,6 +109,28 @@ export function bandRects(
       width: (colEnd - colStart + 1) * size.slot - (size.slot - size.bead) + 2 * pad,
       top: 6 + r * size.row + (size.row - size.bead) / 2 - pad,
       height: size.bead + 2 * pad,
+    });
+  }
+  return rects;
+}
+
+/**
+ * O fio atrás de cada fileira (Protótipo.dc.html `_rowStyle`): uma linha de 2px
+ * da borda esquerda da primeira conta à borda direita da última conta da fileira,
+ * centrada no eixo das contas.
+ */
+export function cordRects(winS: number, winE: number, bpr: number, size: Size): Rect[] {
+  if (winE < winS) return [];
+  const count = winE - winS + 1;
+  const rows = Math.ceil(count / bpr);
+  const rects: Rect[] = [];
+  for (let r = 0; r < rows; r++) {
+    const n = Math.min(bpr, count - r * bpr);
+    rects.push({
+      left: (size.slot - size.bead) / 2,
+      width: (n - 1) * size.slot + size.bead,
+      top: 6 + r * size.row + size.row / 2 - 1,
+      height: 2,
     });
   }
   return rects;

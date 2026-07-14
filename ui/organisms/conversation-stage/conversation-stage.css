@@ -1,15 +1,15 @@
 /*
- * Palco da conversa do Mapeamento (redesign §6.6): momento cerimonial em oliva
- * full-bleed, guia à esquerda e resposta à direita, fio de progresso embaixo.
- * A cor herda o creme para a pergunta ler como voz quieta sobre o oliva.
+ * Palco da conversa (Protótipo.dc.html, mapeamento): full-bleed sobre o oliva do
+ * shell, figura grande à esquerda com "Ouvir a pergunta" embaixo, pergunta em
+ * Merriweather clamp(24–34px) à direita, waveform de 46 barras, mic de 84px com
+ * anel duplo e rodapé com o fio de perguntas + pill creme "Próxima pergunta".
  */
 .cds-conversation-stage {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
   min-height: 100%;
-  padding: 48px clamp(20px, 6vw, 80px);
-  background: var(--cds-olive);
+  padding: 24px clamp(24px, 7vw, 90px);
   color: var(--cds-cream);
 }
 
@@ -23,13 +23,62 @@
 }
 
 .cds-conversation-stage-guide {
+  position: relative;
   flex: 0 0 auto;
-  width: clamp(160px, 24vw, 240px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: clamp(240px, 28vw, 340px);
+}
+
+/* o anel quente atrás da figura (protótipo csRing) */
+.cds-conversation-stage-guide::before {
+  content: '';
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  width: 280px;
+  height: 280px;
+  margin-left: -140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(190, 74, 1, 0.32), rgba(190, 74, 1, 0) 70%);
+  pointer-events: none;
+}
+
+/* a figura na escala do protótipo (320px), escalando pelo viewBox */
+.cds-conversation-stage-guide .cds-guide-figure {
+  width: min(100%, 320px);
+  height: auto;
+}
+
+/* pill "Ouvir a pergunta" sob a figura (protótipo speakQ) */
+.cds-conversation-stage-speak {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 24px;
+  border: 1px solid rgba(246, 245, 235, 0.3);
+  border-radius: var(--cds-radius-pill);
+  background: rgba(246, 245, 235, 0.12);
+  color: var(--cds-cream);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .cds-conversation-stage-panel {
   flex: 1 1 360px;
   max-width: 640px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* a pergunta grande, voz quieta sobre o oliva (protótipo qText) */
+.cds-conversation-stage-panel .cds-question-card-text {
+  font-style: normal;
+  font-size: clamp(24px, 3.4vh, 34px);
+  line-height: 1.35;
 }
 
 .cds-conversation-stage-note {
@@ -40,24 +89,63 @@
   opacity: 0.78;
 }
 
+.cds-conversation-stage-divider {
+  height: 1px;
+  background: rgba(246, 245, 235, 0.16);
+}
+
+.cds-conversation-stage-wave-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* 46 barras de 5px em 180px (protótipo recBars); ativa = telha-claro */
+.cds-conversation-stage-waveform {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 44px;
+  width: 180px;
+  overflow: hidden;
+}
+
+.cds-conversation-stage-waveform .cds-waveform-bar {
+  background: rgba(246, 245, 235, 0.25);
+}
+
+.cds-conversation-stage-waveform .cds-waveform-bar[data-state='active'] {
+  background: #e8813e;
+}
+
+.cds-conversation-stage-review {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+}
+
 .cds-conversation-stage-recorder {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 22px;
   min-height: 88px;
 }
 
-/* microfone telha grande — a ação dominante da resposta em voz */
+/* microfone telha de 84px com anel duplo (protótipo toggleRecord) */
 .cds-conversation-stage-mic {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 76px;
-  height: 76px;
+  flex: none;
+  width: 84px;
+  height: 84px;
   border: none;
   border-radius: 50%;
   background: var(--cds-telha);
   color: var(--cds-cream);
+  box-shadow:
+    0 0 0 8px rgba(190, 74, 1, 0.14),
+    0 8px 24px rgba(190, 74, 1, 0.4);
   cursor: pointer;
 }
 
@@ -70,47 +158,120 @@
   height: 34px;
 }
 
-.cds-conversation-stage-waveform {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  min-height: 48px;
+.cds-conversation-stage-hint {
+  text-align: left;
 }
 
-.cds-conversation-stage-review {
-  display: flex;
-  gap: 12px;
+.cds-conversation-stage-hint-strong {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--cds-cream);
+}
+
+.cds-conversation-stage-typed-hint {
+  margin: 4px 0 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 14px;
+  color: rgba(246, 245, 235, 0.6);
 }
 
 .cds-conversation-stage-typed {
   margin-top: 4px;
 }
 
-.cds-conversation-stage-typed-hint {
-  margin: 0 0 8px;
-  font-family: var(--cds-font-load-bearing);
-  font-size: 13px;
-  opacity: 0.72;
-}
-
 .cds-conversation-stage-footer {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 20px;
+  justify-content: center;
+  gap: 26px;
+  padding-bottom: 24px;
 }
 
+/* "← anterior" sem moldura; "Próxima pergunta" pill creme sólido */
 .cds-conversation-stage-nav {
-  display: flex;
-  gap: 12px;
+  display: contents;
+}
+
+.cds-conversation-stage-nav .cds-button[data-variant='ghost'] {
+  border-color: transparent;
+  background: transparent;
+  color: rgba(246, 245, 235, 0.6);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.cds-conversation-stage-nav .cds-button[data-variant='dark'] {
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+  font-size: 15px;
+  padding: 13px 28px;
+  /* ordem do protótipo: ← anterior · fio de perguntas · Próxima pergunta */
+  order: 3;
 }
 
 .cds-conversation-stage-progress {
-  width: min(100%, 520px);
+  order: 2;
+}
+
+/* o fio de perguntas: contas sobre uma linha contínua (protótipo thread) */
+.cds-conversation-stage-progress {
+  width: fit-content;
+  max-width: min(100%, 520px);
+  padding: 0 6px;
+  background: linear-gradient(
+    rgba(246, 245, 235, 0) 10px,
+    rgba(246, 245, 235, 0.2) 10px,
+    rgba(246, 245, 235, 0.2) 12px,
+    rgba(246, 245, 235, 0) 12px
+  );
+}
+
+/* contas do fio em pérola telha; futuras translúcidas (protótipo unDark) */
+.cds-conversation-stage-progress .cds-pearl[data-state='lit'],
+.cds-conversation-stage-progress .cds-pearl[data-state='head'] {
+  --cds-pearl-lit: #e8813e;
+  --cds-pearl-base: var(--cds-telha);
+}
+
+.cds-conversation-stage-progress .cds-pearl[data-state='head'] {
+  transform: none;
+  box-shadow: 0 0 0 4px rgba(246, 245, 235, 0.18);
+}
+
+.cds-conversation-stage-progress .cds-pearl[data-state='unplayed'] {
+  background: radial-gradient(
+    circle at 34% 30%,
+    rgba(246, 245, 235, 0.22),
+    rgba(246, 245, 235, 0.09) 70%
+  );
+  border: 1px solid rgba(246, 245, 235, 0.18);
 }
 
 /* convite discreto do microfone — movimento decorativo é opt-in (§4.5) */
 @media (prefers-reduced-motion: no-preference) {
+  /* a conta atual do fio de perguntas fica quieta (o halo do protótipo é estático) */
+  .cds-conversation-stage-progress .cds-pearl[data-state='head'] {
+    animation: none;
+  }
+
+  .cds-conversation-stage-guide::before {
+    animation: cds-cs-ring 3.2s ease-out infinite;
+  }
+
+  @keyframes cds-cs-ring {
+    0% {
+      transform: scale(0.85);
+      opacity: 0.9;
+    }
+    100% {
+      transform: scale(1.25);
+      opacity: 0;
+    }
+  }
+
   .cds-conversation-stage-recorder[data-state='idle'] .cds-conversation-stage-mic {
     animation: cds-conversation-mic-pulse 2.4s ease-in-out infinite;
   }
@@ -118,10 +279,14 @@
   @keyframes cds-conversation-mic-pulse {
     0%,
     100% {
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--cds-telha, #be4a01) 45%, transparent);
+      box-shadow:
+        0 0 0 8px rgba(190, 74, 1, 0.14),
+        0 8px 24px rgba(190, 74, 1, 0.4);
     }
     50% {
-      box-shadow: 0 0 0 10px color-mix(in srgb, var(--cds-telha, #be4a01) 0%, transparent);
+      box-shadow:
+        0 0 0 14px rgba(190, 74, 1, 0.06),
+        0 8px 24px rgba(190, 74, 1, 0.4);
     }
   }
 }

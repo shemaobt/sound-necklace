@@ -45,7 +45,10 @@ function base(over: Partial<ConversationStageProps> = {}): ConversationStageProp
 }
 
 function byText(el: HTMLElement, text: string): HTMLButtonElement {
-  const found = [...el.querySelectorAll('button')].find((b) => b.textContent?.trim() === text);
+  // nome acessível: texto visível OU aria-label (o "Parar" vive no botão redondo)
+  const found = [...el.querySelectorAll('button')].find(
+    (b) => b.textContent?.trim() === text || b.getAttribute('aria-label') === text,
+  );
   if (!found) throw new Error(`botão "${text}" não encontrado`);
   return found;
 }
@@ -92,7 +95,7 @@ describe('ConversationStage — fluxo do gravador (Chromium real; CLAUDE.md gate
     const onPrev = vi.fn();
     const onNext = vi.fn();
     const el = mount(base({ onPrev, onNext }));
-    byText(el, 'Anterior').click();
+    byText(el, '← anterior').click();
     byText(el, 'Próxima pergunta').click();
     expect(onPrev).toHaveBeenCalledTimes(1);
     expect(onNext).toHaveBeenCalledTimes(1);

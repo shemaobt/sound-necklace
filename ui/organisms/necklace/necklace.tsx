@@ -6,6 +6,7 @@ import type { PaletteEntry } from '../../tokens';
 import {
   bandRects,
   beadAtXY,
+  cordRects,
   beadPosition,
   beadsPerRow,
   type Rect,
@@ -62,6 +63,7 @@ interface BeadDescriptor {
 
 interface Field {
   beads: BeadDescriptor[];
+  cords: Rect[];
   sceneBand: Rect[];
   selectionBand: Rect[];
   height: number;
@@ -109,7 +111,8 @@ function computeField(
     : [];
 
   const rows = Math.ceil((winE - winS + 1) / bpr);
-  return { beads, sceneBand, selectionBand, height: rows * size.row + 12 };
+  const cords = cordRects(winS, winE, bpr, size);
+  return { beads, cords, sceneBand, selectionBand, height: rows * size.row + 12 };
 }
 
 /** Estado vivo lido pelos listeners nativos delegados (padrão ref-mirror). */
@@ -130,6 +133,18 @@ interface Interaction {
 const BeadField = memo(function BeadField({ field, size }: { field: Field; size: Size }) {
   return (
     <>
+      {field.cords.map((r, i) => (
+        <div
+          key={`cord-${i}`}
+          className="cds-necklace-cord"
+          style={{
+            left: `${r.left}px`,
+            top: `${r.top}px`,
+            width: `${r.width}px`,
+            height: `${r.height}px`,
+          }}
+        />
+      ))}
       {field.sceneBand.map((r, i) => (
         <div
           key={`scene-${i}`}

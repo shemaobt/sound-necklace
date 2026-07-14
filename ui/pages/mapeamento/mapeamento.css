@@ -1,29 +1,34 @@
-/* Conversa (Mapeamento — redesign §6.6): palco creme de trabalho, uma pergunta
-   por tela. O ▶ do trecho relevante fica acima do palco da conversa; o próprio
-   palco (guia + pergunta em Merriweather + gravador + fio de contas) vem do
-   organismo. Sem números na superfície do ouvinte (§9.2). Sem movimento
-   decorativo aqui — a iluminação/animação vive nos átomos, sob a guarda deles. */
+/* Conversa (Mapeamento — Protótipo.dc.html): a tela INTEIRA é oliva — o fundo
+   vem do shell (.cds-app:has(.cds-conversation-stage)), a página não pinta nada
+   por cima. O ▶ do trecho relevante fica acima do palco; o próprio palco (guia +
+   pergunta + gravador + fio de perguntas) vem do organismo. Sem números na
+   superfície do ouvinte (§9.2). A prévia do relatório volta ao creme sozinha
+   (o palco sai do DOM). */
 
 .cds-mapeamento {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1rem;
   min-height: 72vh;
-  padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  padding: clamp(1rem, 3vh, 2rem) 0 0;
   text-align: center;
+}
+
+/* tinta creme só na fase de conversa — a prévia do relatório é creme-sobre-creme */
+.cds-mapeamento:has(.cds-conversation-stage) {
+  color: var(--cds-cream);
 }
 
 .cds-mapeamento-instruction {
   margin: 0;
   max-width: 34ch;
-  font-family: var(--cds-font-load-bearing);
-  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 15px;
   line-height: 1.35;
-  color: var(--cds-olive-soft, var(--cds-olive));
+  color: rgba(246, 245, 235, 0.72);
 }
 
 .cds-mapeamento-listen {
@@ -31,22 +36,35 @@
   justify-content: center;
 }
 
+/* o ▶ do trecho, fantasma sobre o oliva */
+.cds-mapeamento-listen .cds-button[data-variant='ghost'] {
+  border-color: rgba(246, 245, 235, 0.3);
+  background: rgba(246, 245, 235, 0.12);
+  color: var(--cds-cream);
+}
+
+.cds-mapeamento .cds-conversation-stage {
+  align-self: stretch;
+  text-align: left;
+}
+
 .cds-mapeamento-typed {
   width: 100%;
   min-height: 4.5rem;
   padding: 0.6rem 0.75rem;
-  border: 1px solid var(--cds-olive-soft, var(--cds-olive));
-  border-radius: 0.5rem;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  border: 1px solid rgba(246, 245, 235, 0.3);
+  border-radius: var(--cds-radius-input);
+  background: rgba(246, 245, 235, 0.06);
+  color: var(--cds-cream);
   font: inherit;
   resize: vertical;
 }
 
+/* a prévia do relatório é creme (o palco saiu do DOM → o chrome clareia junto) */
 .cds-mapeamento-report-fallback {
   max-width: 34ch;
   font-family: var(--cds-font-load-bearing);
-  color: var(--cds-olive-soft, var(--cds-olive));
+  color: var(--cds-olive-soft);
 }
 
 .cds-mapeamento-controls {

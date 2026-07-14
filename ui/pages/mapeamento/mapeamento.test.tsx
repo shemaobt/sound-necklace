@@ -285,7 +285,7 @@ describe('Mapeamento — navegação entre níveis (referência mapNav L1099–1
     load(mapping());
     render(<Mapeamento />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Anterior' }));
+    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
     expect(sessionStore.getState().session!.mode).toBe('segmentacao');
   });
 
@@ -329,11 +329,13 @@ describe('Mapeamento — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
     assertNoDigits();
   });
 
-  it('o palco aplica o fundo creme (redesign §6.6, §4.5)', () => {
+  it('o palco é full-bleed: a página não pinta fundo próprio (o oliva vem do shell)', () => {
     load(mapping());
     const { container } = render(<Mapeamento />);
     expect(container.querySelector('.cds-mapeamento')).not.toBeNull();
-    expect(mapeamentoCss).toMatch(/\.cds-mapeamento\s*\{[^}]*var\(--cds-cream\)/);
+    // Protótipo: a tela INTEIRA é oliva — pintado pelo shell via :has(); um fundo
+    // aqui criaria a "faixa escura dentro de moldura clara" que não existe lá.
+    expect(mapeamentoCss).not.toMatch(/\.cds-mapeamento\s*\{[^}]*background/);
   });
 });
 

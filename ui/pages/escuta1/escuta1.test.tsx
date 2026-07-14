@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -103,6 +104,29 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
     engine.transport.advance(0.05);
 
     expect(heads[0]).toBe(0);
+  });
+
+  it('o pill de confirmação acende quando a cabeça alcança o fim da história', async () => {
+    const { engine, player } = await makePlayer();
+    sessionStore.getState().load(makeSession());
+    render(<Escuta1 player={player} />);
+
+    const totalBeads = sessionStore.getState().session?.totalBeads ?? 0;
+    const heardTarget = (): Element | null => {
+      const button = screen.getByRole('button', { name: 'Já ouvi a história completa' });
+      return button.hasAttribute('data-heard')
+        ? button
+        : (button.closest('[data-role="primary-action"]') ?? button);
+    };
+
+    expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
+
+    await userEvent.click(screen.getByRole('button', { name: /ouvir a história/i }));
+    act(() => {
+      engine.transport.advance((totalBeads - 6) * BEAD_SEC);
+    });
+
+    expect(heardTarget()?.getAttribute('data-heard')).toBe('true');
   });
 });
 

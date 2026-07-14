@@ -300,7 +300,7 @@ describe('App shell', () => {
       mic.click();
     });
     // A fixture inicia a gravação → surge o controle "Parar" (microfone vivo).
-    expect(await screen.findByText('Parar')).toBeDefined();
+    expect(await screen.findByRole('button', { name: 'Parar' })).toBeDefined();
   });
 
   it('persiste o caminho da resposta de voz em meta.voice → o relatório exportado a referencia', async () => {
@@ -338,7 +338,7 @@ describe('App shell', () => {
     await act(async () => {
       mic.click();
     });
-    const stop = await screen.findByText('Parar');
+    const stop = await screen.findByRole('button', { name: 'Parar' });
     await act(async () => {
       stop.click();
     });

@@ -83,6 +83,23 @@ describe('ConversationStage — canal digitado opcional', () => {
   });
 });
 
+describe('ConversationStage — convite e gravação por voz (protótipo §9.2)', () => {
+  it('idle: convida a falar', () => {
+    render(<ConversationStage {...baseProps({ recorderState: 'idle' })} />);
+    expect(screen.getByText('Toque e fale a sua resposta')).toBeTruthy();
+  });
+
+  it('gravando: o botão redondo vira Parar e anuncia a gravação', () => {
+    const { container } = render(
+      <ConversationStage {...baseProps({ recorderState: 'recording' })} />,
+    );
+    const stopButton = screen.getByRole('button', { name: 'Parar' });
+    expect(stopButton.classList.contains('cds-conversation-stage-mic')).toBe(true);
+    expect(screen.getByText('Gravando…')).toBeTruthy();
+    expect(container.textContent ?? '').not.toMatch(/\d/);
+  });
+});
+
 describe('ConversationStage — movimento respeita prefers-reduced-motion (§4.5)', () => {
   it('nenhuma animação vive fora da guarda de movimento', () => {
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
