@@ -11,7 +11,7 @@
   align-items: center;
   justify-content: center;
   gap: clamp(20px, 3.5vh, 40px);
-  min-height: 72vh;
+  min-height: calc(100vh - 110px);
   padding: 24px 1.5rem;
   background: var(--cds-olive);
   color: var(--cds-cream);

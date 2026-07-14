@@ -96,20 +96,18 @@ describe('ConversationStage — "Ouvir a pergunta" condicional', () => {
 });
 
 /**
- * Canal digitado (§8.7): opcional e sempre acompanhado da cópia contratual — a
- * facilitadora escreve depois, "nunca por você". Só aparece quando há o slot.
+ * Entrevista só-voz (design parity): o palco do Mapeamento não tem mais canal
+ * digitado — a digitação passou a viver só no relatório (já editável, ver
+ * ui/pages/relatorio). A cópia contratual "nunca por você" permanece, mas
+ * agora é permanente (idle), não condicionada a um slot de texto.
  */
-describe('ConversationStage — canal digitado opcional', () => {
-  it('mostra o slot e a cópia "nunca por você" só quando typedAnswer é fornecido', () => {
+describe('ConversationStage — entrevista só-voz (design parity)', () => {
+  it('a cópia "A facilitadora pode escrever depois — nunca por você." está SEMPRE visível (idle) e NÃO há textarea no palco', () => {
     const hint = 'A facilitadora pode escrever depois — nunca por você.';
-    const { rerender } = render(<ConversationStage {...baseProps()} />);
-    expect(screen.queryByText(hint)).toBeNull();
+    render(<ConversationStage {...baseProps({ recorderState: 'idle' })} />);
 
-    rerender(
-      <ConversationStage {...baseProps({ typedAnswer: <textarea aria-label="observação" /> })} />,
-    );
     expect(screen.getByText(hint)).toBeTruthy();
-    expect(screen.getByLabelText('observação')).toBeTruthy();
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 });
 

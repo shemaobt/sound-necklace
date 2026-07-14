@@ -69,6 +69,7 @@ export function Triagem({ player = null }: TriagemProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [focusIdx, setFocusIdx] = useState(0);
+  const [inspecting, setInspecting] = useState<number | null>(null);
 
   useEffect(() => {
     if (!player) return;
@@ -97,6 +98,10 @@ export function Triagem({ player = null }: TriagemProps) {
 
   const idx = Math.min(focusIdx, parts.length - 1);
   const scene = parts[idx]!;
+  // momento de revisão (decisão do dono): todas classificadas + ≥1 produtiva →
+  // UMA ação (Continuar). Clicar num ponto reabre o picker daquela cena
+  // (inspecting); classificar de novo volta à revisão sozinho.
+  const reviewing = gate.enabled && inspecting === null;
 
   const playScene = (): void => {
     if (player && scene.span) player.toggle(scene.part_id, scene.span.s, scene.span.e);
@@ -112,12 +117,14 @@ export function Triagem({ player = null }: TriagemProps) {
   const classify = (kind: string, confidence: Confidence): void => {
     const id = scene.part_id;
     sessionStore.getState().apply((s) => tagScene(s, id, kind, confidence));
+    setInspecting(null);
     advanceFocus();
   };
 
   const noneFit = (): void => {
     const id = scene.part_id;
     sessionStore.getState().apply((s) => markNoneFit(s, id));
+    setInspecting(null);
     advanceFocus();
   };
 
@@ -147,24 +154,38 @@ export function Triagem({ player = null }: TriagemProps) {
                 : 'pending',
           tint: sceneColor(i),
         }))}
-        onSelect={setFocusIdx}
+        onSelect={(i) => {
+          setFocusIdx(i);
+          setInspecting(i);
+        }}
         dotLabel={t('progressDots.dotLabel')}
       />
 
-      <div className="cds-triagem-focus">
-        <p className="cds-triagem-instruction" data-role="instruction">
-          {t('triagem.instruction')}
-        </p>
-        <div className="cds-triagem-play">
-          <Button variant="primary" onClick={playScene}>
-            {t('triagem.playScene')}
+      {reviewing ? (
+        <div className="cds-triagem-review" data-role="primary-action">
+          <p className="cds-triagem-review-headline" data-role="instruction">
+            {t('triagem.reviewHeadline')}
+          </p>
+          <Button variant="primary" onClick={advance}>
+            {t('review.continue')}
           </Button>
         </div>
-        <p className="cds-triagem-tag" data-tag={scene.tag_state}>
-          {tagShow(scene, t, i18n.language)}
-        </p>
-        <TriagemPicker key={scene.part_id} onConfirm={classify} onNoneFit={noneFit} />
-      </div>
+      ) : (
+        <div className="cds-triagem-focus">
+          <p className="cds-triagem-instruction" data-role="instruction">
+            {t('triagem.instruction')}
+          </p>
+          <div className="cds-triagem-play">
+            <Button variant="primary" onClick={playScene}>
+              {t('triagem.playScene')}
+            </Button>
+          </div>
+          <p className="cds-triagem-tag" data-tag={scene.tag_state}>
+            {tagShow(scene, t, i18n.language)}
+          </p>
+          <TriagemPicker key={scene.part_id} onConfirm={classify} onNoneFit={noneFit} />
+        </div>
+      )}
 
       {coverage.noneFit > 0 ? <p className="cds-triagem-finding">{t('triagem.finding')}</p> : null}
 
@@ -174,18 +195,14 @@ export function Triagem({ player = null }: TriagemProps) {
         </p>
       ) : null}
 
-      <div className="cds-triagem-gate">
-        {!gate.enabled && gate.message ? (
+      {/* o CTA antigo virou o Continuar da revisão; aqui fica só o guia do gate */}
+      {!gate.enabled && gate.message ? (
+        <div className="cds-triagem-gate">
           <p className="cds-triagem-gate-msg" role="status">
             {gate.message}
           </p>
-        ) : null}
-        <div data-role="primary-action">
-          <Button variant="primary" disabled={!gate.enabled} onClick={advance}>
-            {t('triagem.advance')}
-          </Button>
         </div>
-      </div>
+      ) : null}
 
       <CoverageDrawer coverage={coverage} />
     </section>

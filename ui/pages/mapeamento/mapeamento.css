@@ -11,7 +11,7 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  min-height: 72vh;
+  min-height: calc(100vh - 110px);
   padding: clamp(1rem, 3vh, 2rem) 0 0;
   text-align: center;
 }
@@ -53,19 +53,8 @@
 
 .cds-mapeamento .cds-conversation-stage {
   align-self: stretch;
+  flex: 1;
   text-align: left;
-}
-
-.cds-mapeamento-typed {
-  width: 100%;
-  min-height: 4.5rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid rgba(246, 245, 235, 0.3);
-  border-radius: var(--cds-radius-input);
-  background: rgba(246, 245, 235, 0.06);
-  color: var(--cds-cream);
-  font: inherit;
-  resize: vertical;
 }
 
 /* a prévia do relatório é creme (o palco saiu do DOM → o chrome clareia junto) */

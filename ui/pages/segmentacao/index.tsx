@@ -98,6 +98,13 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
   const ps = productiveScenes(session);
   const sceneIdx = Math.max(0, sceneIndexOf(session, sc.part_id));
   const headerTint = sceneColor(session.parts.findIndex((p) => p.part_id === sc.part_id));
+  // momento de revisão (decisão do dono): frases travadas cobrindo a cena toda →
+  // nada resta a cortar aqui; UMA ação (Continuar = o mesmo confirmFrasesDone,
+  // que sem cena vazia não avisa). Frases esparsas mantêm o botão do PRD.
+  const lockedPhraseEnds = scenePhrases
+    .filter(({ f }) => f.locked && f.span)
+    .map(({ f }) => f.span!.e);
+  const covered = lockedPhraseEnds.length > 0 && Math.max(...lockedPhraseEnds) === scSpan.e;
   const isLast = sceneIdx >= ps.length - 1;
   const anchor = activeAnchor(session);
 
@@ -235,7 +242,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
           {`${sceneLabel(sceneIdx)} · ${sceneKindLabel(sc.scene_kind!, i18n.language)}`}
         </p>
         <p className="cds-segmentacao-instruction" data-role="instruction">
-          {t('segmentacao.instruction')}
+          {covered ? t('segmentacao.reviewHeadline') : t('segmentacao.instruction')}
         </p>
       </div>
 
@@ -296,7 +303,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
           {t('segmentacao.back')}
         </Button>
 
-        {anchor ? (
+        {!covered && anchor ? (
           <div className="cds-segmentacao-confirm" data-role="primary-action">
             <Button variant="primary" onClick={confirmPhrase}>
               {t('segmentacao.confirmPhrase')}
@@ -304,9 +311,17 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
           </div>
         ) : null}
 
-        <Button variant="dark" onClick={done}>
-          {isLast ? t('segmentacao.doneLast') : t('segmentacao.doneMore')}
-        </Button>
+        {covered ? (
+          <div className="cds-segmentacao-confirm" data-role="primary-action">
+            <Button variant="primary" onClick={done}>
+              {t('review.continue')}
+            </Button>
+          </div>
+        ) : (
+          <Button variant="dark" onClick={done}>
+            {isLast ? t('segmentacao.doneLast') : t('segmentacao.doneMore')}
+          </Button>
+        )}
       </div>
 
       {error ? (

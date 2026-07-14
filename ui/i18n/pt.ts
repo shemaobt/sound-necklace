@@ -114,6 +114,10 @@ export const pt = {
     reviewOwn: '🔒 Modo de revisão — a segmentação está travada.',
     unlock: 'Destravar para editar',
   },
+  /** Momento de revisão inferido: uma manchete + um único "Continuar →". */
+  review: {
+    continue: 'Continuar →',
+  },
   confidence: {
     certeza: 'Certeza',
     quase: 'Quase',
@@ -167,6 +171,7 @@ export const pt = {
   },
   escuta2: {
     title: 'Corte a história em cenas',
+    reviewHeadline: 'A história está toda em cenas.',
     playSelection: 'Ouvir a seleção',
     instructionPre: 'Toque no colar onde ',
     instructionEmph: 'esta cena termina',
@@ -177,6 +182,7 @@ export const pt = {
     confirmAll: 'Confirmar as cenas →',
   },
   segmentacao: {
+    reviewHeadline: 'As frases desta cena estão prontas.',
     instruction: 'Toque no colar o começo e o fim de cada frase.',
     playScene: '▶ ouvir a cena',
     reopen: 'Reabrir',
@@ -231,6 +237,7 @@ export const pt = {
     ariaLabel: 'o guia da conversa',
   },
   triagem: {
+    reviewHeadline: 'Todas as cenas classificadas.',
     empty: 'Nenhuma cena confirmada ainda.',
     instruction: 'Essa cena é sobre o quê?',
     playScene: '▶ Ouvir esta cena',

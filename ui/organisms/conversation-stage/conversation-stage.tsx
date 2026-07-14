@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, WaveformBar } from '../../atoms';
@@ -31,8 +30,6 @@ export interface ConversationStageProps {
   onStop?: () => void;
   onPlay?: () => void;
   onRerecord?: () => void;
-  /** canal opcional: a facilitadora escreve depois — "nunca por você" */
-  typedAnswer?: ReactNode;
   progress: ConversationProgress;
   onPrev?: () => void;
   onNext?: () => void;
@@ -123,7 +120,6 @@ export function ConversationStage({
   onStop,
   onPlay,
   onRerecord,
-  typedAnswer,
   progress,
   onPrev,
   onNext,
@@ -226,17 +222,11 @@ export function ConversationStage({
                     ? t('conversationStage.recordingLabel')
                     : t('conversationStage.idleHint')}
                 </p>
-                {typedAnswer !== undefined ? (
-                  <p className="cds-conversation-stage-typed-hint">
-                    {t('conversationStage.typedHint')}
-                  </p>
-                ) : null}
+                <p className="cds-conversation-stage-typed-hint">
+                  {t('conversationStage.typedHint')}
+                </p>
               </div>
             </div>
-
-            {typedAnswer !== undefined ? (
-              <div className="cds-conversation-stage-typed">{typedAnswer}</div>
-            ) : null}
           </QuestionCard>
         </div>
       </div>

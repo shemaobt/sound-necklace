@@ -99,9 +99,8 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
   for (let i = 0; i < EXPECTED_WORDINGS.length; i++) {
     // espera a tela assentar E prova a ordem/enunciado exatos da pergunta i
     await expect(questionText).toHaveText(EXPECTED_WORDINGS[i]!);
-    const { voice, typed } = plan(i);
-    if (voice) await app.recordVoiceAnswer();
-    if (typed) await app.typeAnswer(typedText(i));
+    const { voice } = plan(i);
+    if (voice) await app.recordVoiceAnswer(); // a ENTREVISTA é só-voz
     await next.click(); // a última navega para a prévia do relatório
   }
 
@@ -112,6 +111,12 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
     'As cenas',
     'As frases',
   ]);
+
+  // a digitação acontece AQUI, no relatório editável (§8.7 "a facilitadora pode
+  // escrever depois — nunca por você"): a entrevista não tem campo de texto.
+  for (let i = 0; i < EXPECTED_WORDINGS.length; i++) {
+    if (plan(i).typed) await app.typeAnswerInReport(i, typedText(i));
+  }
 
   // ——— conclui e guarda os documentos ———
   await app.completeSession();

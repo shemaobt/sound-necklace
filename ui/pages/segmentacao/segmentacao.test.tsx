@@ -365,6 +365,66 @@ describe('Segmentação — cena vazia e navegação (PRD v2 §8.6)', () => {
   });
 });
 
+describe('Segmentação — momento de revisão quando as frases cobrem a cena (design parity)', () => {
+  it('frases cobrindo a cena → revisão', () => {
+    load(
+      segmenting({
+        frases: [frase({ prop_id: 'P1', span: { s: 12, e: 18 }, part_link: 'PT1', locked: true })],
+        current: { layer: 'frases', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Segmentacao />);
+
+    expect(screen.getByText('As frases desta cena estão prontas.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '✓ Confirmar esta frase' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Pronto com esta cena →' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Já segmentei todas as cenas →' })).toBeNull();
+  });
+
+  it('“Continuar →” vai à próxima cena (ou ao Mapeamento na última)', async () => {
+    load(
+      segmenting({
+        parts: [productive('PT1', { s: 12, e: 18 }), productive('PT2', { s: 19, e: 25 })],
+        frases: [
+          frase({ prop_id: 'P1', span: { s: 12, e: 18 }, part_link: 'PT1', locked: true }),
+          frase({ prop_id: 'P2', span: { s: 19, e: 25 }, part_link: 'PT2', locked: true }),
+        ],
+        activeSceneId: 'PT1',
+        current: { layer: 'frases', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Segmentacao />);
+    expect(screen.getByText('Cena um · Nascimento')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
+    expect(screen.getByText('Cena dois · Nascimento')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
+    expect(sessionStore.getState().session!.mode).toBe('mapeamento');
+  });
+
+  it('frases esparsas mantêm o botão do PRD', () => {
+    load(
+      segmenting({
+        frases: [
+          frase({ prop_id: 'P1', span: { s: 12, e: 14 }, part_link: 'PT1', locked: true }),
+          frase({ prop_id: 'P2' }),
+        ],
+        current: { layer: 'frases', index: 1 },
+      }),
+    );
+    render(<Segmentacao />);
+
+    expect(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' })).toBeTruthy();
+    expect(screen.queryByText('As frases desta cena estão prontas.')).toBeNull();
+  });
+});
+
 describe('Segmentação — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
   it('não mostra dígito, tem ≤1 linha de instrução e exatamente uma ação dominante', () => {
     load(segmenting({ selection: null, pendingStart: null }));

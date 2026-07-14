@@ -67,7 +67,9 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
   await app.clickBead(SCENARIO.sceneEndBeads[2]);
   await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
-  await page.getByRole('button', { name: 'Confirmar as cenas →' }).click();
+  // história toda coberta → momento de revisão (uma manchete + Continuar)
+  await scan('Escuta 2 — revisão das cenas');
+  await page.getByRole('button', { name: 'Continuar →' }).click();
 
   // ——— Triagem: foco na cena / picker (grade "Mais comuns") ———
   await expect(page.getByText('Essa cena é sobre o quê?')).toBeVisible();
@@ -90,7 +92,9 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await page.getByRole('radio', { name: SCENARIO.triage[1].confidence, exact: true }).click();
   await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
   await page.getByRole('radio', { name: 'Nenhum se encaixa', exact: true }).click();
-  await page.getByRole('button', { name: 'Já classifiquei todas as cenas →' }).click();
+  // todas classificadas → momento de revisão
+  await scan('Triagem — revisão');
+  await page.getByRole('button', { name: 'Continuar →' }).click();
 
   // ——— Segmentação: ancoragem (primeira cena produtiva, sem frases) ———
   await expect(page.getByText('Toque no colar o começo e o fim de cada frase.')).toBeVisible();

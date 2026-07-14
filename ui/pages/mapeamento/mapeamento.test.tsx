@@ -186,8 +186,8 @@ describe('Mapeamento — o ▶ do span de cada nível (PRD v2 §8.7)', () => {
   });
 });
 
-describe('Mapeamento — resposta por voz e canal digitado (PRD v2 §8.7, §10.4)', () => {
-  it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "listen" toca; digitar grava no texto — e ambos coexistem', async () => {
+describe('Mapeamento — resposta por voz, entrevista só-voz (PRD v2 §8.7, §10.4, design parity)', () => {
+  it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
     render(<Mapeamento recorder={recorder} />);
@@ -209,12 +209,8 @@ describe('Mapeamento — resposta por voz e canal digitado (PRD v2 §8.7, §10.4
     await userEvent.click(screen.getByRole('button', { name: 'ouvir' }));
     expect(recorder.playing).toBe(path);
 
-    // o canal digitado escreve na resposta de texto do domínio (coexiste com a voz)
-    const textarea = screen.getByRole('textbox');
-    await userEvent.type(textarea, 'era uma vez');
-    const answer = sessionStore.getState().session!.mapping!.level1.recontar;
-    expect(answer).toBe('era uma vez');
-    expect(await recorder.has(path)).toBe(true);
+    // a digitação saiu do palco da entrevista — vive só no relatório (ui/pages/relatorio)
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 
   it('parar avisa o shell (onVoiceSaved) com o caminho canônico da pergunta', async () => {

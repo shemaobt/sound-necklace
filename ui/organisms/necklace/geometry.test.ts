@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  centerOffset,
   beadAtXY,
   beadPosition,
   beadsPerRow,
@@ -113,5 +114,16 @@ describe('cordRects — fio atrás de cada fileira (referência _rowStyle)', () 
     expect(cordRects(12, 39, 28, SIZE_M)).toEqual([
       { left: 3.5, width: 693, top: 20.5, height: 2 },
     ]);
+  });
+});
+
+describe('centerOffset — colar sempre centrado (feedback do dono)', () => {
+  it('fileira menor que a largura → metade da folga; cheia/estreita → 0', () => {
+    // 6 contas no SIZE_M (slot 25) em 400px: 400 - 150 = 250 → 125
+    expect(centerOffset(6, 16, 400, SIZE_M)).toBe(125);
+    // fileira cheia (bpr limita): min(40, 16)*25 = 400 → 0
+    expect(centerOffset(40, 16, 400, SIZE_M)).toBe(0);
+    // container mais estreito que a fileira → nunca negativo
+    expect(centerOffset(20, 20, 100, SIZE_M)).toBe(0);
   });
 });

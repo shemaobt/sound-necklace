@@ -124,13 +124,19 @@ export class ColarApp {
     await expect(this.page.getByText('já está costurado')).toBeVisible();
   }
 
-  /** Corta as três cenas (um clique = fim de cada cena) e confirma o conjunto. */
+  /**
+   * Corta as três cenas (um clique = fim de cada cena) e segue. Cobrindo a
+   * história inteira o app entra no momento de revisão ("Continuar →");
+   * cobertura parcial mantém o "Confirmar as cenas →" do PRD.
+   */
   async cutScenes(endBeads: readonly number[] = SCENARIO.sceneEndBeads): Promise<void> {
     for (const end of endBeads) {
       await this.clickBead(end);
       await this.page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
     }
-    await this.page.getByRole('button', { name: 'Confirmar as cenas →' }).click();
+    const continuar = this.page.getByRole('button', { name: 'Continuar →' });
+    if (await continuar.count()) await continuar.click();
+    else await this.page.getByRole('button', { name: 'Confirmar as cenas →' }).click();
   }
 
   // ——— Triagem ———
@@ -147,7 +153,8 @@ export class ColarApp {
         await this.page.getByRole('button', { name: 'Confirmar', exact: true }).click();
       }
     }
-    await this.page.getByRole('button', { name: 'Já classifiquei todas as cenas →' }).click();
+    // todas classificadas → momento de revisão
+    await this.page.getByRole('button', { name: 'Continuar →' }).click();
   }
 
   // ——— Segmentação ———
@@ -164,12 +171,17 @@ export class ColarApp {
     await this.page.getByRole('button', { name: 'Mover a borda até aqui' }).click();
   }
 
+  /** Avança de cena: revisão ("Continuar →") quando as frases cobrem a cena; senão o botão do PRD. */
   async nextScene(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Pronto com esta cena →' }).click();
+    const continuar = this.page.getByRole('button', { name: 'Continuar →' });
+    if (await continuar.count()) await continuar.click();
+    else await this.page.getByRole('button', { name: 'Pronto com esta cena →' }).click();
   }
 
   async finishSegmentacao(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Já segmentei todas as cenas →' }).click();
+    const continuar = this.page.getByRole('button', { name: 'Continuar →' });
+    if (await continuar.count()) await continuar.click();
+    else await this.page.getByRole('button', { name: 'Já segmentei todas as cenas →' }).click();
   }
 
   // ——— Mapeamento ———
@@ -181,8 +193,18 @@ export class ColarApp {
     await expect(this.page.getByRole('button', { name: 'ouvir', exact: true })).toBeVisible();
   }
 
-  async typeAnswer(text: string): Promise<void> {
-    await this.page.getByRole('textbox', { name: 'observação da facilitadora' }).fill(text);
+  /** A digitação vive no RELATÓRIO (a facilitadora escreve depois — §8.7). */
+  async typeAnswerInReport(index: number, text: string): Promise<void> {
+    await this.page.getByRole('textbox', { name: 'resposta' }).nth(index).fill(text);
+  }
+
+  /** Anda até a prévia do relatório clicando "Próxima pergunta" até a conversa acabar. */
+  async walkToReport(): Promise<void> {
+    for (let step = 0; step < 60; step++) {
+      if (await this.page.locator('.cds-relatorio').count()) return;
+      await this.page.getByRole('button', { name: 'Próxima pergunta' }).click();
+    }
+    throw new Error('relatório não apareceu após 60 passos');
   }
 
   private async currentQuestionLevel(): Promise<1 | 2 | 3 | null> {
@@ -200,20 +222,19 @@ export class ColarApp {
    */
   async answerConversation(): Promise<{ voicedLevels: number[]; typed: boolean }> {
     const voiced = new Set<number>();
-    let typed = false;
-    for (let step = 0; step < 60; step++) {
+    // voz durante a conversa (a entrevista é só-voz)…
+    for (let step = 0; step < 60 && voiced.size < 3; step++) {
       const level = await this.currentQuestionLevel();
       if (level !== null && !voiced.has(level)) {
         await this.recordVoiceAnswer();
         voiced.add(level);
-      } else if (!typed) {
-        await this.typeAnswer(TYPED_ANSWER);
-        typed = true;
       }
-      if (voiced.size === 3 && typed) break;
       await this.page.getByRole('button', { name: 'Próxima pergunta' }).click();
     }
-    return { voicedLevels: [...voiced].sort(), typed };
+    // …texto DEPOIS, no relatório (§8.7 "a facilitadora pode escrever depois")
+    await this.walkToReport();
+    await this.typeAnswerInReport(0, TYPED_ANSWER);
+    return { voicedLevels: [...voiced].sort(), typed: true };
   }
 
   // ——— fio de contas / Export ———

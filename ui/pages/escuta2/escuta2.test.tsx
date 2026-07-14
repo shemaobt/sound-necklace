@@ -298,6 +298,58 @@ describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
   });
 });
 
+describe('Escuta 2 — momento de revisão quando a história está toda em cenas (design parity)', () => {
+  it('história toda coberta → momento de revisão', () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
+        current: { layer: 'parts', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    expect(screen.getByText('A história está toda em cenas.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '✓ Confirmar esta cena' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Confirmar as cenas →' })).toBeNull();
+  });
+
+  it('“Continuar →” avança para a Triagem', async () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
+        current: { layer: 'parts', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
+
+    const s = sessionStore.getState().session!;
+    expect(s.mode).toBe('triagem');
+    expect(s.partsConfirmed).toBe(true);
+  });
+
+  it('cobertura parcial mantém o fluxo', () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), part({ part_id: 'PT2' })],
+        current: { layer: 'parts', index: 1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    expect(screen.getByRole('button', { name: 'Confirmar as cenas →' })).toBeTruthy();
+    expect(screen.queryByText('A história está toda em cenas.')).toBeNull();
+  });
+});
+
 describe('Escuta 2 — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
   it('não mostra dígito, tem ≤1 linha de instrução e exatamente uma ação dominante', () => {
     load(

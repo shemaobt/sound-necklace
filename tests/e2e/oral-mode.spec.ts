@@ -219,7 +219,7 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
     await app.clickBead(end);
     await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
   }
-  await page.getByRole('button', { name: 'Confirmar as cenas →' }).click();
+  await page.getByRole('button', { name: 'Continuar →' }).click();
 
   // ——— Triagem: classificação (controles do picker, não chrome) ———
   await app.triage();

@@ -181,10 +181,6 @@
   color: rgba(246, 245, 235, 0.6);
 }
 
-.cds-conversation-stage-typed {
-  margin-top: 4px;
-}
-
 .cds-conversation-stage-footer {
   display: flex;
   align-items: center;

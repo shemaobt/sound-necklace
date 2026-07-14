@@ -9,7 +9,6 @@ import {
   type Mapping,
   type QuestionSlot,
   questionSequence,
-  setAnswer,
   setMode,
   type SessionState,
   voiceAnswerPath,
@@ -95,8 +94,6 @@ interface QuestionScreenProps {
   slot: QuestionSlot;
   path: string;
   listen: ListenTarget | null;
-  typedValue: string;
-  onTyped: (text: string) => void;
   progress: ConversationProgress;
   onPrev: () => void;
   onNext: () => void;
@@ -117,8 +114,6 @@ function QuestionScreen({
   slot,
   path,
   listen,
-  typedValue,
-  onTyped,
   progress,
   onPrev,
   onNext,
@@ -215,15 +210,6 @@ function QuestionScreen({
     setRecorderState('idle');
   };
 
-  const typed = (
-    <textarea
-      className="cds-mapeamento-typed"
-      aria-label={t('mapeamento.typedAria')}
-      value={typedValue}
-      onChange={(e) => onTyped(e.target.value)}
-    />
-  );
-
   return (
     <section className="cds-mapeamento">
       <p className="cds-mapeamento-instruction" data-role="instruction">
@@ -248,7 +234,6 @@ function QuestionScreen({
         onStop={onStop}
         onPlay={onPlay}
         onRerecord={onRerecord}
-        typedAnswer={typed}
         progress={progress}
         onPrev={onPrev}
         onNext={onNext}
@@ -321,10 +306,6 @@ export function Mapeamento({
     if (idx < total - 1) setIndex(idx + 1);
     else setAtReport(true);
   };
-  const writeTyped = (text: string): void => {
-    sessionStore.getState().apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), slot, text));
-  };
-
   // Fio de progresso (indicador, não gate): marca as perguntas com resposta de
   // TEXTO. ponytail: teto conhecido — respostas só-de-voz não acendem a conta,
   // pois `recorder.has()` é assíncrono; enumerar a voz vale um passo síncrono só
@@ -339,8 +320,6 @@ export function Mapeamento({
       slot={slot}
       path={path}
       listen={listenFor(mapped, slot, t)}
-      typedValue={readAnswer(mapped.mapping, slot)}
-      onTyped={writeTyped}
       progress={{ total, answered, current: idx }}
       onPrev={goPrev}
       onNext={goNext}

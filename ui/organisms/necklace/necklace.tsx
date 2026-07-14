@@ -6,6 +6,7 @@ import type { PaletteEntry } from '../../tokens';
 import {
   bandRects,
   beadAtXY,
+  centerOffset,
   cordRects,
   beadPosition,
   beadsPerRow,
@@ -81,6 +82,7 @@ function computeField(
 ): Field {
   const { winS, winE } = resolveWindow(total, beadSec, window);
   const bpr = beadsPerRow(width, size);
+  const xOff = centerOffset(winE - winS + 1, bpr, width, size);
 
   const colorMap = new Map<number, PaletteEntry>();
   for (const seg of segments) {
@@ -94,7 +96,7 @@ function computeField(
     const pos = beadPosition(i, winS, bpr, size);
     beads.push({
       index: i,
-      left: pos.left,
+      left: pos.left + xOff,
       top: pos.top,
       state: dim ? 'dim' : 'unplayed',
       tint: colorMap.get(i),
@@ -103,15 +105,18 @@ function computeField(
     });
   }
 
+  const shift = (r: Rect): Rect => ({ ...r, left: r.left + xOff });
   const sceneBand = window
-    ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, bpr, size, 4)
+    ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, bpr, size, 4).map(shift)
     : [];
   const selectionBand = selection
-    ? bandRects(Math.max(winS, selection.s), Math.min(winE, selection.e), winS, bpr, size, 3)
+    ? bandRects(Math.max(winS, selection.s), Math.min(winE, selection.e), winS, bpr, size, 3).map(
+        shift,
+      )
     : [];
 
   const rows = Math.ceil((winE - winS + 1) / bpr);
-  const cords = cordRects(winS, winE, bpr, size);
+  const cords = cordRects(winS, winE, bpr, size).map(shift);
   return { beads, cords, sceneBand, selectionBand, height: rows * size.row + 12 };
 }
 
@@ -268,8 +273,14 @@ export function Necklace(props: NecklaceProps) {
     function beadFromEvent(ev: PointerEvent): number {
       const ix = ixRef.current;
       const rect = node!.getBoundingClientRect();
+      const xOff = centerOffset(
+        ix.winS <= ix.winE ? ix.winE - ix.winS + 1 : 0,
+        ix.bpr,
+        rect.width,
+        ix.size,
+      );
       return beadAtXY(
-        ev.clientX - rect.left,
+        ev.clientX - rect.left - xOff,
         ev.clientY - rect.top,
         ix.winS,
         ix.winE,

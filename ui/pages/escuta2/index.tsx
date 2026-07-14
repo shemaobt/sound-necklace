@@ -68,6 +68,12 @@ export function Escuta2({ player = null }: Escuta2Props) {
   const anchor = activeAnchor(session);
   const lockedIndexes = session.parts.flatMap((p, i) => (p.locked && p.span ? [i] : []));
   const hasLocked = lockedIndexes.length > 0;
+  // momento de revisão (decisão do dono): a história toda coberta por cenas
+  // travadas → nada resta a cortar; a âncora residual do domínio fica oculta
+  // (confirmParts a descarta, PRD §8.4) e a tela oferece UMA ação: Continuar.
+  const tiled =
+    hasLocked &&
+    Math.max(...lockedIndexes.map((i) => session.parts[i]!.span!.e)) === session.totalBeads - 1;
 
   const onBead = (bead: number): void => {
     const s = sessionStore.getState().session;
@@ -139,11 +145,17 @@ export function Escuta2({ player = null }: Escuta2Props) {
     <section className="cds-escuta2">
       <div className="cds-escuta2-header">
         <h2 className="cds-escuta2-title">{t('escuta2.title')}</h2>
-        <p className="cds-escuta2-instruction" data-role="instruction">
-          {t('escuta2.instructionPre')}
-          <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
-          {t('escuta2.instructionPost')}
-        </p>
+        {tiled ? (
+          <p className="cds-escuta2-instruction" data-role="instruction">
+            {t('escuta2.reviewHeadline')}
+          </p>
+        ) : (
+          <p className="cds-escuta2-instruction" data-role="instruction">
+            {t('escuta2.instructionPre')}
+            <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
+            {t('escuta2.instructionPost')}
+          </p>
+        )}
       </div>
 
       <div className="cds-escuta2-stage">
@@ -191,7 +203,15 @@ export function Escuta2({ player = null }: Escuta2Props) {
           {t('escuta2.back')}
         </Button>
 
-        {session.selection ? (
+        {tiled ? (
+          <div className="cds-escuta2-confirm-scene" data-role="primary-action">
+            <Button variant="primary" onClick={confirmAll}>
+              {t('review.continue')}
+            </Button>
+          </div>
+        ) : null}
+
+        {!tiled && session.selection ? (
           <button
             type="button"
             className="cds-escuta2-play"
@@ -204,7 +224,7 @@ export function Escuta2({ player = null }: Escuta2Props) {
           </button>
         ) : null}
 
-        {anchor ? (
+        {!tiled && anchor ? (
           <div className="cds-escuta2-confirm-scene" data-role="primary-action">
             <Button variant="primary" onClick={confirmScene}>
               {t('escuta2.confirmScene')}
@@ -212,7 +232,7 @@ export function Escuta2({ player = null }: Escuta2Props) {
           </div>
         ) : null}
 
-        {hasLocked ? (
+        {hasLocked && !tiled ? (
           <Button variant="dark" onClick={confirmAll}>
             {t('escuta2.confirmAll')}
           </Button>

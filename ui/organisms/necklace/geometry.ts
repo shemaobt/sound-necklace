@@ -56,6 +56,15 @@ export function resolveWindow(total: number, beadSec: number, window: Span | nul
   };
 }
 
+/**
+ * Deslocamento horizontal que CENTRA as fileiras no container (o protótipo põe
+ * as fileiras em width:fit-content centradas): metade da folga entre a largura
+ * medida e a fileira mais larga (min(count, bpr) contas). Nunca negativo.
+ */
+export function centerOffset(count: number, bpr: number, width: number, size: Size): number {
+  return Math.max(0, (width - Math.min(count, bpr) * size.slot) / 2);
+}
+
 /** Contas por linha a partir da largura do container (L505). Piso de 1. */
 export function beadsPerRow(width: number, size: Size): number {
   return Math.max(1, Math.floor(width / size.slot));

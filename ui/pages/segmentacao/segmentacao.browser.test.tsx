@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Player } from '../../../adapters/audio';
 import { buildBeads, createSession, type SessionState } from '../../../domain';
-import { beadPosition, SIZE_SEG, beadsPerRow } from '../../organisms/necklace/geometry';
 import { sessionStore } from '../../state';
 import Segmentacao from './index';
 
@@ -86,8 +85,10 @@ function mount(player: Player): { host: HTMLDivElement; root: Root; el: HTMLElem
 }
 
 function firePointer(el: HTMLElement, index: number): void {
-  const rect = el.getBoundingClientRect();
-  const pos = beadPosition(index, 0, beadsPerRow(rect.width, SIZE_SEG), SIZE_SEG);
+  // centro do PRÓPRIO elemento da conta — imune a tamanho/offset de centralização
+  const bead = el.querySelector(`.cds-necklace-bead[data-idx="${index}"]`);
+  if (!bead) throw new Error(`conta ${index} não renderizada`);
+  const r = bead.getBoundingClientRect();
   el.dispatchEvent(
     new PointerEvent('pointerdown', {
       pointerId: 1,
@@ -95,8 +96,8 @@ function firePointer(el: HTMLElement, index: number): void {
       isPrimary: true,
       bubbles: true,
       cancelable: true,
-      clientX: rect.left + pos.left,
-      clientY: rect.top + pos.top,
+      clientX: r.left + r.width / 2,
+      clientY: r.top + r.height / 2,
       buttons: 1,
     }),
   );

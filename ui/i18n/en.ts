@@ -104,6 +104,9 @@ export const en: Dict = {
     reviewOwn: '🔒 Review mode — segmentation is locked.',
     unlock: 'Unlock to edit',
   },
+  review: {
+    continue: 'Continue →',
+  },
   confidence: {
     certeza: 'Certain',
     quase: 'Almost',
@@ -151,6 +154,7 @@ export const en: Dict = {
   },
   escuta2: {
     title: 'Cut the story into scenes',
+    reviewHeadline: 'The whole story is in scenes.',
     playSelection: 'Listen to the selection',
     instructionPre: 'Tap the necklace where ',
     instructionEmph: 'this scene ends',
@@ -161,6 +165,7 @@ export const en: Dict = {
     confirmAll: 'Confirm the scenes →',
   },
   segmentacao: {
+    reviewHeadline: 'The phrases of this scene are ready.',
     instruction: 'Tap the necklace at the start and the end of each phrase.',
     playScene: '▶ listen to the scene',
     reopen: 'Reopen',
@@ -217,6 +222,7 @@ export const en: Dict = {
     ariaLabel: 'the conversation guide',
   },
   triagem: {
+    reviewHeadline: 'Every scene is classified.',
     empty: 'No scene confirmed yet.',
     instruction: 'What is this scene about?',
     playScene: '▶ Listen to this scene',
