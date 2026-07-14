@@ -36,9 +36,11 @@
   margin: 0;
   max-width: 30ch;
   font-family: var(--cds-font-load-bearing);
-  font-size: clamp(1.3rem, 3.4vw, 1.8rem);
+  font-size: clamp(24px, 3vh, 30px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1.25;
-  color: var(--cds-ink, #0a0703);
+  color: var(--cds-ink);
 }
 
 .cds-triagem-play {

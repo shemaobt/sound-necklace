@@ -85,6 +85,55 @@ afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
 });
 
+describe('Escuta 2 — título do protótipo (redesign design parity Fase 3)', () => {
+  it('mostra o título do protótipo acima da instrução', () => {
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    expect(screen.getByRole('heading', { name: 'Corte a história em cenas' })).toBeTruthy();
+  });
+});
+
+describe('Escuta 2 — o play branco toca a seleção pendente (redesign design parity Fase 3)', () => {
+  it('o play branco toca a seleção pendente', async () => {
+    const player = spyPlayer();
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: { s: 0, e: 4 },
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 player={player} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ouvir a seleção' }));
+
+    expect(player.toggle).toHaveBeenCalledWith(expect.any(String), 0, 4);
+  });
+
+  it('sem seleção ativa, o botão "Ouvir a seleção" não existe', () => {
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    expect(screen.queryByRole('button', { name: 'Ouvir a seleção' })).toBeNull();
+  });
+});
+
 describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
   it('confirmar a cena trava o span, marca a conta final e reabre a próxima na emenda', async () => {
     load(

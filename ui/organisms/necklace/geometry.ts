@@ -19,6 +19,9 @@ export const SIZE_M: Size = { slot: 25, bead: 18, row: 31 };
 /** Tamanho das telas de escuta do Protótipo.dc.html: conta 26, gap 8, fio a 17px. */
 export const SIZE_L: Size = { slot: 34, bead: 26, row: 33 };
 
+/** Tamanho da Segmentação do Protótipo.dc.html: conta 30, gap 8, fio a 19px. */
+export const SIZE_SEG: Size = { slot: 38, bead: 30, row: 35 };
+
 export interface WindowRange {
   winS: number;
   winE: number;

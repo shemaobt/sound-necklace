@@ -29,6 +29,7 @@ export const en: Dict = {
     refused: 'Could not sign in. Check the username and password.',
   },
   setup: {
+    eyebrow: 'Preparation',
     title: 'New session',
     trustLine: 'Your audio and answers are kept safely in your project. Only your team has access.',
     aiVoiceNotice:
@@ -149,6 +150,8 @@ export const en: Dict = {
     confirm: 'I have heard the whole story',
   },
   escuta2: {
+    title: 'Cut the story into scenes',
+    playSelection: 'Listen to the selection',
     instructionPre: 'Tap the necklace where ',
     instructionEmph: 'this scene ends',
     instructionPost: '. The beginning is already stitched.',

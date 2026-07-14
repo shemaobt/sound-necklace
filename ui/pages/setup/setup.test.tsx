@@ -68,6 +68,14 @@ beforeEach(() => {
 });
 afterEach(() => window.history.replaceState({}, '', '/'));
 
+describe('Setup — eyebrow cerimonial (redesign design parity Fase 3)', () => {
+  it('mostra o eyebrow cerimonial "Preparação"', async () => {
+    renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+    expect(screen.getByText('Preparação')).toBeTruthy();
+  });
+});
+
 describe('Setup — criação de sessão (§8.1)', () => {
   it('áudio + nível + consentimento cria a sessão com grade + manifest_id e vai para Escuta 1', async () => {
     const p = ports();

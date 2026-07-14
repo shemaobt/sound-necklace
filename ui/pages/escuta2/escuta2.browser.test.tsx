@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Player } from '../../../adapters/audio';
 import { buildBeads, createSession, type SessionState } from '../../../domain';
-import { beadPosition, SIZE_M } from '../../organisms/necklace/geometry';
+import { beadPosition, SIZE_L, beadsPerRow } from '../../organisms/necklace/geometry';
 import { sessionStore } from '../../state';
 import Escuta2 from './index';
 
@@ -75,7 +75,7 @@ function mount(player: Player): { host: HTMLDivElement; root: Root; el: HTMLElem
 
 function firePointer(el: HTMLElement, index: number): void {
   const rect = el.getBoundingClientRect();
-  const pos = beadPosition(index, 0, 20, SIZE_M);
+  const pos = beadPosition(index, 0, beadsPerRow(rect.width, SIZE_L), SIZE_L);
   el.dispatchEvent(
     new PointerEvent('pointerdown', {
       pointerId: 1,

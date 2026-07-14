@@ -7,6 +7,7 @@ import type { BucketSource } from '../../../adapters/bucket';
 import type { GranularityResolver } from '../../../adapters/granularity';
 import type { SessionStore } from '../../../adapters/sessions';
 import { type BucketAudio, type GranularityLevel, toSessionDto } from '../../../contracts';
+import { ShemaIcon } from '../../tokens';
 import { buildBeads, createSession, hashPCM } from '../../../domain';
 import { navigate as routerNavigate } from '../../app/router';
 import { sessionStore } from '../../state';
@@ -160,10 +161,16 @@ export function Setup({
 
   return (
     <section className="cds-setup">
-      <h1 className="cds-setup-title">{t('setup.title')}</h1>
-      <p className="cds-setup-trust" role="note">
-        {t('setup.trustLine')}
-      </p>
+      <span className="cds-setup-watermark" aria-hidden="true">
+        <ShemaIcon colorway="telha" size={340} />
+      </span>
+      <header className="cds-setup-header">
+        <p className="cds-setup-eyebrow">{t('setup.eyebrow')}</p>
+        <h1 className="cds-setup-title">{t('setup.title')}</h1>
+        <p className="cds-setup-trust" role="note">
+          {t('setup.trustLine')}
+        </p>
+      </header>
       <p className="cds-setup-ai-notice" role="note">
         {t('setup.aiVoiceNotice')}
       </p>

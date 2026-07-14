@@ -1,29 +1,39 @@
 /*
- * Pontos da Triagem (protótipo tDots): discos pequenos; o atual em telha e maior,
- * os demais no verde a ~22%. Botões-alvo de salto, sem rótulo numérico.
+ * Pontos da Triagem (Protótipo.dc.html, tDots): pérolas de 22px (30px a atual,
+ * com halo telha); taggeada = pérola da cor da cena com check, none_fit = a
+ * mesma esmaecida, pendente = aro vazio. Botões-alvo de salto, sem números.
  */
 .cds-progress-dots {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 11px;
 }
 
 .cds-progress-dots-dot {
-  width: 8px;
-  height: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgba(63, 62, 32, 0.22);
+  background: transparent;
   cursor: pointer;
-  transition:
-    width 160ms,
-    height 160ms,
-    background-color 160ms;
+  flex: none;
+  transition: all 0.22s;
+}
+
+.cds-progress-dots-dot[data-state='pending'] {
+  border: 1.5px solid rgba(63, 62, 32, 0.28);
+}
+
+.cds-progress-dots-dot[data-state='none_fit'] {
+  opacity: 0.42;
 }
 
 .cds-progress-dots-dot[data-current='true'] {
-  width: 11px;
-  height: 11px;
-  background: var(--cds-telha);
+  width: 30px;
+  height: 30px;
+  box-shadow: 0 0 0 4px rgba(190, 74, 1, 0.14);
 }

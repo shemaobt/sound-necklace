@@ -33,6 +33,7 @@ export const pt = {
     refused: 'Não foi possível entrar. Confira o usuário e a senha.',
   },
   setup: {
+    eyebrow: 'Preparação',
     title: 'Nova sessão',
     trustLine:
       'Seus áudios e respostas ficam guardados com segurança no seu projeto. Só a sua equipe tem acesso.',
@@ -165,6 +166,8 @@ export const pt = {
     confirm: 'Já ouvi a história completa',
   },
   escuta2: {
+    title: 'Corte a história em cenas',
+    playSelection: 'Ouvir a seleção',
     instructionPre: 'Toque no colar onde ',
     instructionEmph: 'esta cena termina',
     instructionPost: '. O começo já está costurado.',

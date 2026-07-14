@@ -27,16 +27,18 @@
   white-space: nowrap;
 }
 
-/* botão ▶: só o glifo, herda a cor; o anel de foco global cuida do teclado */
+/* botão ▶: círculo creme de 28px com o glifo oliva (protótipo sc.play) */
 .cds-scene-phrase-chip-play {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
-  background: transparent;
+  background: var(--cds-cream);
   border-radius: 50%;
-  color: var(--cds-telha);
+  color: var(--cds-olive);
 }
 
 .cds-scene-phrase-chip-play[aria-pressed='true'] {

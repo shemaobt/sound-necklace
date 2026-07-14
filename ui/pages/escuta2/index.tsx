@@ -12,7 +12,7 @@ import {
   setMode,
 } from '../../../domain';
 import { Button } from '../../atoms';
-import { Necklace, type NecklaceSegment } from '../../organisms';
+import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import { playActionOn, sceneColor, sceneLabel } from './cutting';
 import { ScenePhraseChip } from '../../molecules';
@@ -129,13 +129,22 @@ export function Escuta2({ player = null }: Escuta2Props) {
     if (player && pt.span) player.toggle(pt.part_id, pt.span.s, pt.span.e);
   };
 
+  /* o play branco do protótipo (playCurrentCut): toca a seleção pendente */
+  const playSelection = (): void => {
+    const sel = sessionStore.getState().session?.selection;
+    if (player && sel) player.toggle('selecao-pendente', sel.s, sel.e);
+  };
+
   return (
     <section className="cds-escuta2">
-      <p className="cds-escuta2-instruction" data-role="instruction">
-        {t('escuta2.instructionPre')}
-        <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
-        {t('escuta2.instructionPost')}
-      </p>
+      <div className="cds-escuta2-header">
+        <h2 className="cds-escuta2-title">{t('escuta2.title')}</h2>
+        <p className="cds-escuta2-instruction" data-role="instruction">
+          {t('escuta2.instructionPre')}
+          <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
+          {t('escuta2.instructionPost')}
+        </p>
+      </div>
 
       <div className="cds-escuta2-stage">
         <Necklace
@@ -145,6 +154,7 @@ export function Escuta2({ player = null }: Escuta2Props) {
           lockedEndBeads={lockedEndBeads}
           selection={session.selection}
           pendingStart={session.pendingStart}
+          size={SIZE_L}
           playbackHead={head}
           onBeadPointerDown={onBead}
           onEdgeHover={onEdgeHover}
@@ -152,31 +162,47 @@ export function Escuta2({ player = null }: Escuta2Props) {
       </div>
 
       {hasLocked ? (
-        <ul className="cds-escuta2-chips">
-          {lockedIndexes.map((i) => {
-            const pt = session.parts[i]!;
-            return (
-              <li key={pt.part_id}>
-                <ScenePhraseChip
-                  label={sceneLabel(i)}
-                  swatch={sceneColor(i)}
-                  onPlay={() => playScene(pt)}
-                  actions={
-                    <Button variant="ghost" size="sm" onClick={() => reopen(i)}>
-                      {t('escuta2.reopen')}
-                    </Button>
-                  }
-                />
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <div className="cds-escuta2-divider" aria-hidden="true" />
+          <ul className="cds-escuta2-chips">
+            {lockedIndexes.map((i) => {
+              const pt = session.parts[i]!;
+              return (
+                <li key={pt.part_id}>
+                  <ScenePhraseChip
+                    label={sceneLabel(i)}
+                    swatch={sceneColor(i)}
+                    onPlay={() => playScene(pt)}
+                    actions={
+                      <Button variant="ghost" size="sm" onClick={() => reopen(i)}>
+                        {t('escuta2.reopen')}
+                      </Button>
+                    }
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </>
       ) : null}
 
       <div className="cds-escuta2-controls">
         <Button variant="ghost" size="sm" onClick={back}>
           {t('escuta2.back')}
         </Button>
+
+        {session.selection ? (
+          <button
+            type="button"
+            className="cds-escuta2-play"
+            aria-label={t('escuta2.playSelection')}
+            onClick={playSelection}
+          >
+            <svg width={19} height={19} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </button>
+        ) : null}
 
         {anchor ? (
           <div className="cds-escuta2-confirm-scene" data-role="primary-action">

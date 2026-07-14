@@ -1,32 +1,63 @@
-/* Setup (redesign §6.1, PRD v2 §8.1): superfície de trabalho creme, densidade de
-   facilitadora. Portas de entrada + escolha de áudio + nível de granularidade +
-   consentimento, em duas colunas. Sem movimento decorativo. */
+/* Setup (Protótipo.dc.html, isSetup + PRD v2 §8.1): coluna ÚNICA centrada de
+   640px — eyebrow "Preparação", título 40px, linha de confiança (§O7) — com o
+   conteúdo do PRD (portas, bucket-only, granularidade, consentimento) na
+   linguagem visual do protótipo: cards brancos radius 14/15, CTA telha
+   full-width, marca d'água no canto. Sem movimento decorativo. */
 
 .cds-setup {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  align-items: center;
+  gap: 26px;
   min-height: 72vh;
-  padding: clamp(1.5rem, 5vh, 3rem) clamp(1rem, 5vw, 3rem);
+  padding: 40px clamp(1rem, 5vw, 3rem) 48px;
   background: var(--cds-cream);
   color: var(--cds-olive);
+  overflow: hidden;
+}
+
+/* todos os blocos da coluna única do protótipo */
+.cds-setup > * {
+  width: 100%;
+  max-width: 640px;
+  position: relative;
+}
+
+.cds-setup-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  text-align: center;
+}
+
+.cds-setup-eyebrow {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cds-ink-subtle);
 }
 
 .cds-setup-title {
   margin: 0;
   font-family: var(--cds-font-load-bearing);
-  font-size: clamp(1.4rem, 3.6vw, 2rem);
-  line-height: 1.15;
-  color: var(--cds-ink, #0a0703);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+  color: var(--cds-ink);
 }
 
 /* §O7 — linha de confiança fixada e proeminente. */
 .cds-setup-trust {
   margin: 0;
   padding: 0.75rem 1rem;
-  border-radius: var(--cds-radius-card);
-  background: var(--cds-warning-bg, #f4ecd8);
-  color: var(--cds-warning-ink, #5a4a2a);
+  border-radius: var(--cds-radius-tile);
+  background: var(--cds-warning-bg);
+  color: var(--cds-warning-ink);
   font-weight: 600;
 }
 
@@ -34,29 +65,34 @@
 .cds-setup-ai-notice {
   margin: 0;
   padding: 0 1rem;
-  color: var(--cds-warning-ink, #5a4a2a);
+  color: var(--cds-warning-ink);
   font-size: 0.875rem;
+  text-align: center;
 }
 
 .cds-setup-heading {
   margin: 0 0 0.5rem;
-  font-family: var(--cds-font-load-bearing);
-  font-size: 1rem;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cds-ink-subtle);
 }
 
 .cds-setup-doors,
 .cds-setup-levels {
   display: flex;
-  gap: 0.75rem;
+  gap: 9px;
   flex-wrap: wrap;
 }
 
 .cds-setup-audios {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 8px;
 }
 
+/* cards brancos do protótipo (bigStyle): borda quase invisível + sombra baixa */
 .cds-setup-door,
 .cds-setup-level,
 .cds-setup-audio {
@@ -64,13 +100,15 @@
   flex-direction: column;
   gap: 0.15rem;
   text-align: left;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--cds-hairline, #d8ccb0);
-  border-radius: var(--cds-radius-card);
+  padding: 14px 16px;
+  border: 1px solid rgba(63, 62, 32, 0.12);
+  border-radius: 15px;
   background: #fff;
+  box-shadow: var(--cds-shadow-card);
   color: inherit;
   font: inherit;
   cursor: pointer;
+  transition: all 0.14s;
 }
 
 .cds-setup-door {
@@ -82,11 +120,18 @@
   align-items: flex-start;
 }
 
+.cds-setup-door:hover,
+.cds-setup-level:hover,
+.cds-setup-audio:hover {
+  border-color: var(--cds-telha);
+  box-shadow: 0 4px 12px rgba(190, 74, 1, 0.14);
+}
+
 .cds-setup-door[data-state='checked'],
 .cds-setup-level[data-state='checked'],
 .cds-setup-audio[data-state='checked'] {
   border-color: var(--cds-telha);
-  box-shadow: 0 0 0 1px var(--cds-telha) inset;
+  background: color-mix(in srgb, var(--cds-telha) 6%, white);
 }
 
 .cds-setup-door:focus-visible,
@@ -99,42 +144,59 @@
 .cds-setup-door-title,
 .cds-setup-level-title,
 .cds-setup-audio-name {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--cds-ink);
 }
 
 .cds-setup-door-desc,
 .cds-setup-level-desc {
-  font-size: 0.85rem;
-  opacity: 0.75;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--cds-ink-subtle);
 }
 
 .cds-setup-consent-ok {
   font-size: 0.8rem;
-  color: var(--cds-confidence-filled, #3d6b3d);
+  color: #585d31;
 }
 
 .cds-setup-consent-warn {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--cds-warning-ink, #8a5a1a);
+  color: var(--cds-warning-ink);
 }
 
+/* "Áudio pronto" no verde do protótipo (loaded) */
 .cds-setup-audio-ready {
   font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--cds-telha-deep, var(--cds-telha));
+  font-weight: 700;
+  color: #585d31;
 }
 
+.cds-setup-audio[data-state='checked'] {
+  border-color: #777d45;
+  background: rgba(119, 125, 69, 0.08);
+}
+
+/* coluna única do protótipo: as "colunas" empilham dentro dos 640px */
 .cds-setup-cols {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
 }
 
 .cds-setup-col {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.cds-setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
 }
 
 .cds-setup-note {
@@ -146,15 +208,26 @@
 .cds-setup-field {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  font-size: 0.9rem;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cds-ink-subtle);
 }
 
+/* input do protótipo: branco, radius 14, 52px */
 .cds-setup-field input {
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--cds-hairline, #d8ccb0);
-  border-radius: var(--cds-radius-card);
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1px solid rgba(63, 62, 32, 0.18);
+  border-radius: var(--cds-radius-tile);
+  background: #ffffff;
+  color: var(--cds-ink);
   font: inherit;
+  font-size: 15px;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .cds-setup-consent {
@@ -166,24 +239,44 @@
 
 .cds-setup-error {
   margin: 0;
-  color: var(--cds-error, #a4331f);
+  align-self: center;
+  max-width: 60ch;
+  padding: 10px 20px;
+  border-radius: var(--cds-radius-pill);
+  background: rgba(143, 55, 1, 0.1);
+  color: var(--cds-telha-deep);
+  font-size: 14px;
   font-weight: 600;
 }
 
+/* CTA telha full-width do protótipo (segBtnStyle) */
 .cds-setup-create {
-  align-self: flex-start;
-  padding: 0.7rem 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 15px;
   border: none;
-  border-radius: var(--cds-radius-pill, 999px);
-  background: var(--cds-ink, #0a0703);
+  border-radius: var(--cds-radius-pill);
+  background: var(--cds-telha);
   color: var(--cds-cream);
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 15.5px;
+  letter-spacing: 0.03em;
+  box-shadow: var(--cds-shadow-cta);
   cursor: pointer;
+  transition: background 0.16s;
+}
+
+.cds-setup-create:hover:enabled {
+  background: var(--cds-telha-deep);
 }
 
 .cds-setup-create:disabled {
-  opacity: 0.55;
+  background: rgba(190, 74, 1, 0.4);
+  box-shadow: none;
   cursor: progress;
 }
 
@@ -191,9 +284,23 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .cds-setup-import-hint {
   margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  color: var(--cds-olive-soft);
+}
+
+/* marca d'água telha vazando no canto (protótipo) */
+.cds-setup-watermark {
+  position: absolute;
+  right: -90px;
+  bottom: -100px;
+  width: auto;
+  max-width: none;
+  opacity: 0.045;
+  pointer-events: none;
 }

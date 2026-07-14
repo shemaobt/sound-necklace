@@ -1,4 +1,3 @@
-import { Pearl } from '../../atoms';
 import type { PaletteEntry } from '../../tokens';
 import './kind-card.css';
 
@@ -46,7 +45,14 @@ export function KindCard({
       className="cds-kind-card"
       onClick={onSelect}
     >
-      {tint && !noneFit ? <Pearl tint={tint} size={22} state="lit" /> : null}
+      {tint && !noneFit ? (
+        <span className="cds-kind-card-dot" aria-hidden="true" style={{ background: tint.base }} />
+      ) : null}
+      {noneFit ? (
+        <span className="cds-kind-card-none-glyph" aria-hidden="true">
+          ø
+        </span>
+      ) : null}
       <span className="cds-kind-card-label">{label}</span>
     </button>
   );

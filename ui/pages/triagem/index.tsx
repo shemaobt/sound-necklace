@@ -14,6 +14,7 @@ import {
   triagemDone,
 } from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
+import { sceneColor } from '../escuta2/cutting';
 import { Button } from '../../atoms';
 import { ProgressDots } from '../../molecules';
 import { CoverageDrawer } from '../../organisms/coverage-drawer/coverage-drawer';
@@ -137,6 +138,15 @@ export function Triagem({ player = null }: TriagemProps) {
       <ProgressDots
         count={parts.length}
         current={idx}
+        scenes={parts.map((p, i) => ({
+          state:
+            p.tag_state === 'tagged'
+              ? 'tagged'
+              : p.tag_state === 'none_fit'
+                ? 'none_fit'
+                : 'pending',
+          tint: sceneColor(i),
+        }))}
         onSelect={setFocusIdx}
         dotLabel={t('progressDots.dotLabel')}
       />
@@ -171,7 +181,7 @@ export function Triagem({ player = null }: TriagemProps) {
           </p>
         ) : null}
         <div data-role="primary-action">
-          <Button variant="dark" disabled={!gate.enabled} onClick={advance}>
+          <Button variant="primary" disabled={!gate.enabled} onClick={advance}>
             {t('triagem.advance')}
           </Button>
         </div>
