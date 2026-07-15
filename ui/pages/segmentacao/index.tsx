@@ -32,6 +32,7 @@ import {
   type SeamCordSide,
   SIZE_SEG,
 } from '../../organisms';
+import { resolveWindow } from '../../organisms/necklace/geometry';
 import { sessionStore, useSessionStore } from '../../state';
 import { playActionOn, sceneColor, sceneLabel } from '../escuta2/cutting';
 import { phraseColor, phraseLabel } from './wiring';
@@ -101,6 +102,10 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
   // momento de revisão (decisão do dono): frases travadas cobrindo a cena toda →
   // nada resta a cortar aqui; UMA ação (Continuar = o mesmo confirmFrasesDone,
   // que sem cena vazia não avisa). Frases esparsas mantêm o botão do PRD.
+  // a moldura tracejada abraça a janela renderizada: contas visíveis × slot + respiro
+  const { winS, winE } = resolveWindow(session.totalBeads, session.beadSec, scSpan);
+  const stageMaxWidth = Math.min(22, winE - winS + 1) * SIZE_SEG.slot + 63;
+
   const lockedPhraseEnds = scenePhrases
     .filter(({ f }) => f.locked && f.span)
     .map(({ f }) => f.span!.e);
@@ -246,7 +251,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
         </p>
       </div>
 
-      <div className="cds-segmentacao-stage">
+      <div className="cds-segmentacao-stage" style={{ maxWidth: stageMaxWidth }}>
         <Necklace
           totalBeads={session.totalBeads}
           beadSec={session.beadSec}

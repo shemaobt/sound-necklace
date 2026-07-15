@@ -10,6 +10,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: clamp(12px, 2vh, 22px);
   min-height: calc(100vh - 110px);
   padding: 18px 1.5rem 3rem;
@@ -54,10 +55,10 @@
 
 /* a moldura tracejada da cena desperta (protótipo: 1.5px dashed, radius 26) */
 .cds-segmentacao-stage {
-  margin-top: auto;
   position: relative;
   width: 100%;
-  /* 22 contas por fileira no slot de 38px + o respiro da moldura */
+  /* a moldura ABRAÇA o colar: o max-width exato vem inline da página
+     (nº de contas da janela × slot + respiro); teto duro nas 22 do protótipo */
   max-width: 896px;
   padding: 22px 30px;
   border: 1.5px dashed rgba(63, 62, 32, 0.35);
@@ -169,8 +170,4 @@
       transform: none;
     }
   }
-}
-
-.cds-segmentacao > :last-child {
-  margin-bottom: auto;
 }

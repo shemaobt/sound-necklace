@@ -9,9 +9,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* o BLOCO INTEIRO centra no espaço sob o chrome (título desce junto — sem
+     vazios gigantes entre o cabeçalho e o miolo em telas altas) */
+  justify-content: center;
   gap: clamp(14px, 2.5vh, 24px);
-  /* altura estável sob header (64) + fio (46): o conteúdo centra no espaço
-     restante independente da quantidade de contas (protótipo: justify safe center) */
   min-height: calc(100vh - 110px);
   padding: 18px 1.5rem 3rem;
   background: var(--cds-cream);
@@ -50,8 +51,6 @@
 }
 
 .cds-escuta2-stage {
-  /* centra o miolo entre o cabeçalho (topo) e a base — par do margin-bottom:auto */
-  margin-top: auto;
   position: relative;
   width: 100%;
   /* 28 contas por fileira no slot de 34px (protótipo _chunk(beads, 28)) */
@@ -141,8 +140,4 @@
       transform: none;
     }
   }
-}
-
-.cds-escuta2 > :last-child {
-  margin-bottom: auto;
 }

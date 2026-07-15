@@ -9,6 +9,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 1.5rem;
   min-height: calc(100vh - 110px);
   padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
@@ -24,7 +25,6 @@
 }
 
 .cds-triagem-focus {
-  margin-top: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -119,7 +119,6 @@
 
 /* a revisão centra como o foco centraria */
 .cds-triagem-review {
-  margin-top: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -133,8 +132,4 @@
   font-weight: 300;
   font-size: clamp(24px, 3.4vh, 34px);
   color: var(--cds-ink);
-}
-
-.cds-triagem > :last-child {
-  margin-bottom: auto;
 }
