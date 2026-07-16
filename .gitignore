@@ -21,3 +21,4 @@ test-results/
 # artefatos do vitest browser mode
 .vitest-attachments/
 **/__screenshots__/
+.parity-shots/

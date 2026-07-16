@@ -6,6 +6,8 @@ import type { PaletteEntry } from '../../tokens';
 import {
   bandRects,
   beadAtXY,
+  centerOffset,
+  cordRects,
   beadPosition,
   beadsPerRow,
   type Rect,
@@ -40,6 +42,10 @@ export interface NecklaceProps {
   pendingStart?: number | null;
   /** span da cena ativa (Segmentação): abre a janela cena ± margem, dim fora, banda tracejada */
   window?: Span | null;
+  /** margem da janela em contas; 0 = só a cena (Triagem). Padrão: max(3, 2s) */
+  windowMargin?: number;
+  /** banda tracejada da cena; a Triagem a dispensa (a cena já vem sozinha, no cartão) */
+  sceneBand?: boolean;
   /** cabeça de reprodução: acende as contas ≤ head de forma imperativa (60fps) */
   playbackHead?: number | null;
   /** modo transporte (Escuta/review): toca ao tocar, sem afordâncias de seleção */
@@ -62,6 +68,7 @@ interface BeadDescriptor {
 
 interface Field {
   beads: BeadDescriptor[];
+  cords: Rect[];
   sceneBand: Rect[];
   selectionBand: Rect[];
   height: number;
@@ -76,9 +83,12 @@ function computeField(
   lockedEndBeads: number[],
   selection: Span | null,
   window: Span | null,
+  windowMargin: number | undefined,
+  sceneBandOn: boolean,
 ): Field {
-  const { winS, winE } = resolveWindow(total, beadSec, window);
+  const { winS, winE } = resolveWindow(total, beadSec, window, windowMargin);
   const bpr = beadsPerRow(width, size);
+  const xOff = centerOffset(winE - winS + 1, bpr, width, size);
 
   const colorMap = new Map<number, PaletteEntry>();
   for (const seg of segments) {
@@ -92,7 +102,7 @@ function computeField(
     const pos = beadPosition(i, winS, bpr, size);
     beads.push({
       index: i,
-      left: pos.left,
+      left: pos.left + xOff,
       top: pos.top,
       state: dim ? 'dim' : 'unplayed',
       tint: colorMap.get(i),
@@ -101,15 +111,20 @@ function computeField(
     });
   }
 
-  const sceneBand = window
-    ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, bpr, size, 4)
-    : [];
+  const shift = (r: Rect): Rect => ({ ...r, left: r.left + xOff });
+  const sceneBand =
+    window && sceneBandOn
+      ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, bpr, size, 4).map(shift)
+      : [];
   const selectionBand = selection
-    ? bandRects(Math.max(winS, selection.s), Math.min(winE, selection.e), winS, bpr, size, 3)
+    ? bandRects(Math.max(winS, selection.s), Math.min(winE, selection.e), winS, bpr, size, 3).map(
+        shift,
+      )
     : [];
 
   const rows = Math.ceil((winE - winS + 1) / bpr);
-  return { beads, sceneBand, selectionBand, height: rows * size.row + 12 };
+  const cords = cordRects(winS, winE, bpr, size).map(shift);
+  return { beads, cords, sceneBand, selectionBand, height: rows * size.row + 12 };
 }
 
 /** Estado vivo lido pelos listeners nativos delegados (padrão ref-mirror). */
@@ -130,6 +145,18 @@ interface Interaction {
 const BeadField = memo(function BeadField({ field, size }: { field: Field; size: Size }) {
   return (
     <>
+      {field.cords.map((r, i) => (
+        <div
+          key={`cord-${i}`}
+          className="cds-necklace-cord"
+          style={{
+            left: `${r.left}px`,
+            top: `${r.top}px`,
+            width: `${r.width}px`,
+            height: `${r.height}px`,
+          }}
+        />
+      ))}
       {field.sceneBand.map((r, i) => (
         <div
           key={`scene-${i}`}
@@ -184,6 +211,8 @@ export function Necklace(props: NecklaceProps) {
     lockedEndBeads,
     selection = null,
     window = null,
+    windowMargin,
+    sceneBand = true,
     playbackHead = null,
     transportOnly = false,
     size = SIZE_M,
@@ -206,11 +235,24 @@ export function Necklace(props: NecklaceProps) {
         lockedEndBeads ?? [],
         effectiveSelection,
         window,
+        windowMargin,
+        sceneBand,
       ),
-    [totalBeads, beadSec, width, size, segments, lockedEndBeads, effectiveSelection, window],
+    [
+      totalBeads,
+      beadSec,
+      width,
+      size,
+      segments,
+      lockedEndBeads,
+      effectiveSelection,
+      window,
+      windowMargin,
+      sceneBand,
+    ],
   );
 
-  const { winS, winE } = resolveWindow(totalBeads, beadSec, window);
+  const { winS, winE } = resolveWindow(totalBeads, beadSec, window, windowMargin);
   const bpr = beadsPerRow(width, size);
 
   // ref-mirror: os listeners nativos (montados uma vez) leem sempre o estado atual.
@@ -253,8 +295,14 @@ export function Necklace(props: NecklaceProps) {
     function beadFromEvent(ev: PointerEvent): number {
       const ix = ixRef.current;
       const rect = node!.getBoundingClientRect();
+      const xOff = centerOffset(
+        ix.winS <= ix.winE ? ix.winE - ix.winS + 1 : 0,
+        ix.bpr,
+        rect.width,
+        ix.size,
+      );
       return beadAtXY(
-        ev.clientX - rect.left,
+        ev.clientX - rect.left - xOff,
         ev.clientY - rect.top,
         ix.winS,
         ix.winE,

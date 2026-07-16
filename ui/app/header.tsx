@@ -5,24 +5,53 @@ import { setLang, type Lang } from '../i18n';
 import './header.css';
 
 /**
- * Cabeçalho do app (referência L203–212 + PRD §9/§13): a marca Shemá, o toggle de
- * idioma PT/EN (ENG-279) e o toggle de som que silencia todo som da UI. O som é
- * presentacional aqui — o shell liga o app store (`muted`); o idioma é resolvido pelo
- * i18n (camada de wiring) e persiste no reload.
+ * Cabeçalho do app (Protótipo.dc.html, faixa de 64px): pill "← Histórias" + só o
+ * ícone da marca à esquerda; toggle de idioma PT/EN (ENG-279, não existe no
+ * protótipo mas fica, discreto) e o toggle de som à direita. Sem título — o nome
+ * do app vive no dashboard. A variante escura (telas cerimoniais) é CSS puro:
+ * `.cds-app:has(...)` troca as custom properties de chrome (app.css).
  */
-export function Header({ muted, onToggleMuted }: { muted: boolean; onToggleMuted: () => void }) {
+export function Header({
+  muted,
+  onToggleMuted,
+  onBack,
+}: {
+  muted: boolean;
+  onToggleMuted: () => void;
+  onBack: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const other: Lang = i18n.language.startsWith('en') ? 'pt' : 'en';
 
   return (
     <header className="cds-header">
-      <div className="cds-header-brand">
-        <ShemaIcon colorway="telha" size={44} />
-        <div>
-          <p className="cds-header-eyebrow">{t('header.eyebrow')}</p>
-          <h1 className="cds-header-title">{t('header.title')}</h1>
-          <p className="cds-header-subtitle">{t('header.subtitle')}</p>
-        </div>
+      <div className="cds-header-left">
+        <button
+          type="button"
+          className="cds-header-back"
+          aria-label={t('header.backAria')}
+          onClick={onBack}
+        >
+          <svg
+            width={17}
+            height={17}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M19 12H5" />
+            <path d="M11 6l-6 6 6 6" />
+          </svg>
+          {t('header.back')}
+        </button>
+        <span className="cds-header-icon">
+          <ShemaIcon colorway="telha" size={26} />
+        </span>
       </div>
       <div className="cds-header-actions">
         <button
@@ -51,8 +80,8 @@ export function Header({ muted, onToggleMuted }: { muted: boolean; onToggleMuted
 function SoundGlyph({ muted }: { muted: boolean }) {
   return (
     <svg
-      width={22}
-      height={22}
+      width={18}
+      height={18}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

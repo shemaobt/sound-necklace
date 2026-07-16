@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import baseCss from './base.css?inline';
 import fontsSource from './fonts.ts?raw';
 import { ShemaIcon } from './icon';
-import { colors, darken30, iconColorways, motion, phrasePalette, scenePalette } from './tokens';
+import { colors, iconColorways, motion, phrasePalette, scenePalette } from './tokens';
 import tokensCss from './tokens.css?inline';
 
 /**
@@ -24,6 +24,14 @@ describe('tokens Shemá — valores congelados (§4.1/§4.4)', () => {
     expect(colors.error).toBe('#8F3701');
     expect(colors.pearl).toBe('#E7E3D3');
     expect(colors.pearlHighlight).toBe('#FBFAF3');
+    expect(colors.ink).toBe('#0A0703');
+    expect(colors.oliveSoft).toBe('#5A5A3E');
+    expect(colors.inkSubtle).toBe('#6D6C56');
+    expect(colors.surfaceMuted).toBe('#ECEADF');
+    expect(colors.frame).toBe('#EDEBE0');
+    expect(colors.accentSoft).toBe('#F2D8C2');
+    expect(colors.sand).toBe('#C5C29F');
+    expect(colors.sandMuted).toBe('#B8B79E');
   });
 
   it('motion: ease-out ~220ms, sem bounces', () => {
@@ -54,13 +62,25 @@ describe('paletas de identidade de segmento (§4.2)', () => {
     ]);
   });
 
-  it('cada entrada expõe {base, lit, deep}: lit = base; deep = base 30% mais escuro (fórmula do shade() da referência)', () => {
-    for (const entry of [...scenePalette, ...phrasePalette]) {
-      expect(entry.lit).toBe(entry.base);
-      expect(entry.deep).toBe(darken30(entry.base));
-    }
-    // vetor conhecido: telha #BE4A01 → r 190→133 (0x85), g 74→52 (0x34), b 1→1 (0x01)
-    expect(darken30('#BE4A01')).toBe('#853401');
+  it('cada entrada expõe {base, lit, deep} com as triplas exatas do Protótipo.dc.html (PAL/PALF)', () => {
+    expect(scenePalette).toEqual([
+      { base: '#BE4A01', lit: '#E8813E', deep: '#8F3701' },
+      { base: '#9A7B2E', lit: '#C2A55A', deep: '#6E5A22' },
+      { base: '#4E7A6A', lit: '#7BA595', deep: '#3A5C4F' },
+      { base: '#5E6B8C', lit: '#8B97B5', deep: '#46506A' },
+      { base: '#8C5A74', lit: '#B4849D', deep: '#694257' },
+      { base: '#777D45', lit: '#9EA46B', deep: '#585D31' },
+      { base: '#89AAA3', lit: '#B2CCC6', deep: '#5F827B' },
+      { base: '#A85D3E', lit: '#CE8767', deep: '#7E442C' },
+    ]);
+    expect(phrasePalette).toEqual([
+      { base: '#D98A54', lit: '#F0B489', deep: '#B06A3A' },
+      { base: '#C4A96A', lit: '#E0CA97', deep: '#9C844D' },
+      { base: '#86AC9C', lit: '#AECFC2', deep: '#688B7D' },
+      { base: '#93A0BE', lit: '#BBC5DC', deep: '#71809F' },
+      { base: '#B98FA8', lit: '#D8B5C9', deep: '#966F87' },
+      { base: '#A3A878', lit: '#C4C8A0', deep: '#7F845B' },
+    ]);
   });
 });
 
@@ -71,6 +91,24 @@ describe('css base e tokens (§4.5, PRD §13, LGPD)', () => {
     expect(tokensCss).toContain('--cds-telha: #be4a01');
     expect(tokensCss).toContain('--cds-telha-deep: #8f3701');
     expect(tokensCss).toContain('--cds-motion-duration: 220ms');
+    expect(tokensCss).toContain('--cds-ink: #0a0703');
+    expect(tokensCss).toContain('--cds-olive-soft: #5a5a3e');
+    expect(tokensCss).toContain('--cds-ink-subtle: #6d6c56');
+    expect(tokensCss).toContain('--cds-surface-muted: #eceadf');
+    expect(tokensCss).toContain('--cds-frame: #edebe0');
+    expect(tokensCss).toContain('--cds-accent-soft: #f2d8c2');
+    expect(tokensCss).toContain('--cds-radius-input: 12px');
+    expect(tokensCss).toContain('--cds-radius-tile: 14px');
+    expect(tokensCss).toContain('--cds-radius-card-sm: 18px');
+    expect(tokensCss).toContain('--cds-radius-card: 22px');
+    expect(tokensCss).toContain('--cds-radius-frame: 26px');
+    expect(tokensCss).toContain('--cds-shadow-card: 0 2px 6px rgba(63, 62, 32, 0.08)');
+    expect(tokensCss).toContain('--cds-shadow-menu: 0 8px 26px rgba(10, 7, 3, 0.18)');
+    expect(tokensCss).toContain('--cds-shadow-modal: 0 24px 60px -12px rgba(10, 7, 3, 0.5)');
+    expect(tokensCss).toContain('--cds-shadow-cta: 0 4px 14px rgba(190, 74, 1, 0.28)');
+    expect(tokensCss).toContain(
+      '--cds-shadow-play: 0 6px 20px rgba(190, 74, 1, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.16)',
+    );
   });
 
   it('respeita prefers-reduced-motion e foco visível de 3px telha', () => {

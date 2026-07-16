@@ -10,9 +10,9 @@
  */
 export const pt = {
   header: {
-    eyebrow: 'Arquivo Oral · Tripod',
     title: 'Colar de Sons',
-    subtitle: 'Mapeando as histórias do arquivo oral.',
+    back: 'Histórias',
+    backAria: 'Voltar às histórias',
     mute: 'Desligar o som da interface',
     unmute: 'Ligar o som da interface',
     switchLanguage: 'Mudar para inglês',
@@ -33,6 +33,7 @@ export const pt = {
     refused: 'Não foi possível entrar. Confira o usuário e a senha.',
   },
   setup: {
+    eyebrow: 'Preparação',
     title: 'Nova sessão',
     trustLine:
       'Seus áudios e respostas ficam guardados com segurança no seu projeto. Só a sua equipe tem acesso.',
@@ -113,6 +114,10 @@ export const pt = {
     reviewOwn: '🔒 Modo de revisão — a segmentação está travada.',
     unlock: 'Destravar para editar',
   },
+  /** Momento de revisão inferido: uma manchete + um único "Continuar →". */
+  review: {
+    continue: 'Continuar →',
+  },
   confidence: {
     certeza: 'Certeza',
     quase: 'Quase',
@@ -160,11 +165,12 @@ export const pt = {
   },
   escuta1: {
     tagline: 'Ouça a história.',
-    listen: 'Ouvir a história',
     reopen: 'Reabrir',
     confirm: 'Já ouvi a história completa',
   },
   escuta2: {
+    title: 'Corte a história em cenas',
+    reviewHeadline: 'A história está toda em cenas.',
     instructionPre: 'Toque no colar onde ',
     instructionEmph: 'esta cena termina',
     instructionPost: '. O começo já está costurado.',
@@ -174,8 +180,8 @@ export const pt = {
     confirmAll: 'Confirmar as cenas →',
   },
   segmentacao: {
+    reviewHeadline: 'As frases desta cena estão prontas.',
     instruction: 'Toque no colar o começo e o fim de cada frase.',
-    playScene: '▶ ouvir a cena',
     reopen: 'Reabrir',
     flagMarked: '⚑ marcada',
     flagReview: '⚑ revisar',
@@ -228,9 +234,10 @@ export const pt = {
     ariaLabel: 'o guia da conversa',
   },
   triagem: {
+    reviewHeadline: 'Todas as cenas classificadas.',
     empty: 'Nenhuma cena confirmada ainda.',
     instruction: 'Essa cena é sobre o quê?',
-    playScene: '▶ Ouvir esta cena',
+    colarHint: 'toque no colar para ouvir esta cena',
     tagNoneFit: '⌀ nenhum se encaixa',
     tagPending: '— por classificar',
     confAlta: 'certeza',
@@ -240,7 +247,6 @@ export const pt = {
       '⌀ Nenhum se encaixa — evidência para nomear um tipo nativo quando o padrão se repetir.',
     lockout:
       '⚠ Nenhuma cena se encaixa em Rute. Segmentação e Mapeamento ficam travadas — esta história não rende cobertura de Rute. As marcas ficam salvas como evidência de tipo nativo.',
-    advance: 'Já classifiquei todas as cenas →',
   },
   triagemPicker: {
     // Aninhado de verdade: chaves planas com ponto só resolviam por um FALLBACK do
@@ -280,9 +286,9 @@ export const pt = {
     listenScene: '▶ ouvir a cena',
     listenPhrase: '▶ ouvir a frase',
     instruction: 'Ouça o trecho e responda com calma, com a sua voz.',
-    typedAria: 'observação da facilitadora',
     reportAria: 'relatório',
     reportFallback: 'A conversa terminou. O relatório abre aqui.',
+    toExport: 'Guardar os documentos →',
     prev: '← anterior',
   },
   seamModal: {
@@ -297,6 +303,8 @@ export const pt = {
     markerAfter: 'borda nova',
   },
   relatorio: {
+    eyebrow: 'A conversa sobre o sentido',
+    headline: 'Tudo que vocês falaram, reunido.',
     facilitatorLed: 'conduzida pela facilitadora',
     answerDuration: 'duração da resposta',
     answer: 'resposta',
@@ -308,18 +316,20 @@ export const pt = {
     groupPhrase: 'Frase {{n}}',
     playAnswer: '▶ ouvir a resposta',
     noAnswerYet: 'ainda sem resposta gravada',
+    writeAnswer: 'escrever a resposta',
     addNote: 'acrescentar uma observação',
-    downloadReport: 'Baixar relatório (.md)',
-    downloadRetorno: 'Baixar a ancoragem (.json)',
   },
   conversationStage: {
     listen: 'Ouvir a pergunta',
     record: 'gravar a resposta',
     stop: 'Parar',
+    idleHint: 'Toque e fale a sua resposta',
+    emptyWave: 'a sua resposta vira um fio de som aqui',
+    recordingLabel: 'Gravando…',
     play: 'ouvir',
     again: 'de novo',
     typedHint: 'A facilitadora pode escrever depois — nunca por você.',
-    prev: 'Anterior',
+    prev: '← anterior',
     next: 'Próxima pergunta',
     progressAria: 'progresso da conversa',
   },

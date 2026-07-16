@@ -4,21 +4,22 @@
  */
 .cds-confidence-trio {
   display: flex;
-  gap: 26px;
+  justify-content: center;
+  gap: 14px;
 }
 
 .cds-confidence-trio-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   width: 168px;
-  padding: 28px 16px;
+  padding: 22px 16px;
   border: 1.5px solid transparent;
-  border-radius: var(--cds-radius-card, 20px);
+  border-radius: 20px;
   font-family: var(--cds-font-load-bearing);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
   transition:
     box-shadow var(--cds-motion-duration, 220ms) var(--cds-motion-easing, ease-out),
@@ -39,9 +40,14 @@
 
 .cds-confidence-trio-card[data-choice='duvida'] {
   background: white;
-  color: var(--cds-warning-ink);
+  color: var(--cds-olive-soft);
   border-style: dashed;
-  border-color: var(--cds-hairline);
+  border-color: rgba(63, 62, 32, 0.3);
+}
+
+/* o disco da Certeza é creme sobre o cartão oliva (protótipo pickConfAlta) */
+.cds-confidence-trio-card[data-choice='certeza'] .cds-confidence-disc {
+  background: var(--cds-cream);
 }
 
 .cds-confidence-trio-card[aria-checked='true'] {

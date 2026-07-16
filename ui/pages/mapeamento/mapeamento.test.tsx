@@ -186,8 +186,8 @@ describe('Mapeamento — o ▶ do span de cada nível (PRD v2 §8.7)', () => {
   });
 });
 
-describe('Mapeamento — resposta por voz e canal digitado (PRD v2 §8.7, §10.4)', () => {
-  it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "listen" toca; digitar grava no texto — e ambos coexistem', async () => {
+describe('Mapeamento — resposta por voz, entrevista só-voz (PRD v2 §8.7, §10.4, design parity)', () => {
+  it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
     render(<Mapeamento recorder={recorder} />);
@@ -209,12 +209,8 @@ describe('Mapeamento — resposta por voz e canal digitado (PRD v2 §8.7, §10.4
     await userEvent.click(screen.getByRole('button', { name: 'ouvir' }));
     expect(recorder.playing).toBe(path);
 
-    // o canal digitado escreve na resposta de texto do domínio (coexiste com a voz)
-    const textarea = screen.getByRole('textbox');
-    await userEvent.type(textarea, 'era uma vez');
-    const answer = sessionStore.getState().session!.mapping!.level1.recontar;
-    expect(answer).toBe('era uma vez');
-    expect(await recorder.has(path)).toBe(true);
+    // a digitação saiu do palco da entrevista — vive só no relatório (ui/pages/relatorio)
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 
   it('parar avisa o shell (onVoiceSaved) com o caminho canônico da pergunta', async () => {
@@ -285,7 +281,7 @@ describe('Mapeamento — navegação entre níveis (referência mapNav L1099–1
     load(mapping());
     render(<Mapeamento />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Anterior' }));
+    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
     expect(sessionStore.getState().session!.mode).toBe('segmentacao');
   });
 
@@ -329,11 +325,13 @@ describe('Mapeamento — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
     assertNoDigits();
   });
 
-  it('o palco aplica o fundo creme (redesign §6.6, §4.5)', () => {
+  it('o palco é full-bleed: a página não pinta fundo próprio (o oliva vem do shell)', () => {
     load(mapping());
     const { container } = render(<Mapeamento />);
     expect(container.querySelector('.cds-mapeamento')).not.toBeNull();
-    expect(mapeamentoCss).toMatch(/\.cds-mapeamento\s*\{[^}]*var\(--cds-cream\)/);
+    // Protótipo: a tela INTEIRA é oliva — pintado pelo shell via :has(); um fundo
+    // aqui criaria a "faixa escura dentro de moldura clara" que não existe lá.
+    expect(mapeamentoCss).not.toMatch(/\.cds-mapeamento\s*\{[^}]*background/);
   });
 });
 
@@ -414,5 +412,45 @@ describe('Mapeamento — a voz do guia (ENG-280)', () => {
     expect(tts.spoken).toEqual([]);
     expect(screen.queryByRole('button', { name: 'Ouvir a pergunta' })).toBeNull();
     expect(document.querySelector('[data-speaking]')?.getAttribute('data-speaking')).toBe('false');
+  });
+});
+
+describe('Mapeamento — a passagem para o relatório (ENG-250)', () => {
+  it('a resposta em VOZ chega tocável ao relatório: o card promete voz, não um campo vazio', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    render(<Mapeamento recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+
+    // anda até o relatório (a última "Próxima pergunta" abre a prévia)
+    const total = questionSequence(sessionStore.getState().session!).length;
+    for (let i = 0; i < total; i++) {
+      await userEvent.click(screen.getByRole('button', { name: 'Próxima pergunta' }));
+    }
+
+    // a gravação da 1ª pergunta é ouvível LÁ — sem o recorder o card cairia no
+    // "ainda sem resposta gravada" e a voz ficaria inalcançável
+    const play = await screen.findByRole('button', { name: '▶ ouvir a resposta' });
+    await userEvent.click(play);
+    expect(recorder.playing).toBe('respostas/level1/recontar.webm');
+  });
+});
+
+describe('Mapeamento — o relatório não é o fim do fluxo (protótipo toExport)', () => {
+  it('a prévia oferece "Guardar os documentos →": a última tela do protótipo não fica só no fio de contas', async () => {
+    const onGoToExport = vi.fn();
+    load(mapping());
+    render(<Mapeamento onGoToExport={onGoToExport} />);
+
+    const total = questionSequence(sessionStore.getState().session!).length;
+    for (let i = 0; i < total; i++) {
+      await userEvent.click(screen.getByRole('button', { name: 'Próxima pergunta' }));
+    }
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar os documentos →' }));
+
+    expect(onGoToExport).toHaveBeenCalled();
   });
 });

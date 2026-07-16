@@ -20,5 +20,6 @@
 }
 
 .cds-confidence-disc[data-variant='dashed'] {
-  border: 4px dashed color-mix(in srgb, var(--cds-confidence-filled) 35%, var(--cds-cream));
+  /* protótipo pickConfBaixa: aro sólido areia de 4px */
+  border: 4px solid var(--cds-sand, #c5c29f);
 }

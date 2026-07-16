@@ -29,10 +29,12 @@ describe('KindCard — cartão de tipo de cena + variante "nenhum se encaixa" (r
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
 
-  it('mostra um ponto de cor tingido pelo segmento', () => {
+  it('mostra um ponto de cor chapado tingido pelo tema (protótipo _tile.dot)', () => {
     const { container } = render(<KindCard label="Chegada a um lugar" tint={teal} />);
-    const dot = container.querySelector<HTMLElement>('.cds-pearl');
-    expect(dot?.style.getPropertyValue('--cds-pearl-base')).toBe(teal.base);
+    const dot = container.querySelector<HTMLElement>('.cds-kind-card-dot');
+    // derivado do próprio tint (jsdom serializa hex como rgb) — nada de tripla à mão
+    const n = parseInt(teal.base.slice(1), 16);
+    expect(dot?.style.background).toBe(`rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`);
   });
 
   it('a variante none-fit é tracejada e não tem ponto de cor', () => {

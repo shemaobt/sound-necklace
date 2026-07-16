@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -92,17 +93,51 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
     expect(sessionStore.getState().session?.whole.confirmed).toBe(false);
   });
 
-  it('o botão grande toca a história a partir do começo (áudio de fixture)', async () => {
+  it('o toque na conta toca a história dali (sem botão de play — som nas contas)', async () => {
     const { engine, player } = await makePlayer();
     const heads: (number | null)[] = [];
     player.onHead((h) => heads.push(h));
     sessionStore.getState().load(makeSession());
     render(<Escuta1 player={player} />);
 
-    await userEvent.click(screen.getByRole('button', { name: /ouvir a história/i }));
+    document
+      .querySelector('.cds-necklace')!
+      .dispatchEvent(
+        new MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 1, clientY: 1 }),
+      );
     engine.transport.advance(0.05);
 
     expect(heads[0]).toBe(0);
+  });
+
+  it('o pill de confirmação acende quando a cabeça alcança o fim da história', async () => {
+    const { engine, player } = await makePlayer();
+    sessionStore.getState().load(makeSession());
+    render(<Escuta1 player={player} />);
+
+    const totalBeads = sessionStore.getState().session?.totalBeads ?? 0;
+    // data-heard vive no wrapper [data-role="primary-action"] (index.tsx)
+    const heardTarget = (): Element | null =>
+      screen
+        .getByRole('button', { name: 'Já ouvi a história completa' })
+        .closest('[data-role="primary-action"]');
+
+    expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
+
+    // sem botão de play: o toque na conta 0 é o transporte (decisão do dono)
+    act(() => {
+      document.querySelector('.cds-necklace')!.dispatchEvent(
+        new MouseEvent('pointerdown', {
+          bubbles: true,
+          cancelable: true,
+          clientX: 1,
+          clientY: 1,
+        }),
+      );
+      engine.transport.advance((totalBeads - 6) * BEAD_SEC);
+    });
+
+    expect(heardTarget()?.getAttribute('data-heard')).toBe('true');
   });
 });
 

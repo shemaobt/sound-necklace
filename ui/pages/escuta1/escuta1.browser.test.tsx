@@ -9,7 +9,6 @@ import {
   type Player,
 } from '../../../adapters/audio';
 import { buildBeads, createSession, type SessionState } from '../../../domain';
-import { beadPosition, SIZE_M } from '../../organisms/necklace/geometry';
 import { sessionStore } from '../../state';
 import Escuta1 from './index';
 
@@ -68,9 +67,11 @@ function firePointer(el: HTMLElement, clientX: number, clientY: number): void {
 }
 
 function beadClient(el: HTMLElement, index: number): { x: number; y: number } {
-  const rect = el.getBoundingClientRect();
-  const pos = beadPosition(index, 0, 20, SIZE_M);
-  return { x: rect.left + pos.left, y: rect.top + pos.top };
+  // centro do PRÓPRIO elemento da conta — imune a tamanho/offset de centralização
+  const bead = el.querySelector(`.cds-necklace-bead[data-idx="${index}"]`);
+  if (!bead) throw new Error(`conta ${index} não renderizada`);
+  const r = bead.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
 beforeEach(() => {

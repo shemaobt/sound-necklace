@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, WaveformBar } from '../../atoms';
@@ -8,6 +7,14 @@ import './conversation-stage.css';
 
 /** Estado da resposta em voz — a máquina vive na página; o organismo só a desenha. */
 export type RecorderState = 'idle' | 'recording' | 'recorded';
+
+/**
+ * Barras da forma de onda (protótipo recBars). Exportado porque quem alimenta
+ * `levels` precisa da MESMA contagem: capado abaixo disso, o rabo da onda ficava
+ * congelado na fórmula de fallback enquanto o começo reagia à voz — o medidor
+ * mentia justamente na tela cujo trabalho é mostrar "estamos te ouvindo".
+ */
+export const WAVE_BARS = 46;
 
 export interface ConversationProgress {
   /** total de perguntas do roteiro para esta estrutura */
@@ -31,8 +38,6 @@ export interface ConversationStageProps {
   onStop?: () => void;
   onPlay?: () => void;
   onRerecord?: () => void;
-  /** canal opcional: a facilitadora escreve depois — "nunca por você" */
-  typedAnswer?: ReactNode;
   progress: ConversationProgress;
   onPrev?: () => void;
   onNext?: () => void;
@@ -44,6 +49,43 @@ export interface ConversationStageProps {
    * era `recorderState === 'idle'`, ou seja, o guia mexia a boca em silêncio.
    */
   speaking?: boolean;
+}
+
+/** Quadrado de parar (protótipo recording), herdando a cor do botão. */
+function StopGlyph() {
+  return (
+    <svg
+      className="cds-conversation-stage-mic-glyph"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  );
+}
+
+/** Alto-falante do "Ouvir a pergunta" (protótipo speakQ). */
+function SpeakGlyph() {
+  return (
+    <svg
+      width={17}
+      height={17}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor" stroke="none" />
+      <path d="M15 9a4 4 0 0 1 0 6" />
+      <path d="M18 6.5a8 8 0 0 1 0 11" />
+    </svg>
+  );
 }
 
 /** Microfone como SVG inline (nunca unicode), herdando a cor do botão. */
@@ -86,7 +128,6 @@ export function ConversationStage({
   onStop,
   onPlay,
   onRerecord,
-  typedAnswer,
   progress,
   onPrev,
   onNext,
@@ -94,74 +135,129 @@ export function ConversationStage({
   speaking = false,
 }: ConversationStageProps) {
   const { t } = useTranslation();
-  const beads: BeadCell[] = Array.from({ length: progress.total }, (_, i) => ({
-    key: i,
-    state: i === progress.current ? 'head' : progress.answered.has(i) ? 'lit' : 'unplayed',
-    size: 14,
-  }));
+  // protótipo thread: respondidas/passadas 15px, a atual 22px com halo (CSS).
+  // O protótipo mostra 11 perguntas; o roteiro real chega a 41 — janela em volta
+  // da atual para o fio nunca estourar a largura (sem scroll, §9.2).
+  const THREAD_WINDOW = 23;
+  const start =
+    progress.total <= THREAD_WINDOW
+      ? 0
+      : Math.max(
+          0,
+          Math.min(
+            progress.current - Math.floor(THREAD_WINDOW / 2),
+            progress.total - THREAD_WINDOW,
+          ),
+        );
+  const beads: BeadCell[] = Array.from(
+    { length: Math.min(progress.total, THREAD_WINDOW) },
+    (_, offset) => {
+      const i = start + offset;
+      return {
+        key: i,
+        state:
+          i === progress.current
+            ? 'head'
+            : // protótipo: `i < qIndex || answers[i]` — o fio conta o caminho ANDADO,
+              // não só o que ficou gravado. Sem o `i < current` nada acendia: a
+              // entrevista é só-voz e `answered` enumera apenas respostas de texto.
+              i < progress.current || progress.answered.has(i)
+              ? 'lit'
+              : 'unplayed',
+        size: i === progress.current ? 22 : 15,
+      } satisfies BeadCell;
+    },
+  );
 
   return (
     <div className="cds-conversation-stage">
       <div className="cds-conversation-stage-main">
         <div className="cds-conversation-stage-guide">
           <StorytellerGuide speaking={speaking} />
+          {onSpeakQuestion ? (
+            <button
+              type="button"
+              className="cds-conversation-stage-speak"
+              onClick={onSpeakQuestion}
+            >
+              <SpeakGlyph />
+              {t('conversationStage.listen')}
+            </button>
+          ) : null}
         </div>
 
         <div className="cds-conversation-stage-panel">
           <QuestionCard
             question={question}
             facilitatorLed={facilitatorLed}
-            onListen={onSpeakQuestion}
-            listenLabel={t('conversationStage.listen')}
             roleTitle={t('questionCard.roleTitle')}
           >
             {note ? <p className="cds-conversation-stage-note">{note}</p> : null}
 
-            <div className="cds-conversation-stage-recorder" data-state={recorderState}>
-              {recorderState === 'idle' ? (
-                <button
-                  type="button"
-                  className="cds-conversation-stage-mic"
-                  aria-label={t('conversationStage.record')}
-                  onClick={onRecord}
-                >
-                  <MicGlyph />
-                </button>
-              ) : null}
+            <div className="cds-conversation-stage-divider" aria-hidden="true" />
 
-              {recorderState === 'recording' ? (
-                <>
-                  <div className="cds-conversation-stage-waveform" aria-hidden="true">
-                    {levels.map((height, i) => (
-                      <WaveformBar key={i} height={height} active />
-                    ))}
-                  </div>
-                  <Button variant="dark" onClick={onStop}>
-                    {t('conversationStage.stop')}
-                  </Button>
-                </>
-              ) : null}
+            <div className="cds-conversation-stage-wave-row">
+              {recorderState === 'idle' ? (
+                // sem resposta ainda, o protótipo promete o fio de som em palavras —
+                // barras chapadas aqui viravam um traço morto espremendo o microfone
+                <p className="cds-conversation-stage-empty-wave">
+                  {t('conversationStage.emptyWave')}
+                </p>
+              ) : (
+                <div className="cds-conversation-stage-waveform" aria-hidden="true">
+                  {recorderState === 'recording'
+                    ? // barras vivas: nível real quando o gravador o emite; senão a
+                      // altura formulaica do protótipo (recBars: 10 + (i*7 % 34))
+                      Array.from({ length: WAVE_BARS }, (_, i) => (
+                        <WaveformBar key={i} height={levels[i] ?? 10 + ((i * 7) % 34)} active />
+                      ))
+                    : Array.from({ length: WAVE_BARS }, (_, i) => (
+                        <WaveformBar key={i} height={10 + ((i * 7) % 34)} />
+                      ))}
+                </div>
+              )}
 
               {recorderState === 'recorded' ? (
                 <div className="cds-conversation-stage-review">
-                  <Button variant="ghost" onClick={onPlay}>
+                  <Button variant="ghost" size="sm" onClick={onPlay}>
                     {t('conversationStage.play')}
                   </Button>
-                  <Button variant="ghost" onClick={onRerecord}>
+                  <Button variant="ghost" size="sm" onClick={onRerecord}>
                     {t('conversationStage.again')}
                   </Button>
                 </div>
               ) : null}
             </div>
 
-            {typedAnswer !== undefined ? (
-              <div className="cds-conversation-stage-typed">
+            <div className="cds-conversation-stage-recorder" data-state={recorderState}>
+              {/* o microfone nunca some (protótipo toggleRecord): escondê-lo com a
+                  resposta pronta deixava "Toque e fale a sua resposta" mandando
+                  tocar num botão que não estava mais lá */}
+              <button
+                type="button"
+                className="cds-conversation-stage-mic"
+                data-recording={recorderState === 'recording' || undefined}
+                aria-label={
+                  recorderState === 'recording'
+                    ? t('conversationStage.stop')
+                    : t('conversationStage.record')
+                }
+                onClick={recorderState === 'recording' ? onStop : onRecord}
+              >
+                {recorderState === 'recording' ? <StopGlyph /> : <MicGlyph />}
+              </button>
+
+              <div className="cds-conversation-stage-hint">
+                <p className="cds-conversation-stage-hint-strong">
+                  {recorderState === 'recording'
+                    ? t('conversationStage.recordingLabel')
+                    : t('conversationStage.idleHint')}
+                </p>
                 <p className="cds-conversation-stage-typed-hint">
                   {t('conversationStage.typedHint')}
                 </p>
-                {typedAnswer}
               </div>
-            ) : null}
+            </div>
           </QuestionCard>
         </div>
       </div>

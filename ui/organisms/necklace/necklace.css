@@ -16,6 +16,15 @@
   transform: translate(-50%, -50%);
 }
 
+/* o fio atrás de cada fileira (protótipo _rowStyle); escuro sobre creme,
+   claro sobre oliva — quem pinta oliva define --cds-necklace-cord */
+.cds-necklace-cord {
+  position: absolute;
+  z-index: 0;
+  background: var(--cds-necklace-cord, rgba(63, 62, 32, 0.2));
+  pointer-events: none;
+}
+
 /* contas de borda da seleção: anel telha (§9.3 — "toque aqui para ouvir a costura") */
 .cds-necklace-bead[data-sel-edge='true'] {
   z-index: 2;

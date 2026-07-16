@@ -198,10 +198,8 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
     window.__oral.chromeOn = true;
   });
 
-  // decisão: tocar a história inteira (transporte) → som, nenhum texto novo.
-  await assertPlaysWithoutText(page, () =>
-    page.getByRole('button', { name: 'Ouvir a história' }).click(),
-  );
+  // o transporte "Ouvir a história" saiu (o som vem das contas): resta a decisão
+  // de conta, que é justamente a que o ouvinte tem.
   // decisão: tocar uma conta → som daquela conta, nenhum texto.
   await assertPlaysWithoutText(page, () => app.clickBead(3));
 
@@ -219,7 +217,7 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
     await app.clickBead(end);
     await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
   }
-  await page.getByRole('button', { name: 'Confirmar as cenas →' }).click();
+  await page.getByRole('button', { name: 'Continuar →' }).click();
 
   // ——— Triagem: classificação (controles do picker, não chrome) ———
   await app.triage();

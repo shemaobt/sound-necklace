@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import type { SpeechSynthesizer } from '../../../adapters/tts/types';
+import type { UiSound } from '../../../adapters/ui-sound';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
 import {
   ensureMapping,
   type Mapping,
   type QuestionSlot,
   questionSequence,
-  setAnswer,
   setMode,
   type SessionState,
   voiceAnswerPath,
@@ -20,6 +20,7 @@ import {
   ConversationStage,
   type ConversationProgress,
   type RecorderState,
+  WAVE_BARS,
 } from '../../organisms/conversation-stage/conversation-stage';
 import { sessionStore, useAppStore, useSessionStore } from '../../state';
 import './mapeamento.css';
@@ -43,19 +44,34 @@ import './mapeamento.css';
 export interface MapeamentoProps {
   player?: Player | null;
   recorder?: VoiceRecorder | null;
+  /** A voz da UI (§9): gravar, parar e chegar ao relatório têm som. */
+  sound?: UiSound;
   /** Porta de fala (ENG-280): ausente = sem voz (ambiente sem Web Speech) e o botão some. */
   speaker?: SpeechSynthesizer | null;
   /** O shell registra o caminho `respostas/…` recém-gravado no `meta.voice` da sessão (ENG-276). */
   onVoiceSaved?: (path: string) => void;
+  /**
+   * Entra na cauda "Guardar" (protótipo `toExport`). Ausente = sem a saída: a
+   * Export é estado LOCAL do shell (o domínio não tem modo `export`), então quem
+   * a abre é ele. Sem isto o relatório era um beco — só o fio de contas do
+   * cabeçalho levava adiante, e chrome não é ação.
+   */
+  onGoToExport?: () => void;
 }
 
 /** A tela do relatório (ENG-250) entra por add-a-file: presente → renderiza; ausente → o passo fica em espera. */
 const relatorioModules = import.meta.glob('/ui/pages/relatorio/index.tsx', {
   eager: true,
-}) as Record<string, { default: ComponentType }>;
+}) as Record<string, { default: ComponentType<RelatorioSlotProps> }>;
+
+/** O relatório descobre as gravações pela MESMA porta de voz da entrevista. */
+interface RelatorioSlotProps {
+  recorder?: VoiceRecorder | null;
+}
 
 /** Resolvido uma vez, no carregamento do módulo (o glob é eager e estático). */
-const RelatorioStation: ComponentType | null = Object.values(relatorioModules)[0]?.default ?? null;
+const RelatorioStation: ComponentType<RelatorioSlotProps> | null =
+  Object.values(relatorioModules)[0]?.default ?? null;
 
 /** Lê a resposta de texto da pergunta em foco (string vazia quando ainda não há). */
 function readAnswer(m: Mapping | null, slot: QuestionSlot): string {
@@ -95,14 +111,14 @@ interface QuestionScreenProps {
   slot: QuestionSlot;
   path: string;
   listen: ListenTarget | null;
-  typedValue: string;
-  onTyped: (text: string) => void;
   progress: ConversationProgress;
   onPrev: () => void;
   onNext: () => void;
   player: Player | null;
   recorder: VoiceRecorder | null;
   speaker: SpeechSynthesizer | null;
+  /** A voz da UI (§9): gravar e parar têm som. */
+  sound?: UiSound;
   /** Toggle de som do cabeçalho: mudo = a voz nunca toca (§13 — nunca falar sem consentimento). */
   muted: boolean;
   onVoiceSaved?: (path: string) => void;
@@ -117,14 +133,13 @@ function QuestionScreen({
   slot,
   path,
   listen,
-  typedValue,
-  onTyped,
   progress,
   onPrev,
   onNext,
   player,
   recorder,
   speaker,
+  sound,
   muted,
   onVoiceSaved,
 }: QuestionScreenProps) {
@@ -187,8 +202,9 @@ function QuestionScreen({
       return;
     }
     recordingRef.current = rec;
+    sound?.recordStart();
     unsubRef.current = rec.onLevel((l) =>
-      setLevels((prev) => [...prev, Math.max(2, Math.round(l * 40))].slice(-32)),
+      setLevels((prev) => [...prev, Math.max(2, Math.round(l * 40))].slice(-WAVE_BARS)),
     );
     setRecorderState('recording');
   };
@@ -203,6 +219,7 @@ function QuestionScreen({
     // caminho no meta.voice: `onVoiceSaved` leria a sessão/rota JÁ trocada e gravaria
     // esta resposta na sessão errada (contaminação cross-sessão). Espelha `onRecord`.
     if (!mountedRef.current) return;
+    sound?.recordStop();
     setRecorderState('recorded');
     // Voz salva no caminho canônico: avisa o shell para registrá-lo em meta.voice (§10.4).
     onVoiceSaved?.(path);
@@ -214,15 +231,6 @@ function QuestionScreen({
     setLevels([]);
     setRecorderState('idle');
   };
-
-  const typed = (
-    <textarea
-      className="cds-mapeamento-typed"
-      aria-label={t('mapeamento.typedAria')}
-      value={typedValue}
-      onChange={(e) => onTyped(e.target.value)}
-    />
-  );
 
   return (
     <section className="cds-mapeamento">
@@ -248,7 +256,6 @@ function QuestionScreen({
         onStop={onStop}
         onPlay={onPlay}
         onRerecord={onRerecord}
-        typedAnswer={typed}
         progress={progress}
         onPrev={onPrev}
         onNext={onNext}
@@ -263,7 +270,9 @@ export function Mapeamento({
   player = null,
   recorder = null,
   speaker = null,
+  sound,
   onVoiceSaved,
+  onGoToExport,
 }: MapeamentoProps) {
   const { t } = useTranslation();
   const muted = useAppStore((s) => s.muted);
@@ -298,7 +307,9 @@ export function Mapeamento({
     return (
       <section className="cds-mapeamento" aria-label={t('mapeamento.reportAria')}>
         {RelatorioStation ? (
-          <RelatorioStation />
+          // sem o recorder o relatório não acha gravação nenhuma e todo card cai no
+          // "ainda sem resposta gravada" — a voz da entrevista ficava inalcançável lá
+          <RelatorioStation recorder={recorder} />
         ) : (
           <div className="cds-mapeamento-report-fallback">
             <p>{t('mapeamento.reportFallback')}</p>
@@ -308,6 +319,18 @@ export function Mapeamento({
           <Button variant="ghost" size="sm" onClick={() => setAtReport(false)}>
             {t('mapeamento.prev')}
           </Button>
+          {onGoToExport ? (
+            <Button
+              variant="primary"
+              data-role="primary-action"
+              onClick={() => {
+                sound?.advance();
+                onGoToExport();
+              }}
+            >
+              {t('mapeamento.toExport')}
+            </Button>
+          ) : null}
         </div>
       </section>
     );
@@ -319,14 +342,16 @@ export function Mapeamento({
   };
   const goNext = (): void => {
     if (idx < total - 1) setIndex(idx + 1);
-    else setAtReport(true);
+    else {
+      sound?.advance(); // a conversa acabou: a prévia do relatório é a próxima etapa
+      setAtReport(true);
+    }
   };
-  const writeTyped = (text: string): void => {
-    sessionStore.getState().apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), slot, text));
-  };
-
-  // Fio de progresso (indicador, não gate): marca as perguntas com resposta de
-  // TEXTO. ponytail: teto conhecido — respostas só-de-voz não acendem a conta,
+  // Fio de progresso (indicador, não gate): as perguntas com resposta de TEXTO.
+  // O caminho já andado o organismo acende sozinho (`i < current`, protótipo), que
+  // é o que faz o fio significar algo numa entrevista só-voz — este conjunto só
+  // acrescenta as respondidas ADIANTE da atual (quem voltou não apaga o que fez).
+  // ponytail: teto conhecido — uma resposta só-de-voz à frente da atual não acende,
   // pois `recorder.has()` é assíncrono; enumerar a voz vale um passo síncrono só
   // quando o progresso virar informação carregada (não é o caso hoje).
   const answered = new Set(
@@ -339,14 +364,13 @@ export function Mapeamento({
       slot={slot}
       path={path}
       listen={listenFor(mapped, slot, t)}
-      typedValue={readAnswer(mapped.mapping, slot)}
-      onTyped={writeTyped}
       progress={{ total, answered, current: idx }}
       onPrev={goPrev}
       onNext={goNext}
       player={player}
       recorder={recorder}
       speaker={speaker}
+      sound={sound}
       muted={muted}
       onVoiceSaved={onVoiceSaved}
     />

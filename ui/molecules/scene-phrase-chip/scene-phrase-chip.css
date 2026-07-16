@@ -18,29 +18,8 @@
   color: inherit;
 }
 
-.cds-scene-phrase-chip[data-playing='true'] {
-  border-color: var(--cds-telha);
-  background: color-mix(in srgb, var(--cds-telha) 6%, white);
-}
-
 .cds-scene-phrase-chip-label {
   white-space: nowrap;
-}
-
-/* botão ▶: só o glifo, herda a cor; o anel de foco global cuida do teclado */
-.cds-scene-phrase-chip-play {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border: none;
-  background: transparent;
-  border-radius: 50%;
-  color: var(--cds-telha);
-}
-
-.cds-scene-phrase-chip-play[aria-pressed='true'] {
-  color: var(--cds-telha-deep);
 }
 
 .cds-scene-phrase-chip-actions {

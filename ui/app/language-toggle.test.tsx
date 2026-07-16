@@ -28,7 +28,7 @@ describe('Idioma da UI (ENG-279)', () => {
   it('alterna a cópia PT↔EN pela interface inteira', async () => {
     render(
       <>
-        <Header muted={false} onToggleMuted={noop} />
+        <Header muted={false} onToggleMuted={noop} onBack={noop} />
         <Login />
       </>,
     );
@@ -44,7 +44,7 @@ describe('Idioma da UI (ENG-279)', () => {
   });
 
   it('persiste a escolha de idioma para o próximo reload', async () => {
-    render(<Header muted={false} onToggleMuted={noop} />);
+    render(<Header muted={false} onToggleMuted={noop} onBack={noop} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Mudar para inglês' }));
 

@@ -1,12 +1,46 @@
 /*
- * Layout do shell (redesign §4.1, §5.1): cabeçalho no topo, fio de contas logo
- * abaixo, a estação ativa ocupando o resto. Fundo creme por default; as estações
- * cerimoniais (Escuta 1, Mapeamento) pintam o próprio oliva full-bleed.
+ * Layout do shell (Protótipo.dc.html): cabeçalho de 64px, fio de contas de 46px,
+ * a estação ativa ocupando o resto. As cores do chrome são custom properties que
+ * a variante escura das telas cerimoniais (Escuta 1 = .cds-escuta1; Conversa =
+ * .cds-conversation-stage) troca via :has() — CSS puro, sem prop-drilling; quando
+ * o Mapeamento alterna para a prévia do relatório, o palco sai do DOM e o chrome
+ * volta ao claro sozinho.
  */
 .cds-app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+
+  /* chrome claro (default) */
+  --cds-chrome-bg: rgba(255, 255, 255, 0.5);
+  --cds-chrome-band-bg: rgba(255, 255, 255, 0.28);
+  --cds-chrome-fg: var(--cds-olive);
+  /* protótipo usa #8A8970 (reprova AA) — substituto AA, ver tokens.ts */
+  --cds-chrome-fg-soft: var(--cds-ink-subtle);
+  --cds-chrome-pill-bg: var(--cds-surface-muted);
+  --cds-chrome-mark: var(--cds-telha);
+  --cds-chrome-hairline: var(--cds-hairline);
+  --cds-chrome-thread: rgba(63, 62, 32, 0.16);
+  --cds-chrome-halo: var(--cds-accent-soft);
+  --cds-chrome-dot-future-bg: var(--cds-frame);
+  --cds-chrome-dot-future-border: rgba(63, 62, 32, 0.24);
+}
+
+.cds-app:has(.cds-escuta1),
+.cds-app:has(.cds-conversation-stage) {
+  background: var(--cds-olive);
+
+  --cds-chrome-bg: rgba(10, 7, 3, 0.12);
+  --cds-chrome-band-bg: rgba(10, 7, 3, 0.06);
+  --cds-chrome-fg: var(--cds-cream);
+  --cds-chrome-fg-soft: rgba(246, 245, 235, 0.7);
+  --cds-chrome-pill-bg: rgba(246, 245, 235, 0.1);
+  --cds-chrome-mark: var(--cds-cream);
+  --cds-chrome-hairline: rgba(246, 245, 235, 0.2);
+  --cds-chrome-thread: rgba(246, 245, 235, 0.22);
+  --cds-chrome-halo: rgba(246, 245, 235, 0.16);
+  --cds-chrome-dot-future-bg: rgba(246, 245, 235, 0.1);
+  --cds-chrome-dot-future-border: rgba(246, 245, 235, 0.3);
 }
 
 .cds-app-main {

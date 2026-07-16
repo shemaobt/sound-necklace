@@ -120,13 +120,14 @@ beforeEach(() => {
 });
 
 describe('App shell', () => {
-  it('as estações montam o cabeçalho do shell (marca + botão de som)', () => {
+  it('as estações montam o cabeçalho do shell (pill Histórias + botão de som)', () => {
     // a rota default cai no dashboard, que tem cabeçalho PRÓPRIO — o shell só monta o
-    // dele nas estações; /imports é uma delas.
+    // dele nas estações; /imports é uma delas. O header do shell é só ícone + pill de
+    // voltar (protótipo Shemá v2) — sem título.
     act(() => navigate('/imports'));
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Colar de Sons' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Voltar às histórias' })).toBeDefined();
     expect(screen.getByRole('button', { name: /som da interface/i })).toBeDefined();
   });
 
@@ -193,7 +194,8 @@ describe('App shell', () => {
       navigate(`/session/${summary.id}`);
     });
     render(<App />);
-    expect(await screen.findByText('Ouvir')).toBeDefined();
+    // 'Ouvir' aparece 2×: no rótulo sr-only do li E no nome visível da etapa atual
+    expect((await screen.findAllByText('Ouvir')).length).toBeGreaterThan(0);
     expect(screen.getByText('Guardar')).toBeDefined();
   });
 
@@ -203,7 +205,7 @@ describe('App shell', () => {
       sessionStore.getState().load(sampleSession());
     });
     render(<App />);
-    expect(screen.getByText('Ouvir')).toBeDefined();
+    expect(screen.getAllByText('Ouvir').length).toBeGreaterThan(0);
     expect(screen.getByText('Guardar')).toBeDefined();
   });
 
@@ -269,7 +271,7 @@ describe('App shell', () => {
 
     act(() => navigate(`/session/${summary.id}`));
     render(<App />);
-    await screen.findByText('Ouvir'); // hidratado na Escuta 1
+    await screen.findAllByText('Ouvir'); // hidratado na Escuta 1
 
     // Uma decisão pós-Setup, sem flush explícito (o app real não chama flush).
     act(() => sessionStore.getState().apply((s) => ({ ...s, slug: 'avancada' })));
@@ -298,7 +300,7 @@ describe('App shell', () => {
       mic.click();
     });
     // A fixture inicia a gravação → surge o controle "Parar" (microfone vivo).
-    expect(await screen.findByText('Parar')).toBeDefined();
+    expect(await screen.findByRole('button', { name: 'Parar' })).toBeDefined();
   });
 
   it('persiste o caminho da resposta de voz em meta.voice → o relatório exportado a referencia', async () => {
@@ -336,7 +338,7 @@ describe('App shell', () => {
     await act(async () => {
       mic.click();
     });
-    const stop = await screen.findByText('Parar');
+    const stop = await screen.findByRole('button', { name: 'Parar' });
     await act(async () => {
       stop.click();
     });
@@ -395,10 +397,22 @@ describe('App shell', () => {
       act(() => navigate(`/session/${summary.id}`));
       render(<App />);
 
-      // aguarda a hidratação + construção assíncrona do player (chip ▶ da cena travada)
-      const play = await screen.findByRole('button', { name: 'Tocar' });
+      // aguarda a hidratação + construção assíncrona do player; o transporte é o
+      // toque na conta (sem botões de play — decisão do dono)
+      const necklace = await waitFor(() => {
+        const el = document.querySelector('.cds-necklace');
+        if (!el) throw new Error('colar ainda não montou');
+        return el;
+      });
       await act(async () => {
-        play.click();
+        necklace.dispatchEvent(
+          new MouseEvent('pointerdown', {
+            bubbles: true,
+            cancelable: true,
+            clientX: 1,
+            clientY: 1,
+          }),
+        );
       });
 
       // dirige o relógio do fixture por rAF: baseline + 1 frame de 0,1 s → cabeça na conta 0
@@ -476,7 +490,7 @@ describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
       sessionStore.getState().load(sampleSession());
     });
     render(<App />);
-    expect(screen.getByText('Ouvir')).toBeDefined();
+    expect(screen.getAllByText('Ouvir').length).toBeGreaterThan(0);
 
     await act(async () => {
       appAuth().simulateExpiry();

@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { beadAtXY, beadPosition, beadsPerRow, bandRects, resolveWindow, SIZE_M } from './geometry';
+import {
+  centerOffset,
+  beadAtXY,
+  beadPosition,
+  beadsPerRow,
+  bandRects,
+  cordRects,
+  resolveWindow,
+  SIZE_M,
+} from './geometry';
 
 /**
  * Geometria do colar — porta 1:1 da referência (docs/reference/index.html):
@@ -84,5 +93,37 @@ describe('bandRects — retângulos por linha de uma banda (referência drawBand
 
   it('intervalo vazio (e < s) não rende retângulo', () => {
     expect(bandRects(5, 4, 0, 20, SIZE_M, 3)).toEqual([]);
+  });
+});
+
+describe('cordRects — fio atrás de cada fileira (referência _rowStyle)', () => {
+  it('janela de 2 fileiras cheias + 1 parcial rende 3 retângulos', () => {
+    const rects = cordRects(0, 59, 28, SIZE_M);
+    expect(rects).toEqual([
+      { left: 3.5, width: 693, top: 20.5, height: 2 },
+      { left: 3.5, width: 693, top: 51.5, height: 2 },
+      { left: 3.5, width: 93, top: 82.5, height: 2 },
+    ]);
+  });
+
+  it('janela de uma única fileira rende um retângulo', () => {
+    expect(cordRects(0, 5, 28, SIZE_M)).toEqual([{ left: 3.5, width: 143, top: 20.5, height: 2 }]);
+  });
+
+  it('winS>0 não muda left/top relativo — a janela realinha em 0', () => {
+    expect(cordRects(12, 39, 28, SIZE_M)).toEqual([
+      { left: 3.5, width: 693, top: 20.5, height: 2 },
+    ]);
+  });
+});
+
+describe('centerOffset — colar sempre centrado (feedback do dono)', () => {
+  it('fileira menor que a largura → metade da folga; cheia/estreita → 0', () => {
+    // 6 contas no SIZE_M (slot 25) em 400px: 400 - 150 = 250 → 125
+    expect(centerOffset(6, 16, 400, SIZE_M)).toBe(125);
+    // fileira cheia (bpr limita): min(40, 16)*25 = 400 → 0
+    expect(centerOffset(40, 16, 400, SIZE_M)).toBe(0);
+    // container mais estreito que a fileira → nunca negativo
+    expect(centerOffset(20, 20, 100, SIZE_M)).toBe(0);
   });
 });

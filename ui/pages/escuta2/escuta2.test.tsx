@@ -2,7 +2,6 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Player } from '../../../adapters/audio';
 import {
   buildBeads,
   createSession,
@@ -66,23 +65,27 @@ function load(state: SessionState): void {
   sessionStore.getState().load(state);
 }
 
-/** Player-espião: registra as chamadas de reprodução sem tocar áudio real. */
-function spyPlayer(): Player {
-  return {
-    toggle: vi.fn(),
-    play: vi.fn(),
-    playEdge: vi.fn(),
-    stop: vi.fn(),
-    state: { key: null, playing: false, paused: false },
-    onHead: vi.fn(() => () => {}),
-  };
-}
-
 beforeEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
 });
 afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
+});
+
+describe('Escuta 2 — título do protótipo (redesign design parity Fase 3)', () => {
+  it('mostra o título do protótipo acima da instrução', () => {
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    expect(screen.getByRole('heading', { name: 'Corte a história em cenas' })).toBeTruthy();
+  });
 });
 
 describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
@@ -173,24 +176,6 @@ describe('Escuta 2 — chips das cenas confirmadas (redesign §6.3)', () => {
     expect(chips[0]!.getAttribute('aria-label')).toBe('Cena um');
     expect(sessionStore.getState().session!.current.index).toBe(1);
   });
-
-  it('▶ ouvir de um chip toca o span da cena travada pelo player', async () => {
-    const player = spyPlayer();
-    load(
-      cutting({
-        parts: [lockedPart('PT1', { s: 1, e: 6 }), part({ part_id: 'PT2' })],
-        current: { layer: 'parts', index: 1 },
-        selection: null,
-        pendingStart: null,
-      }),
-    );
-    render(<Escuta2 player={player} />);
-
-    const chip = screen.getByRole('group', { name: 'Cena um' });
-    await userEvent.click(within(chip).getByRole('button', { name: 'Tocar' }));
-
-    expect(player.toggle).toHaveBeenCalledWith('PT1', 1, 6);
-  });
 });
 
 describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
@@ -249,6 +234,58 @@ describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
   });
 });
 
+describe('Escuta 2 — momento de revisão quando a história está toda em cenas (design parity)', () => {
+  it('história toda coberta → momento de revisão', () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
+        current: { layer: 'parts', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    expect(screen.getByText('A história está toda em cenas.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '✓ Confirmar esta cena' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Confirmar as cenas →' })).toBeNull();
+  });
+
+  it('“Continuar →” avança para a Triagem', async () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
+        current: { layer: 'parts', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
+
+    const s = sessionStore.getState().session!;
+    expect(s.mode).toBe('triagem');
+    expect(s.partsConfirmed).toBe(true);
+  });
+
+  it('cobertura parcial mantém o fluxo', () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), part({ part_id: 'PT2' })],
+        current: { layer: 'parts', index: 1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    expect(screen.getByRole('button', { name: 'Confirmar as cenas →' })).toBeTruthy();
+    expect(screen.queryByText('A história está toda em cenas.')).toBeNull();
+  });
+});
+
 describe('Escuta 2 — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
   it('não mostra dígito, tem ≤1 linha de instrução e exatamente uma ação dominante', () => {
     load(
@@ -295,5 +332,97 @@ describe('Escuta 2 — tratamento creme (redesign §6.3, §4.5)', () => {
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
     const { outside } = splitByGuard(escuta2Css, guard);
     expect(outside).not.toMatch(/animation|@keyframes/);
+  });
+});
+
+describe('Escuta 2 — a voz da UI (protótipo _lock/_chime/_blip)', () => {
+  /** Espião da porta de som: registra o vocabulário, sem tocar nada. */
+  function spySound() {
+    return {
+      lock: vi.fn(),
+      advance: vi.fn(),
+      refuse: vi.fn(),
+      tap: vi.fn(),
+      recordStart: vi.fn(),
+      recordStop: vi.fn(),
+      saved: vi.fn(),
+    };
+  }
+
+  it('travar uma cena SOA — a decisão é audível sem ler nada', async () => {
+    const sound = spySound();
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: { s: 0, e: 4 },
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 sound={sound} />);
+
+    await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
+
+    expect(sound.lock).toHaveBeenCalled();
+    expect(sound.refuse).not.toHaveBeenCalled();
+  });
+
+  it('uma cena sem seleção RECUSA — som de "não pode", distinto do de travar', async () => {
+    const sound = spySound();
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 sound={sound} />);
+
+    await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
+
+    expect(sound.refuse).toHaveBeenCalled();
+    expect(sound.lock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A cobertura é AFERIDA, não inferida da última conta. O corte normal é sequencial,
+ * mas um retorno salvo traz `parts` travadas direto do JSON com spans quaisquer
+ * (contracts/imports.ts) — e `confirmParts` descarta em silêncio o que ficou fora.
+ */
+describe('Escuta 2 — a revisão exige cobertura de VERDADE', () => {
+  it('um trecho sem cena no meio NÃO é "história toda em cenas", mesmo com a última cena no fim do colar', () => {
+    load(
+      cutting({
+        parts: [
+          lockedPart('PT1', { s: 0, e: 2 }),
+          lockedPart('PT2', { s: 6, e: 9 }), // as contas 3,4,5 nunca foram cortadas
+        ],
+        current: { layer: 'parts', index: 1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    // não pode jurar cobertura: as contas 3,4,5 estão sem cena
+    expect(screen.queryByText('A história está toda em cenas.')).toBeNull();
+    // e a estação segue no modo de corte (o CTA do PRD, não o Continuar da revisão)
+    expect(screen.getByRole('button', { name: 'Confirmar as cenas →' })).toBeTruthy();
+  });
+
+  it('cenas que ladrilham o colar inteiro entram na revisão', () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
+        current: { layer: 'parts', index: 1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    expect(screen.getByText('A história está toda em cenas.')).toBeTruthy();
   });
 });

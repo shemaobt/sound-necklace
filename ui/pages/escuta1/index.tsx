@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { UiSound } from '../../../adapters/ui-sound';
 import { confirmWhole, reopenWhole } from '../../../domain';
-import { Button, PlayGlyph } from '../../atoms';
-import { Necklace } from '../../organisms';
+import { Button } from '../../atoms';
+import { Necklace, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import { ShemaIcon } from '../../tokens';
 import { makeTransportHandlers } from './transport';
@@ -21,12 +22,15 @@ import './escuta1.css';
  */
 export interface Escuta1Props {
   player?: Player | null;
+  /** A voz da UI (§9): confirmar a escuta avança; sem ouvir tudo, recusa. */
+  sound?: UiSound;
 }
 
-export function Escuta1({ player = null }: Escuta1Props) {
+export function Escuta1({ player = null, sound }: Escuta1Props) {
   const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
+  const [heardEnough, setHeardEnough] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const totalBeads = session?.totalBeads ?? 0;
@@ -37,8 +41,12 @@ export function Escuta1({ player = null }: Escuta1Props) {
 
   useEffect(() => {
     if (!player) return;
-    return player.onHead(setHead);
-  }, [player]);
+    return player.onHead((h) => {
+      setHead(h);
+      // protótipo heardEnough: a cabeça alcançou (quase) o fim → o pill acende
+      if (h !== null && h >= totalBeads - 6) setHeardEnough(true);
+    });
+  }, [player, totalBeads]);
 
   useEffect(() => {
     if (!player) return;
@@ -51,9 +59,11 @@ export function Escuta1({ player = null }: Escuta1Props) {
     const result = confirmWhole(session);
     if (!result.ok) {
       setError(result.error.message);
+      sound?.refuse();
       return;
     }
     setError(null);
+    sound?.advance();
     sessionStore.getState().apply(() => result.state);
   };
 
@@ -65,7 +75,7 @@ export function Escuta1({ player = null }: Escuta1Props) {
   return (
     <section className="cds-escuta1">
       <div className="cds-escuta1-watermark" aria-hidden="true">
-        <ShemaIcon colorway="branco" size={420} />
+        <ShemaIcon colorway="branco" size={380} />
       </div>
 
       <p className="cds-escuta1-tagline" data-role="instruction">
@@ -76,6 +86,7 @@ export function Escuta1({ player = null }: Escuta1Props) {
         <Necklace
           totalBeads={totalBeads}
           beadSec={session.beadSec}
+          size={SIZE_L}
           transportOnly
           playbackHead={head}
           onBeadPointerDown={handlers?.onBead}
@@ -84,20 +95,33 @@ export function Escuta1({ player = null }: Escuta1Props) {
       </div>
 
       <div className="cds-escuta1-controls">
-        <Button variant="dark" onClick={handlers?.onBig}>
-          <PlayGlyph state="play" />
-          {t('escuta1.listen')}
-        </Button>
-
-        <div className="cds-escuta1-decision" data-role="primary-action">
+        <div
+          className="cds-escuta1-decision"
+          data-role="primary-action"
+          data-heard={heardEnough || undefined}
+        >
           {session.whole.confirmed ? (
-            <Button variant="ghost" onClick={reopen}>
+            <Button key="reopen" variant="ghost" onClick={reopen}>
               {t('escuta1.reopen')}
             </Button>
           ) : (
-            <Button variant="primary" onClick={confirm}>
+            <button type="button" className="cds-escuta1-confirm" onClick={confirm}>
+              <svg
+                width={18}
+                height={18}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.6}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
               {t('escuta1.confirm')}
-            </Button>
+            </button>
           )}
         </div>
 

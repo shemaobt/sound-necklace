@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
 import type { SpeechSynthesizer } from '../../adapters/tts/types';
+import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
 import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
 import { DEFAULT_FIXTURE_USER } from '../../adapters/sessions';
@@ -27,6 +28,9 @@ import './app.css';
 
 /** Player itinerante em repouso (sem áudio fiado): só o `stop()` que o slot chama. */
 const NO_PLAYBACK: Player = { stop() {} };
+
+/** O mudo do cabeçalho: a mesma porta, sem voz. Estável entre renders. */
+const SILENT_SOUND: UiSound = new SilentUiSound();
 
 /** Estação (diretório em ui/pages) → modo do domínio, para a navegação do fio. */
 const KEY_TO_MODE: Record<string, Mode> = {
@@ -55,6 +59,7 @@ function SessionStations({
   player,
   recorder,
   speaker,
+  sound,
   onVoiceSaved,
 }: {
   session: SessionState;
@@ -67,6 +72,7 @@ function SessionStations({
   player: AudioPlayer | null;
   recorder: VoiceRecorder | null;
   speaker: SpeechSynthesizer | null;
+  sound: UiSound;
   onVoiceSaved: (path: string) => void;
 }) {
   const [viewingExport, setViewingExport] = useState(false);
@@ -86,12 +92,22 @@ function SessionStations({
   // app-global + o id da rota; o Mapeamento grava a resposta por voz (§8.7) E toca
   // os trechos; as demais estações do colar (Escuta 1/2, Triagem, Segmentação)
   // recebem o player para tocar contas/bordas/cenas (§8.2).
+  // O som da UI vai para TODAS: cada estação tem decisões que precisam soar (§9).
   const stationProps =
     currentKey === 'export'
-      ? { store: exportStore, sessionId }
+      ? { store: exportStore, sessionId, sound }
       : currentKey === 'mapeamento'
-        ? { recorder, player, speaker, onVoiceSaved }
-        : { player };
+        ? {
+            recorder,
+            player,
+            speaker,
+            sound,
+            onVoiceSaved,
+            // a prévia do relatório fecha com "Guardar os documentos →" (protótipo
+            // toExport); a Export é estado local do shell, então a chave é nossa
+            onGoToExport: () => setViewingExport(true),
+          }
+        : { player, sound };
 
   return (
     <>
@@ -327,13 +343,26 @@ export function App() {
     const registration = buildAdapterRegistry().tts;
     return registration ? (registration.real() as SpeechSynthesizer) : null;
   }, []);
+  // O som da UI é a implementação REAL: tocar de volta É a feature num app
+  // ear-first. Mudo troca a PORTA pela silenciosa — assim nenhum chamador precisa
+  // saber o que é estar mudo, e o botão do cabeçalho passa a silenciar de fato
+  // tudo o que a UI toca (antes só calava a voz da entrevista).
+  const uiSound = useMemo<UiSound>(() => {
+    const registration = buildAdapterRegistry()['ui-sound'];
+    return registration ? (registration.real() as UiSound) : new SilentUiSound();
+  }, []);
+  const sound = muted ? SILENT_SOUND : uiSound;
 
   // Login e dashboard são superfícies full-bleed com cabeçalho PRÓPRIO (protótipo
   // Shemá v2, ENG-278) — o shell não empilha o dele por cima. As estações mantêm-no
   // (é lá que vive o botão de som).
   const ownsHeader = route.name === 'login' || route.name === 'dashboard';
   const header = ownsHeader ? null : (
-    <Header muted={muted} onToggleMuted={() => appStore.getState().toggleMuted()} />
+    <Header
+      muted={muted}
+      onToggleMuted={() => appStore.getState().toggleMuted()}
+      onBack={() => navigate('/dashboard')}
+    />
   );
 
   let body: React.ReactNode;
@@ -354,6 +383,7 @@ export function App() {
           player={player}
           recorder={recorder}
           speaker={speaker}
+          sound={sound}
           onVoiceSaved={onVoiceSaved}
         />
       );

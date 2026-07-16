@@ -7,9 +7,9 @@ import type { Dict } from './pt';
  */
 export const en: Dict = {
   header: {
-    eyebrow: 'Oral Archive · Tripod',
     title: 'Colar de Sons',
-    subtitle: 'Mapping the oral archive stories.',
+    back: 'Stories',
+    backAria: 'Back to stories',
     mute: 'Turn interface sound off',
     unmute: 'Turn interface sound on',
     switchLanguage: 'Switch to Portuguese',
@@ -29,6 +29,7 @@ export const en: Dict = {
     refused: 'Could not sign in. Check the username and password.',
   },
   setup: {
+    eyebrow: 'Preparation',
     title: 'New session',
     trustLine: 'Your audio and answers are kept safely in your project. Only your team has access.',
     aiVoiceNotice:
@@ -103,6 +104,9 @@ export const en: Dict = {
     reviewOwn: '🔒 Review mode — segmentation is locked.',
     unlock: 'Unlock to edit',
   },
+  review: {
+    continue: 'Continue →',
+  },
   confidence: {
     certeza: 'Certain',
     quase: 'Almost',
@@ -144,11 +148,12 @@ export const en: Dict = {
   },
   escuta1: {
     tagline: 'Listen to the story.',
-    listen: 'Listen to the story',
     reopen: 'Reopen',
     confirm: 'I have heard the whole story',
   },
   escuta2: {
+    title: 'Cut the story into scenes',
+    reviewHeadline: 'The whole story is in scenes.',
     instructionPre: 'Tap the necklace where ',
     instructionEmph: 'this scene ends',
     instructionPost: '. The beginning is already stitched.',
@@ -158,8 +163,8 @@ export const en: Dict = {
     confirmAll: 'Confirm the scenes →',
   },
   segmentacao: {
+    reviewHeadline: 'The phrases of this scene are ready.',
     instruction: 'Tap the necklace at the start and the end of each phrase.',
-    playScene: '▶ listen to the scene',
     reopen: 'Reopen',
     flagMarked: '⚑ marked',
     flagReview: '⚑ review',
@@ -214,9 +219,10 @@ export const en: Dict = {
     ariaLabel: 'the conversation guide',
   },
   triagem: {
+    reviewHeadline: 'Every scene is classified.',
     empty: 'No scene confirmed yet.',
     instruction: 'What is this scene about?',
-    playScene: '▶ Listen to this scene',
+    colarHint: 'tap the necklace to hear this scene',
     tagNoneFit: '⌀ none fits',
     tagPending: '— to classify',
     confAlta: 'certain',
@@ -225,7 +231,6 @@ export const en: Dict = {
     finding: '⌀ None fits — evidence for naming a native type when the pattern repeats.',
     lockout:
       '⚠ No scene fits Ruth. Segmentation and Mapping stay locked — this story yields no Ruth coverage. The marks are kept as evidence of a native type.',
-    advance: 'I have classified every scene →',
   },
   triagemPicker: {
     theme: {
@@ -262,9 +267,9 @@ export const en: Dict = {
     listenScene: '▶ listen to the scene',
     listenPhrase: '▶ listen to the phrase',
     instruction: 'Listen to the stretch and answer calmly, in your own voice.',
-    typedAria: 'facilitator note',
     reportAria: 'report',
     reportFallback: 'The conversation is over. The report opens here.',
+    toExport: 'Save the documents →',
     prev: '← previous',
   },
   seamModal: {
@@ -279,6 +284,8 @@ export const en: Dict = {
     markerAfter: 'new border',
   },
   relatorio: {
+    eyebrow: 'The conversation about meaning',
+    headline: 'Everything you said, gathered.',
     facilitatorLed: 'facilitator-led',
     answerDuration: 'answer length',
     answer: 'answer',
@@ -290,18 +297,20 @@ export const en: Dict = {
     groupPhrase: 'Phrase {{n}}',
     playAnswer: '▶ listen to the answer',
     noAnswerYet: 'no answer recorded yet',
+    writeAnswer: 'write the answer',
     addNote: 'add a note',
-    downloadReport: 'Download report (.md)',
-    downloadRetorno: 'Download the anchoring (.json)',
   },
   conversationStage: {
     listen: 'Listen to the question',
     record: 'record the answer',
     stop: 'Stop',
+    idleHint: 'Tap and speak your answer',
+    emptyWave: 'your answer becomes a thread of sound here',
+    recordingLabel: 'Recording…',
     play: 'listen',
     again: 'again',
     typedHint: 'The facilitator can write later — never for you.',
-    prev: 'Previous',
+    prev: '← previous',
     next: 'Next question',
     progressAria: 'conversation progress',
   },

@@ -2,17 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { UiSound } from '../../../adapters/ui-sound';
 import {
   activeAnchor,
   clickBead,
   confirmPart,
   confirmParts,
   reopenPart,
-  type ScenePart,
   setMode,
+  type Span,
 } from '../../../domain';
 import { Button } from '../../atoms';
-import { Necklace, type NecklaceSegment } from '../../organisms';
+import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import { playActionOn, sceneColor, sceneLabel } from './cutting';
 import { ScenePhraseChip } from '../../molecules';
@@ -30,11 +31,24 @@ import './escuta2.css';
  * (`confirmParts` → Triagem) e voltar (história reaberta, cenas preservadas) são
  * decisões puras do domínio aplicadas pelo `sessionStore`. O áudio chega por prop.
  */
-export interface Escuta2Props {
-  player?: Player | null;
+/** As cenas cobrem 0…N-1 sem buraco? (ladrilham a história inteira) */
+function tilesWholeStory(spans: Span[], totalBeads: number): boolean {
+  const ordered = [...spans].sort((a, b) => a.s - b.s);
+  let next = 0;
+  for (const span of ordered) {
+    if (span.s > next) return false; // buraco: um trecho ficou sem cena
+    next = Math.max(next, span.e + 1);
+  }
+  return next >= totalBeads;
 }
 
-export function Escuta2({ player = null }: Escuta2Props) {
+export interface Escuta2Props {
+  player?: Player | null;
+  /** A voz da UI (§9): travar uma cena, recusar um corte e avançar têm som. */
+  sound?: UiSound;
+}
+
+export function Escuta2({ player = null, sound }: Escuta2Props) {
   const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
@@ -68,6 +82,22 @@ export function Escuta2({ player = null }: Escuta2Props) {
   const anchor = activeAnchor(session);
   const lockedIndexes = session.parts.flatMap((p, i) => (p.locked && p.span ? [i] : []));
   const hasLocked = lockedIndexes.length > 0;
+  // momento de revisão (decisão do dono): a história toda coberta por cenas
+  // travadas → nada resta a cortar; a âncora residual do domínio fica oculta
+  // (confirmParts a descarta, PRD §8.4) e a tela oferece UMA ação: Continuar.
+  //
+  // A cobertura é AFERIDA, não inferida da última conta: o corte normal é
+  // sequencial, mas um retorno salvo traz `parts` travadas direto do JSON, com
+  // spans quaisquer (contracts/imports.ts). Bastava a última cena terminar no fim
+  // do colar para a tela jurar "está toda em cenas", esconder o "Confirmar esta
+  // cena" e deixar o trecho não cortado inalcançável — que o `confirmParts`
+  // descarta em silêncio. Coberto = as cenas ladrilham 0…N-1 sem buraco.
+  const tiled =
+    hasLocked &&
+    tilesWholeStory(
+      lockedIndexes.map((i) => session.parts[i]!.span!),
+      session.totalBeads,
+    );
 
   const onBead = (bead: number): void => {
     const s = sessionStore.getState().session;
@@ -87,9 +117,11 @@ export function Escuta2({ player = null }: Escuta2Props) {
     const result = confirmPart(s, s.current.index);
     if (!result.ok) {
       setError(result.error.message);
+      sound?.refuse();
       return;
     }
     setError(null);
+    sound?.lock();
     sessionStore.getState().apply(() => result.state);
   };
 
@@ -99,9 +131,11 @@ export function Escuta2({ player = null }: Escuta2Props) {
     const result = confirmParts(s);
     if (!result.ok) {
       setError(result.error.message);
+      sound?.refuse();
       return;
     }
     setError(null);
+    sound?.advance();
     sessionStore.getState().apply(() => result.state);
   };
 
@@ -125,17 +159,22 @@ export function Escuta2({ player = null }: Escuta2Props) {
     sessionStore.getState().apply((s) => reopenPart(s, i));
   };
 
-  const playScene = (pt: ScenePart): void => {
-    if (player && pt.span) player.toggle(pt.part_id, pt.span.s, pt.span.e);
-  };
-
   return (
     <section className="cds-escuta2">
-      <p className="cds-escuta2-instruction" data-role="instruction">
-        {t('escuta2.instructionPre')}
-        <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
-        {t('escuta2.instructionPost')}
-      </p>
+      <div className="cds-escuta2-header">
+        <h2 className="cds-escuta2-title">{t('escuta2.title')}</h2>
+        {tiled ? (
+          <p className="cds-escuta2-instruction" data-role="instruction">
+            {t('escuta2.reviewHeadline')}
+          </p>
+        ) : (
+          <p className="cds-escuta2-instruction" data-role="instruction">
+            {t('escuta2.instructionPre')}
+            <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
+            {t('escuta2.instructionPost')}
+          </p>
+        )}
+      </div>
 
       <div className="cds-escuta2-stage">
         <Necklace
@@ -145,6 +184,7 @@ export function Escuta2({ player = null }: Escuta2Props) {
           lockedEndBeads={lockedEndBeads}
           selection={session.selection}
           pendingStart={session.pendingStart}
+          size={SIZE_L}
           playbackHead={head}
           onBeadPointerDown={onBead}
           onEdgeHover={onEdgeHover}
@@ -152,25 +192,27 @@ export function Escuta2({ player = null }: Escuta2Props) {
       </div>
 
       {hasLocked ? (
-        <ul className="cds-escuta2-chips">
-          {lockedIndexes.map((i) => {
-            const pt = session.parts[i]!;
-            return (
-              <li key={pt.part_id}>
-                <ScenePhraseChip
-                  label={sceneLabel(i)}
-                  swatch={sceneColor(i)}
-                  onPlay={() => playScene(pt)}
-                  actions={
-                    <Button variant="ghost" size="sm" onClick={() => reopen(i)}>
-                      {t('escuta2.reopen')}
-                    </Button>
-                  }
-                />
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <div className="cds-escuta2-divider" aria-hidden="true" />
+          <ul className="cds-escuta2-chips">
+            {lockedIndexes.map((i) => {
+              const pt = session.parts[i]!;
+              return (
+                <li key={pt.part_id}>
+                  <ScenePhraseChip
+                    label={sceneLabel(i)}
+                    swatch={sceneColor(i)}
+                    actions={
+                      <Button variant="ghost" size="sm" onClick={() => reopen(i)}>
+                        {t('escuta2.reopen')}
+                      </Button>
+                    }
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </>
       ) : null}
 
       <div className="cds-escuta2-controls">
@@ -178,7 +220,15 @@ export function Escuta2({ player = null }: Escuta2Props) {
           {t('escuta2.back')}
         </Button>
 
-        {anchor ? (
+        {tiled ? (
+          <div className="cds-escuta2-confirm-scene" data-role="primary-action">
+            <Button variant="primary" onClick={confirmAll}>
+              {t('review.continue')}
+            </Button>
+          </div>
+        ) : null}
+
+        {!tiled && anchor ? (
           <div className="cds-escuta2-confirm-scene" data-role="primary-action">
             <Button variant="primary" onClick={confirmScene}>
               {t('escuta2.confirmScene')}
@@ -186,7 +236,7 @@ export function Escuta2({ player = null }: Escuta2Props) {
           </div>
         ) : null}
 
-        {hasLocked ? (
+        {hasLocked && !tiled ? (
           <Button variant="dark" onClick={confirmAll}>
             {t('escuta2.confirmAll')}
           </Button>

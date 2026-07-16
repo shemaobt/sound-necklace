@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { UiSound } from '../../../adapters/ui-sound';
 import {
   computeCoverage,
   type Confidence,
@@ -14,8 +15,10 @@ import {
   triagemDone,
 } from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
+import { sceneColor } from '../escuta2/cutting';
 import { Button } from '../../atoms';
 import { ProgressDots } from '../../molecules';
+import { Necklace, SIZE_L } from '../../organisms';
 import { CoverageDrawer } from '../../organisms/coverage-drawer/coverage-drawer';
 import { TriagemPicker } from '../../organisms/triagem-picker/triagem-picker';
 import { sessionStore, useSessionStore } from '../../state';
@@ -37,6 +40,8 @@ import './triagem.css';
  */
 export interface TriagemProps {
   player?: Player | null;
+  /** A voz da UI (§9): escolher um tipo, travar a cena e avançar têm som. */
+  sound?: UiSound;
 }
 
 type Translate = (key: string) => string;
@@ -64,10 +69,17 @@ function nextPending(parts: ScenePart[], from: number): number {
   return -1;
 }
 
-export function Triagem({ player = null }: TriagemProps) {
+export function Triagem({ player = null, sound }: TriagemProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [focusIdx, setFocusIdx] = useState(0);
+  const [inspecting, setInspecting] = useState<number | null>(null);
+  const [head, setHead] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!player) return;
+    return player.onHead(setHead);
+  }, [player]);
 
   useEffect(() => {
     if (!player) return;
@@ -96,10 +108,10 @@ export function Triagem({ player = null }: TriagemProps) {
 
   const idx = Math.min(focusIdx, parts.length - 1);
   const scene = parts[idx]!;
-
-  const playScene = (): void => {
-    if (player && scene.span) player.toggle(scene.part_id, scene.span.s, scene.span.e);
-  };
+  // momento de revisão (decisão do dono): todas classificadas + ≥1 produtiva →
+  // UMA ação (Continuar). Clicar num ponto reabre o picker daquela cena
+  // (inspecting); classificar de novo volta à revisão sozinho.
+  const reviewing = gate.enabled && inspecting === null;
 
   const advanceFocus = (): void => {
     const s = sessionStore.getState().session;
@@ -110,13 +122,24 @@ export function Triagem({ player = null }: TriagemProps) {
 
   const classify = (kind: string, confidence: Confidence): void => {
     const id = scene.part_id;
+    sound?.lock();
     sessionStore.getState().apply((s) => tagScene(s, id, kind, confidence));
+    setInspecting(null);
     advanceFocus();
+  };
+
+  // protótipo tapTriageBead: tocar QUALQUER conta da cena reproduz a cena inteira
+  // (e tocar a conta que brilha pausa — o `toggle` já faz isso na mesma chave).
+  const playScene = (): void => {
+    if (!player || !scene.span) return;
+    player.toggle(scene.part_id, scene.span.s, scene.span.e);
   };
 
   const noneFit = (): void => {
     const id = scene.part_id;
+    sound?.lock();
     sessionStore.getState().apply((s) => markNoneFit(s, id));
+    setInspecting(null);
     advanceFocus();
   };
 
@@ -126,6 +149,7 @@ export function Triagem({ player = null }: TriagemProps) {
   const advance = (): void => {
     const s = sessionStore.getState().session;
     if (!s || !triagemDone(s).enabled) return;
+    sound?.advance();
     sessionStore.getState().apply((st) => {
       const moved = setMode(st, 'segmentacao');
       return moved.mode === 'segmentacao' ? enterSegmentacao(moved) : moved;
@@ -137,24 +161,75 @@ export function Triagem({ player = null }: TriagemProps) {
       <ProgressDots
         count={parts.length}
         current={idx}
-        onSelect={setFocusIdx}
+        scenes={parts.map((p, i) => ({
+          state:
+            p.tag_state === 'tagged'
+              ? 'tagged'
+              : p.tag_state === 'none_fit'
+                ? 'none_fit'
+                : 'pending',
+          tint: sceneColor(i),
+        }))}
+        onSelect={(i) => {
+          setFocusIdx(i);
+          setInspecting(i);
+        }}
         dotLabel={t('progressDots.dotLabel')}
       />
 
-      <div className="cds-triagem-focus">
-        <p className="cds-triagem-instruction" data-role="instruction">
-          {t('triagem.instruction')}
-        </p>
-        <div className="cds-triagem-play">
-          <Button variant="primary" onClick={playScene}>
-            {t('triagem.playScene')}
+      {reviewing ? (
+        <div className="cds-triagem-review" data-role="primary-action">
+          <p className="cds-triagem-review-headline" data-role="instruction">
+            {t('triagem.reviewHeadline')}
+          </p>
+          <Button variant="primary" onClick={advance}>
+            {t('review.continue')}
           </Button>
         </div>
-        <p className="cds-triagem-tag" data-tag={scene.tag_state}>
-          {tagShow(scene, t, i18n.language)}
-        </p>
-        <TriagemPicker key={scene.part_id} onConfirm={classify} onNoneFit={noneFit} />
-      </div>
+      ) : (
+        <div className="cds-triagem-focus">
+          <p className="cds-triagem-instruction" data-role="instruction">
+            {t('triagem.instruction')}
+          </p>
+          <p className="cds-triagem-tag" data-tag={scene.tag_state}>
+            {tagShow(scene, t, i18n.language)}
+          </p>
+
+          {/* o colar da cena em foco (protótipo tColarRows): sem play na estação, é
+              daqui que sai o som — qualquer conta reproduz a cena inteira. Só a cena
+              (windowMargin 0), sem a banda tracejada, que é afordância da Segmentação. */}
+          {scene.span ? (
+            <div className="cds-triagem-colar">
+              <div
+                className="cds-triagem-colar-card"
+                // o cartão abraça a cena (protótipo: fit-content), em vez de virar uma
+                // barra larga com quatro contas perdidas no meio. Teto de 30 contas por
+                // fileira = o `_rowsWithFill(beads, 30)` do protótipo.
+                style={{
+                  maxWidth: Math.min(30, scene.span.e - scene.span.s + 1) * SIZE_L.slot + 44,
+                }}
+              >
+                <Necklace
+                  totalBeads={session.totalBeads}
+                  beadSec={session.beadSec}
+                  segments={[{ span: scene.span, tint: sceneColor(idx) }]}
+                  window={scene.span}
+                  windowMargin={0}
+                  sceneBand={false}
+                  size={SIZE_L}
+                  transportOnly
+                  playbackHead={head}
+                  onBeadPointerDown={playScene}
+                  onHeadTap={playScene}
+                />
+              </div>
+              <p className="cds-triagem-colar-hint">{t('triagem.colarHint')}</p>
+            </div>
+          ) : null}
+
+          <TriagemPicker key={scene.part_id} onConfirm={classify} onNoneFit={noneFit} />
+        </div>
+      )}
 
       {coverage.noneFit > 0 ? <p className="cds-triagem-finding">{t('triagem.finding')}</p> : null}
 
@@ -164,18 +239,27 @@ export function Triagem({ player = null }: TriagemProps) {
         </p>
       ) : null}
 
-      <div className="cds-triagem-gate">
-        {!gate.enabled && gate.message ? (
+      {/* o CTA antigo virou o Continuar da revisão; aqui fica só o guia do gate */}
+      {!gate.enabled && gate.message ? (
+        <div className="cds-triagem-gate">
           <p className="cds-triagem-gate-msg" role="status">
             {gate.message}
           </p>
-        ) : null}
-        <div data-role="primary-action">
-          <Button variant="dark" disabled={!gate.enabled} onClick={advance}>
-            {t('triagem.advance')}
+        </div>
+      ) : null}
+
+      {/* Inspecionando uma cena com o gate JÁ aberto, a saída fica aqui — como o CTA
+          do protótipo, que vive no rodapé e não depende do picker. Sem isto, tocar
+          num ponto só para reouvir a cena (que é para isso que o colar está lá)
+          sumia com a única ação de avanço, e o único jeito de voltar a ela era
+          RECLASSIFICAR uma cena que ninguém queria mexer. */}
+      {gate.enabled && !reviewing ? (
+        <div className="cds-triagem-gate" data-role="primary-action">
+          <Button variant="primary" onClick={advance}>
+            {t('review.continue')}
           </Button>
         </div>
-      </div>
+      ) : null}
 
       <CoverageDrawer coverage={coverage} />
     </section>

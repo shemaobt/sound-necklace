@@ -171,11 +171,13 @@ export function TriagemPicker({ onConfirm, onNoneFit }: TriagemPickerProps) {
     const label = sceneKindLabel(picked, i18n.language);
     return (
       <div className="cds-triagem-picker" data-stage="confianca" ref={rootRef}>
-        <div className="cds-triagem-picker-chosen">
-          <Pearl tint={tintOf(picked)} size={22} state="lit" />
-          <span className="cds-triagem-picker-chosen-label" title={picked}>
-            {label}
-          </span>
+        <div className="cds-triagem-picker-chosen-row">
+          <div className="cds-triagem-picker-chosen">
+            <Pearl tint={tintOf(picked)} size={20} state="lit" />
+            <span className="cds-triagem-picker-chosen-label" title={picked}>
+              {label}
+            </span>
+          </div>
           <button
             type="button"
             className="cds-triagem-picker-swap"

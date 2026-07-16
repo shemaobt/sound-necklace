@@ -19,3 +19,7 @@ Path: @/ui/pages/setup
 ### Known follow-ups
 
 - `projectId` defaults to `'projeto'`; the real project comes from auth once the composition root exists (ENG-247).
+
+### Things to Know
+
+- **Layout realigned to the Protótipo** (`docs/design/Colar de Sons - Protótipo.dc.html`, CLAUDE.md precedence rule 2): a single centered 640px column (`.cds-setup > *`) instead of the previous two-column layout, headed by an eyebrow ("Preparação", `setup.eyebrow`) above the title, a large `ShemaIcon` watermark in the corner, and white cards (radius 15px, `--cds-shadow-card`) for the doors/levels/audio picker. The content and gating (§O7 trust line, consent checkbox, the three entry doors) are unchanged — only the visual frame moved.

@@ -1,14 +1,48 @@
 /*
- * Fio de contas abaixo do cabeçalho (redesign §5.1): fita fina e calma, fora do
- * conteúdo. Uma linha horizontal de contas-etapa; sem números.
+ * Fio de contas (Protótipo.dc.html, ui.wizardStyle): faixa de 46px, nome da etapa
+ * em caixa alta espaçada, bolinhas de 7/11px atravessadas por uma linha de 1.5px.
+ * Cores via custom properties de chrome (app.css) — a variante escura vem de lá.
  */
 .cds-stepper {
   display: flex;
-  align-items: flex-start;
-  gap: clamp(16px, 4vw, 44px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 46px;
+  flex: none;
+  border-bottom: 1px solid var(--cds-chrome-hairline);
+  background: var(--cds-chrome-band-bg);
+}
+
+.cds-stepper-name {
   margin: 0;
-  padding: 12px clamp(16px, 5vw, 48px);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cds-chrome-fg-soft);
+}
+
+.cds-stepper-dots {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
   list-style: none;
-  border-bottom: 1px solid var(--cds-hairline);
-  background: var(--cds-cream);
+}
+
+/* a linha contínua do fio, atravessando por trás das bolinhas */
+.cds-stepper-dots::before {
+  content: '';
+  position: absolute;
+  left: -11px;
+  right: -11px;
+  top: 50%;
+  height: 1.5px;
+  margin-top: -0.75px;
+  background: var(--cds-chrome-thread);
+  z-index: 0;
 }

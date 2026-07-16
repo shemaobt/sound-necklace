@@ -40,7 +40,8 @@ async function triageGleaningThenNoneFit(page: Page): Promise<void> {
   await page.getByRole('radio', { name: 'Certeza', exact: true }).click();
   await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
   await page.getByRole('radio', { name: 'Nenhum se encaixa', exact: true }).click();
-  await page.getByRole('button', { name: 'Já classifiquei todas as cenas →' }).click();
+  // todas classificadas → momento de revisão
+  await page.getByRole('button', { name: 'Continuar →' }).click();
 }
 
 /**
@@ -49,20 +50,17 @@ async function triageGleaningThenNoneFit(page: Page): Promise<void> {
  * Os alvos vêm em ordem crescente; entre eles, avança clicando "Próxima pergunta".
  * Perguntas não visitadas (e a resposta vazia de `tempo`) ficam "(sem resposta)" no
  * relatório — idêntico ao golden. NENHUMA resposta por voz (poluiria o .md com paths).
+ * A digitação acontece no RELATÓRIO (a entrevista é só-voz): anda até a prévia e
+ * preenche o card do índice exato da sequência.
  */
 async function typeAnswersAt(
   app: ColarApp,
-  page: Page,
+  _page: Page,
   answers: readonly (readonly [number, string])[],
 ): Promise<void> {
-  const next = page.getByRole('button', { name: 'Próxima pergunta' });
-  let idx = 0;
+  await app.walkToReport();
   for (const [target, text] of answers) {
-    while (idx < target) {
-      await next.click();
-      idx += 1;
-    }
-    await app.typeAnswer(text);
+    await app.typeAnswerInReport(target, text);
   }
 }
 

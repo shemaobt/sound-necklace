@@ -66,6 +66,7 @@ function load(state: SessionState): void {
   sessionStore.getState().load(state);
 }
 
+/** Player-espião: registra as chamadas de reprodução sem tocar áudio real. */
 function spyPlayer(): Player {
   return {
     toggle: vi.fn(),
@@ -149,38 +150,53 @@ describe('Triagem — pontos de progresso (redesign §6.4)', () => {
   });
 });
 
-describe('Triagem — ▶ ouvir esta cena', () => {
-  it('“Ouvir esta cena” toca o span da cena em foco pelo player', async () => {
+describe('Triagem — o colar da cena em foco (protótipo tColarRows/tapTriageBead)', () => {
+  it('tocar numa conta toca a CENA inteira — a estação não tem play, o som vem do colar', async () => {
     const player = spyPlayer();
     load(triaging([lockedPart('PT1', { s: 1, e: 6 }), lockedPart('PT2', { s: 7, e: 9 })]));
     render(<Triagem player={player} />);
 
-    await userEvent.click(screen.getByRole('button', { name: /Ouvir esta cena/ }));
+    document
+      .querySelector('.cds-necklace')!
+      .dispatchEvent(
+        new MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 1, clientY: 1 }),
+      );
 
     expect(player.toggle).toHaveBeenCalledWith('PT1', 1, 6);
+  });
+
+  it('o colar segue a cena em foco: saltar de ponto troca o span que o toque reproduz', async () => {
+    const player = spyPlayer();
+    load(triaging([lockedPart('PT1', { s: 1, e: 6 }), lockedPart('PT2', { s: 7, e: 9 })]));
+    render(<Triagem player={player} />);
+
+    await userEvent.click(dots()[1]!);
+    document
+      .querySelector('.cds-necklace')!
+      .dispatchEvent(
+        new MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 1, clientY: 1 }),
+      );
+
+    expect(player.toggle).toHaveBeenCalledWith('PT2', 7, 9);
   });
 });
 
 describe('Triagem — gate duro "Já classifiquei todas as cenas →" (PRD v2 §8.5)', () => {
-  it('fica desabilitado com cena pendente e mostra a cópia de ajuda exata', () => {
+  it('com cena pendente não há CTA nenhum — só a cópia de ajuda exata', () => {
     load(
       triaging([lockedPart('PT1', { s: 0, e: 4 }, 'tagged'), lockedPart('PT2', { s: 5, e: 9 })]),
     );
     render(<Triagem />);
 
-    expect(
-      (
-        screen.getByRole('button', {
-          name: 'Já classifiquei todas as cenas →',
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    // o CTA antigo virou o Continuar da revisão; pendente = nem um, nem outro
+    expect(screen.queryByRole('button', { name: 'Já classifiquei todas as cenas →' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continuar →' })).toBeNull();
     expect(
       screen.getByText('Classifique todas as cenas (ou marque “nenhum se encaixa”) para seguir.'),
     ).toBeTruthy();
   });
 
-  it('habilita com todas não-pendentes e ≥1 produtiva e avança para Segmentação', async () => {
+  it('habilita a revisão com todas não-pendentes e ≥1 produtiva; "Continuar →" avança para Segmentação', async () => {
     load(
       triaging([
         lockedPart('PT1', { s: 0, e: 4 }, 'tagged'),
@@ -189,7 +205,9 @@ describe('Triagem — gate duro "Já classifiquei todas as cenas →" (PRD v2 §
     );
     render(<Triagem />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Já classifiquei todas as cenas →' }));
+    // com todas classificadas e ≥1 produtiva, o botão do PRD some — vira revisão
+    expect(screen.queryByRole('button', { name: 'Já classifiquei todas as cenas →' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
 
     const s = sessionStore.getState().session!;
     expect(s.mode).toBe('segmentacao');
@@ -198,6 +216,54 @@ describe('Triagem — gate duro "Já classifiquei todas as cenas →" (PRD v2 §
     // enterSegmentacao rodou: a cena produtiva está ativa (a estação não fica nula)
     expect(activeScene(s)?.part_id).toBe('PT1');
     expect(s.current.layer).toBe('frases');
+  });
+});
+
+describe('Triagem — momento de revisão quando todas as cenas estão classificadas (design parity)', () => {
+  it('todas classificadas (≥1 produtiva) → revisão', () => {
+    load(
+      triaging([
+        lockedPart('PT1', { s: 0, e: 4 }, 'tagged'),
+        lockedPart('PT2', { s: 5, e: 9 }, 'tagged'),
+      ]),
+    );
+    render(<Triagem />);
+
+    expect(screen.getByText('Todas as cenas classificadas.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
+    expect(screen.queryByText('Essa cena é sobre o quê?')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Já classifiquei todas as cenas →' })).toBeNull();
+  });
+
+  it('“Continuar →” entra na Segmentação', async () => {
+    load(
+      triaging([
+        lockedPart('PT1', { s: 0, e: 4 }, 'tagged'),
+        lockedPart('PT2', { s: 5, e: 9 }, 'tagged'),
+      ]),
+    );
+    render(<Triagem />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
+
+    expect(sessionStore.getState().session!.mode).toBe('segmentacao');
+  });
+
+  it('os pontos continuam navegáveis na revisão', async () => {
+    load(
+      triaging([
+        lockedPart('PT1', { s: 0, e: 4 }, 'tagged'),
+        lockedPart('PT2', { s: 5, e: 9 }, 'tagged'),
+      ]),
+    );
+    render(<Triagem />);
+    // na revisão, o picker por cena não aparece por padrão
+    expect(screen.queryByText('Essa cena é sobre o quê?')).toBeNull();
+
+    await userEvent.click(dots()[1]!);
+
+    // clicar num ponto volta a mostrar o picker daquela cena
+    expect(screen.getByText('Essa cena é sobre o quê?')).toBeTruthy();
   });
 });
 
@@ -212,13 +278,9 @@ describe('Triagem — todas "nenhum se encaixa" (PRD v2 §8.5)', () => {
     render(<Triagem />);
 
     expect(screen.getByText(/Segmentação e Mapeamento ficam travadas/)).toBeTruthy();
-    expect(
-      (
-        screen.getByRole('button', {
-          name: 'Já classifiquei todas as cenas →',
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    // o CTA antigo não existe mais; o lockout NÃO é um momento de revisão — sem "Continuar →"
+    expect(screen.queryByRole('button', { name: 'Já classifiquei todas as cenas →' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continuar →' })).toBeNull();
     const s = sessionStore.getState().session!;
     expect(modeLocks(s).segmentacao).toBe(false);
     expect(modeLocks(s).mapeamento).toBe(false);
@@ -266,5 +328,26 @@ describe('Triagem — tratamento creme (redesign §6.4, §4.5)', () => {
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
     const { outside } = splitByGuard(triagemCss, guard);
     expect(outside).not.toMatch(/animation|@keyframes/);
+  });
+});
+
+describe('Triagem — reouvir na revisão não pode custar a saída', () => {
+  it('tocar num ponto para reouvir uma cena mantém o "Continuar →" ao alcance', async () => {
+    load(
+      triaging([
+        lockedPart('PT1', { s: 0, e: 4 }, 'tagged'),
+        lockedPart('PT2', { s: 5, e: 9 }, 'tagged'),
+      ]),
+    );
+    render(<Triagem />);
+    expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
+
+    // a facilitadora toca um ponto só para reouvir a cena 2 (é para isso que o
+    // colar está lá) — sem mudar classificação nenhuma
+    await userEvent.click(dots()[1]!);
+
+    // ela ainda consegue seguir: sem isto, o único jeito de avançar seria
+    // RECLASSIFICAR uma cena que ela não queria mexer
+    expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
   });
 });

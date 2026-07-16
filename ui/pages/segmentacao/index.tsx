@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { UiSound } from '../../../adapters/ui-sound';
 import {
   activeAnchor,
   activeScene,
@@ -10,7 +11,6 @@ import {
   confirmFrase,
   confirmFrasesDone,
   enterScene,
-  type Frase,
   moveBorder,
   nextNeighbor,
   prevNeighbor,
@@ -25,7 +25,14 @@ import {
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button } from '../../atoms';
 import { ScenePhraseChip } from '../../molecules';
-import { Necklace, type NecklaceSegment, SeamModal, type SeamCordSide } from '../../organisms';
+import {
+  Necklace,
+  type NecklaceSegment,
+  SeamModal,
+  type SeamCordSide,
+  SIZE_SEG,
+} from '../../organisms';
+import { resolveWindow } from '../../organisms/necklace/geometry';
 import { sessionStore, useSessionStore } from '../../state';
 import { playActionOn, sceneColor, sceneLabel } from '../escuta2/cutting';
 import { phraseColor, phraseLabel } from './wiring';
@@ -48,9 +55,11 @@ import './segmentacao.css';
  */
 export interface SegmentacaoProps {
   player?: Player | null;
+  /** A voz da UI (§9): travar a frase, mover a costura, recusar e avançar têm som. */
+  sound?: UiSound;
 }
 
-export function Segmentacao({ player = null }: SegmentacaoProps) {
+export function Segmentacao({ player = null, sound }: SegmentacaoProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
@@ -91,6 +100,18 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
 
   const ps = productiveScenes(session);
   const sceneIdx = Math.max(0, sceneIndexOf(session, sc.part_id));
+  const headerTint = sceneColor(session.parts.findIndex((p) => p.part_id === sc.part_id));
+  // momento de revisão (decisão do dono): frases travadas cobrindo a cena toda →
+  // nada resta a cortar aqui; UMA ação (Continuar = o mesmo confirmFrasesDone,
+  // que sem cena vazia não avisa). Frases esparsas mantêm o botão do PRD.
+  // a moldura tracejada abraça a janela renderizada: contas visíveis × slot + respiro
+  const { winS, winE } = resolveWindow(session.totalBeads, session.beadSec, scSpan);
+  const stageMaxWidth = Math.min(22, winE - winS + 1) * SIZE_SEG.slot + 63;
+
+  const lockedPhraseEnds = scenePhrases
+    .filter(({ f }) => f.locked && f.span)
+    .map(({ f }) => f.span!.e);
+  const covered = lockedPhraseEnds.length > 0 && Math.max(...lockedPhraseEnds) === scSpan.e;
   const isLast = sceneIdx >= ps.length - 1;
   const anchor = activeAnchor(session);
 
@@ -106,14 +127,6 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
     if (player) player.playEdge(edge);
   };
 
-  const playScene = (): void => {
-    if (player) player.toggle(sc.part_id, scSpan.s, scSpan.e);
-  };
-
-  const playPhrase = (f: Frase): void => {
-    if (player && f.span) player.toggle(f.prop_id, f.span.s, f.span.e);
-  };
-
   const confirmPhrase = (): void => {
     const s = sessionStore.getState().session;
     if (!s || s.current.layer !== 'frases' || s.current.index < 0) return;
@@ -121,6 +134,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
     switch (result.kind) {
       case 'error':
         setError(result.error.message);
+        sound?.refuse();
         return;
       case 'border':
         setError(null);
@@ -128,6 +142,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
         return;
       case 'locked':
         setError(null);
+        sound?.lock();
         sessionStore.getState().apply(() => result.state);
         return;
       case 'noop':
@@ -139,6 +154,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
     if (!offer) return;
     setError(null);
     setOffer(null);
+    sound?.lock();
     // moveBorder deve rodar sobre o MESMO estado (mesma cena ativa) que gerou a
     // oferta — o store não muda enquanto o modal está aberto (§8.6).
     sessionStore.getState().apply((s) => moveBorder(s, offer));
@@ -179,11 +195,13 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
       case 'warn-empty':
         setWarned(result.warnedEmptyScene);
         setError(result.message);
+        sound?.refuse();
         return;
       case 'next-scene':
       case 'mapeamento':
         setError(null);
         setWarned(null);
+        sound?.advance();
         sessionStore.getState().apply(() => result.state);
         return;
     }
@@ -216,12 +234,23 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
 
   return (
     <section className="cds-segmentacao">
-      <p className="cds-segmentacao-title">{`${sceneLabel(sceneIdx)} · ${sceneKindLabel(sc.scene_kind!, i18n.language)}`}</p>
-      <p className="cds-segmentacao-instruction" data-role="instruction">
-        {t('segmentacao.instruction')}
-      </p>
+      <div className="cds-segmentacao-header">
+        <p className="cds-segmentacao-title">
+          <span
+            className="cds-segmentacao-swatch"
+            aria-hidden="true"
+            style={{
+              background: `radial-gradient(circle at 34% 30%, ${headerTint.lit} 0%, ${headerTint.base} 70%)`,
+            }}
+          />
+          {`${sceneLabel(sceneIdx)} · ${sceneKindLabel(sc.scene_kind!, i18n.language)}`}
+        </p>
+        <p className="cds-segmentacao-instruction" data-role="instruction">
+          {covered ? t('segmentacao.reviewHeadline') : t('segmentacao.instruction')}
+        </p>
+      </div>
 
-      <div className="cds-segmentacao-stage">
+      <div className="cds-segmentacao-stage" style={{ maxWidth: stageMaxWidth }}>
         <Necklace
           totalBeads={session.totalBeads}
           beadSec={session.beadSec}
@@ -229,6 +258,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
           lockedEndBeads={lockedEndBeads}
           selection={session.selection}
           pendingStart={session.pendingStart}
+          size={SIZE_SEG}
           window={scSpan}
           playbackHead={head}
           onBeadPointerDown={onBead}
@@ -236,37 +266,33 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
         />
       </div>
 
-      <div className="cds-segmentacao-scene-controls">
-        <Button variant="ghost" size="sm" onClick={playScene}>
-          {t('segmentacao.playScene')}
-        </Button>
-      </div>
-
       {scenePhrases.length ? (
-        <ul className="cds-segmentacao-chips">
-          {scenePhrases.map(({ f, index }, pos) => (
-            <li key={f.prop_id}>
-              <ScenePhraseChip
-                label={phraseLabel(pos)}
-                swatch={phraseColor(pos)}
-                onPlay={() => playPhrase(f)}
-                actions={
-                  <>
-                    <Button variant="ghost" size="sm" onClick={() => reopen(index)}>
-                      {t('segmentacao.reopen')}
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => flag(index)}>
-                      {f.flagged ? t('segmentacao.flagMarked') : t('segmentacao.flagReview')}
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => remove(index)}>
-                      {t('segmentacao.remove')}
-                    </Button>
-                  </>
-                }
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="cds-segmentacao-divider" aria-hidden="true" />
+          <ul className="cds-segmentacao-chips">
+            {scenePhrases.map(({ f, index }, pos) => (
+              <li key={f.prop_id}>
+                <ScenePhraseChip
+                  label={phraseLabel(pos)}
+                  swatch={phraseColor(pos)}
+                  actions={
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => reopen(index)}>
+                        {t('segmentacao.reopen')}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => flag(index)}>
+                        {f.flagged ? t('segmentacao.flagMarked') : t('segmentacao.flagReview')}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => remove(index)}>
+                        {t('segmentacao.remove')}
+                      </Button>
+                    </>
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        </>
       ) : null}
 
       <div className="cds-segmentacao-controls">
@@ -274,7 +300,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
           {t('segmentacao.back')}
         </Button>
 
-        {anchor ? (
+        {!covered && anchor ? (
           <div className="cds-segmentacao-confirm" data-role="primary-action">
             <Button variant="primary" onClick={confirmPhrase}>
               {t('segmentacao.confirmPhrase')}
@@ -282,13 +308,21 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
           </div>
         ) : null}
 
-        <Button variant="dark" onClick={done}>
-          {isLast ? t('segmentacao.doneLast') : t('segmentacao.doneMore')}
-        </Button>
+        {covered ? (
+          <div className="cds-segmentacao-confirm" data-role="primary-action">
+            <Button variant="primary" onClick={done}>
+              {t('review.continue')}
+            </Button>
+          </div>
+        ) : (
+          <Button variant="dark" onClick={done}>
+            {isLast ? t('segmentacao.doneLast') : t('segmentacao.doneMore')}
+          </Button>
+        )}
       </div>
 
       {error ? (
-        <p className="cds-segmentacao-error" role="alert">
+        <p className="cds-segmentacao-error" role="alert" data-kind={warned ? 'warn' : 'error'}>
           {error}
         </p>
       ) : null}
