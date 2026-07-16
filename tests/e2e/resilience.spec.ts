@@ -48,8 +48,6 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
 
     // Assenta no modo Segmentação com as três cenas persistidas antes de derrubar a rede.
     await expect.poll(async () => (await readPersistedState(page, id))?.mode).toBe('segmentacao');
-    const before = await readPersistedState(page, id);
-    expect(before?.parts).toHaveLength(SCENARIO.sceneEndBeads.length);
 
     // Playback já-carregado tocando ANTES da queda: a conta do playhead acende
     // (`data-play="head"`; as anteriores ficam "played" — a iluminação é cumulativa).
@@ -58,7 +56,23 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
       const idx = await headBead.getAttribute('data-idx').catch(() => null);
       return idx === null ? -1 : Number(idx);
     };
-    await page.getByRole('button', { name: '▶ ouvir a cena' }).click();
+    // o ▶ da cena saiu: o som nasce das contas — duas contas fecham uma seleção e o
+    // colar toca o INTERVALO. Apontar a frase aqui deixa a seleção assentar no
+    // autosave (que é debounced) ANTES da régua, senão ela nasce velha e a queda
+    // levaria a culpa por uma mudança que foi nossa.
+    const { s: phraseS, e: phraseE } = SCENARIO.containedPhrase;
+    await app.clickBead(phraseS);
+    await app.clickBead(phraseE);
+    await expect
+      .poll(async () => (await readPersistedState(page, id))?.selection)
+      .toEqual({ s: phraseS, e: phraseE });
+    const before = await readPersistedState(page, id);
+    expect(before?.parts).toHaveLength(SCENARIO.sceneEndBeads.length);
+
+    // reapontar as MESMAS contas retoca o intervalo e recai no mesmo estado da régua
+    // (reabrir a seleção e refechá-la nas mesmas bordas) — som tocando na hora da queda.
+    await app.clickBead(phraseS);
+    await app.clickBead(phraseE);
     await expect(headBead).toBeVisible();
     const startHead = await headIndex();
 

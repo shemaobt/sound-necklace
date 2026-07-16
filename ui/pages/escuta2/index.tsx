@@ -8,7 +8,6 @@ import {
   confirmPart,
   confirmParts,
   reopenPart,
-  type ScenePart,
   setMode,
 } from '../../../domain';
 import { Button } from '../../atoms';
@@ -131,16 +130,6 @@ export function Escuta2({ player = null }: Escuta2Props) {
     sessionStore.getState().apply((s) => reopenPart(s, i));
   };
 
-  const playScene = (pt: ScenePart): void => {
-    if (player && pt.span) player.toggle(pt.part_id, pt.span.s, pt.span.e);
-  };
-
-  /* o play branco do protótipo (playCurrentCut): toca a seleção pendente */
-  const playSelection = (): void => {
-    const sel = sessionStore.getState().session?.selection;
-    if (player && sel) player.toggle('selecao-pendente', sel.s, sel.e);
-  };
-
   return (
     <section className="cds-escuta2">
       <div className="cds-escuta2-header">
@@ -184,7 +173,6 @@ export function Escuta2({ player = null }: Escuta2Props) {
                   <ScenePhraseChip
                     label={sceneLabel(i)}
                     swatch={sceneColor(i)}
-                    onPlay={() => playScene(pt)}
                     actions={
                       <Button variant="ghost" size="sm" onClick={() => reopen(i)}>
                         {t('escuta2.reopen')}
@@ -209,19 +197,6 @@ export function Escuta2({ player = null }: Escuta2Props) {
               {t('review.continue')}
             </Button>
           </div>
-        ) : null}
-
-        {!tiled && session.selection ? (
-          <button
-            type="button"
-            className="cds-escuta2-play"
-            aria-label={t('escuta2.playSelection')}
-            onClick={playSelection}
-          >
-            <svg width={19} height={19} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </button>
         ) : null}
 
         {!tiled && anchor ? (

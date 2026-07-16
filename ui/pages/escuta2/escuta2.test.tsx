@@ -1,8 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Player } from '../../../adapters/audio';
 import {
   buildBeads,
   createSession,
@@ -66,18 +65,6 @@ function load(state: SessionState): void {
   sessionStore.getState().load(state);
 }
 
-/** Player-espião: registra as chamadas de reprodução sem tocar áudio real. */
-function spyPlayer(): Player {
-  return {
-    toggle: vi.fn(),
-    play: vi.fn(),
-    playEdge: vi.fn(),
-    stop: vi.fn(),
-    state: { key: null, playing: false, paused: false },
-    onHead: vi.fn(() => () => {}),
-  };
-}
-
 beforeEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
 });
@@ -98,39 +85,6 @@ describe('Escuta 2 — título do protótipo (redesign design parity Fase 3)', (
     render(<Escuta2 />);
 
     expect(screen.getByRole('heading', { name: 'Corte a história em cenas' })).toBeTruthy();
-  });
-});
-
-describe('Escuta 2 — o play branco toca a seleção pendente (redesign design parity Fase 3)', () => {
-  it('o play branco toca a seleção pendente', async () => {
-    const player = spyPlayer();
-    load(
-      cutting({
-        parts: [part({ part_id: 'PT1' })],
-        current: { layer: 'parts', index: 0 },
-        selection: { s: 0, e: 4 },
-        pendingStart: null,
-      }),
-    );
-    render(<Escuta2 player={player} />);
-
-    await userEvent.click(screen.getByRole('button', { name: 'Ouvir a seleção' }));
-
-    expect(player.toggle).toHaveBeenCalledWith(expect.any(String), 0, 4);
-  });
-
-  it('sem seleção ativa, o botão "Ouvir a seleção" não existe', () => {
-    load(
-      cutting({
-        parts: [part({ part_id: 'PT1' })],
-        current: { layer: 'parts', index: 0 },
-        selection: null,
-        pendingStart: null,
-      }),
-    );
-    render(<Escuta2 />);
-
-    expect(screen.queryByRole('button', { name: 'Ouvir a seleção' })).toBeNull();
   });
 });
 
@@ -221,24 +175,6 @@ describe('Escuta 2 — chips das cenas confirmadas (redesign §6.3)', () => {
     expect(chips).toHaveLength(1);
     expect(chips[0]!.getAttribute('aria-label')).toBe('Cena um');
     expect(sessionStore.getState().session!.current.index).toBe(1);
-  });
-
-  it('▶ ouvir de um chip toca o span da cena travada pelo player', async () => {
-    const player = spyPlayer();
-    load(
-      cutting({
-        parts: [lockedPart('PT1', { s: 1, e: 6 }), part({ part_id: 'PT2' })],
-        current: { layer: 'parts', index: 1 },
-        selection: null,
-        pendingStart: null,
-      }),
-    );
-    render(<Escuta2 player={player} />);
-
-    const chip = screen.getByRole('group', { name: 'Cena um' });
-    await userEvent.click(within(chip).getByRole('button', { name: 'Tocar' }));
-
-    expect(player.toggle).toHaveBeenCalledWith('PT1', 1, 6);
   });
 });
 

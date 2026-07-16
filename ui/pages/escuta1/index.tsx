@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import { confirmWhole, reopenWhole } from '../../../domain';
-import { Button, PlayGlyph } from '../../atoms';
+import { Button } from '../../atoms';
 import { Necklace, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import { ShemaIcon } from '../../tokens';
@@ -90,15 +90,6 @@ export function Escuta1({ player = null }: Escuta1Props) {
       </div>
 
       <div className="cds-escuta1-controls">
-        <button
-          type="button"
-          className="cds-escuta1-play"
-          aria-label={t('escuta1.listen')}
-          onClick={handlers?.onBig}
-        >
-          <PlayGlyph state="play" size={28} />
-        </button>
-
         <div
           className="cds-escuta1-decision"
           data-role="primary-action"

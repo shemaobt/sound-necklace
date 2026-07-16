@@ -59,6 +59,14 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await app.finishSegmentacao();
   await shot('09-mapeamento');
 
+  // os três estados da resposta em voz: vazio (acima) → gravando → pronta. É onde
+  // moram o contraste dos ghost sobre o oliva e as barras da forma de onda.
+  await page.getByRole('button', { name: 'gravar a resposta' }).click();
+  await shot('09b-mapeamento-gravando');
+  await page.getByRole('button', { name: 'Parar' }).click();
+  await expect(page.getByRole('button', { name: 'ouvir', exact: true })).toBeVisible();
+  await shot('09c-mapeamento-resposta-pronta');
+
   await app.completeSession();
   await shot('10-export');
 });

@@ -181,11 +181,25 @@ export function ConversationStage({
             <div className="cds-conversation-stage-divider" aria-hidden="true" />
 
             <div className="cds-conversation-stage-wave-row">
-              <div className="cds-conversation-stage-waveform" aria-hidden="true">
-                {recorderState === 'recording'
-                  ? levels.map((height, i) => <WaveformBar key={i} height={height} active />)
-                  : Array.from({ length: 46 }, (_, i) => <WaveformBar key={i} height={8} />)}
-              </div>
+              {recorderState === 'idle' ? (
+                // sem resposta ainda, o protótipo promete o fio de som em palavras —
+                // barras chapadas aqui viravam um traço morto espremendo o microfone
+                <p className="cds-conversation-stage-empty-wave">
+                  {t('conversationStage.emptyWave')}
+                </p>
+              ) : (
+                <div className="cds-conversation-stage-waveform" aria-hidden="true">
+                  {recorderState === 'recording'
+                    ? // 46 barras vivas: nível real quando o gravador o emite; senão a
+                      // altura formulaica do protótipo (recBars: 10 + (i*7 % 34))
+                      Array.from({ length: 46 }, (_, i) => (
+                        <WaveformBar key={i} height={levels[i] ?? 10 + ((i * 7) % 34)} active />
+                      ))
+                    : Array.from({ length: 46 }, (_, i) => (
+                        <WaveformBar key={i} height={10 + ((i * 7) % 34)} />
+                      ))}
+                </div>
+              )}
 
               {recorderState === 'recorded' ? (
                 <div className="cds-conversation-stage-review">
@@ -200,21 +214,22 @@ export function ConversationStage({
             </div>
 
             <div className="cds-conversation-stage-recorder" data-state={recorderState}>
-              {recorderState !== 'recorded' ? (
-                <button
-                  type="button"
-                  className="cds-conversation-stage-mic"
-                  data-recording={recorderState === 'recording' || undefined}
-                  aria-label={
-                    recorderState === 'recording'
-                      ? t('conversationStage.stop')
-                      : t('conversationStage.record')
-                  }
-                  onClick={recorderState === 'recording' ? onStop : onRecord}
-                >
-                  {recorderState === 'recording' ? <StopGlyph /> : <MicGlyph />}
-                </button>
-              ) : null}
+              {/* o microfone nunca some (protótipo toggleRecord): escondê-lo com a
+                  resposta pronta deixava "Toque e fale a sua resposta" mandando
+                  tocar num botão que não estava mais lá */}
+              <button
+                type="button"
+                className="cds-conversation-stage-mic"
+                data-recording={recorderState === 'recording' || undefined}
+                aria-label={
+                  recorderState === 'recording'
+                    ? t('conversationStage.stop')
+                    : t('conversationStage.record')
+                }
+                onClick={recorderState === 'recording' ? onStop : onRecord}
+              >
+                {recorderState === 'recording' ? <StopGlyph /> : <MicGlyph />}
+              </button>
 
               <div className="cds-conversation-stage-hint">
                 <p className="cds-conversation-stage-hint-strong">

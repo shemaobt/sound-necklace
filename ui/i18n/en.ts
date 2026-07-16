@@ -148,14 +148,12 @@ export const en: Dict = {
   },
   escuta1: {
     tagline: 'Listen to the story.',
-    listen: 'Listen to the story',
     reopen: 'Reopen',
     confirm: 'I have heard the whole story',
   },
   escuta2: {
     title: 'Cut the story into scenes',
     reviewHeadline: 'The whole story is in scenes.',
-    playSelection: 'Listen to the selection',
     instructionPre: 'Tap the necklace where ',
     instructionEmph: 'this scene ends',
     instructionPost: '. The beginning is already stitched.',
@@ -167,7 +165,6 @@ export const en: Dict = {
   segmentacao: {
     reviewHeadline: 'The phrases of this scene are ready.',
     instruction: 'Tap the necklace at the start and the end of each phrase.',
-    playScene: '▶ listen to the scene',
     reopen: 'Reopen',
     flagMarked: '⚑ marked',
     flagReview: '⚑ review',
@@ -225,7 +222,6 @@ export const en: Dict = {
     reviewHeadline: 'Every scene is classified.',
     empty: 'No scene confirmed yet.',
     instruction: 'What is this scene about?',
-    playScene: '▶ Listen to this scene',
     tagNoneFit: '⌀ none fits',
     tagPending: '— to classify',
     confAlta: 'certain',
@@ -310,6 +306,7 @@ export const en: Dict = {
     record: 'record the answer',
     stop: 'Stop',
     idleHint: 'Tap and speak your answer',
+    emptyWave: 'your answer becomes a thread of sound here',
     recordingLabel: 'Recording…',
     play: 'listen',
     again: 'again',

@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Player } from '../../../adapters/audio';
 import {
   activeScene,
   buildBeads,
@@ -64,17 +63,6 @@ function triaging(parts: ScenePart[]): SessionState {
 
 function load(state: SessionState): void {
   sessionStore.getState().load(state);
-}
-
-function spyPlayer(): Player {
-  return {
-    toggle: vi.fn(),
-    play: vi.fn(),
-    playEdge: vi.fn(),
-    stop: vi.fn(),
-    state: { key: null, playing: false, paused: false },
-    onHead: vi.fn(() => () => {}),
-  };
 }
 
 /** Classifica a cena em foco: escolhe um tipo comum e a confiança "Certeza". */
@@ -146,18 +134,6 @@ describe('Triagem — pontos de progresso (redesign §6.4)', () => {
     const s = sessionStore.getState().session!;
     expect(s.parts[1]!.tag_state).toBe('tagged');
     expect(s.parts[0]!.tag_state).toBe('pending');
-  });
-});
-
-describe('Triagem — ▶ ouvir esta cena', () => {
-  it('“Ouvir esta cena” toca o span da cena em foco pelo player', async () => {
-    const player = spyPlayer();
-    load(triaging([lockedPart('PT1', { s: 1, e: 6 }), lockedPart('PT2', { s: 7, e: 9 })]));
-    render(<Triagem player={player} />);
-
-    await userEvent.click(screen.getByRole('button', { name: /Ouvir esta cena/ }));
-
-    expect(player.toggle).toHaveBeenCalledWith('PT1', 1, 6);
   });
 });
 

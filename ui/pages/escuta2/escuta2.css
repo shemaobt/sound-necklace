@@ -93,20 +93,6 @@
   gap: 16px;
 }
 
-/* o play branco de 48px ao lado do confirmar (protótipo playCurrentCut) */
-.cds-escuta2-play {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border: none;
-  border-radius: 50%;
-  background: #ffffff;
-  color: var(--cds-telha);
-  box-shadow: 0 2px 6px rgba(63, 62, 32, 0.12);
-}
-
 /* confirmação inelegível: telha lavado exato do protótipo (confirmSceneBg) */
 .cds-escuta2 .cds-button[data-variant='primary']:disabled {
   background: #d8b79e;

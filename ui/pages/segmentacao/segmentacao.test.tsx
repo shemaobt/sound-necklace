@@ -1,8 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Player } from '../../../adapters/audio';
 import {
   buildBeads,
   createSession,
@@ -91,18 +90,6 @@ function load(state: SessionState): void {
   sessionStore.getState().load(state);
 }
 
-/** Player-espião: registra as chamadas de reprodução sem tocar áudio real. */
-function spyPlayer(): Player {
-  return {
-    toggle: vi.fn(),
-    play: vi.fn(),
-    playEdge: vi.fn(),
-    stop: vi.fn(),
-    state: { key: null, playing: false, paused: false },
-    onHead: vi.fn(() => () => {}),
-  };
-}
-
 beforeEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
 });
@@ -120,16 +107,6 @@ describe('Segmentação — janela na cena ativa (PRD v2 §8.6)', () => {
     expect(container.querySelector('[data-idx="0"]')).toBeNull();
     // uma conta dentro da cena renderiza
     expect(container.querySelector('[data-idx="15"]')).not.toBeNull();
-  });
-
-  it('“▶ ouvir a cena” toca só o span da cena ativa', async () => {
-    const player = spyPlayer();
-    load(segmenting({}));
-    render(<Segmentacao player={player} />);
-
-    await userEvent.click(screen.getByRole('button', { name: '▶ ouvir a cena' }));
-
-    expect(player.toggle).toHaveBeenCalledWith('PT1', 12, 18);
   });
 
   it('o título lê “Cena N · <tipo>” por extenso e o botão da última cena avança para o Mapeamento', () => {
@@ -292,17 +269,6 @@ describe('Segmentação — chips das frases travadas (redesign §6.5)', () => {
     await userEvent.click(within(chip).getByRole('button', { name: 'Remover' }));
 
     expect(sessionStore.getState().session!.frases.some((f) => f.prop_id === 'P1')).toBe(false);
-  });
-
-  it('“▶ ouvir” de um chip toca o span da frase travada', async () => {
-    const player = spyPlayer();
-    withLockedPhrase();
-    render(<Segmentacao player={player} />);
-
-    const chip = screen.getByRole('group', { name: 'Frase um' });
-    await userEvent.click(within(chip).getByRole('button', { name: 'Tocar' }));
-
-    expect(player.toggle).toHaveBeenCalledWith('P1', 12, 15);
   });
 });
 

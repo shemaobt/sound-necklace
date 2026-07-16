@@ -93,14 +93,18 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
     expect(sessionStore.getState().session?.whole.confirmed).toBe(false);
   });
 
-  it('o botão grande toca a história a partir do começo (áudio de fixture)', async () => {
+  it('o toque na conta toca a história dali (sem botão de play — som nas contas)', async () => {
     const { engine, player } = await makePlayer();
     const heads: (number | null)[] = [];
     player.onHead((h) => heads.push(h));
     sessionStore.getState().load(makeSession());
     render(<Escuta1 player={player} />);
 
-    await userEvent.click(screen.getByRole('button', { name: /ouvir a história/i }));
+    document
+      .querySelector('.cds-necklace')!
+      .dispatchEvent(
+        new MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 1, clientY: 1 }),
+      );
     engine.transport.advance(0.05);
 
     expect(heads[0]).toBe(0);
@@ -120,8 +124,16 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
 
     expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
 
-    await userEvent.click(screen.getByRole('button', { name: /ouvir a história/i }));
+    // sem botão de play: o toque na conta 0 é o transporte (decisão do dono)
     act(() => {
+      document.querySelector('.cds-necklace')!.dispatchEvent(
+        new MouseEvent('pointerdown', {
+          bubbles: true,
+          cancelable: true,
+          clientX: 1,
+          clientY: 1,
+        }),
+      );
       engine.transport.advance((totalBeads - 6) * BEAD_SEC);
     });
 

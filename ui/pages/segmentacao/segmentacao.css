@@ -66,19 +66,6 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
-.cds-segmentacao-scene-controls {
-  display: flex;
-  justify-content: center;
-}
-
-/* "▶ ouvir a cena" como pill branco de sombra baixa (protótipo playSegScene) */
-.cds-segmentacao-scene-controls .cds-button[data-variant='ghost'] {
-  border-color: transparent;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(63, 62, 32, 0.12);
-  color: var(--cds-telha);
-}
-
 /* hairline entre o colar e as frases desta cena (protótipo) */
 .cds-segmentacao-divider {
   width: 100%;

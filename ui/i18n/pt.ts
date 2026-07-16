@@ -165,14 +165,12 @@ export const pt = {
   },
   escuta1: {
     tagline: 'Ouça a história.',
-    listen: 'Ouvir a história',
     reopen: 'Reabrir',
     confirm: 'Já ouvi a história completa',
   },
   escuta2: {
     title: 'Corte a história em cenas',
     reviewHeadline: 'A história está toda em cenas.',
-    playSelection: 'Ouvir a seleção',
     instructionPre: 'Toque no colar onde ',
     instructionEmph: 'esta cena termina',
     instructionPost: '. O começo já está costurado.',
@@ -184,7 +182,6 @@ export const pt = {
   segmentacao: {
     reviewHeadline: 'As frases desta cena estão prontas.',
     instruction: 'Toque no colar o começo e o fim de cada frase.',
-    playScene: '▶ ouvir a cena',
     reopen: 'Reabrir',
     flagMarked: '⚑ marcada',
     flagReview: '⚑ revisar',
@@ -240,7 +237,6 @@ export const pt = {
     reviewHeadline: 'Todas as cenas classificadas.',
     empty: 'Nenhuma cena confirmada ainda.',
     instruction: 'Essa cena é sobre o quê?',
-    playScene: '▶ Ouvir esta cena',
     tagNoneFit: '⌀ nenhum se encaixa',
     tagPending: '— por classificar',
     confAlta: 'certeza',
@@ -329,6 +325,7 @@ export const pt = {
     record: 'gravar a resposta',
     stop: 'Parar',
     idleHint: 'Toque e fale a sua resposta',
+    emptyWave: 'a sua resposta vira um fio de som aqui',
     recordingLabel: 'Gravando…',
     play: 'ouvir',
     again: 'de novo',

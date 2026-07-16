@@ -77,6 +77,16 @@
   flex-direction: column;
 }
 
+/* o painel respira como o protótipo (gap 22). O slot da resposta é quem empilha
+   onda + gravador: o gap tem de morar NELE — no .cds-question-card ele só separa
+   pergunta/slot, e a onda ficava colada no anel do microfone. */
+.cds-conversation-stage-panel .cds-question-card,
+.cds-conversation-stage-panel .cds-question-card-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
 /* a pergunta grande, voz quieta sobre o oliva (protótipo qText) */
 .cds-conversation-stage-panel .cds-question-card-text {
   font-style: normal;
@@ -104,13 +114,13 @@
 }
 
 /* 46 barras de 5px em 180px (protótipo recBars); ativa = telha-claro */
+/* as 46 barras do protótipo cabem inteiras (46 × 5px + 45 × 3px = 365px) no painel
+   de 640px; a largura fixa de 180px cortava metade do fio de som */
 .cds-conversation-stage-waveform {
   display: flex;
   align-items: flex-end;
   gap: 3px;
   height: 44px;
-  width: 180px;
-  overflow: hidden;
 }
 
 .cds-conversation-stage-waveform .cds-waveform-bar {
@@ -121,10 +131,37 @@
   background: #e8813e;
 }
 
+/* a promessa do fio de som antes da primeira gravação (protótipo answerEmpty) */
+.cds-conversation-stage-empty-wave {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  min-height: 44px;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 14px;
+  color: rgba(246, 245, 235, 0.45);
+}
+
 .cds-conversation-stage-review {
   display: flex;
   gap: 12px;
   margin-left: auto;
+}
+
+/* o ghost do átomo é oliva — sobre o palco oliva ele some. Vale para TODO ghost
+   do palco (ouvir · de novo · ← anterior), não só os do rodapé: um só lugar por
+   onde os dois passam. O hover precisa da própria regra: o do átomo tem
+   especificidade 0-4-1 e ganharia deste override. */
+.cds-conversation-stage .cds-button[data-variant='ghost'] {
+  border-color: rgba(246, 245, 235, 0.3);
+  color: var(--cds-cream);
+}
+
+.cds-conversation-stage .cds-button[data-variant='ghost']:hover:enabled,
+.cds-conversation-stage .cds-button[data-variant='ghost']:active:enabled,
+.cds-conversation-stage .cds-button[data-variant='ghost']:focus-visible:enabled {
+  background: rgba(246, 245, 235, 0.08);
 }
 
 .cds-conversation-stage-recorder {
@@ -211,6 +248,14 @@
   order: 3;
 }
 
+/* o hover do átomo (olive→preto) tem especificidade maior e escurecia o pill
+   creme sobre o oliva — contraste ilegível; aqui o hover só rebaixa ao muted */
+.cds-conversation-stage-nav .cds-button[data-variant='dark']:hover:enabled,
+.cds-conversation-stage-nav .cds-button[data-variant='dark']:active:enabled,
+.cds-conversation-stage-nav .cds-button[data-variant='dark']:focus-visible:enabled {
+  background: var(--cds-surface-muted);
+}
+
 .cds-conversation-stage-progress {
   order: 2;
 }
@@ -251,6 +296,22 @@
 
 /* convite discreto do microfone — movimento decorativo é opt-in (§4.5) */
 @media (prefers-reduced-motion: no-preference) {
+  /* as barras "sound wave" da gravação (protótipo csEq) */
+  .cds-conversation-stage-waveform .cds-waveform-bar[data-state='active'] {
+    animation: cds-cs-eq 0.6s ease-in-out infinite;
+    transform-origin: bottom;
+  }
+
+  @keyframes cds-cs-eq {
+    0%,
+    100% {
+      transform: scaleY(1);
+    }
+    50% {
+      transform: scaleY(0.45);
+    }
+  }
+
   /* a conta atual do fio de perguntas fica quieta (o halo do protótipo é estático) */
   .cds-conversation-stage-progress .cds-pearl[data-state='head'] {
     animation: none;

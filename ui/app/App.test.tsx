@@ -397,10 +397,22 @@ describe('App shell', () => {
       act(() => navigate(`/session/${summary.id}`));
       render(<App />);
 
-      // aguarda a hidratação + construção assíncrona do player (chip ▶ da cena travada)
-      const play = await screen.findByRole('button', { name: 'Tocar' });
+      // aguarda a hidratação + construção assíncrona do player; o transporte é o
+      // toque na conta (sem botões de play — decisão do dono)
+      const necklace = await waitFor(() => {
+        const el = document.querySelector('.cds-necklace');
+        if (!el) throw new Error('colar ainda não montou');
+        return el;
+      });
       await act(async () => {
-        play.click();
+        necklace.dispatchEvent(
+          new MouseEvent('pointerdown', {
+            bubbles: true,
+            cancelable: true,
+            clientX: 1,
+            clientY: 1,
+          }),
+        );
       });
 
       // dirige o relógio do fixture por rAF: baseline + 1 frame de 0,1 s → cabeça na conta 0

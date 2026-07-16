@@ -73,25 +73,6 @@
   gap: 20px;
 }
 
-/* o play redondo de 72px (protótipo togglePlayAll) */
-.cds-escuta1-play {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 72px;
-  height: 72px;
-  border: none;
-  border-radius: 50%;
-  background: var(--cds-telha);
-  color: var(--cds-cream);
-  box-shadow: var(--cds-shadow-play);
-  transition: transform 0.09s;
-}
-
-.cds-escuta1-play:active {
-  transform: scale(0.96);
-}
-
 /* pill fantasma "Já ouvi a história completa" — acende (creme sólido) quando a
    cabeça de reprodução alcançou o fim (protótipo heardBg/heardBorder/heardColor) */
 .cds-escuta1-confirm {

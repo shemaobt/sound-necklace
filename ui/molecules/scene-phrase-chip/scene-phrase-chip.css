@@ -18,31 +18,8 @@
   color: inherit;
 }
 
-.cds-scene-phrase-chip[data-playing='true'] {
-  border-color: var(--cds-telha);
-  background: color-mix(in srgb, var(--cds-telha) 6%, white);
-}
-
 .cds-scene-phrase-chip-label {
   white-space: nowrap;
-}
-
-/* botão ▶: círculo creme de 28px com o glifo oliva (protótipo sc.play) */
-.cds-scene-phrase-chip-play {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  background: var(--cds-cream);
-  border-radius: 50%;
-  color: var(--cds-olive);
-}
-
-.cds-scene-phrase-chip-play[aria-pressed='true'] {
-  color: var(--cds-telha-deep);
 }
 
 .cds-scene-phrase-chip-actions {

@@ -10,7 +10,6 @@ import {
   confirmFrase,
   confirmFrasesDone,
   enterScene,
-  type Frase,
   moveBorder,
   nextNeighbor,
   prevNeighbor,
@@ -123,14 +122,6 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
 
   const onEdgeHover = (edge: number): void => {
     if (player) player.playEdge(edge);
-  };
-
-  const playScene = (): void => {
-    if (player) player.toggle(sc.part_id, scSpan.s, scSpan.e);
-  };
-
-  const playPhrase = (f: Frase): void => {
-    if (player && f.span) player.toggle(f.prop_id, f.span.s, f.span.e);
   };
 
   const confirmPhrase = (): void => {
@@ -267,12 +258,6 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
         />
       </div>
 
-      <div className="cds-segmentacao-scene-controls">
-        <Button variant="ghost" size="sm" onClick={playScene}>
-          {t('segmentacao.playScene')}
-        </Button>
-      </div>
-
       {scenePhrases.length ? (
         <>
           <div className="cds-segmentacao-divider" aria-hidden="true" />
@@ -282,7 +267,6 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
                 <ScenePhraseChip
                   label={phraseLabel(pos)}
                   swatch={phraseColor(pos)}
-                  onPlay={() => playPhrase(f)}
                   actions={
                     <>
                       <Button variant="ghost" size="sm" onClick={() => reopen(index)}>

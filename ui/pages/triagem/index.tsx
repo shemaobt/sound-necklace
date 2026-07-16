@@ -103,10 +103,6 @@ export function Triagem({ player = null }: TriagemProps) {
   // (inspecting); classificar de novo volta à revisão sozinho.
   const reviewing = gate.enabled && inspecting === null;
 
-  const playScene = (): void => {
-    if (player && scene.span) player.toggle(scene.part_id, scene.span.s, scene.span.e);
-  };
-
   const advanceFocus = (): void => {
     const s = sessionStore.getState().session;
     if (!s) return;
@@ -175,11 +171,6 @@ export function Triagem({ player = null }: TriagemProps) {
           <p className="cds-triagem-instruction" data-role="instruction">
             {t('triagem.instruction')}
           </p>
-          <div className="cds-triagem-play">
-            <Button variant="primary" onClick={playScene}>
-              {t('triagem.playScene')}
-            </Button>
-          </div>
           <p className="cds-triagem-tag" data-tag={scene.tag_state}>
             {tagShow(scene, t, i18n.language)}
           </p>
