@@ -10,6 +10,7 @@ import {
   confirmParts,
   reopenPart,
   setMode,
+  type Span,
 } from '../../../domain';
 import { Button } from '../../atoms';
 import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
@@ -30,6 +31,17 @@ import './escuta2.css';
  * (`confirmParts` → Triagem) e voltar (história reaberta, cenas preservadas) são
  * decisões puras do domínio aplicadas pelo `sessionStore`. O áudio chega por prop.
  */
+/** As cenas cobrem 0…N-1 sem buraco? (ladrilham a história inteira) */
+function tilesWholeStory(spans: Span[], totalBeads: number): boolean {
+  const ordered = [...spans].sort((a, b) => a.s - b.s);
+  let next = 0;
+  for (const span of ordered) {
+    if (span.s > next) return false; // buraco: um trecho ficou sem cena
+    next = Math.max(next, span.e + 1);
+  }
+  return next >= totalBeads;
+}
+
 export interface Escuta2Props {
   player?: Player | null;
   /** A voz da UI (§9): travar uma cena, recusar um corte e avançar têm som. */
@@ -73,9 +85,19 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
   // momento de revisão (decisão do dono): a história toda coberta por cenas
   // travadas → nada resta a cortar; a âncora residual do domínio fica oculta
   // (confirmParts a descarta, PRD §8.4) e a tela oferece UMA ação: Continuar.
+  //
+  // A cobertura é AFERIDA, não inferida da última conta: o corte normal é
+  // sequencial, mas um retorno salvo traz `parts` travadas direto do JSON, com
+  // spans quaisquer (contracts/imports.ts). Bastava a última cena terminar no fim
+  // do colar para a tela jurar "está toda em cenas", esconder o "Confirmar esta
+  // cena" e deixar o trecho não cortado inalcançável — que o `confirmParts`
+  // descarta em silêncio. Coberto = as cenas ladrilham 0…N-1 sem buraco.
   const tiled =
     hasLocked &&
-    Math.max(...lockedIndexes.map((i) => session.parts[i]!.span!.e)) === session.totalBeads - 1;
+    tilesWholeStory(
+      lockedIndexes.map((i) => session.parts[i]!.span!),
+      session.totalBeads,
+    );
 
   const onBead = (bead: number): void => {
     const s = sessionStore.getState().session;

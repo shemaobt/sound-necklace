@@ -385,3 +385,44 @@ describe('Escuta 2 — a voz da UI (protótipo _lock/_chime/_blip)', () => {
     expect(sound.lock).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * A cobertura é AFERIDA, não inferida da última conta. O corte normal é sequencial,
+ * mas um retorno salvo traz `parts` travadas direto do JSON com spans quaisquer
+ * (contracts/imports.ts) — e `confirmParts` descarta em silêncio o que ficou fora.
+ */
+describe('Escuta 2 — a revisão exige cobertura de VERDADE', () => {
+  it('um trecho sem cena no meio NÃO é "história toda em cenas", mesmo com a última cena no fim do colar', () => {
+    load(
+      cutting({
+        parts: [
+          lockedPart('PT1', { s: 0, e: 2 }),
+          lockedPart('PT2', { s: 6, e: 9 }), // as contas 3,4,5 nunca foram cortadas
+        ],
+        current: { layer: 'parts', index: 1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    // não pode jurar cobertura: as contas 3,4,5 estão sem cena
+    expect(screen.queryByText('A história está toda em cenas.')).toBeNull();
+    // e a estação segue no modo de corte (o CTA do PRD, não o Continuar da revisão)
+    expect(screen.getByRole('button', { name: 'Confirmar as cenas →' })).toBeTruthy();
+  });
+
+  it('cenas que ladrilham o colar inteiro entram na revisão', () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
+        current: { layer: 'parts', index: 1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    expect(screen.getByText('A história está toda em cenas.')).toBeTruthy();
+  });
+});
