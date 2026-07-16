@@ -252,6 +252,23 @@ describe('Escuta 2 — momento de revisão quando a história está toda em cena
     expect(screen.queryByRole('button', { name: 'Confirmar as cenas →' })).toBeNull();
   });
 
+  it('é aqui que a dica de reouvir mais importa: conferir antes de “Continuar →”', () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
+        current: { layer: 'parts', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 />);
+
+    // toda conta pertence a uma cena travada: o colar inteiro relê o corte, e a
+    // única linha da tela precisa dizer isso — senão a afordância fica invisível
+    // justamente no momento em que a facilitadora vai conferir
+    expect(screen.getByText(/Toque numa cena para reouvir/)).toBeTruthy();
+  });
+
   it('“Continuar →” avança para a Triagem', async () => {
     load(
       cutting({

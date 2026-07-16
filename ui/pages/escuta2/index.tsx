@@ -15,7 +15,7 @@ import {
 import { Button } from '../../atoms';
 import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
-import { playActionOn, sceneColor, sceneLabel } from './cutting';
+import { lockedSceneAt, playActionOn, sceneColor, sceneLabel } from './cutting';
 import { ScenePhraseChip } from '../../molecules';
 import './escuta2.css';
 
@@ -99,12 +99,34 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
       session.totalBeads,
     );
 
+  /**
+   * Tocar numa cena já travada a reproduz inteira (protótipo `clickCut`/`_sceneOf`;
+   * a Triagem faz o mesmo pelo colar da cena em foco). A pergunta vem ANTES do
+   * `clickBead` porque o redutor é port 1:1 da referência v1: ele clampa o clique
+   * até a emenda e, ao fazer isso, consome a pré-ancoragem da próxima cena. Levar
+   * a regra para o domínio muda camada congelada — o golden é o juiz, não esta
+   * estação. Devolve true quando a conta era de cena travada (o corte não corre).
+   */
+  const playLockedSceneAt = (bead: number): boolean => {
+    const s = sessionStore.getState().session;
+    const locked = s ? lockedSceneAt(s.parts, bead) : null;
+    if (!locked?.span) return false;
+    player?.toggle(locked.part_id, locked.span.s, locked.span.e);
+    return true;
+  };
+
   const onBead = (bead: number): void => {
+    if (playLockedSceneAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
     if (play && player) playActionOn(player, play);
+  };
+
+  /** A conta que brilha durante a cena pausa — mesma chave no `toggle`. */
+  const onHeadTap = (): void => {
+    if (head !== null) playLockedSceneAt(head);
   };
 
   const onEdgeHover = (edge: number): void => {
@@ -165,13 +187,18 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
         <h2 className="cds-escuta2-title">{t('escuta2.title')}</h2>
         {tiled ? (
           <p className="cds-escuta2-instruction" data-role="instruction">
-            {t('escuta2.reviewHeadline')}
+            <span>{t('escuta2.reviewHeadline')}</span>
+            {/* nada mais resta a cortar: toda conta é de cena travada, então o colar
+                inteiro relê o corte — e é conferindo aqui que se decide Continuar */}
+            {t('escuta2.reviewReplayHint')}
           </p>
         ) : (
           <p className="cds-escuta2-instruction" data-role="instruction">
             {t('escuta2.instructionPre')}
             <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
-            {t('escuta2.instructionPost')}
+            {/* a única linha da tela (§9.2) sinaliza a afordância que existe AGORA:
+                sem cena travada não há o que reouvir, e a emenda é a novidade. */}
+            {hasLocked ? t('escuta2.instructionReplay') : t('escuta2.instructionPost')}
           </p>
         )}
       </div>
@@ -187,6 +214,7 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
           size={SIZE_L}
           playbackHead={head}
           onBeadPointerDown={onBead}
+          onHeadTap={onHeadTap}
           onEdgeHover={onEdgeHover}
         />
       </div>

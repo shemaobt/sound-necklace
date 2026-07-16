@@ -2,8 +2,14 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Player } from '../../../adapters/audio';
-import { buildBeads, createSession, type SessionState } from '../../../domain';
+import type { HeadListener, Player } from '../../../adapters/audio';
+import {
+  buildBeads,
+  clickBead,
+  confirmPart,
+  createSession,
+  type SessionState,
+} from '../../../domain';
 import { sessionStore } from '../../state';
 import Escuta2 from './index';
 
@@ -19,18 +25,29 @@ const DURATION = 2.5;
 const BEAD_SEC = 0.25; // 10 contas (0…9)
 
 /** Player-espião: registra as chamadas de reprodução sem tocar áudio real. */
-type Call = { m: 'play' | 'playEdge' | 'toggle'; args: number[] };
-function spyPlayer(): { player: Player; calls: Call[] } {
+type Call =
+  { m: 'play' | 'playEdge'; args: number[] } | { m: 'toggle'; key: string; args: number[] };
+function spyPlayer(): {
+  player: Player;
+  calls: Call[];
+  emitHead: (bead: number | null) => void;
+} {
   const calls: Call[] = [];
+  let head: HeadListener | null = null;
   const player: Player = {
-    toggle: (_k, s, e) => calls.push({ m: 'toggle', args: [s, e] }),
+    toggle: (k, s, e) => calls.push({ m: 'toggle', key: k, args: [s, e] }),
     play: (s, e) => calls.push({ m: 'play', args: [s, e] }),
     playEdge: (b) => calls.push({ m: 'playEdge', args: [b] }),
     stop: () => {},
     state: { key: null, playing: false, paused: false },
-    onHead: () => () => {},
+    onHead: (cb) => {
+      head = cb;
+      return () => {
+        head = null;
+      };
+    },
   };
-  return { player, calls };
+  return { player, calls, emitHead: (b) => head?.(b) };
 }
 
 function cutting(): SessionState {
@@ -60,6 +77,19 @@ function cutting(): SessionState {
     selection: null,
     pendingStart: null,
   };
+}
+
+/**
+ * A cena um travada em 0…3, com a próxima já pré-ancorada na emenda — construída
+ * pelo próprio domínio (cortar → travar), não à mão, para o estado ser o mesmo que
+ * o app produz.
+ */
+function withLockedScene(): SessionState {
+  const { state: s1 } = clickBead(cutting(), 0);
+  const { state: s2 } = clickBead(s1, 3);
+  const locked = confirmPart(s2, 0);
+  if (!locked.ok) throw new Error(`fixture: ${locked.error.message}`);
+  return locked.state;
 }
 
 function mount(player: Player): { host: HTMLDivElement; root: Root; el: HTMLElement } {
@@ -121,6 +151,66 @@ describe('Escuta 2 — modelo de clique com áudio na hora (PRD v2 §8.2/§8.4)'
     expect(calls.at(-1)).toEqual({ m: 'playEdge', args: [5] });
     expect(sessionStore.getState().session!.selection).toEqual({ s: 3, e: 5 });
 
+    root.unmount();
+  });
+});
+
+describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
+  it('tocar numa conta da cena travada toca a CENA inteira, não a conta', () => {
+    const { player, calls } = spyPlayer();
+    sessionStore.getState().load(withLockedScene());
+    const { root, el } = mount(player);
+
+    firePointer(el, 2); // conta no meio da cena um (0…3)
+
+    // o log inteiro, não só a última: um toggle seguido de play seriam dois sons
+    expect(calls).toEqual([{ m: 'toggle', key: 'PT1', args: [0, 3] }]);
+    root.unmount();
+  });
+
+  it('a cena travada é para ouvir, não para cortar: a emenda costurada sobrevive', () => {
+    const { player } = spyPlayer();
+    sessionStore.getState().load(withLockedScene());
+    const { root, el } = mount(player);
+
+    firePointer(el, 2);
+
+    // sem isto o clique é clampado até a emenda e CONSOME a pré-ancoragem,
+    // fechando uma cena degenerada de uma conta só onde a próxima ia começar
+    const depois = sessionStore.getState().session!;
+    expect(depois.pendingStart).toBe(4);
+    expect(depois.selection).toEqual({ s: 4, e: 4 });
+    root.unmount();
+  });
+
+  it('a conta ainda livre continua cortando: a cena fecha da emenda até ela', () => {
+    const { player, calls } = spyPlayer();
+    sessionStore.getState().load(withLockedScene());
+    const { root, el } = mount(player);
+
+    firePointer(el, 6);
+
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [4, 6] });
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 4, e: 6 });
+    expect(sessionStore.getState().session!.pendingStart).toBeNull();
+    root.unmount();
+  });
+
+  it('a conta que brilha volta ao mesmo toggle da cena (é o player que pausa)', () => {
+    const { player, calls, emitHead } = spyPlayer();
+    sessionStore.getState().load(withLockedScene());
+    const { root, el } = mount(player);
+
+    firePointer(el, 2); // toca a cena um
+    flushSync(() => emitHead(2)); // o playback acende a conta 2
+    firePointer(el, 2); // tocar a conta que brilha
+
+    // o colar desvia a conta acesa para `onHeadTap`, não para `onBeadPointerDown`:
+    // sem esse caminho o toque na conta que brilha é um clique morto
+    expect(calls).toEqual([
+      { m: 'toggle', key: 'PT1', args: [0, 3] },
+      { m: 'toggle', key: 'PT1', args: [0, 3] },
+    ]);
     root.unmount();
   });
 });

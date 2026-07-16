@@ -171,9 +171,11 @@ export const pt = {
   escuta2: {
     title: 'Corte a história em cenas',
     reviewHeadline: 'A história está toda em cenas.',
+    reviewReplayHint: ' Toque numa cena para reouvir.',
     instructionPre: 'Toque no colar onde ',
     instructionEmph: 'esta cena termina',
     instructionPost: '. O começo já está costurado.',
+    instructionReplay: '. Toque numa cena pronta para reouvir.',
     reopen: 'Reabrir',
     back: '← Voltar',
     confirmScene: '✓ Confirmar esta cena',

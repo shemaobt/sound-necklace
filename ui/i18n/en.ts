@@ -154,9 +154,11 @@ export const en: Dict = {
   escuta2: {
     title: 'Cut the story into scenes',
     reviewHeadline: 'The whole story is in scenes.',
+    reviewReplayHint: ' Tap a scene to hear it again.',
     instructionPre: 'Tap the necklace where ',
     instructionEmph: 'this scene ends',
     instructionPost: '. The beginning is already stitched.',
+    instructionReplay: '. Tap a finished scene to hear it again.',
     reopen: 'Reopen',
     back: '← Back',
     confirmScene: '✓ Confirm this scene',

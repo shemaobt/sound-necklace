@@ -236,9 +236,11 @@ Facilitator-only screen. Inputs: audio source (§7.4); **granularity level** —
   2. Second click → sets the range (order-normalized); **the whole range plays**.
   3. Further clicks → nudge the **nearest edge** to the clicked bead; only **~1 s around the moved boundary plays** (`max(1, round(1/beadSec))` beads each side) — "the ear decides", never the whole scene again (§9.3).
   - Clicks are clamped to `[frontier, end of story]`. With no active anchoring, bead taps are transport only.
+  - **A bead belonging to an already-locked item is heard, not cut:** tapping it plays that whole item (scene/phrase) as a toggle — tapping again, or tapping the glowing head, pauses. Only beads past the frontier take part in cutting. This is what makes a finished cut reviewable without reopening (and therefore destroying) it.
 - **Hover edge preview (mouse only; field-requested):** dwelling ~280 ms within ±1 bead of a selection edge plays that boundary without changing it; re-arms after the pointer leaves the edge's proximity.
 - **Selection band:** a band under the pending range with the two **edge beads emphasized** — the emphasis doubles as the discoverable "touch here to hear the seam" affordance (§9.3).
-- **Play controls are toggles** ("▶ …" ⇄ "⏸ pausar" ⇄ "▶ continuar"); exactly one thing plays at a time; every control reflects global playback state. "▶ ouvir a história" plays the whole story — except in Segmentação, where it becomes "▶ ouvir a cena" and plays only the active scene. Saved items (locked scenes/phrases, report answers) keep small ▶ chips for quick review.
+- **Playback is a toggle** (play ⇄ pause ⇄ continue) wherever it lives; exactly one thing plays at a time and every surface reflects global playback state. Re-tapping what is already playing — the same bead span, the same control — pauses it.
+- **The sound comes from the beads, not from buttons** (owner decision, ENG-291): the stations carry no play buttons and saved items carry no ▶ chip. A saved item is reviewed by tapping its beads on the necklace (above); the interview player and the report playback are the carve-outs, being neither necklace nor cut.
 - **Confirm bar:** a single, unmistakable contextual confirm action ("✓ Confirmar esta cena" / "✓ Confirmar esta frase"); hidden when nothing is anchoring. Errors and offers render directly beneath it.
 
 ### 8.3 Escuta step 1 — "Ouça a história."
@@ -247,9 +249,9 @@ The full necklace renders; the whole audio plays with beads lighting progressive
 
 ### 8.4 Escuta step 2 — "Corte a história em cenas."
 
-- A new scene opens automatically with its start **pre-anchored at the seam** (previous end + 1). The user's only decision is where the scene **ends** — instruction copy: *"Toque no colar onde esta cena termina. O começo já está costurado."*
+- A new scene opens automatically with its start **pre-anchored at the seam** (previous end + 1). The user's only decision is where the scene **ends** — instruction copy: *"Toque no colar onde esta cena termina. O começo já está costurado."* Once ≥ 1 scene is locked the second sentence gives way to the replay affordance (never a third sentence — §9.2 allows one line): *"Toque no colar onde esta cena termina. Toque numa cena pronta para reouvir."*
 - **"✓ Confirmar esta cena":** requires a completed selection ("Clique onde a cena termina, no colar.") starting at/after the frontier ("A cena não pode começar antes da conta X."). On success the scene locks, its end bead turns square, and the next scene opens pre-anchored at the seam (animated).
-- **Confirmed scene list:** compact chips — swatch · "Cena N" · ▶ ouvir · Reabrir. Reopening scene *i* unlocks *i* and everything after it.
+- **Confirmed scene list:** compact chips — swatch · "Cena N" · Reabrir. The chip is a named group, not a control: to hear a confirmed scene, tap any of its beads on the necklace (§8.2). Reopening scene *i* unlocks *i* and everything after it.
 - **"Confirmar as cenas →":** requires ≥ 1 locked scene ("Confirme ao menos uma cena."); discards any unlocked/empty trailing scene; advances to Triagem.
 - "← Voltar" returns to step 1 (scenes preserved).
 
@@ -273,7 +275,7 @@ The full necklace renders; the whole audio plays with beads lighting progressive
   - **Large overshoot (`consumed` or `delta > thr`):** looks like a scene re-cut, not a border adjustment — options: **Voltar à Triagem**; **Mover mesmo assim** (only when not consumed); **Reancorar dentro da cena**.
   - **Small overshoot:** offer **Mover a borda até aqui** / **Reancorar dentro da cena**, with one line explaining the consequence ("A cena de hoje cresce, a vizinha encolhe").
   - **Moving** slides the shared seam: this scene grows to the selected bead; the immediate neighbor shrinks accordingly; the phrase then locks.
-- **Locked phrase list** (active scene only): chips — swatch · "Frase N" · ▶ · Reabrir · **⚑ revisar** (exports as `NEEDS_REVIEW`) · Remover.
+- **Locked phrase list** (active scene only): chips — swatch · "Frase N" · Reabrir · **⚑ revisar** (exports as `NEEDS_REVIEW`) · Remover. As with scenes, a locked phrase is heard by tapping its beads (§8.2), not by a chip control.
 - **Empty-scene soft warning:** leaving a scene with zero phrases warns once ("Esta cena ficou sem frases. Clique de novo para seguir mesmo assim."); a second click proceeds.
 - **Navigation:** back goes to the previous productive scene, or to Triagem from the first; finishing the last scene advances to Mapeamento.
 
