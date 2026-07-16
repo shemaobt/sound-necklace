@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { SessionStore } from '../../../adapters/sessions';
+import type { UiSound } from '../../../adapters/ui-sound';
 import {
   type ArtifactTriple,
   buildManifesto,
@@ -47,6 +48,8 @@ import './export.css';
 export interface ExportProps {
   store?: SessionStore;
   sessionId?: string;
+  /** A voz da UI (§9): guardar um documento soa; um bloqueado recusa. */
+  sound?: UiSound;
   /** Fronteira de download; default grava um Blob no browser. */
   saveBytes?: (filename: string, bytes: string) => void;
 }
@@ -84,7 +87,7 @@ function filenameFor(kind: ArtifactKind, slug: string): string {
   return relatorioFilename(slug);
 }
 
-export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportProps) {
+export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: ExportProps) {
   const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [phase, setPhase] = useState<Phase>(store && sessionId ? 'loading' : 'edit');
@@ -153,6 +156,7 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
     if (!triple) return;
     if (kind === 'anchoring' && !canExport) {
       setNotice(t('export.anchoringBlocked'));
+      sound?.refuse();
       return;
     }
     if (kind === 'manifest' && !canExportManifesto(session)) return;
@@ -163,6 +167,7 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
         ? (await store.getArtifacts(sessionId))[kind]
         : triple[kind];
     setNotice(null);
+    sound?.saved();
     saveBytes(filenameFor(kind, session.slug), bytes);
     setDownloaded((d) => ({ ...d, [kind]: true }));
   };
@@ -171,6 +176,7 @@ export function Export({ store, sessionId, saveBytes = domSaveBytes }: ExportPro
     if (!store || !sessionId || !triple || !canExport) return;
     await store.complete(sessionId, toSessionDto(session, custody?.meta ?? DEFAULT_META), triple);
     setNotice(null);
+    sound?.advance();
     setPhase('saved');
   };
 

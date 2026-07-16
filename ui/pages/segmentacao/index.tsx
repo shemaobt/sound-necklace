@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { UiSound } from '../../../adapters/ui-sound';
 import {
   activeAnchor,
   activeScene,
@@ -54,9 +55,11 @@ import './segmentacao.css';
  */
 export interface SegmentacaoProps {
   player?: Player | null;
+  /** A voz da UI (§9): travar a frase, mover a costura, recusar e avançar têm som. */
+  sound?: UiSound;
 }
 
-export function Segmentacao({ player = null }: SegmentacaoProps) {
+export function Segmentacao({ player = null, sound }: SegmentacaoProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
@@ -131,6 +134,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
     switch (result.kind) {
       case 'error':
         setError(result.error.message);
+        sound?.refuse();
         return;
       case 'border':
         setError(null);
@@ -138,6 +142,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
         return;
       case 'locked':
         setError(null);
+        sound?.lock();
         sessionStore.getState().apply(() => result.state);
         return;
       case 'noop':
@@ -149,6 +154,7 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
     if (!offer) return;
     setError(null);
     setOffer(null);
+    sound?.lock();
     // moveBorder deve rodar sobre o MESMO estado (mesma cena ativa) que gerou a
     // oferta — o store não muda enquanto o modal está aberto (§8.6).
     sessionStore.getState().apply((s) => moveBorder(s, offer));
@@ -189,11 +195,13 @@ export function Segmentacao({ player = null }: SegmentacaoProps) {
       case 'warn-empty':
         setWarned(result.warnedEmptyScene);
         setError(result.message);
+        sound?.refuse();
         return;
       case 'next-scene':
       case 'mapeamento':
         setError(null);
         setWarned(null);
+        sound?.advance();
         sessionStore.getState().apply(() => result.state);
         return;
     }

@@ -134,6 +134,26 @@ function toRows(sequence: QuestionSlot[], t: Translate): Row[] {
   return rows;
 }
 
+/** Marcador de papel do protótipo: a pergunta que a facilitadora conduz. SVG inline,
+ *  nunca unicode — um emoji renderiza diferente em cada sistema e não é da marca. */
+function NotebookGlyph() {
+  return (
+    <svg
+      className="cds-relatorio-role-glyph"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" />
+    </svg>
+  );
+}
+
 interface ReportCardProps {
   slot: QuestionSlot;
   typed: string;
@@ -157,21 +177,23 @@ function ReportCard({
 }: ReportCardProps) {
   const { t, i18n } = useTranslation();
   const [showNote, setShowNote] = useState(note !== '');
-  const q = slot.question;
   const facilitatorLed = slot.k === 'ausencia';
   const voiceOnly = hasVoice && !typed.trim();
 
   return (
     <div className="cds-relatorio-card">
-      {facilitatorLed ? (
-        <span className="cds-relatorio-role" role="img" aria-label={t('relatorio.facilitatorLed')}>
-          🎙
-        </span>
-      ) : null}
-
       <p className="cds-relatorio-q">
+        {facilitatorLed ? (
+          <span
+            className="cds-relatorio-role"
+            role="img"
+            aria-label={t('relatorio.facilitatorLed')}
+            title={t('relatorio.facilitatorLed')}
+          >
+            <NotebookGlyph />
+          </span>
+        ) : null}
         {questionTextFor(slot, i18n.language)}
-        {q.field ? <span className="cds-relatorio-field"> ({q.field})</span> : null}
       </p>
 
       {voiceOnly ? (
@@ -206,9 +228,11 @@ function ReportCard({
           onChange={(e) => onNote(e.target.value)}
         />
       ) : (
-        <Button variant="ghost" size="sm" onClick={() => setShowNote(true)}>
-          {t('relatorio.addNote')}
-        </Button>
+        <span className="cds-relatorio-add-note">
+          <Button variant="ghost" size="sm" onClick={() => setShowNote(true)}>
+            {t('relatorio.addNote')}
+          </Button>
+        </span>
       )}
     </div>
   );

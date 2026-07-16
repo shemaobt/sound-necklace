@@ -11,6 +11,10 @@
   border-radius: 22px;
   background: white;
   box-shadow: 0 2px 6px rgba(63, 62, 32, 0.08);
+  /* o cartão se alinha sozinho (protótipo): a Export centra o palco inteiro, e sem
+     isto o rótulo/título/texto herdavam o centro enquanto o botão ficava à
+     esquerda — três linhas centradas puxando para um canto */
+  text-align: left;
 }
 
 .cds-document-card-filename {

@@ -67,6 +67,10 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'ouvir', exact: true })).toBeVisible();
   await shot('09c-mapeamento-resposta-pronta');
 
+  // a prévia do relatório (a "revisão"): a conversa reunida, antes de guardar
+  await app.walkToReport();
+  await shot('09d-relatorio');
+
   await app.completeSession();
   await shot('10-export');
 });

@@ -14,6 +14,10 @@
   padding: 36px 0 44px;
   background: var(--cds-cream);
   color: var(--cds-olive);
+  /* o relatório mora dentro da `.cds-mapeamento`, que centra tudo para a conversa
+     — aqui isso vira prosa centralizada, que se lê mal e não é o protótipo. Um
+     documento se lê a partir da margem; só o cabeçalho abaixo fica centrado. */
+  text-align: left;
 }
 
 .cds-relatorio-header {
@@ -74,17 +78,24 @@
   color: var(--cds-ink);
 }
 
-.cds-relatorio-field {
-  font-family: var(--cds-font-load-bearing);
-  font-size: 0.85rem;
-  font-style: italic;
-  color: var(--cds-olive-soft);
+/* marcador de papel do protótipo: disco areia com o glifo de caderno, junto da
+   pergunta que a facilitadora conduz */
+.cds-relatorio-role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 9px;
+  border-radius: 50%;
+  background: #ede7d6;
+  color: var(--cds-ink-subtle);
+  vertical-align: -6px;
 }
 
-.cds-relatorio-role {
-  align-self: flex-start;
-  font-size: 1.1rem;
-  line-height: 1;
+.cds-relatorio-role-glyph {
+  width: 13px;
+  height: 13px;
 }
 
 /* escrita da facilitadora: sem moldura — só o fio de caderno (protótipo) */
@@ -107,6 +118,12 @@
 .cds-relatorio-note {
   min-height: 2.5rem;
   font-size: 0.9rem;
+}
+
+/* o convite da observação abraça o próprio texto (protótipo: align-self flex-start)
+   — esticado na largura do cartão ele competia com a pergunta */
+.cds-relatorio-add-note {
+  align-self: flex-start;
 }
 
 /* a resposta em voz: faixa quente com o play telha (protótipo r.isAudio) */

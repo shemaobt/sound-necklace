@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import type { SpeechSynthesizer } from '../../../adapters/tts/types';
+import type { UiSound } from '../../../adapters/ui-sound';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
 import {
   ensureMapping,
@@ -42,6 +43,8 @@ import './mapeamento.css';
 export interface MapeamentoProps {
   player?: Player | null;
   recorder?: VoiceRecorder | null;
+  /** A voz da UI (§9): gravar, parar e chegar ao relatório têm som. */
+  sound?: UiSound;
   /** Porta de fala (ENG-280): ausente = sem voz (ambiente sem Web Speech) e o botão some. */
   speaker?: SpeechSynthesizer | null;
   /** O shell registra o caminho `respostas/…` recém-gravado no `meta.voice` da sessão (ENG-276). */
@@ -51,10 +54,16 @@ export interface MapeamentoProps {
 /** A tela do relatório (ENG-250) entra por add-a-file: presente → renderiza; ausente → o passo fica em espera. */
 const relatorioModules = import.meta.glob('/ui/pages/relatorio/index.tsx', {
   eager: true,
-}) as Record<string, { default: ComponentType }>;
+}) as Record<string, { default: ComponentType<RelatorioSlotProps> }>;
+
+/** O relatório descobre as gravações pela MESMA porta de voz da entrevista. */
+interface RelatorioSlotProps {
+  recorder?: VoiceRecorder | null;
+}
 
 /** Resolvido uma vez, no carregamento do módulo (o glob é eager e estático). */
-const RelatorioStation: ComponentType | null = Object.values(relatorioModules)[0]?.default ?? null;
+const RelatorioStation: ComponentType<RelatorioSlotProps> | null =
+  Object.values(relatorioModules)[0]?.default ?? null;
 
 /** Lê a resposta de texto da pergunta em foco (string vazia quando ainda não há). */
 function readAnswer(m: Mapping | null, slot: QuestionSlot): string {
@@ -100,6 +109,8 @@ interface QuestionScreenProps {
   player: Player | null;
   recorder: VoiceRecorder | null;
   speaker: SpeechSynthesizer | null;
+  /** A voz da UI (§9): gravar e parar têm som. */
+  sound?: UiSound;
   /** Toggle de som do cabeçalho: mudo = a voz nunca toca (§13 — nunca falar sem consentimento). */
   muted: boolean;
   onVoiceSaved?: (path: string) => void;
@@ -120,6 +131,7 @@ function QuestionScreen({
   player,
   recorder,
   speaker,
+  sound,
   muted,
   onVoiceSaved,
 }: QuestionScreenProps) {
@@ -182,6 +194,7 @@ function QuestionScreen({
       return;
     }
     recordingRef.current = rec;
+    sound?.recordStart();
     unsubRef.current = rec.onLevel((l) =>
       setLevels((prev) => [...prev, Math.max(2, Math.round(l * 40))].slice(-32)),
     );
@@ -198,6 +211,7 @@ function QuestionScreen({
     // caminho no meta.voice: `onVoiceSaved` leria a sessão/rota JÁ trocada e gravaria
     // esta resposta na sessão errada (contaminação cross-sessão). Espelha `onRecord`.
     if (!mountedRef.current) return;
+    sound?.recordStop();
     setRecorderState('recorded');
     // Voz salva no caminho canônico: avisa o shell para registrá-lo em meta.voice (§10.4).
     onVoiceSaved?.(path);
@@ -248,6 +262,7 @@ export function Mapeamento({
   player = null,
   recorder = null,
   speaker = null,
+  sound,
   onVoiceSaved,
 }: MapeamentoProps) {
   const { t } = useTranslation();
@@ -283,7 +298,9 @@ export function Mapeamento({
     return (
       <section className="cds-mapeamento" aria-label={t('mapeamento.reportAria')}>
         {RelatorioStation ? (
-          <RelatorioStation />
+          // sem o recorder o relatório não acha gravação nenhuma e todo card cai no
+          // "ainda sem resposta gravada" — a voz da entrevista ficava inalcançável lá
+          <RelatorioStation recorder={recorder} />
         ) : (
           <div className="cds-mapeamento-report-fallback">
             <p>{t('mapeamento.reportFallback')}</p>
@@ -304,7 +321,10 @@ export function Mapeamento({
   };
   const goNext = (): void => {
     if (idx < total - 1) setIndex(idx + 1);
-    else setAtReport(true);
+    else {
+      sound?.advance(); // a conversa acabou: a prévia do relatório é a próxima etapa
+      setAtReport(true);
+    }
   };
   // Fio de progresso (indicador, não gate): marca as perguntas com resposta de
   // TEXTO. ponytail: teto conhecido — respostas só-de-voz não acendem a conta,
@@ -326,6 +346,7 @@ export function Mapeamento({
       player={player}
       recorder={recorder}
       speaker={speaker}
+      sound={sound}
       muted={muted}
       onVoiceSaved={onVoiceSaved}
     />

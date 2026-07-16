@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildBeads,
@@ -332,5 +332,56 @@ describe('Escuta 2 — tratamento creme (redesign §6.3, §4.5)', () => {
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
     const { outside } = splitByGuard(escuta2Css, guard);
     expect(outside).not.toMatch(/animation|@keyframes/);
+  });
+});
+
+describe('Escuta 2 — a voz da UI (protótipo _lock/_chime/_blip)', () => {
+  /** Espião da porta de som: registra o vocabulário, sem tocar nada. */
+  function spySound() {
+    return {
+      lock: vi.fn(),
+      advance: vi.fn(),
+      refuse: vi.fn(),
+      tap: vi.fn(),
+      recordStart: vi.fn(),
+      recordStop: vi.fn(),
+      saved: vi.fn(),
+    };
+  }
+
+  it('travar uma cena SOA — a decisão é audível sem ler nada', async () => {
+    const sound = spySound();
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: { s: 0, e: 4 },
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 sound={sound} />);
+
+    await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
+
+    expect(sound.lock).toHaveBeenCalled();
+    expect(sound.refuse).not.toHaveBeenCalled();
+  });
+
+  it('uma cena sem seleção RECUSA — som de "não pode", distinto do de travar', async () => {
+    const sound = spySound();
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Escuta2 sound={sound} />);
+
+    await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
+
+    expect(sound.refuse).toHaveBeenCalled();
+    expect(sound.lock).not.toHaveBeenCalled();
   });
 });

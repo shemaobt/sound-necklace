@@ -414,3 +414,26 @@ describe('Mapeamento — a voz do guia (ENG-280)', () => {
     expect(document.querySelector('[data-speaking]')?.getAttribute('data-speaking')).toBe('false');
   });
 });
+
+describe('Mapeamento — a passagem para o relatório (ENG-250)', () => {
+  it('a resposta em VOZ chega tocável ao relatório: o card promete voz, não um campo vazio', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    render(<Mapeamento recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+
+    // anda até o relatório (a última "Próxima pergunta" abre a prévia)
+    const total = questionSequence(sessionStore.getState().session!).length;
+    for (let i = 0; i < total; i++) {
+      await userEvent.click(screen.getByRole('button', { name: 'Próxima pergunta' }));
+    }
+
+    // a gravação da 1ª pergunta é ouvível LÁ — sem o recorder o card cairia no
+    // "ainda sem resposta gravada" e a voz ficaria inalcançável
+    const play = await screen.findByRole('button', { name: '▶ ouvir a resposta' });
+    await userEvent.click(play);
+    expect(recorder.playing).toBe('respostas/level1/recontar.webm');
+  });
+});

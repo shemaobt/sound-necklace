@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { UiSound } from '../../../adapters/ui-sound';
 import {
   computeCoverage,
   type Confidence,
@@ -39,6 +40,8 @@ import './triagem.css';
  */
 export interface TriagemProps {
   player?: Player | null;
+  /** A voz da UI (§9): escolher um tipo, travar a cena e avançar têm som. */
+  sound?: UiSound;
 }
 
 type Translate = (key: string) => string;
@@ -66,7 +69,7 @@ function nextPending(parts: ScenePart[], from: number): number {
   return -1;
 }
 
-export function Triagem({ player = null }: TriagemProps) {
+export function Triagem({ player = null, sound }: TriagemProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [focusIdx, setFocusIdx] = useState(0);
@@ -119,6 +122,7 @@ export function Triagem({ player = null }: TriagemProps) {
 
   const classify = (kind: string, confidence: Confidence): void => {
     const id = scene.part_id;
+    sound?.lock();
     sessionStore.getState().apply((s) => tagScene(s, id, kind, confidence));
     setInspecting(null);
     advanceFocus();
@@ -133,6 +137,7 @@ export function Triagem({ player = null }: TriagemProps) {
 
   const noneFit = (): void => {
     const id = scene.part_id;
+    sound?.lock();
     sessionStore.getState().apply((s) => markNoneFit(s, id));
     setInspecting(null);
     advanceFocus();
@@ -144,6 +149,7 @@ export function Triagem({ player = null }: TriagemProps) {
   const advance = (): void => {
     const s = sessionStore.getState().session;
     if (!s || !triagemDone(s).enabled) return;
+    sound?.advance();
     sessionStore.getState().apply((st) => {
       const moved = setMode(st, 'segmentacao');
       return moved.mode === 'segmentacao' ? enterSegmentacao(moved) : moved;

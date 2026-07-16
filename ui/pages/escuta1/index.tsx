@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { UiSound } from '../../../adapters/ui-sound';
 import { confirmWhole, reopenWhole } from '../../../domain';
 import { Button } from '../../atoms';
 import { Necklace, SIZE_L } from '../../organisms';
@@ -21,9 +22,11 @@ import './escuta1.css';
  */
 export interface Escuta1Props {
   player?: Player | null;
+  /** A voz da UI (§9): confirmar a escuta avança; sem ouvir tudo, recusa. */
+  sound?: UiSound;
 }
 
-export function Escuta1({ player = null }: Escuta1Props) {
+export function Escuta1({ player = null, sound }: Escuta1Props) {
   const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
@@ -56,9 +59,11 @@ export function Escuta1({ player = null }: Escuta1Props) {
     const result = confirmWhole(session);
     if (!result.ok) {
       setError(result.error.message);
+      sound?.refuse();
       return;
     }
     setError(null);
+    sound?.advance();
     sessionStore.getState().apply(() => result.state);
   };
 

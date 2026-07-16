@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { UiSound } from '../../../adapters/ui-sound';
 import {
   activeAnchor,
   clickBead,
@@ -31,9 +32,11 @@ import './escuta2.css';
  */
 export interface Escuta2Props {
   player?: Player | null;
+  /** A voz da UI (§9): travar uma cena, recusar um corte e avançar têm som. */
+  sound?: UiSound;
 }
 
-export function Escuta2({ player = null }: Escuta2Props) {
+export function Escuta2({ player = null, sound }: Escuta2Props) {
   const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
@@ -92,9 +95,11 @@ export function Escuta2({ player = null }: Escuta2Props) {
     const result = confirmPart(s, s.current.index);
     if (!result.ok) {
       setError(result.error.message);
+      sound?.refuse();
       return;
     }
     setError(null);
+    sound?.lock();
     sessionStore.getState().apply(() => result.state);
   };
 
@@ -104,9 +109,11 @@ export function Escuta2({ player = null }: Escuta2Props) {
     const result = confirmParts(s);
     if (!result.ok) {
       setError(result.error.message);
+      sound?.refuse();
       return;
     }
     setError(null);
+    sound?.advance();
     sessionStore.getState().apply(() => result.state);
   };
 
