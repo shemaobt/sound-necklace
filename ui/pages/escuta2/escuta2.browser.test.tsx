@@ -156,7 +156,7 @@ describe('Escuta 2 — modelo de clique com áudio na hora (PRD v2 §8.2/§8.4)'
 });
 
 describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
-  it('tocar numa conta da cena travada toca a CENA inteira, não a conta', () => {
+  it('tocar numa conta da cena travada toca a CENA inteira e deixa o corte quieto', () => {
     const { player, calls } = spyPlayer();
     sessionStore.getState().load(withLockedScene());
     const { root, el } = mount(player);
@@ -165,18 +165,9 @@ describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
 
     // o log inteiro, não só a última: um toggle seguido de play seriam dois sons
     expect(calls).toEqual([{ m: 'toggle', key: 'PT1', args: [0, 3] }]);
-    root.unmount();
-  });
-
-  it('a cena travada é para ouvir, não para cortar: a emenda costurada sobrevive', () => {
-    const { player } = spyPlayer();
-    sessionStore.getState().load(withLockedScene());
-    const { root, el } = mount(player);
-
-    firePointer(el, 2);
-
-    // sem isto o clique é clampado até a emenda e CONSOME a pré-ancoragem,
-    // fechando uma cena degenerada de uma conta só onde a próxima ia começar
+    // e a emenda costurada sobrevive: sem isto o clique é clampado até a emenda e
+    // CONSOME a pré-ancoragem, fechando uma cena degenerada de uma conta só onde a
+    // próxima ia começar (o toggle acima é quem prova que o toque de fato chegou)
     const depois = sessionStore.getState().session!;
     expect(depois.pendingStart).toBe(4);
     expect(depois.selection).toEqual({ s: 4, e: 4 });
@@ -196,7 +187,7 @@ describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
     root.unmount();
   });
 
-  it('a conta que brilha volta ao mesmo toggle da cena (é o player que pausa)', () => {
+  it('a conta que brilha não é clique morto: volta ao mesmo toggle da cena', () => {
     const { player, calls, emitHead } = spyPlayer();
     sessionStore.getState().load(withLockedScene());
     const { root, el } = mount(player);

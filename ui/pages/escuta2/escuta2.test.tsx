@@ -250,22 +250,8 @@ describe('Escuta 2 — momento de revisão quando a história está toda em cena
     expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '✓ Confirmar esta cena' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Confirmar as cenas →' })).toBeNull();
-  });
-
-  it('é aqui que a dica de reouvir mais importa: conferir antes de “Continuar →”', () => {
-    load(
-      cutting({
-        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
-        current: { layer: 'parts', index: -1 },
-        selection: null,
-        pendingStart: null,
-      }),
-    );
-    render(<Escuta2 />);
-
-    // toda conta pertence a uma cena travada: o colar inteiro relê o corte, e a
-    // única linha da tela precisa dizer isso — senão a afordância fica invisível
-    // justamente no momento em que a facilitadora vai conferir
+    // nada resta a cortar: é conferindo aqui que se decide Continuar, então é aqui
+    // que a dica de reouvir mais importa — e era exatamente aqui que ela sumia
     expect(screen.getByText(/Toque numa cena para reouvir/)).toBeTruthy();
   });
 
@@ -300,6 +286,9 @@ describe('Escuta 2 — momento de revisão quando a história está toda em cena
 
     expect(screen.getByRole('button', { name: 'Confirmar as cenas →' })).toBeTruthy();
     expect(screen.queryByText('A história está toda em cenas.')).toBeNull();
+    // com cena travada, a linha única sinaliza que dá para reouvir — a afordância
+    // é invisível no colar, então sem esta frase ninguém descobre que existe
+    expect(screen.getByText(/Toque numa cena pronta para reouvir/)).toBeTruthy();
   });
 });
 
@@ -341,6 +330,9 @@ describe('Escuta 2 — tratamento creme (redesign §6.3, §4.5)', () => {
 
     expect(container.querySelector('.cds-escuta2')).not.toBeNull();
     expect(container.querySelector('.cds-escuta2-emph')?.textContent).toBe('esta cena termina');
+    // sem cena travada não há o que reouvir: a linha explica a emenda e nada mais
+    expect(screen.getByText(/O começo já está costurado/)).toBeTruthy();
+    expect(screen.queryByText(/para reouvir/)).toBeNull();
     expect(escuta2Css).toMatch(/\.cds-escuta2\s*\{[^}]*var\(--cds-cream\)/);
     expect(escuta2Css).toMatch(/\.cds-escuta2-emph\s*\{[^}]*var\(--cds-telha\)/);
   });
