@@ -64,6 +64,11 @@
   box-shadow: none;
 }
 
+.cds-kind-card-none-glyph-svg {
+  width: 14px;
+  height: 14px;
+}
+
 .cds-kind-card-none-glyph {
   display: flex;
   align-items: center;

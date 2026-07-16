@@ -8,6 +8,14 @@ import './conversation-stage.css';
 /** Estado da resposta em voz — a máquina vive na página; o organismo só a desenha. */
 export type RecorderState = 'idle' | 'recording' | 'recorded';
 
+/**
+ * Barras da forma de onda (protótipo recBars). Exportado porque quem alimenta
+ * `levels` precisa da MESMA contagem: capado abaixo disso, o rabo da onda ficava
+ * congelado na fórmula de fallback enquanto o começo reagia à voz — o medidor
+ * mentia justamente na tela cujo trabalho é mostrar "estamos te ouvindo".
+ */
+export const WAVE_BARS = 46;
+
 export interface ConversationProgress {
   /** total de perguntas do roteiro para esta estrutura */
   total: number;
@@ -198,12 +206,12 @@ export function ConversationStage({
               ) : (
                 <div className="cds-conversation-stage-waveform" aria-hidden="true">
                   {recorderState === 'recording'
-                    ? // 46 barras vivas: nível real quando o gravador o emite; senão a
+                    ? // barras vivas: nível real quando o gravador o emite; senão a
                       // altura formulaica do protótipo (recBars: 10 + (i*7 % 34))
-                      Array.from({ length: 46 }, (_, i) => (
+                      Array.from({ length: WAVE_BARS }, (_, i) => (
                         <WaveformBar key={i} height={levels[i] ?? 10 + ((i * 7) % 34)} active />
                       ))
-                    : Array.from({ length: 46 }, (_, i) => (
+                    : Array.from({ length: WAVE_BARS }, (_, i) => (
                         <WaveformBar key={i} height={10 + ((i * 7) % 34)} />
                       ))}
                 </div>

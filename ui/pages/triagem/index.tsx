@@ -248,6 +248,19 @@ export function Triagem({ player = null, sound }: TriagemProps) {
         </div>
       ) : null}
 
+      {/* Inspecionando uma cena com o gate JÁ aberto, a saída fica aqui — como o CTA
+          do protótipo, que vive no rodapé e não depende do picker. Sem isto, tocar
+          num ponto só para reouvir a cena (que é para isso que o colar está lá)
+          sumia com a única ação de avanço, e o único jeito de voltar a ela era
+          RECLASSIFICAR uma cena que ninguém queria mexer. */}
+      {gate.enabled && !reviewing ? (
+        <div className="cds-triagem-gate" data-role="primary-action">
+          <Button variant="primary" onClick={advance}>
+            {t('review.continue')}
+          </Button>
+        </div>
+      ) : null}
+
       <CoverageDrawer coverage={coverage} />
     </section>
   );

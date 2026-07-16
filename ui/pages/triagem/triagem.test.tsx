@@ -330,3 +330,24 @@ describe('Triagem — tratamento creme (redesign §6.4, §4.5)', () => {
     expect(outside).not.toMatch(/animation|@keyframes/);
   });
 });
+
+describe('Triagem — reouvir na revisão não pode custar a saída', () => {
+  it('tocar num ponto para reouvir uma cena mantém o "Continuar →" ao alcance', async () => {
+    load(
+      triaging([
+        lockedPart('PT1', { s: 0, e: 4 }, 'tagged'),
+        lockedPart('PT2', { s: 5, e: 9 }, 'tagged'),
+      ]),
+    );
+    render(<Triagem />);
+    expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
+
+    // a facilitadora toca um ponto só para reouvir a cena 2 (é para isso que o
+    // colar está lá) — sem mudar classificação nenhuma
+    await userEvent.click(dots()[1]!);
+
+    // ela ainda consegue seguir: sem isto, o único jeito de avançar seria
+    // RECLASSIFICAR uma cena que ela não queria mexer
+    expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
+  });
+});

@@ -20,6 +20,7 @@ import {
   ConversationStage,
   type ConversationProgress,
   type RecorderState,
+  WAVE_BARS,
 } from '../../organisms/conversation-stage/conversation-stage';
 import { sessionStore, useAppStore, useSessionStore } from '../../state';
 import './mapeamento.css';
@@ -203,7 +204,7 @@ function QuestionScreen({
     recordingRef.current = rec;
     sound?.recordStart();
     unsubRef.current = rec.onLevel((l) =>
-      setLevels((prev) => [...prev, Math.max(2, Math.round(l * 40))].slice(-32)),
+      setLevels((prev) => [...prev, Math.max(2, Math.round(l * 40))].slice(-WAVE_BARS)),
     );
     setRecorderState('recording');
   };
