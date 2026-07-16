@@ -27,10 +27,10 @@ const DURATION = 2.5;
 const BEAD_SEC = 0.25; // 10 contas (0…9)
 const SPEC: PcmSpec = { seed: 42, sampleRate: 8000, samples: 20000, channels: 1 };
 
-function makeSession(overrides?: Partial<SessionState>): SessionState {
-  const beads = buildBeads(DURATION, BEAD_SEC);
+function makeSession(overrides?: Partial<SessionState>, durationSec = DURATION): SessionState {
+  const beads = buildBeads(durationSec, BEAD_SEC);
   const base = createSession({
-    durationSec: DURATION,
+    durationSec,
     beadSec: BEAD_SEC,
     beads,
     manifestId: 'fnv1a32:00000000',
@@ -110,34 +110,72 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
     expect(heads[0]).toBe(0);
   });
 
-  it('o pill de confirmação acende quando a cabeça alcança o fim da história', async () => {
-    const { engine, player } = await makePlayer();
-    sessionStore.getState().load(makeSession());
-    render(<Escuta1 player={player} />);
+  // data-heard vive no wrapper [data-role="primary-action"] (index.tsx)
+  const heardTarget = (): Element | null =>
+    screen
+      .getByRole('button', { name: 'Já ouvi a história completa' })
+      .closest('[data-role="primary-action"]');
 
-    const totalBeads = sessionStore.getState().session?.totalBeads ?? 0;
-    // data-heard vive no wrapper [data-role="primary-action"] (index.tsx)
-    const heardTarget = (): Element | null =>
-      screen
-        .getByRole('button', { name: 'Já ouvi a história completa' })
-        .closest('[data-role="primary-action"]');
-
-    expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
-
-    // sem botão de play: o toque na conta 0 é o transporte (decisão do dono)
+  /** Toca a partir da conta `from` e deixa a cabeça correr até o fim do áudio. */
+  function playToEnd(engine: FixtureAudioEngine, from: number): void {
     act(() => {
+      // sem botão de play: o toque na conta é o transporte (decisão do dono)
       document.querySelector('.cds-necklace')!.dispatchEvent(
         new MouseEvent('pointerdown', {
           bubbles: true,
           cancelable: true,
+          // jsdom zera as medidas → todo toque cai na conta 0; a janela [from, fim]
+          // é montada tocando direto a partir de `from` quando preciso
           clientX: 1,
           clientY: 1,
         }),
       );
-      engine.transport.advance((totalBeads - 6) * BEAD_SEC);
+      engine.transport.advance(0.05);
+      for (let bead = from; bead < 10; bead++) engine.transport.advance(BEAD_SEC);
+    });
+  }
+
+  it('o pill de confirmação acende quando a cabeça percorre a história inteira', async () => {
+    const { engine, player } = await makePlayer();
+    sessionStore.getState().load(makeSession());
+    render(<Escuta1 player={player} />);
+
+    expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
+    playToEnd(engine, 0);
+    expect(heardTarget()?.getAttribute('data-heard')).toBe('true');
+  });
+
+  it('amostrar só o fim da história NÃO acende o pill (cobertura cumulativa)', async () => {
+    const { engine, player } = await makePlayer();
+    sessionStore.getState().load(makeSession());
+    render(<Escuta1 player={player} />);
+
+    // toca a partir da conta 5 até o fim: a cabeça alcança a última conta, mas
+    // metade da história nunca foi ouvida
+    act(() => {
+      player.play(5, 9);
+      engine.transport.advance(0.05);
+      for (let bead = 5; bead < 10; bead++) engine.transport.advance(BEAD_SEC);
     });
 
-    expect(heardTarget()?.getAttribute('data-heard')).toBe('true');
+    expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
+  });
+
+  it('o primeiro tick de uma história curta não acende o pill', async () => {
+    const engine = new FixtureAudioEngine();
+    // 1.5 s a 0.25 s/conta → 6 contas: a margem absoluta de 6 do protótipo
+    // deixava `h >= totalBeads - 6` verdadeiro já em h = 0
+    const decoded = await engine.decode(pcmSpecBytes({ ...SPEC, samples: 12000 }));
+    const player = engine.createPlayer(decoded, BEAD_SEC);
+    sessionStore.getState().load(makeSession(undefined, 1.5));
+    render(<Escuta1 player={player} />);
+
+    act(() => {
+      player.play(0, 5);
+      engine.transport.advance(0.05); // cabeça na conta 0
+    });
+
+    expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
   });
 });
 
