@@ -100,8 +100,10 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
     );
 
   /**
-   * Tocar numa cena já travada a reproduz inteira (protótipo `clickCut`/`_sceneOf`;
-   * a Triagem faz o mesmo pelo colar da cena em foco). A pergunta vem ANTES do
+   * Tocar numa cena já travada a reproduz inteira — o `clickCut`/`_sceneOf` de
+   * "Ouvir no colar" (o estudo `pure` escolhido, redesign §11; o arquivo chamado
+   * "Protótipo" é o estudo VELHO e traz o oposto: play no chip e nenhum ramo de
+   * cena travada). A Triagem faz o mesmo pelo colar da cena em foco. Vem ANTES do
    * `clickBead` porque o redutor é port 1:1 da referência v1: ele clampa o clique
    * até a emenda e, ao fazer isso, consome a pré-ancoragem da próxima cena. Levar
    * a regra para o domínio muda camada congelada — o golden é o juiz, não esta
@@ -187,17 +189,12 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
         <h2 className="cds-escuta2-title">{t('escuta2.title')}</h2>
         {tiled ? (
           <p className="cds-escuta2-instruction" data-role="instruction">
-            <span>{t('escuta2.reviewHeadline')}</span>
-            {/* nada mais resta a cortar: toda conta é de cena travada, então o colar
-                inteiro relê o corte — e é conferindo aqui que se decide Continuar */}
-            {t('escuta2.reviewReplayHint')}
+            {t('escuta2.reviewHeadline')}
           </p>
         ) : (
           <p className="cds-escuta2-instruction" data-role="instruction">
             {t('escuta2.instructionPre')}
             <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
-            {/* a única linha da tela (§9.2) sinaliza a afordância que existe AGORA:
-                sem cena travada não há o que reouvir, e a emenda é a novidade. */}
             {hasLocked ? t('escuta2.instructionReplay') : t('escuta2.instructionPost')}
           </p>
         )}

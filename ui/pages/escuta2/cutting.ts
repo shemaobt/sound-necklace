@@ -10,8 +10,9 @@ import { type PaletteEntry, scenePalette } from '../../tokens';
  */
 
 /**
- * A cena travada dona desta conta, se houver — o `_sceneOf` do protótipo, com as
- * duas bordas dentro. Uma cena travada é para ouvir, não para cortar.
+ * A cena travada dona desta conta, se houver — o `_sceneOf` do estudo "Ouvir no
+ * colar" (redesign §11, o `pure` escolhido), com as duas bordas dentro. Uma cena
+ * travada é para ouvir, não para cortar.
  */
 export function lockedSceneAt(parts: readonly ScenePart[], bead: number): ScenePart | null {
   return parts.find((p) => p.locked && p.span && bead >= p.span.s && bead <= p.span.e) ?? null;

@@ -187,6 +187,20 @@ describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
     root.unmount();
   });
 
+  it('no modo revisão a cena travada continua audível — a estação vira só-ouvir', () => {
+    const { player, calls } = spyPlayer();
+    // `review` do domínio: o `clickBead` devolve `play: null` e a estação ficaria
+    // muda (redesign §5.3 chama a revisão de play-only). Como a pergunta da cena
+    // travada vem antes do redutor, o colar segue tocando o que já está travado.
+    sessionStore.getState().load({ ...withLockedScene(), review: true });
+    const { root, el } = mount(player);
+
+    firePointer(el, 2);
+
+    expect(calls).toEqual([{ m: 'toggle', key: 'PT1', args: [0, 3] }]);
+    root.unmount();
+  });
+
   it('a conta que brilha não é clique morto: volta ao mesmo toggle da cena', () => {
     const { player, calls, emitHead } = spyPlayer();
     sessionStore.getState().load(withLockedScene());
