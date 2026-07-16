@@ -4,7 +4,8 @@
  */
 .cds-confidence-trio {
   display: flex;
-  gap: 26px;
+  justify-content: center;
+  gap: 14px;
 }
 
 .cds-confidence-trio-card {
