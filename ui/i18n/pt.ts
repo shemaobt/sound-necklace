@@ -247,7 +247,6 @@ export const pt = {
       '⌀ Nenhum se encaixa — evidência para nomear um tipo nativo quando o padrão se repetir.',
     lockout:
       '⚠ Nenhuma cena se encaixa em Rute. Segmentação e Mapeamento ficam travadas — esta história não rende cobertura de Rute. As marcas ficam salvas como evidência de tipo nativo.',
-    advance: 'Já classifiquei todas as cenas →',
   },
   triagemPicker: {
     // Aninhado de verdade: chaves planas com ponto só resolviam por um FALLBACK do
@@ -287,7 +286,6 @@ export const pt = {
     listenScene: '▶ ouvir a cena',
     listenPhrase: '▶ ouvir a frase',
     instruction: 'Ouça o trecho e responda com calma, com a sua voz.',
-    typedAria: 'observação da facilitadora',
     reportAria: 'relatório',
     reportFallback: 'A conversa terminou. O relatório abre aqui.',
     toExport: 'Guardar os documentos →',
@@ -320,8 +318,6 @@ export const pt = {
     noAnswerYet: 'ainda sem resposta gravada',
     writeAnswer: 'escrever a resposta',
     addNote: 'acrescentar uma observação',
-    downloadReport: 'Baixar relatório (.md)',
-    downloadRetorno: 'Baixar a ancoragem (.json)',
   },
   conversationStage: {
     listen: 'Ouvir a pergunta',

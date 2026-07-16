@@ -231,7 +231,6 @@ export const en: Dict = {
     finding: '⌀ None fits — evidence for naming a native type when the pattern repeats.',
     lockout:
       '⚠ No scene fits Ruth. Segmentation and Mapping stay locked — this story yields no Ruth coverage. The marks are kept as evidence of a native type.',
-    advance: 'I have classified every scene →',
   },
   triagemPicker: {
     theme: {
@@ -268,7 +267,6 @@ export const en: Dict = {
     listenScene: '▶ listen to the scene',
     listenPhrase: '▶ listen to the phrase',
     instruction: 'Listen to the stretch and answer calmly, in your own voice.',
-    typedAria: 'facilitator note',
     reportAria: 'report',
     reportFallback: 'The conversation is over. The report opens here.',
     toExport: 'Save the documents →',
@@ -301,8 +299,6 @@ export const en: Dict = {
     noAnswerYet: 'no answer recorded yet',
     writeAnswer: 'write the answer',
     addNote: 'add a note',
-    downloadReport: 'Download report (.md)',
-    downloadRetorno: 'Download the anchoring (.json)',
   },
   conversationStage: {
     listen: 'Listen to the question',

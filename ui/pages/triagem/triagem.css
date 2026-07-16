@@ -71,11 +71,6 @@
   color: var(--cds-ink);
 }
 
-.cds-triagem-play {
-  display: flex;
-  justify-content: center;
-}
-
 .cds-triagem-tag {
   margin: 0;
   font-family: var(--cds-font-quiet-voice);
