@@ -64,7 +64,14 @@
   color: var(--cds-olive-soft);
 }
 
+/* rodapé da prévia do relatório: o `.cds-mapeamento` não tem padding embaixo (o
+   palco da conversa cuida do próprio), então a folga até a borda mora aqui — sem
+   ela o CTA encostava no fim da tela. `gap` porque "← anterior" e o CTA estavam
+   colados um no outro. */
 .cds-mapeamento-controls {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 16px;
+  padding-bottom: clamp(1.5rem, 5vh, 3rem);
 }

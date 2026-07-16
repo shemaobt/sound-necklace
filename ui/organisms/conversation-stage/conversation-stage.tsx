@@ -147,7 +147,15 @@ export function ConversationStage({
       const i = start + offset;
       return {
         key: i,
-        state: i === progress.current ? 'head' : progress.answered.has(i) ? 'lit' : 'unplayed',
+        state:
+          i === progress.current
+            ? 'head'
+            : // protótipo: `i < qIndex || answers[i]` — o fio conta o caminho ANDADO,
+              // não só o que ficou gravado. Sem o `i < current` nada acendia: a
+              // entrevista é só-voz e `answered` enumera apenas respostas de texto.
+              i < progress.current || progress.answered.has(i)
+              ? 'lit'
+              : 'unplayed',
         size: i === progress.current ? 22 : 15,
       } satisfies BeadCell;
     },

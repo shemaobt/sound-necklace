@@ -135,3 +135,34 @@ describe('ConversationStage — movimento respeita prefers-reduced-motion (§4.5
     expect(outside).not.toMatch(/animation|@keyframes/);
   });
 });
+
+/**
+ * O fio conta A CONVERSA PERCORRIDA, não só o que ficou gravado (protótipo:
+ * `i < qIndex || answers[i]` acende). A entrevista é só-voz e `answered` hoje só
+ * enumera respostas de TEXTO — sem contar as perguntas já passadas, nenhuma conta
+ * acendia nunca e o fio virava enfeite.
+ */
+describe('ConversationStage — o fio acende o caminho já andado', () => {
+  const lit = (el: HTMLElement) =>
+    el.querySelectorAll('.cds-conversation-stage-progress .cds-pearl[data-state="lit"]').length;
+
+  it('as perguntas já passadas acendem, mesmo sem nenhuma resposta de texto', () => {
+    const { container } = render(
+      <ConversationStage
+        {...baseProps({ progress: { total: 6, answered: new Set(), current: 3 } })}
+      />,
+    );
+
+    expect(lit(container)).toBe(3); // 0,1,2 andadas · 3 é a cabeça · 4,5 por vir
+  });
+
+  it('uma pergunta respondida à frente da atual também acende (voltar não apaga)', () => {
+    const { container } = render(
+      <ConversationStage
+        {...baseProps({ progress: { total: 6, answered: new Set([5]), current: 1 } })}
+      />,
+    );
+
+    expect(lit(container)).toBe(2); // a 0 (andada) + a 5 (respondida)
+  });
+});

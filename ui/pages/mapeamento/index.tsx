@@ -346,8 +346,11 @@ export function Mapeamento({
       setAtReport(true);
     }
   };
-  // Fio de progresso (indicador, não gate): marca as perguntas com resposta de
-  // TEXTO. ponytail: teto conhecido — respostas só-de-voz não acendem a conta,
+  // Fio de progresso (indicador, não gate): as perguntas com resposta de TEXTO.
+  // O caminho já andado o organismo acende sozinho (`i < current`, protótipo), que
+  // é o que faz o fio significar algo numa entrevista só-voz — este conjunto só
+  // acrescenta as respondidas ADIANTE da atual (quem voltou não apaga o que fez).
+  // ponytail: teto conhecido — uma resposta só-de-voz à frente da atual não acende,
   // pois `recorder.has()` é assíncrono; enumerar a voz vale um passo síncrono só
   // quando o progresso virar informação carregada (não é o caso hoje).
   const answered = new Set(
