@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
@@ -32,6 +32,7 @@ export function Escuta1({ player = null, sound }: Escuta1Props) {
   const [head, setHead] = useState<number | null>(null);
   const [heardEnough, setHeardEnough] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const heard = useRef(new Set<number>());
 
   const totalBeads = session?.totalBeads ?? 0;
   const handlers = useMemo(
@@ -43,8 +44,12 @@ export function Escuta1({ player = null, sound }: Escuta1Props) {
     if (!player) return;
     return player.onHead((h) => {
       setHead(h);
-      // protótipo heardEnough: a cabeça alcançou (quase) o fim → o pill acende
-      if (h !== null && h >= totalBeads - 6) setHeardEnough(true);
+      if (h === null) return;
+      // "ouviu o bastante" = a cabeça percorreu ~toda a história (cobertura
+      // cumulativa das contas visitadas), não apenas alcançou o fim: amostrar as
+      // últimas contas não é ter ouvido. A folga de 10% absorve o frame perdido.
+      heard.current.add(h);
+      if (heard.current.size >= totalBeads * 0.9) setHeardEnough(true);
     });
   }, [player, totalBeads]);
 
