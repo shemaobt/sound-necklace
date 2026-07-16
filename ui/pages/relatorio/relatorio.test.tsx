@@ -1,15 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
-import {
-  buildMapReport,
-  buildRetorno,
-  relatorioFilename,
-  retornoFilename,
-  serializeArtifact,
-} from '../../../contracts';
+import { buildMapReport } from '../../../contracts';
 import {
   buildBeads,
   createSession,
@@ -183,9 +177,8 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
 
   it('a nota persiste no estado da sessão (relida no re-mount) e NÃO sai no .md exportado', async () => {
     const q = L1_Q[0]!;
-    const saveBytes = vi.fn();
     load(report());
-    const view = render(<Relatorio saveBytes={saveBytes} />);
+    const view = render(<Relatorio />);
 
     const before = buildMapReport(sessionStore.getState().session!);
 
@@ -198,7 +191,7 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
 
     // a nota volta a aparecer num re-mount → está no estado da sessão (blackbox)
     view.unmount();
-    render(<Relatorio saveBytes={saveBytes} />);
+    render(<Relatorio />);
     expect(
       (within(cardFor(q.q)).getByLabelText('observação da facilitadora') as HTMLTextAreaElement)
         .value,
@@ -208,47 +201,5 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
     const after = buildMapReport(sessionStore.getState().session!);
     expect(after).toBe(before);
     expect(after).not.toContain('checar vocabulário');
-
-    await userEvent.click(screen.getByRole('button', { name: /baixar relatório/i }));
-    const [, bytes] = saveBytes.mock.calls.at(-1)!;
-    expect(bytes).not.toContain('checar vocabulário');
-  });
-});
-
-describe('Relatório — export dos artefatos (referência renderMapReport L1147–1150)', () => {
-  it('baixa o .md byte-idêntico ao buildMapReport do estado atual', async () => {
-    const saveBytes = vi.fn();
-    load(setAnswer(report(), { level: 1, k: L1_Q[0]!.k }, 'era uma vez'));
-    render(<Relatorio saveBytes={saveBytes} />);
-
-    await userEvent.click(screen.getByRole('button', { name: /baixar relatório/i }));
-
-    const session = sessionStore.getState().session!;
-    expect(saveBytes).toHaveBeenLastCalledWith(
-      relatorioFilename(session.slug),
-      buildMapReport(session),
-    );
-  });
-
-  it('o atalho da ancoragem (.json) respeita o gate whole.confirmed', async () => {
-    const saveBytes = vi.fn();
-    load(report({ whole: { id: 'S1', span: { s: 0, e: 29 }, confirmed: false } }));
-    const view = render(<Relatorio saveBytes={saveBytes} />);
-
-    // história não confirmada → o atalho não baixa
-    await userEvent.click(screen.getByRole('button', { name: /baixar a ancoragem/i }));
-    expect(saveBytes).not.toHaveBeenCalled();
-
-    // confirmada → baixa o retorno pelos builders reais
-    view.unmount();
-    load(report({ whole: { id: 'S1', span: { s: 0, e: 29 }, confirmed: true } }));
-    render(<Relatorio saveBytes={saveBytes} />);
-    await userEvent.click(screen.getByRole('button', { name: /baixar a ancoragem/i }));
-
-    const session = sessionStore.getState().session!;
-    expect(saveBytes).toHaveBeenLastCalledWith(
-      retornoFilename(session.slug),
-      serializeArtifact(buildRetorno(session)),
-    );
   });
 });

@@ -299,6 +299,7 @@ export const en: Dict = {
     groupPhrase: 'Phrase {{n}}',
     playAnswer: '▶ listen to the answer',
     noAnswerYet: 'no answer recorded yet',
+    writeAnswer: 'write the answer',
     addNote: 'add a note',
     downloadReport: 'Download report (.md)',
     downloadRetorno: 'Download the anchoring (.json)',

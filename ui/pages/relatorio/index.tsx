@@ -3,13 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import {
-  buildMapReport,
-  buildRetorno,
-  relatorioFilename,
-  retornoFilename,
-  serializeArtifact,
-} from '../../../contracts';
-import {
   type AnswerSlot,
   ensureMapping,
   type Mapping,
@@ -29,14 +22,15 @@ import './relatorio.css';
  * (`questionSequence`); cada cartão traz a resposta digitada editável, ou — quando
  * a resposta existe só como gravação — a linha de voz (▶ + forma de onda + duração),
  * ou o vazio "ainda sem resposta gravada". Perguntas conduzidas pela facilitadora
- * levam um marcador de papel. O `.md` sai byte-idêntico ao contrato
- * (`buildMapReport`), e o atalho da ancoragem (.json) respeita o gate da história
- * confirmada — 1:1 do `renderMapReport` da referência (L1136–1154).
+ * levam um marcador de papel. Baixar é a tela SEGUINTE ("Guardar os documentos →"):
+ * os atalhos .md/.json que a referência tinha aqui (L1136–1154) eram duplicatas dos
+ * três cartões de lá e faziam quatro controles disputarem um rodapé que o protótipo
+ * resolve com um.
  *
  * Superfície FACILITADORA (§7.2): dígitos e IDs são permitidos aqui (≠ telas do
- * ouvinte). Camada de wiring: recebe a porta `VoiceRecorder` (playback das
- * respostas) e a fronteira de download `saveBytes` por prop; nada de domínio/
- * contracts muda. As edições de texto passam por `setAnswer` (store preguiçoso).
+ * ouvinte) — daí o numeral "Q11" de cada cartão. Camada de wiring: recebe a porta
+ * `VoiceRecorder` (playback das respostas) por prop; nada de domínio/contracts
+ * muda. As edições de texto passam por `setAnswer` (store preguiçoso).
  *
  * A nota da facilitadora ("acrescentar uma observação") vive no answer store sob
  * uma chave reservada `nota__<k>` no MESMO bucket da resposta: persiste no autosave
@@ -46,8 +40,6 @@ import './relatorio.css';
  */
 export interface RelatorioProps {
   recorder?: VoiceRecorder | null;
-  /** Fronteira de download; default grava um Blob no browser. */
-  saveBytes?: (filename: string, bytes: string) => void;
 }
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string;
@@ -68,17 +60,6 @@ const WAVE_HEIGHTS = [6, 12, 20, 14, 22, 10, 16, 8];
 function formatDuration(sec: number): string {
   const total = Math.round(sec);
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-function domSaveBytes(filename: string, bytes: string): void {
-  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 /** O slot da nota: a mesma resposta sob a chave reservada `nota__<k>`. */
@@ -154,8 +135,30 @@ function NotebookGlyph() {
   );
 }
 
+/** O "+" do convite da observação (protótipo noteClosed). */
+function PlusGlyph() {
+  return (
+    <svg
+      className="cds-relatorio-add-note-glyph"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
 interface ReportCardProps {
   slot: QuestionSlot;
+  /** Posição na conversa (protótipo `r.num`): "Q11". Superfície de facilitadora (§7.2). */
+  num: number;
   typed: string;
   note: string;
   hasVoice: boolean;
@@ -167,6 +170,7 @@ interface ReportCardProps {
 
 function ReportCard({
   slot,
+  num,
   typed,
   note,
   hasVoice,
@@ -182,7 +186,12 @@ function ReportCard({
 
   return (
     <div className="cds-relatorio-card">
-      <p className="cds-relatorio-q">
+      {/* cabeçalho do protótipo: numeral areia · pergunta · marcador de papel */}
+      <div className="cds-relatorio-head">
+        <span className="cds-relatorio-num" aria-hidden="true">
+          Q{num}
+        </span>
+        <p className="cds-relatorio-q">{questionTextFor(slot, i18n.language)}</p>
         {facilitatorLed ? (
           <span
             className="cds-relatorio-role"
@@ -193,8 +202,7 @@ function ReportCard({
             <NotebookGlyph />
           </span>
         ) : null}
-        {questionTextFor(slot, i18n.language)}
-      </p>
+      </div>
 
       {voiceOnly ? (
         <div className="cds-relatorio-voice">
@@ -212,10 +220,15 @@ function ReportCard({
         </div>
       ) : null}
 
+      {/* A digitação vive AQUI (decisão do dono: a entrevista é só-voz). Mas o campo
+          fica quieto: uma linha, sem caixa nem alça — vazio, lê-se como o
+          "ainda sem resposta gravada" em itálico do protótipo, e cresce ao escrever.
+          Uma caixa de 64px em cada um dos 41 cartões era um formulário, não um relato. */}
       <textarea
         className="cds-relatorio-typed"
         aria-label={t('relatorio.answer')}
-        placeholder={voiceOnly ? undefined : t('relatorio.noAnswerYet')}
+        rows={1}
+        placeholder={voiceOnly ? t('relatorio.writeAnswer') : t('relatorio.noAnswerYet')}
         value={typed}
         onChange={(e) => onTyped(e.target.value)}
       />
@@ -224,21 +237,23 @@ function ReportCard({
         <textarea
           className="cds-relatorio-note"
           aria-label={t('relatorio.typedAria')}
+          rows={2}
           value={note}
           onChange={(e) => onNote(e.target.value)}
         />
       ) : (
-        <span className="cds-relatorio-add-note">
-          <Button variant="ghost" size="sm" onClick={() => setShowNote(true)}>
-            {t('relatorio.addNote')}
-          </Button>
-        </span>
+        // link de texto com "+", não pílula (protótipo noteClosed): é um convite
+        // discreto, e uma pílula por cartão competia com a pergunta
+        <button type="button" className="cds-relatorio-add-note" onClick={() => setShowNote(true)}>
+          <PlusGlyph />
+          {t('relatorio.addNote')}
+        </button>
       )}
     </div>
   );
 }
 
-export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: RelatorioProps) {
+export function Relatorio({ recorder = null }: RelatorioProps) {
   const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [voiceSet, setVoiceSet] = useState<ReadonlySet<string>>(new Set());
@@ -287,7 +302,6 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
   if (!session || !mapped || !sequence.length) return null;
 
   const rows = toRows(sequence, t);
-  const confirmed = mapped.whole.confirmed;
 
   const writeTyped = (slot: QuestionSlot, text: string): void => {
     sessionStore.getState().apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), slot, text));
@@ -298,21 +312,13 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
       .apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), noteSlot(slot), text));
   };
 
-  const onDownloadReport = (): void => {
-    saveBytes(relatorioFilename(mapped.slug), buildMapReport(mapped, voiceSet));
-  };
-  const onDownloadRetorno = (): void => {
-    if (!confirmed) return;
-    saveBytes(retornoFilename(mapped.slug), serializeArtifact(buildRetorno(mapped)));
-  };
-
   return (
     <section className="cds-relatorio">
       <header className="cds-relatorio-header">
         <p className="cds-relatorio-eyebrow">{t('relatorio.eyebrow')}</p>
         <p className="cds-relatorio-headline">{t('relatorio.headline')}</p>
       </header>
-      {rows.map(({ slot, section, group }) => {
+      {rows.map(({ slot, section, group }, i) => {
         const path = voiceAnswerPath(slot);
         return (
           <div key={path}>
@@ -320,6 +326,7 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
             {group ? <p className="cds-relatorio-group">{group}</p> : null}
             <ReportCard
               slot={slot}
+              num={i + 1}
               typed={readAnswer(mapped.mapping, slot)}
               note={readAnswer(mapped.mapping, noteSlot(slot))}
               hasVoice={voiceSet.has(path)}
@@ -331,18 +338,6 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
           </div>
         );
       })}
-
-      {/* Atalhos de download da referência (L1136–1154), mantidos — mas em telha
-          SECUNDÁRIA: a ação dominante daqui é "Guardar os documentos →", e dois
-          botões telha lado a lado não dizem qual é o caminho. */}
-      <div className="cds-relatorio-nav">
-        <Button variant="ghost" size="sm" onClick={onDownloadReport}>
-          {t('relatorio.downloadReport')}
-        </Button>
-        <Button variant="ghost" size="sm" disabled={!confirmed} onClick={onDownloadRetorno}>
-          {t('relatorio.downloadRetorno')}
-        </Button>
-      </div>
     </section>
   );
 }

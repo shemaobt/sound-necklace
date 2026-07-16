@@ -318,6 +318,7 @@ export const pt = {
     groupPhrase: 'Frase {{n}}',
     playAnswer: '▶ ouvir a resposta',
     noAnswerYet: 'ainda sem resposta gravada',
+    writeAnswer: 'escrever a resposta',
     addNote: 'acrescentar uma observação',
     downloadReport: 'Baixar relatório (.md)',
     downloadRetorno: 'Baixar a ancoragem (.json)',
