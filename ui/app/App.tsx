@@ -97,7 +97,16 @@ function SessionStations({
     currentKey === 'export'
       ? { store: exportStore, sessionId, sound }
       : currentKey === 'mapeamento'
-        ? { recorder, player, speaker, sound, onVoiceSaved }
+        ? {
+            recorder,
+            player,
+            speaker,
+            sound,
+            onVoiceSaved,
+            // a prévia do relatório fecha com "Guardar os documentos →" (protótipo
+            // toExport); a Export é estado local do shell, então a chave é nossa
+            onGoToExport: () => setViewingExport(true),
+          }
         : { player, sound };
 
   return (

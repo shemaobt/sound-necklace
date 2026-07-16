@@ -49,6 +49,13 @@ export interface MapeamentoProps {
   speaker?: SpeechSynthesizer | null;
   /** O shell registra o caminho `respostas/…` recém-gravado no `meta.voice` da sessão (ENG-276). */
   onVoiceSaved?: (path: string) => void;
+  /**
+   * Entra na cauda "Guardar" (protótipo `toExport`). Ausente = sem a saída: a
+   * Export é estado LOCAL do shell (o domínio não tem modo `export`), então quem
+   * a abre é ele. Sem isto o relatório era um beco — só o fio de contas do
+   * cabeçalho levava adiante, e chrome não é ação.
+   */
+  onGoToExport?: () => void;
 }
 
 /** A tela do relatório (ENG-250) entra por add-a-file: presente → renderiza; ausente → o passo fica em espera. */
@@ -264,6 +271,7 @@ export function Mapeamento({
   speaker = null,
   sound,
   onVoiceSaved,
+  onGoToExport,
 }: MapeamentoProps) {
   const { t } = useTranslation();
   const muted = useAppStore((s) => s.muted);
@@ -310,6 +318,18 @@ export function Mapeamento({
           <Button variant="ghost" size="sm" onClick={() => setAtReport(false)}>
             {t('mapeamento.prev')}
           </Button>
+          {onGoToExport ? (
+            <Button
+              variant="primary"
+              data-role="primary-action"
+              onClick={() => {
+                sound?.advance();
+                onGoToExport();
+              }}
+            >
+              {t('mapeamento.toExport')}
+            </Button>
+          ) : null}
         </div>
       </section>
     );

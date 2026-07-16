@@ -271,6 +271,7 @@ export const en: Dict = {
     typedAria: 'facilitator note',
     reportAria: 'report',
     reportFallback: 'The conversation is over. The report opens here.',
+    toExport: 'Save the documents →',
     prev: '← previous',
   },
   seamModal: {

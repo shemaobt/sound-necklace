@@ -437,3 +437,20 @@ describe('Mapeamento — a passagem para o relatório (ENG-250)', () => {
     expect(recorder.playing).toBe('respostas/level1/recontar.webm');
   });
 });
+
+describe('Mapeamento — o relatório não é o fim do fluxo (protótipo toExport)', () => {
+  it('a prévia oferece "Guardar os documentos →": a última tela do protótipo não fica só no fio de contas', async () => {
+    const onGoToExport = vi.fn();
+    load(mapping());
+    render(<Mapeamento onGoToExport={onGoToExport} />);
+
+    const total = questionSequence(sessionStore.getState().session!).length;
+    for (let i = 0; i < total; i++) {
+      await userEvent.click(screen.getByRole('button', { name: 'Próxima pergunta' }));
+    }
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar os documentos →' }));
+
+    expect(onGoToExport).toHaveBeenCalled();
+  });
+});

@@ -54,6 +54,11 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
   const conversation = await app.answerConversation();
   expect(conversation.voicedLevels).toEqual([1, 2, 3]); // ≥1 por nível por voz
 
+  // o relatório LEVA à última tela por uma ação própria: sem isto ele era um beco
+  // e só o fio de contas do cabeçalho seguia adiante (chrome não é ação)
+  await page.getByRole('button', { name: 'Guardar os documentos →' }).click();
+  await expect(page.getByText('A história está inteira no colar.')).toBeVisible();
+
   await app.completeSession();
   await expect.poll(() => readPersistedStatus(page, sessionId)).toBe('completed');
 

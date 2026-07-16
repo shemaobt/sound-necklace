@@ -290,6 +290,7 @@ export const pt = {
     typedAria: 'observação da facilitadora',
     reportAria: 'relatório',
     reportFallback: 'A conversa terminou. O relatório abre aqui.',
+    toExport: 'Guardar os documentos →',
     prev: '← anterior',
   },
   seamModal: {

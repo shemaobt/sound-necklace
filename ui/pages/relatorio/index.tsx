@@ -332,8 +332,11 @@ export function Relatorio({ recorder = null, saveBytes = domSaveBytes }: Relator
         );
       })}
 
+      {/* Atalhos de download da referência (L1136–1154), mantidos — mas em telha
+          SECUNDÁRIA: a ação dominante daqui é "Guardar os documentos →", e dois
+          botões telha lado a lado não dizem qual é o caminho. */}
       <div className="cds-relatorio-nav">
-        <Button variant="primary" size="sm" onClick={onDownloadReport}>
+        <Button variant="ghost" size="sm" onClick={onDownloadReport}>
           {t('relatorio.downloadReport')}
         </Button>
         <Button variant="ghost" size="sm" disabled={!confirmed} onClick={onDownloadRetorno}>
