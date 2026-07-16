@@ -17,6 +17,7 @@ import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { sceneColor } from '../escuta2/cutting';
 import { Button } from '../../atoms';
 import { ProgressDots } from '../../molecules';
+import { Necklace, SIZE_L } from '../../organisms';
 import { CoverageDrawer } from '../../organisms/coverage-drawer/coverage-drawer';
 import { TriagemPicker } from '../../organisms/triagem-picker/triagem-picker';
 import { sessionStore, useSessionStore } from '../../state';
@@ -70,6 +71,12 @@ export function Triagem({ player = null }: TriagemProps) {
   const session = useSessionStore((s) => s.session);
   const [focusIdx, setFocusIdx] = useState(0);
   const [inspecting, setInspecting] = useState<number | null>(null);
+  const [head, setHead] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!player) return;
+    return player.onHead(setHead);
+  }, [player]);
 
   useEffect(() => {
     if (!player) return;
@@ -115,6 +122,13 @@ export function Triagem({ player = null }: TriagemProps) {
     sessionStore.getState().apply((s) => tagScene(s, id, kind, confidence));
     setInspecting(null);
     advanceFocus();
+  };
+
+  // protótipo tapTriageBead: tocar QUALQUER conta da cena reproduz a cena inteira
+  // (e tocar a conta que brilha pausa — o `toggle` já faz isso na mesma chave).
+  const playScene = (): void => {
+    if (!player || !scene.span) return;
+    player.toggle(scene.part_id, scene.span.s, scene.span.e);
   };
 
   const noneFit = (): void => {
@@ -174,6 +188,39 @@ export function Triagem({ player = null }: TriagemProps) {
           <p className="cds-triagem-tag" data-tag={scene.tag_state}>
             {tagShow(scene, t, i18n.language)}
           </p>
+
+          {/* o colar da cena em foco (protótipo tColarRows): sem play na estação, é
+              daqui que sai o som — qualquer conta reproduz a cena inteira. Só a cena
+              (windowMargin 0), sem a banda tracejada, que é afordância da Segmentação. */}
+          {scene.span ? (
+            <div className="cds-triagem-colar">
+              <div
+                className="cds-triagem-colar-card"
+                // o cartão abraça a cena (protótipo: fit-content), em vez de virar uma
+                // barra larga com quatro contas perdidas no meio. Teto de 30 contas por
+                // fileira = o `_rowsWithFill(beads, 30)` do protótipo.
+                style={{
+                  maxWidth: Math.min(30, scene.span.e - scene.span.s + 1) * SIZE_L.slot + 44,
+                }}
+              >
+                <Necklace
+                  totalBeads={session.totalBeads}
+                  beadSec={session.beadSec}
+                  segments={[{ span: scene.span, tint: sceneColor(idx) }]}
+                  window={scene.span}
+                  windowMargin={0}
+                  sceneBand={false}
+                  size={SIZE_L}
+                  transportOnly
+                  playbackHead={head}
+                  onBeadPointerDown={playScene}
+                  onHeadTap={playScene}
+                />
+              </div>
+              <p className="cds-triagem-colar-hint">{t('triagem.colarHint')}</p>
+            </div>
+          ) : null}
+
           <TriagemPicker key={scene.part_id} onConfirm={classify} onNoneFit={noneFit} />
         </div>
       )}

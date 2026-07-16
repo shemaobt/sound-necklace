@@ -46,10 +46,19 @@ export interface Rect {
  * Range de contas a renderizar. `window` = span da cena ativa (Segmentação); o
  * organismo abre uma margem `max(3, round(2/beadSec))` de cada lado (L509). Sem
  * cena ativa, mostra a história inteira.
+ *
+ * `marginBeads` sobrepõe essa margem: a Triagem pede 0 porque o protótipo mostra
+ * ali a cena SOZINHA (tColarRows vai de start a end) — vizinhas na tela seriam
+ * ruído numa estação que só pergunta "esta cena é sobre o quê?".
  */
-export function resolveWindow(total: number, beadSec: number, window: Span | null): WindowRange {
+export function resolveWindow(
+  total: number,
+  beadSec: number,
+  window: Span | null,
+  marginBeads?: number,
+): WindowRange {
   if (!window) return { winS: 0, winE: total - 1 };
-  const margin = Math.max(3, Math.round(2 / beadSec));
+  const margin = marginBeads ?? Math.max(3, Math.round(2 / beadSec));
   return {
     winS: Math.max(0, window.s - margin),
     winE: Math.min(total - 1, window.e + margin),

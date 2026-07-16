@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Player } from '../../../adapters/audio';
 import {
   activeScene,
   buildBeads,
@@ -63,6 +64,18 @@ function triaging(parts: ScenePart[]): SessionState {
 
 function load(state: SessionState): void {
   sessionStore.getState().load(state);
+}
+
+/** Player-espião: registra as chamadas de reprodução sem tocar áudio real. */
+function spyPlayer(): Player {
+  return {
+    toggle: vi.fn(),
+    play: vi.fn(),
+    playEdge: vi.fn(),
+    stop: vi.fn(),
+    state: { key: null, playing: false, paused: false },
+    onHead: vi.fn(() => () => {}),
+  };
 }
 
 /** Classifica a cena em foco: escolhe um tipo comum e a confiança "Certeza". */
@@ -134,6 +147,37 @@ describe('Triagem — pontos de progresso (redesign §6.4)', () => {
     const s = sessionStore.getState().session!;
     expect(s.parts[1]!.tag_state).toBe('tagged');
     expect(s.parts[0]!.tag_state).toBe('pending');
+  });
+});
+
+describe('Triagem — o colar da cena em foco (protótipo tColarRows/tapTriageBead)', () => {
+  it('tocar numa conta toca a CENA inteira — a estação não tem play, o som vem do colar', async () => {
+    const player = spyPlayer();
+    load(triaging([lockedPart('PT1', { s: 1, e: 6 }), lockedPart('PT2', { s: 7, e: 9 })]));
+    render(<Triagem player={player} />);
+
+    document
+      .querySelector('.cds-necklace')!
+      .dispatchEvent(
+        new MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 1, clientY: 1 }),
+      );
+
+    expect(player.toggle).toHaveBeenCalledWith('PT1', 1, 6);
+  });
+
+  it('o colar segue a cena em foco: saltar de ponto troca o span que o toque reproduz', async () => {
+    const player = spyPlayer();
+    load(triaging([lockedPart('PT1', { s: 1, e: 6 }), lockedPart('PT2', { s: 7, e: 9 })]));
+    render(<Triagem player={player} />);
+
+    await userEvent.click(dots()[1]!);
+    document
+      .querySelector('.cds-necklace')!
+      .dispatchEvent(
+        new MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 1, clientY: 1 }),
+      );
+
+    expect(player.toggle).toHaveBeenCalledWith('PT2', 7, 9);
   });
 });
 

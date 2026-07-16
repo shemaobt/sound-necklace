@@ -222,6 +222,7 @@ export const en: Dict = {
     reviewHeadline: 'Every scene is classified.',
     empty: 'No scene confirmed yet.',
     instruction: 'What is this scene about?',
+    colarHint: 'tap the necklace to hear this scene',
     tagNoneFit: '⌀ none fits',
     tagPending: '— to classify',
     confAlta: 'certain',

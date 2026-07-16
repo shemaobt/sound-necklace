@@ -33,6 +33,33 @@
   max-width: 680px;
 }
 
+/* o cartão do colar da cena (protótipo tColarRows): branco translúcido sobre o
+   creme, as contas soltas dentro — é a única fonte de som da estação */
+.cds-triagem-colar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.cds-triagem-colar-card {
+  width: 100%;
+  padding: 14px 22px;
+  border-radius: var(--cds-radius-card);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: var(--cds-shadow-card);
+  cursor: pointer;
+}
+
+.cds-triagem-colar-hint {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 500;
+  font-size: 12.5px;
+  color: var(--cds-ink-subtle);
+}
+
 .cds-triagem-instruction {
   margin: 0;
   max-width: 30ch;

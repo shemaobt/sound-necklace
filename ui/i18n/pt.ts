@@ -237,6 +237,7 @@ export const pt = {
     reviewHeadline: 'Todas as cenas classificadas.',
     empty: 'Nenhuma cena confirmada ainda.',
     instruction: 'Essa cena é sobre o quê?',
+    colarHint: 'toque no colar para ouvir esta cena',
     tagNoneFit: '⌀ nenhum se encaixa',
     tagPending: '— por classificar',
     confAlta: 'certeza',

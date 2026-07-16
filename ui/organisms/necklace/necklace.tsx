@@ -42,6 +42,10 @@ export interface NecklaceProps {
   pendingStart?: number | null;
   /** span da cena ativa (Segmentação): abre a janela cena ± margem, dim fora, banda tracejada */
   window?: Span | null;
+  /** margem da janela em contas; 0 = só a cena (Triagem). Padrão: max(3, 2s) */
+  windowMargin?: number;
+  /** banda tracejada da cena; a Triagem a dispensa (a cena já vem sozinha, no cartão) */
+  sceneBand?: boolean;
   /** cabeça de reprodução: acende as contas ≤ head de forma imperativa (60fps) */
   playbackHead?: number | null;
   /** modo transporte (Escuta/review): toca ao tocar, sem afordâncias de seleção */
@@ -79,8 +83,10 @@ function computeField(
   lockedEndBeads: number[],
   selection: Span | null,
   window: Span | null,
+  windowMargin: number | undefined,
+  sceneBandOn: boolean,
 ): Field {
-  const { winS, winE } = resolveWindow(total, beadSec, window);
+  const { winS, winE } = resolveWindow(total, beadSec, window, windowMargin);
   const bpr = beadsPerRow(width, size);
   const xOff = centerOffset(winE - winS + 1, bpr, width, size);
 
@@ -106,9 +112,10 @@ function computeField(
   }
 
   const shift = (r: Rect): Rect => ({ ...r, left: r.left + xOff });
-  const sceneBand = window
-    ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, bpr, size, 4).map(shift)
-    : [];
+  const sceneBand =
+    window && sceneBandOn
+      ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, bpr, size, 4).map(shift)
+      : [];
   const selectionBand = selection
     ? bandRects(Math.max(winS, selection.s), Math.min(winE, selection.e), winS, bpr, size, 3).map(
         shift,
@@ -204,6 +211,8 @@ export function Necklace(props: NecklaceProps) {
     lockedEndBeads,
     selection = null,
     window = null,
+    windowMargin,
+    sceneBand = true,
     playbackHead = null,
     transportOnly = false,
     size = SIZE_M,
@@ -226,11 +235,24 @@ export function Necklace(props: NecklaceProps) {
         lockedEndBeads ?? [],
         effectiveSelection,
         window,
+        windowMargin,
+        sceneBand,
       ),
-    [totalBeads, beadSec, width, size, segments, lockedEndBeads, effectiveSelection, window],
+    [
+      totalBeads,
+      beadSec,
+      width,
+      size,
+      segments,
+      lockedEndBeads,
+      effectiveSelection,
+      window,
+      windowMargin,
+      sceneBand,
+    ],
   );
 
-  const { winS, winE } = resolveWindow(totalBeads, beadSec, window);
+  const { winS, winE } = resolveWindow(totalBeads, beadSec, window, windowMargin);
   const bpr = beadsPerRow(width, size);
 
   // ref-mirror: os listeners nativos (montados uma vez) leem sempre o estado atual.
