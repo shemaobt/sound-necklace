@@ -131,6 +131,8 @@ function computeField(
 interface Interaction {
   total: number;
   size: Size;
+  /** a MESMA largura que centrou o campo no render — o hit-test não a remede */
+  width: number;
   winS: number;
   winE: number;
   bpr: number;
@@ -262,6 +264,7 @@ export function Necklace(props: NecklaceProps) {
     ixRef.current = {
       total: totalBeads,
       size,
+      width,
       winS,
       winE,
       bpr,
@@ -292,18 +295,23 @@ export function Necklace(props: NecklaceProps) {
     const node = containerRef.current;
     if (!node) return;
 
+    // As contas são posicionadas contra a caixa de PADDING do container, com a
+    // largura medida em `ix.width` (clientWidth). O hit-test tem de ler as duas
+    // mesmas fontes: uma borda (ou barra de rolagem) separa clientWidth de
+    // getBoundingClientRect().width e afasta a origem de `rect.left` — e aí tocar
+    // numa conta tocaria a vizinha.
     function beadFromEvent(ev: PointerEvent): number {
       const ix = ixRef.current;
       const rect = node!.getBoundingClientRect();
       const xOff = centerOffset(
         ix.winS <= ix.winE ? ix.winE - ix.winS + 1 : 0,
         ix.bpr,
-        rect.width,
+        ix.width,
         ix.size,
       );
       return beadAtXY(
-        ev.clientX - rect.left - xOff,
-        ev.clientY - rect.top,
+        ev.clientX - rect.left - node!.clientLeft - xOff,
+        ev.clientY - rect.top - node!.clientTop,
         ix.winS,
         ix.winE,
         ix.bpr,

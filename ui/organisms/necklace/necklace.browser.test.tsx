@@ -121,6 +121,41 @@ describe('Necklace — modelo de clique delegado', () => {
   });
 });
 
+describe('Necklace — centragem e hit-test leem a mesma largura', () => {
+  /**
+   * A largura que centra o campo no render e a que o hit-test usa têm de ser a
+   * MESMA medida. Uma borda no contêiner (ou uma barra de rolagem) separa
+   * `clientWidth` de `getBoundingClientRect().width` — e a caixa onde as contas
+   * vivem (a de padding) deixa de começar em `rect.left`. As coordenadas aqui vêm
+   * do rect real da conta, não da geometria replicada: se o mapeamento deslocar,
+   * o toque cai na vizinha.
+   */
+  // a borda entra por folha de estilo e sai SEMPRE — se vazasse para os testes
+  // seguintes, quebraria a geometria deles
+  const style = document.createElement('style');
+  style.textContent = '.cds-necklace { border-left: 40px solid transparent; }';
+  beforeEach(() => document.head.appendChild(style));
+  afterEach(() => style.remove());
+
+  function beadCenter(el: HTMLElement, index: number): { x: number; y: number } {
+    const r = el.querySelector(`.cds-necklace-bead[data-idx="${index}"]`)!.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  it('com borda no contêiner, tocar no centro de uma conta reporta essa conta', () => {
+    const onBeadPointerDown = vi.fn();
+    const { root, el } = mount({ totalBeads: 60, beadSec: 0.25, onBeadPointerDown });
+
+    for (const idx of [0, 7, 31]) {
+      const { x, y } = beadCenter(el, idx);
+      firePointer(el, 'pointerdown', x, y);
+      expect(onBeadPointerDown).toHaveBeenLastCalledWith(idx);
+    }
+
+    root.unmount();
+  });
+});
+
 describe('Necklace — hover na fronteira (dwell)', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
