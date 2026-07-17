@@ -18,9 +18,18 @@ import {
   type SessionStateDto,
   type SessionSummary,
 } from '../../contracts';
+import { ApiError } from '../api';
 import type { ConnectivityMonitor } from '../connectivity/types';
 import { createAutosaver, type Autosaver } from './autosave';
-import type { CreateSessionInput, LockHolder, SessionStore } from './types';
+import {
+  LockLostError,
+  type CreateSessionInput,
+  type LockHolder,
+  type SessionStore,
+} from './types';
+
+/** Fencing do tripod-api (ENG-262): a trava é de outra pessoa e a escrita foi recusada. */
+const LOCK_CONFLICT = 409;
 
 export interface HttpSessionStoreOptions {
   baseUrl: string;
@@ -30,21 +39,38 @@ export interface HttpSessionStoreOptions {
   /** Token Bearer atual (do AuthProvider/ENG-239). */
   token?: () => string | null;
   debounceMs?: number;
+  /**
+   * A trava desta sessão foi tomada por outra pessoa — um autosave foi recusado com
+   * 409. O autosave é fire-and-forget (§7.3): não há promessa para o chamador aguardar,
+   * então este callback é a ÚNICA via pela qual a UI descobre. Só o autosave passa por
+   * aqui; `complete`/`reopen` são aguardados e o 409 sobe por throw para quem chamou —
+   * como `ApiError` cru, sem virar `LockLostError` (a tradução vive no `persist`).
+   */
+  onLockLost?: (id: string) => void;
 }
 
 export class HttpSessionStore implements SessionStore {
+  readonly me: LockHolder;
   readonly #baseUrl: string;
   readonly #fetch: typeof globalThis.fetch;
   readonly #token?: () => string | null;
   readonly #autosaver: Autosaver;
 
   constructor(opts: HttpSessionStoreOptions) {
+    this.me = opts.user;
     this.#baseUrl = opts.baseUrl.replace(/\/$/, '');
     this.#fetch = opts.fetch;
     this.#token = opts.token;
     this.#autosaver = createAutosaver({
-      persist: (id, state) =>
-        this.#req('PUT', `/sessions/${id}/state`, state).then(() => undefined),
+      persist: async (id, state) => {
+        try {
+          await this.#req('PUT', `/sessions/${id}/state`, state);
+        } catch (err) {
+          if (!(err instanceof ApiError) || err.status !== LOCK_CONFLICT) throw err;
+          opts.onLockLost?.(id);
+          throw new LockLostError(id);
+        }
+      },
       monitor: opts.monitor,
       debounceMs: opts.debounceMs ?? 800,
     });
@@ -103,7 +129,9 @@ export class HttpSessionStore implements SessionStore {
   }
 
   async acquireLock(id: string): Promise<LockStatus> {
-    return LockStatusSchema.parse(await this.#req('POST', `/sessions/${id}/lock`));
+    // Adquirir e renovar são a MESMA operação idempotente no tripod-api (ENG-262) —
+    // um só PUT. Não existe POST nesta rota: ele responderia 405.
+    return LockStatusSchema.parse(await this.#req('PUT', `/sessions/${id}/lock`));
   }
 
   async renewLock(id: string): Promise<LockStatus> {
@@ -154,7 +182,9 @@ export class HttpSessionStore implements SessionStore {
       headers: this.#authHeaders(init?.headers),
       body: init?.body,
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status} em ${method} ${path}`);
+    // ApiError carrega o status — é o que separa o 409 do fencing (veredito) de um
+    // 5xx transitório, que o autosaver ainda deve retentar.
+    if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status} em ${method} ${path}`);
     return res;
   }
 

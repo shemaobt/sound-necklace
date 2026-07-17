@@ -51,6 +51,19 @@ export function appSessionBackend(): FixtureSessionBackend {
 
 let store: SessionStore | undefined;
 
+/**
+ * ENG-247, ao montar aqui o `HttpSessionStore` do modo real, precisa ligar as DUAS
+ * pontas da trava consultiva (§7.3) — hoje ambas dormem, porque a fixture não tem
+ * lease nem fencing (ENG-299):
+ *
+ * 1. `onLockLost: (id) => sessionStore.getState().setLock({ holder: null })` — um
+ *    autosave recusado com 409 é a única via pela qual a UI descobre que a sessão foi
+ *    tomada, já que o autosave é fire-and-forget. Esta camada de wiring é quem pode
+ *    fazer a ligação: `adapters/` não importa `ui/`.
+ * 2. `useEditorLock(routeId)` (use-editor-lock.ts) no App — adquire, renova e solta a
+ *    trava. Ao ligá-lo, REMOVA a leitura de trava de `useSessionHydration`: as duas
+ *    escrevem o mesmo `setLock`/`setReview` e competiriam.
+ */
 export function appSessionStore(): SessionStore {
   return (store ??= new FixtureSessionStore({ backend: appSessionBackend() }));
 }

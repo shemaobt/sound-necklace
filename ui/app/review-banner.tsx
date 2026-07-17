@@ -8,7 +8,8 @@ import './review-banner.css';
  * Chrome de revisão + trava de editor (PRD §8.10, §7.3). Em revisão, a segmentação
  * fica travada e só o playback funciona; "Destravar para editar" sai. Quando outra
  * pessoa detém a trava consultiva, a sessão abre em revisão e NÃO se pode destravar
- * (a trava força a revisão) — só se mostra por quem ela está em uso.
+ * (a trava força a revisão) — só se mostra por quem ela está em uso. Uma trava sem
+ * nome é a que perdeu contato com o servidor: mesmo tratamento, aviso de reconexão.
  */
 export function ReviewBanner({
   review,
@@ -26,7 +27,9 @@ export function ReviewBanner({
     <div className="cds-review-banner" role="status">
       {lock ? (
         <span className="cds-review-banner-text">
-          {t('shell.reviewLocked', { holder: lock.holder })}
+          {lock.holder === null
+            ? t('shell.reviewStale')
+            : t('shell.reviewLocked', { holder: lock.holder })}
         </span>
       ) : (
         <>

@@ -7,7 +7,6 @@ import type { SpeechSynthesizer } from '../../adapters/tts/types';
 import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
 import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
-import { DEFAULT_FIXTURE_USER } from '../../adapters/sessions';
 import { setMode, type Mode, type SessionState } from '../../domain';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
@@ -207,12 +206,17 @@ function useSessionHydration(
         sessionStore.getState().load(state);
         // Trava consultiva (§7.3): se a sessão está em uso por OUTRA pessoa, abre em
         // revisão com o aviso de quem a detém. Este fluxo não adquire trava própria,
-        // então qualquer trava por um holder distinto do usuário default da store é
-        // alheia. ponytail: sem auto-aquisição de trava — comparo o holder ao default.
-        const lock = await appSessionStore().lockStatus(routeId);
+        // então qualquer trava por um holder distinto de nós é alheia.
+        //
+        // ENG-247: quando o modo real ligar, troque esta leitura única por
+        // `useEditorLock(routeId)` (use-editor-lock.ts) — ele adquire a trava, renova
+        // enquanto a sessão fica aberta e a solta ao sair. As duas não convivem: ambas
+        // escrevem o mesmo `setLock`/`setReview`.
+        const store = appSessionStore();
+        const lock = await store.lockStatus(routeId);
         if (!alive) return;
         const foreignHolder =
-          lock.held && lock.holder && lock.holder.user_id !== DEFAULT_FIXTURE_USER.user_id
+          lock.held && lock.holder && lock.holder.user_id !== store.me.user_id
             ? lock.holder.display_name
             : null;
         // Trava/revisão são POR SESSÃO, mas o store é singleton e `load` não os reseta:

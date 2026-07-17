@@ -33,6 +33,20 @@ export class SessionNotFoundError extends Error {
 }
 
 /**
+ * Erro tipado — a escrita foi recusada porque a trava consultiva é de OUTRA pessoa
+ * (§7.3; o fencing por `user_id` do tripod-api, ENG-262, responde 409). É um veredito,
+ * não uma falha transitória: retentar só repete a recusa, então o autosaver descarta o
+ * pendente em vez de segurá-lo em memória — o que perderia a escrita ao fechar a aba.
+ */
+export class LockLostError extends Error {
+  override readonly name = 'LockLostError';
+
+  constructor(readonly sessionId: string) {
+    super(`trava perdida na sessão: ${sessionId}`);
+  }
+}
+
+/**
  * Entrada de criação (§8.1): o que o Setup calcula client-side antes de existir uma
  * sessão — áudio do bucket + parâmetros de grade + consentimento de uso no pipeline.
  */
@@ -48,6 +62,13 @@ export interface CreateSessionInput {
 }
 
 export interface SessionStore {
+  /**
+   * Identidade do editor desta store — o dono das travas que ela adquire. É o que
+   * permite ao chamador decidir se um `LockStatus.holder` é ELE MESMO ou outra
+   * pessoa, sem conhecer o modo (fixture/HTTP) nem importar a constante da fixture.
+   */
+  readonly me: LockHolder;
+
   /** Cria a sessão (status em_progresso, na 1ª estação) e devolve o resumo. */
   create(input: CreateSessionInput): Promise<SessionSummary>;
   /** Resumo de uma sessão (dashboard/resume). */

@@ -111,6 +111,8 @@ export const pt = {
     loadingSession: 'carregando a sessão…',
     stationUnderConstruction: 'estação em construção',
     reviewLocked: '🔒 Modo de revisão — sessão em uso por {{holder}}.',
+    /** Perdemos contato com o servidor: guia, não pune — o trabalho salvo está a salvo. */
+    reviewStale: '🔒 Modo de revisão — reconectando à sessão…',
     reviewOwn: '🔒 Modo de revisão — a segmentação está travada.',
     unlock: 'Destravar para editar',
   },

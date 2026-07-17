@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionStateDto } from '../../contracts';
 import { FixtureConnectivityMonitor } from '../connectivity/fixture';
 import { createAutosaver } from './autosave';
+import { LockLostError } from './types';
 
 /** Estado opaco distinguível — a store/autosaver não olham a forma interna. */
 const dto = (tag: string): SessionStateDto =>
@@ -129,6 +130,29 @@ describe('createAutosaver', () => {
       { id: 's1', state: dto('A') },
       { id: 's2', state: dto('B') },
     ]);
+  });
+
+  it('a lost lock is terminal: no retry, and the rejected state stops being pending', async () => {
+    let attempts = 0;
+    const saver = createAutosaver({
+      persist: async () => {
+        attempts++;
+        throw new LockLostError('s1');
+      },
+      monitor: new FixtureConnectivityMonitor(true),
+      debounceMs: 100,
+      backoffMs: 50,
+      maxRetries: 5,
+    });
+
+    saver.schedule('s1', dto('A'));
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(attempts).toBe(1); // o backend recusou a escrita — retentar repete a recusa
+
+    // e o pendente foi descartado: um flush posterior não pode ressuscitar a escrita
+    // que já perdemos o direito de fazer.
+    await saver.flush('s1');
+    expect(attempts).toBe(1);
   });
 
   it('cancel discards a pending autosave so it never persists', async () => {

@@ -5,6 +5,7 @@
  */
 
 export {
+  LockLostError,
   SessionNotFoundError,
   type CreateSessionInput,
   type LockHolder,

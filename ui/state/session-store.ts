@@ -14,9 +14,14 @@ import type { SessionState } from '../../domain';
  * / revisão / trava por outro NÃO limpam o estado — apenas pausam a edição.
  */
 
-/** Trava consultiva: presença = a sessão está aberta por outra pessoa. */
+/**
+ * Trava consultiva: presença = a edição está suspensa e NÃO se pode destravar. Com
+ * `holder`, a sessão está aberta por essa pessoa; com `holder: null`, perdemos contato
+ * com o servidor e não podemos garantir que ainda somos o editor (§7.3) — em ambos os
+ * casos seguir editando arriscaria escrever por cima de outra pessoa.
+ */
 export interface EditorLock {
-  holder: string;
+  holder: string | null;
 }
 
 export interface SessionStore {
