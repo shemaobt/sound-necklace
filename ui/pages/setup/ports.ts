@@ -9,18 +9,19 @@
  * produção, então ficam sem cobertura de teste de propósito.
  */
 
-import { FixtureAudioEngine, type AudioEngine } from '../../../adapters/audio';
-import { FixtureBucketSource, type BucketSource } from '../../../adapters/bucket';
+import { FixtureAudioEngine, WebAudioEngine, type AudioEngine } from '../../../adapters/audio';
+import type { BucketSource } from '../../../adapters/bucket';
 import {
   AcoustemeGranularityResolver,
   type GranularityResolver,
 } from '../../../adapters/granularity';
 import type { SessionStore } from '../../../adapters/sessions';
+import { API_MODE } from '../../app/api-config';
+import { appBucket } from '../../app/bucket-adapter';
 import { appSessionStore } from '../../app/session-adapter';
 
-let bucket: BucketSource | undefined;
 export function defaultBucket(): BucketSource {
-  return (bucket ??= new FixtureBucketSource());
+  return appBucket();
 }
 
 let resolver: GranularityResolver | undefined;
@@ -30,7 +31,9 @@ export function defaultResolver(): GranularityResolver {
 
 let audioEngine: AudioEngine | undefined;
 export function defaultAudioEngine(): AudioEngine {
-  return (audioEngine ??= new FixtureAudioEngine());
+  // real: decodeAudioData decodifica o áudio do piloto (mp3/wav) e o hash/grade saem
+  // do PCM verdadeiro; fixture: o PcmSpec sintético de sempre
+  return (audioEngine ??= API_MODE === 'real' ? new WebAudioEngine() : new FixtureAudioEngine());
 }
 
 export function defaultSessionStore(): SessionStore {

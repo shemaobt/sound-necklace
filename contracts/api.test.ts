@@ -13,6 +13,7 @@ import {
   CompleteSessionRequestSchema,
   CreateSessionRequestSchema,
   LockStatusSchema,
+  MyProjectRolesResponseSchema,
   MyRoleResponseSchema,
   OpaqueArtifactSchema,
   ResourceRefSchema,
@@ -85,6 +86,20 @@ describe('auth — wire real do tripod-api (login/refresh/me/my-roles)', () => {
   it('login devolve o envelope user + tokens', () => {
     expect(AuthResponseSchema.safeParse({ user: userWire, tokens }).success).toBe(true);
     expect(AuthResponseSchema.safeParse({ user: userWire }).success).toBe(false);
+  });
+
+  it('my-project-roles traz o dicionário projeto→papel (fonte do projectId real)', () => {
+    expect(
+      MyProjectRolesResponseSchema.safeParse({
+        is_platform_admin: false,
+        project_roles: { 'proj-1': 'manager' },
+      }).success,
+    ).toBe(true);
+    expect(
+      MyProjectRolesResponseSchema.safeParse({ is_platform_admin: true, project_roles: {} })
+        .success,
+    ).toBe(true);
+    expect(MyProjectRolesResponseSchema.safeParse({ project_roles: {} }).success).toBe(false);
   });
 
   it('papéis do app vêm de my-roles; RoleSchema segue os dois papéis (§7.1/O2)', () => {

@@ -25,7 +25,10 @@ export default defineConfig({
           // jsdom não tem MediaRecorder: o shell monta o gravador REAL por padrão
           // (ENG-298), então aqui — e SÓ aqui — ele pede o dublê. O e2e não pede: lá
           // o Chromium dá um microfone falso e o portão exige áudio de verdade.
-          env: { VITE_VOICE: 'fixture' },
+          // VITE_API_MODE fixado: o vitest carrega .env.local como o vite, e um dev
+          // com VITE_API_MODE=real não pode virar teste fazendo rede (ENG-247 DoD:
+          // fixture é o default de teste/CI, mecanicamente).
+          env: { VITE_VOICE: 'fixture', VITE_API_MODE: 'fixture' },
           // globals ligado para a auto-limpeza do Testing Library (afterEach cleanup);
           // sem isso, múltiplos render() no mesmo arquivo acumulam DOM e geram flakes.
           globals: true,
@@ -44,6 +47,8 @@ export default defineConfig({
           // retry único: a 1ª execução em cache frio pode recarregar por
           // otimização de deps do Vite; as asserções não mudam.
           retry: 1,
+          // mesmo escudo do projeto dom: .env.local de dev nunca vira teste com rede
+          env: { VITE_API_MODE: 'fixture' },
           // init do i18n (default PT) para os testes de interação — ENG-279.
           setupFiles: ['./ui/i18n/test-setup.ts'],
           include: ['ui/**/*.browser.test.{ts,tsx}'],

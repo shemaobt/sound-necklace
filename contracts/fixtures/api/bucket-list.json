@@ -6,7 +6,7 @@
       "duration_sec": 42.5,
       "consent_present": true,
       "acousteme": {
-        "version": 1,
+        "codebook_version": "terena-xlsr53-k100-v1",
         "hop_sec": 0.02,
         "granularity_frames": { "small": 10, "medium": 25, "large": 50 }
       }
@@ -17,7 +17,7 @@
       "duration_sec": 63.0,
       "consent_present": true,
       "acousteme": {
-        "version": 1,
+        "codebook_version": "terena-xlsr53-k100-v1",
         "hop_sec": 0.02,
         "granularity_frames": { "small": 10, "medium": 25, "large": 50 }
       }
@@ -25,7 +25,7 @@
     {
       "id": "aud_gravacao_sem_acousteme",
       "filename": "gravacao-antiga.wav",
-      "duration_sec": 30.0,
+      "duration_sec": null,
       "consent_present": false,
       "acousteme": null
     }

@@ -103,7 +103,7 @@ export function Setup({
     // trava silenciosa). Grade/hash/createSession são puros — não lançam aqui.
     setBusy(true);
     try {
-      const { beadSec } = resolver.resolve(level, audio.acousteme);
+      const { beadSec } = resolver.resolve(level, audio.acousteme ?? null);
       if (!(beadSec > 0)) {
         setError(t('setup.noBeadSec'));
         return;

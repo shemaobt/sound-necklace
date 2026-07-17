@@ -78,6 +78,17 @@ export type MyRoleResponse = z.infer<typeof MyRoleResponseSchema>;
 export const MyRolesResponseSchema = z.array(MyRoleResponseSchema);
 export type MyRolesResponse = z.infer<typeof MyRolesResponseSchema>;
 
+/**
+ * `GET /auth/my-project-roles` — projetos do usuário como `{project_id: papel}`.
+ * É de onde o wiring real deriva o projeto do bucket (§7.4); um platform admin
+ * pode vir com o dicionário vazio.
+ */
+export const MyProjectRolesResponseSchema = z.strictObject({
+  is_platform_admin: z.boolean(),
+  project_roles: z.record(z.string(), z.string()),
+});
+export type MyProjectRolesResponse = z.infer<typeof MyProjectRolesResponseSchema>;
+
 // ── Sessions (§7.2/§7.3) ──
 
 /** Estados do ciclo de vida (§7.3), em ascii no fio (rótulo acentuado é display). */

@@ -15,7 +15,7 @@ describe('registro do adapter de bucket', () => {
     expect(registration.fixture()).toBeInstanceOf(FixtureBucketSource);
   });
 
-  it('a factory real constrói sem rede (fetch do browser injetado no wiring)', () => {
-    expect(() => registration.real()).not.toThrow();
+  it('a factory real constrói sem rede (wiring do composition root)', () => {
+    expect(() => registration.real({ projectId: () => 'proj-1' })).not.toThrow();
   });
 });

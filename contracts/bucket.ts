@@ -13,16 +13,15 @@
 import { z } from 'zod';
 
 /**
- * §6.1/§15.2 O8 (resolvido — tripod-api PR #100 "acousteme artifact + consumption
- * API"): a granularidade vem da grade fixa do tokenizador que acompanha cada áudio.
- * `hop_sec` = segundos por frame (0.02 = 20 ms); `granularity_frames` = frames por
- * conta em cada nível, espelhando as presets Small/Medium/Large do backend. O
- * GranularityResolver (adapters/granularity) resolve beadSec = frames[nível] × hop_sec.
+ * §6.1/§15.2 O8 (resolvido — tripod-api ENG-261): a granularidade vem da grade fixa
+ * do tokenizador que acompanha cada áudio. `hop_sec` = segundos por frame (0.02 =
+ * 20 ms); `granularity_frames` = frames por conta em cada nível, espelhando as
+ * presets Small/Medium/Large do backend. O GranularityResolver (adapters/granularity)
+ * resolve beadSec = frames[nível] × hop_sec.
  *
- * `version` tolera codebooks futuros. NOTA (ENG-247): o tripod-api serve isto como
- * `AcoustemeStreamResponse`, com `codebook_version: string` (aqui `version: int`) e
- * campos extra (download_url, num_frames…) que o MVP não consome — os tipos gerados
- * do OpenAPI reconciliam a divergência.
+ * `codebook_version` é string (ex.: `terena-xlsr53-k100-v1`) — é metade da chave
+ * primária do artefato de acousteme no pipeline; um int aqui seria uma versão que o
+ * pipeline nunca minta (forma confirmada pelo OpenAPI real, contracts/generated/).
  */
 export const AcoustemeGranularityFramesSchema = z.strictObject({
   small: z.int().positive(),
@@ -33,7 +32,7 @@ export const AcoustemeGranularityFramesSchema = z.strictObject({
 export type AcoustemeGranularityFrames = z.infer<typeof AcoustemeGranularityFramesSchema>;
 
 export const AcoustemeEnvelopeSchema = z.strictObject({
-  version: z.int().positive(),
+  codebook_version: z.string(),
   hop_sec: z.number().positive(),
   granularity_frames: AcoustemeGranularityFramesSchema,
 });
@@ -50,16 +49,19 @@ export type GranularityLevel = z.infer<typeof GranularityLevelSchema>;
 
 /**
  * Uma entrada de áudio do bucket (§7.4). `consent_present` é a flag de consentimento
- * de COLETA que viaja com o áudio desde o Oral Collector (§12/O6) — a setup a
- * exibe/verifica. `acousteme` é null quando o áudio não tem dado de granularidade
- * (caso de borda no MVP; normal para uploads pós-MVP — §6.1).
+ * de COLETA que viaja com o áudio (§12/O6, assertada no vínculo `sn_audio_refs`) — a
+ * setup a exibe/verifica. `acousteme` é null quando o áudio não tem dado de
+ * granularidade (fallback do §6.1). `duration_sec` é anulável/opcional porque a API
+ * valida na SAÍDA: um único áudio não-sondado reprovaria a listagem inteira — a
+ * invariante mora na ingestão (forma real do OpenAPI; foi o que nos ensinou a não
+ * ser mais estritos que o wire numa resposta).
  */
 export const BucketAudioSchema = z.strictObject({
   id: z.string(),
   filename: z.string(),
-  duration_sec: z.number().positive(),
+  duration_sec: z.number().positive().nullable().optional(),
   consent_present: z.boolean(),
-  acousteme: AcoustemeEnvelopeSchema.nullable(),
+  acousteme: AcoustemeEnvelopeSchema.nullable().optional(),
 });
 
 export type BucketAudio = z.infer<typeof BucketAudioSchema>;
@@ -70,6 +72,16 @@ export const BucketListResponseSchema = z.strictObject({
 });
 
 export type BucketListResponse = z.infer<typeof BucketListResponseSchema>;
+
+/**
+ * `GET /audios/{id}/url` — a API nunca serve os bytes do áudio: minta uma URL
+ * assinada de curta duração e o adapter busca dela (2 saltos; o 2º sem Bearer).
+ */
+export const AudioUrlResponseSchema = z.strictObject({
+  url: z.string(),
+});
+
+export type AudioUrlResponse = z.infer<typeof AudioUrlResponseSchema>;
 
 /**
  * Os bytes do áudio buscados por id são OPACOS (§10.5, mesma custódia dos
