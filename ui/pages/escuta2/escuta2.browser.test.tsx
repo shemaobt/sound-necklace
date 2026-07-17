@@ -2,7 +2,12 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { HeadListener, Player } from '../../../adapters/audio';
+import {
+  createPlayer,
+  type DecodedAudio,
+  FixtureTransport,
+  type Player,
+} from '../../../adapters/audio';
 import {
   buildBeads,
   clickBead,
@@ -24,30 +29,24 @@ const WIDTH = 500; // slot 25 → 20 contas por linha
 const DURATION = 2.5;
 const BEAD_SEC = 0.25; // 10 contas (0…9)
 
-/** Player-espião: registra as chamadas de reprodução sem tocar áudio real. */
+/**
+ * Player-espião: registra as chamadas sem tocar áudio. Serve às asserções de
+ * DESPACHO (qual método, qual span) — nunca às de pausa: o `state` aqui é literal
+ * e nada o move, então quem afirma pausa usa o `realPlayer` abaixo.
+ */
 type Call =
   { m: 'play' | 'playEdge'; args: number[] } | { m: 'toggle'; key: string; args: number[] };
-function spyPlayer(): {
-  player: Player;
-  calls: Call[];
-  emitHead: (bead: number | null) => void;
-} {
+function spyPlayer(): { player: Player; calls: Call[] } {
   const calls: Call[] = [];
-  let head: HeadListener | null = null;
   const player: Player = {
     toggle: (k, s, e) => calls.push({ m: 'toggle', key: k, args: [s, e] }),
     play: (s, e) => calls.push({ m: 'play', args: [s, e] }),
     playEdge: (b) => calls.push({ m: 'playEdge', args: [b] }),
     stop: () => {},
     state: { key: null, playing: false, paused: false },
-    onHead: (cb) => {
-      head = cb;
-      return () => {
-        head = null;
-      };
-    },
+    onHead: () => () => {},
   };
-  return { player, calls, emitHead: (b) => head?.(b) };
+  return { player, calls };
 }
 
 function cutting(): SessionState {
@@ -155,6 +154,97 @@ describe('Escuta 2 — modelo de clique com áudio na hora (PRD v2 §8.2/§8.4)'
   });
 });
 
+/**
+ * Player REAL sobre transport de avanço manual — não um espião. A pausa mora no
+ * adapter (mesma chave → suspend) e a chave só existe se alguém a setou, então
+ * espião com `state` fabricado provaria o fake, não a estação.
+ */
+const DECODED: DecodedAudio = {
+  duration: DURATION,
+  pcm: { numberOfChannels: 1, sampleRate: 8000, getChannelData: () => new Float32Array(20000) },
+};
+function realPlayer(): { player: Player; transport: FixtureTransport } {
+  const transport = new FixtureTransport();
+  return { player: createPlayer(transport, DECODED, BEAD_SEC), transport };
+}
+/** Avança rodando os frames como o rAF real, com o React vendo cada head. */
+function advanceBy(transport: FixtureTransport, seconds: number, step = 0.05): void {
+  let left = seconds;
+  while (left > 1e-12) {
+    const dt = Math.min(step, left);
+    flushSync(() => transport.advance(dt));
+    left -= dt;
+  }
+}
+
+describe('Escuta 2 — a conta acesa pausa, venha o playback de onde vier (ENG-297)', () => {
+  it('durante uma prévia de borda, tocar a conta acesa PARA — não reinicia a cena', () => {
+    const { player, transport } = realPlayer();
+    sessionStore.getState().load(withLockedScene());
+    const { root, el } = mount(player);
+
+    // a janela da prévia é max(1, round(1/beadSec)) = 4 contas por lado → 0…8:
+    // a cabeça nasce DENTRO da cena travada 0…3, e o playback é sem chave
+    flushSync(() => player.playEdge(4));
+    advanceBy(transport, 0.6); // cabeça ~conta 2, dentro da PT1
+
+    firePointer(el, 2); // toca a conta acesa
+
+    // sem o guard: `toggle('PT1')` não casa com key=null → troca de faixa e a cena
+    // RECOMEÇA do zero, justamente para quem tocou querendo parar
+    expect(player.state.playing).toBe(false);
+    root.unmount();
+  });
+
+  it('durante o playback de uma seleção, a conta acesa não é clique morto', () => {
+    const { player, transport } = realPlayer();
+    sessionStore.getState().load(withLockedScene());
+    const { root, el } = mount(player);
+
+    flushSync(() => player.play(4, 8)); // seleção em curso, sem chave, contas LIVRES
+    advanceBy(transport, 0.3); // cabeça ~conta 5
+
+    firePointer(el, 5);
+
+    expect(player.state.playing).toBe(false);
+    root.unmount();
+  });
+
+  it('reabrir a cena cala o áudio dela — nada de tocar o que deixou de existir', () => {
+    const { player, transport } = realPlayer();
+    sessionStore.getState().load(withLockedScene());
+    const { host, root, el } = mount(player);
+
+    firePointer(el, 1); // toca a cena travada
+    advanceBy(transport, 0.2);
+    expect(player.state.playing).toBe(true);
+
+    const reabrir = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Reabrir');
+    flushSync(() => reabrir!.click());
+
+    expect(player.state.playing).toBe(false);
+    root.unmount();
+  });
+
+  it('a cena tocando por chave própria pausa na conta acesa, e não para', () => {
+    const { player, transport } = realPlayer();
+    sessionStore.getState().load(withLockedScene());
+    const { root, el } = mount(player);
+
+    firePointer(el, 1); // toca a cena travada → toggle('PT1', 0, 3)
+    advanceBy(transport, 0.3);
+    expect(player.state).toEqual({ key: 'PT1', playing: true, paused: false });
+
+    // a conta acesa DE FATO — o colar só roteia para `onHeadTap` nela
+    const acesa = el.querySelector('.cds-necklace-bead[data-play="head"]');
+    firePointer(el, Number(acesa!.getAttribute('data-idx')));
+
+    // pausa (retomável), não `stop`: aqui existe chave, logo existe o que retomar
+    expect(player.state).toEqual({ key: 'PT1', playing: true, paused: true });
+    root.unmount();
+  });
+});
+
 describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
   it('tocar numa conta da cena travada toca a CENA inteira e deixa o corte quieto', () => {
     const { player, calls } = spyPlayer();
@@ -198,24 +288,6 @@ describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
     firePointer(el, 2);
 
     expect(calls).toEqual([{ m: 'toggle', key: 'PT1', args: [0, 3] }]);
-    root.unmount();
-  });
-
-  it('a conta que brilha não é clique morto: volta ao mesmo toggle da cena', () => {
-    const { player, calls, emitHead } = spyPlayer();
-    sessionStore.getState().load(withLockedScene());
-    const { root, el } = mount(player);
-
-    firePointer(el, 2); // toca a cena um
-    flushSync(() => emitHead(2)); // o playback acende a conta 2
-    firePointer(el, 2); // tocar a conta que brilha
-
-    // o colar desvia a conta acesa para `onHeadTap`, não para `onBeadPointerDown`:
-    // sem esse caminho o toque na conta que brilha é um clique morto
-    expect(calls).toEqual([
-      { m: 'toggle', key: 'PT1', args: [0, 3] },
-      { m: 'toggle', key: 'PT1', args: [0, 3] },
-    ]);
     root.unmount();
   });
 });

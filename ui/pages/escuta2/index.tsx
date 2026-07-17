@@ -126,8 +126,20 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
     if (play && player) playActionOn(player, play);
   };
 
-  /** A conta que brilha durante a cena pausa — mesma chave no `toggle`. */
+  /**
+   * A conta que brilha pausa — o `_headTapPause` de "Ouvir no colar" (:697), que
+   * também vem antes de decidir o que tocar. `play`/`playEdge` não têm chave (o
+   * `playRange` a limpa), e só o `toggle` da MESMA chave pausa: sem o corte seco
+   * abaixo, a cabeça acesa durante uma prévia de borda — cuja janela invade a cena
+   * travada — cairia num `toggle` de chave alheia e RECOMEÇARIA a cena para quem
+   * tocou querendo parar. Sem chave não há o que retomar, então é `stop`.
+   */
   const onHeadTap = (): void => {
+    if (!player) return;
+    if (player.state.key === null) {
+      player.stop();
+      return;
+    }
     if (head !== null) playLockedSceneAt(head);
   };
 
@@ -180,6 +192,8 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
 
   const reopen = (i: number): void => {
     setError(null);
+    // a cena que estava tocando deixa de existir aqui: o áudio dela não sobrevive
+    player?.stop();
     sessionStore.getState().apply((s) => reopenPart(s, i));
   };
 
