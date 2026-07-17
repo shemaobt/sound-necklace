@@ -67,6 +67,11 @@ export class FixtureAuthProvider implements AuthProvider {
     return Promise.resolve();
   }
 
+  resume(): Promise<AuthUser | null> {
+    // a fixture não persiste sessão: retomar é devolver o que já está em memória
+    return Promise.resolve(this.#user);
+  }
+
   logout(): Promise<void> {
     this.#user = null;
     this.#token = null;

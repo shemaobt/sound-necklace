@@ -6,9 +6,11 @@
  * Implementações: fixture headless (default) e o cliente HTTP real dos endpoints
  * `/api/auth/*` do OpenAPI (contracts/generated/tripod.d.ts).
  *
- * §12 (higiene de sessão): tokens vivem SÓ em memória (+ refresh) — nunca em
- * localStorage. A expiração devolve à tela de login SEM limpar o estado do app: o
- * estado em memória é do CHAMADOR; estes adapters nunca o tocam.
+ * §12 (higiene de sessão, EMENDADO em 2026-07-17 por decisão do dono): o ACCESS
+ * token vive só em memória; o REFRESH token — rotativo, morre a cada uso — persiste
+ * em localStorage para a sessão sobreviver a reload/reabertura (`resume()`). A
+ * expiração devolve à tela de login SEM limpar o estado do app: o estado em memória
+ * é do CHAMADOR; estes adapters nunca o tocam.
  */
 
 import type { Role } from '../../contracts';
@@ -81,6 +83,11 @@ export interface ApiClient {
 export interface AuthProvider {
   /** Autentica; devolve o usuário com papéis. Lança `AuthError` se recusado. */
   login(creds: Credentials): Promise<AuthUser>;
+  /**
+   * Retoma a sessão persistida (refresh rotativo, §12 emendado): o usuário
+   * restaurado, ou `null` quando não há o que retomar. Nunca lança.
+   */
+  resume(): Promise<AuthUser | null>;
   /** Encerra a sessão local (limpa token + usuário). */
   logout(): Promise<void>;
   /** Usuário atual, ou `null` se deslogado. */

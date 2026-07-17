@@ -12,7 +12,10 @@ import {
   MyRolesResponseSchema,
   RoleSchema,
   TokenResponseSchema,
+  UserResponseSchema,
   type AuthResponse,
+  type Role,
+  type UserResponse,
 } from '../../contracts';
 import { Emitter } from './emitter';
 import {
@@ -124,21 +127,28 @@ function messageOf(body: unknown, fallback: string): string {
 /** app_key do Colar no tripod-api (decisão ENG-259). */
 const APP_KEY = 'sound-necklace';
 
+/** Onde o refresh token rotativo persiste (§12 emendado — decisão do dono). */
+const REFRESH_STORAGE_KEY = 'colar-de-sons:auth:refresh:v1';
+
 export interface HttpAuthProviderOptions {
   baseUrl: string;
   fetch: typeof globalThis.fetch;
+  /** Persistência do refresh token (localStorage no app real); ausente = só memória. */
+  storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 }
 
 export class HttpAuthProvider implements AuthProvider {
   readonly #client: HttpApiClient;
   /** Expiração detectada pelo PROVIDER (refresh agendado que falhou) — soma-se aos 401 do client. */
   readonly #expired = new Emitter();
+  readonly #storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   #refreshTimer: ReturnType<typeof setTimeout> | null = null;
   #refreshToken: string | null = null;
   #token: string | null = null;
   #user: AuthUser | null = null;
 
   constructor(opts: HttpAuthProviderOptions) {
+    this.#storage = opts.storage;
     this.#client = new HttpApiClient({
       baseUrl: opts.baseUrl,
       fetch: opts.fetch,
@@ -163,15 +173,7 @@ export class HttpAuthProvider implements AuthProvider {
     this.#token = res.tokens.access_token;
     this.#refreshToken = res.tokens.refresh_token;
 
-    // os papéis do app não vêm no /me da plataforma — vêm de my-roles, já filtrados
-    // pelo app_key; um role_key fora do vocabulário do Colar é ignorado
-    const myRoles = await this.#client.request('GET', `/auth/my-roles?app_key=${APP_KEY}`, {
-      schema: MyRolesResponseSchema,
-    });
-    const roles = myRoles.flatMap((r) => {
-      const parsed = RoleSchema.safeParse(r.role_key);
-      return parsed.success ? [parsed.data] : [];
-    });
+    const roles = await this.#fetchRoles();
     if (roles.length === 0) {
       // conta válida na plataforma, mas sem papel no Colar: não há sessão a manter
       this.#token = null;
@@ -179,13 +181,76 @@ export class HttpAuthProvider implements AuthProvider {
       throw new AuthError('sem acesso ao Colar de Sons');
     }
 
-    this.#user = {
-      id: res.user.id,
-      username: res.user.display_name ?? res.user.email,
-      roles,
-    };
+    this.#persistRefresh(res.tokens.refresh_token);
+    this.#user = this.#userFrom(res.user, roles);
     this.#scheduleRefresh();
     return this.#user;
+  }
+
+  /**
+   * Retoma a sessão persistida (§12 emendado): troca o refresh guardado por um par
+   * novo (rotação), rebusca usuário + papéis e re-arma o refresh automático. Um
+   * refresh recusado pela API limpa a persistência (sessão morta); uma falha de
+   * REDE a preserva — o próximo boot tenta de novo.
+   */
+  async resume(): Promise<AuthUser | null> {
+    const stored = this.#storage?.getItem(REFRESH_STORAGE_KEY) ?? null;
+    if (!stored) return null;
+    try {
+      const tokens = await this.#client.request('POST', '/auth/refresh', {
+        body: { refresh_token: stored },
+        schema: TokenResponseSchema,
+        suppressAuthExpired: true,
+      });
+      this.#token = tokens.access_token;
+      this.#refreshToken = tokens.refresh_token;
+      this.#persistRefresh(tokens.refresh_token);
+
+      const user = await this.#client.request('GET', '/auth/me', {
+        schema: UserResponseSchema,
+        suppressAuthExpired: true,
+      });
+      const roles = await this.#fetchRoles();
+      if (roles.length === 0) throw new AuthError('sem acesso ao Colar de Sons');
+
+      this.#user = this.#userFrom(user, roles);
+      this.#scheduleRefresh();
+      return this.#user;
+    } catch (err) {
+      // recusa da API (refresh revogado/sem papel) = sessão morta → esquece;
+      // falha de rede = transitória → o refresh guardado fica para o próximo boot
+      if (err instanceof ApiError || err instanceof AuthError) this.#persistRefresh(null);
+      this.#clearRefreshTimer();
+      this.#token = null;
+      this.#refreshToken = null;
+      this.#user = null;
+      return null;
+    }
+  }
+
+  /** Papéis do app via my-roles (o /me da plataforma não os traz); role_key estranho é ignorado. */
+  async #fetchRoles(): Promise<Role[]> {
+    const myRoles = await this.#client.request('GET', `/auth/my-roles?app_key=${APP_KEY}`, {
+      schema: MyRolesResponseSchema,
+    });
+    return myRoles.flatMap((r) => {
+      const parsed = RoleSchema.safeParse(r.role_key);
+      return parsed.success ? [parsed.data] : [];
+    });
+  }
+
+  #userFrom(user: UserResponse, roles: Role[]): AuthUser {
+    return { id: user.id, username: user.display_name ?? user.email, roles };
+  }
+
+  /** Grava/remove o refresh persistido; storage indisponível não derruba o login. */
+  #persistRefresh(value: string | null): void {
+    try {
+      if (value === null) this.#storage?.removeItem(REFRESH_STORAGE_KEY);
+      else this.#storage?.setItem(REFRESH_STORAGE_KEY, value);
+    } catch {
+      // quota/modo privado: sessão vive só em memória, como antes da emenda
+    }
   }
 
   async refresh(): Promise<void> {
@@ -197,6 +262,7 @@ export class HttpAuthProvider implements AuthProvider {
     });
     this.#token = res.access_token;
     this.#refreshToken = res.refresh_token; // rotação: o refresh antigo morre no uso
+    this.#persistRefresh(res.refresh_token);
     this.#scheduleRefresh();
   }
 
@@ -214,6 +280,7 @@ export class HttpAuthProvider implements AuthProvider {
     this.#refreshTimer = setTimeout(() => {
       void this.refresh().catch(() => {
         this.#clearRefreshTimer();
+        this.#persistRefresh(null);
         this.#token = null;
         this.#refreshToken = null;
         this.#user = null;
@@ -231,6 +298,7 @@ export class HttpAuthProvider implements AuthProvider {
 
   async logout(): Promise<void> {
     this.#clearRefreshTimer();
+    this.#persistRefresh(null);
     const refreshToken = this.#refreshToken;
     this.#token = null;
     this.#refreshToken = null;

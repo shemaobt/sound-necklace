@@ -17,6 +17,12 @@ let auth: FixtureAuthProvider | HttpAuthProvider | undefined;
 export function appAuth(): FixtureAuthProvider | HttpAuthProvider {
   return (auth ??=
     API_MODE === 'real'
-      ? new HttpAuthProvider({ baseUrl: API_BASE_URL, fetch: globalThis.fetch.bind(globalThis) })
+      ? new HttpAuthProvider({
+          baseUrl: API_BASE_URL,
+          fetch: globalThis.fetch.bind(globalThis),
+          // §12 emendado (decisão do dono): o refresh rotativo persiste para a
+          // sessão sobreviver a reload/reabertura; o access segue só em memória
+          ...(typeof localStorage !== 'undefined' ? { storage: localStorage } : {}),
+        })
       : new FixtureAuthProvider());
 }

@@ -274,6 +274,81 @@ describe('HttpAuthProvider', () => {
     }
   });
 
+  const fakeStorage = () => {
+    const m = new Map<string, string>();
+    return {
+      getItem: (k: string) => m.get(k) ?? null,
+      setItem: (k: string, v: string) => void m.set(k, v),
+      removeItem: (k: string) => void m.delete(k),
+      dump: () => [...m.entries()],
+    };
+  };
+  const KEY = 'colar-de-sons:auth:refresh:v1';
+
+  it('login persiste o refresh token; logout o remove (decisão do dono, §12 emendado)', async () => {
+    const storage = fakeStorage();
+    const { fetch } = stubFetch({
+      'POST /api/auth/login': { body: wireLogin },
+      'GET /api/auth/my-roles': { body: myRoles },
+      'POST /api/auth/logout': { status: 204 },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch, storage });
+    await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
+    expect(storage.dump()).toEqual([[KEY, 'r1']]);
+    await auth.logout();
+    expect(storage.dump()).toEqual([]);
+  });
+
+  it('resume() troca o refresh guardado por sessão nova: rotação + /me + papéis', async () => {
+    const storage = fakeStorage();
+    storage.setItem(KEY, 'r-guardado');
+    const { fetch, calls } = stubFetch({
+      'POST /api/auth/refresh': {
+        body: { access_token: 'a2', refresh_token: 'r2', token_type: 'bearer' },
+      },
+      'GET /api/auth/me': { body: wireUser },
+      'GET /api/auth/my-roles': { body: myRoles },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch, storage });
+
+    const user = await auth.resume();
+
+    expect(calls[0]?.init.body).toBe(JSON.stringify({ refresh_token: 'r-guardado' }));
+    expect(user).toEqual({ id: 'u1', username: 'Marcia', roles: ['facilitator'] });
+    expect(auth.token()).toBe('a2');
+    expect(storage.dump()).toEqual([[KEY, 'r2']]);
+  });
+
+  it('resume() sem nada guardado devolve null sem tocar a rede', async () => {
+    const { fetch, calls } = stubFetch({});
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch, storage: fakeStorage() });
+    expect(await auth.resume()).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('resume() com refresh REVOGADO limpa o storage e devolve null', async () => {
+    const storage = fakeStorage();
+    storage.setItem(KEY, 'r-morto');
+    const { fetch } = stubFetch({
+      'POST /api/auth/refresh': { status: 401, body: { detail: 'revogado' } },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch, storage });
+    expect(await auth.resume()).toBeNull();
+    expect(auth.token()).toBeNull();
+    expect(storage.dump()).toEqual([]);
+  });
+
+  it('resume() com falha de REDE preserva o refresh guardado (retomável no próximo boot)', async () => {
+    const storage = fakeStorage();
+    storage.setItem(KEY, 'r-valido');
+    const fetchDown = (async () => {
+      throw new TypeError('rede fora');
+    }) as unknown as typeof globalThis.fetch;
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch: fetchDown, storage });
+    expect(await auth.resume()).toBeNull();
+    expect(storage.dump()).toEqual([[KEY, 'r-valido']]);
+  });
+
   it('logout revoga o refresh token e limpa a sessão mesmo se a API falhar', async () => {
     const { fetch, calls } = stubFetch({
       'POST /api/auth/login': { body: wireLogin },

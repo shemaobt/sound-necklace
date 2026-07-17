@@ -174,17 +174,32 @@ function useAuthExpiry(): void {
 }
 
 /**
- * Gate de sessão do modo real (ENG-247): o token vive só em memória (§12 — um
- * reload o perde de propósito, nunca localStorage). Sem sessão viva, qualquer rota
- * além do login volta ao login, em vez de o app seguir usável e silenciosamente
- * desautenticado (voz do guia no fallback, listagens 401). Na fixture não gateia.
+ * Gate de sessão do modo real (ENG-247, §12 emendado): antes de gatear, tenta a
+ * RETOMADA silenciosa — o refresh rotativo persistido vira sessão nova sem tela de
+ * login (um F5 não expulsa ninguém). Só quando não há o que retomar é que qualquer
+ * rota além do login volta ao login, em vez de o app seguir usável e
+ * silenciosamente desautenticado (voz do guia no fallback, listagens 401). Na
+ * fixture não gateia: o fluxo de teste/dev não exige login.
  */
 function useAuthGate(routeName: string): void {
+  const [resumed, setResumed] = useState(API_MODE === 'fixture');
   useEffect(() => {
-    if (shouldGateToLogin(API_MODE, routeName, appAuth().currentUser())) {
+    if (API_MODE === 'fixture') return;
+    let alive = true;
+    void appAuth()
+      .resume()
+      .finally(() => {
+        if (alive) setResumed(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (resumed && shouldGateToLogin(API_MODE, routeName, appAuth().currentUser())) {
       navigate('/login', { replace: true });
     }
-  }, [routeName]);
+  }, [resumed, routeName]);
 }
 
 /**
