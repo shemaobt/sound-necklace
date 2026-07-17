@@ -164,8 +164,9 @@ export const en: Dict = {
     confirmAll: 'Confirm the scenes →',
   },
   segmentacao: {
-    reviewHeadline: 'The phrases of this scene are ready.',
+    reviewHeadline: 'The phrases of this scene are ready. Tap a phrase to hear it again.',
     instruction: 'Tap the necklace at the start and the end of each phrase.',
+    instructionReplay: ' Tap a finished phrase to hear it again.',
     reopen: 'Reopen',
     flagMarked: '⚑ marked',
     flagReview: '⚑ review',

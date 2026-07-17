@@ -343,11 +343,14 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
     );
     render(<Segmentacao />);
 
-    expect(screen.getByText('As frases desta cena estão prontas.')).toBeTruthy();
+    expect(screen.getByText(/As frases desta cena estão prontas/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '✓ Confirmar esta frase' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Pronto com esta cena →' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Já segmentei todas as cenas →' })).toBeNull();
+    // nada resta a cortar: o colar inteiro relê as frases, e é conferindo aqui que
+    // se decide Continuar — é onde a afordância invisível mais precisa de sinal
+    expect(screen.getByText(/Toque numa frase para reouvir/)).toBeTruthy();
   });
 
   it('“Continuar →” vai à próxima cena (ou ao Mapeamento na última)', async () => {
@@ -387,7 +390,22 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
     render(<Segmentacao />);
 
     expect(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' })).toBeTruthy();
-    expect(screen.queryByText('As frases desta cena estão prontas.')).toBeNull();
+    expect(screen.queryByText(/As frases desta cena estão prontas/)).toBeNull();
+    // com frase travada, a linha única sinaliza que dá para reouvir
+    expect(screen.getByText(/Toque numa frase pronta para reouvir/)).toBeTruthy();
+  });
+
+  it('sem frase travada não há o que reouvir: a linha não promete a afordância', () => {
+    load(
+      segmenting({
+        frases: [frase({ prop_id: 'P1' })],
+        current: { layer: 'frases', index: 0 },
+      }),
+    );
+    render(<Segmentacao />);
+
+    expect(screen.getByText(/Toque no colar o começo e o fim de cada frase/)).toBeTruthy();
+    expect(screen.queryByText(/para reouvir/)).toBeNull();
   });
 });
 

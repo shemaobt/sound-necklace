@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { PlayAction, ScenePart } from '../../../domain';
 import { scenePalette } from '../../tokens';
-import { lockedSceneAt, playActionOn, sceneColor, sceneLabel } from './cutting';
+import { lockedItemAt, playActionOn, sceneColor, sceneLabel } from './cutting';
 
 /**
  * Helpers puros da estação de corte (Escuta 2): o intérprete efeito→player que
@@ -71,7 +71,7 @@ describe('sceneLabel — rótulo de cena sem dígitos (PRD v2 §9.2)', () => {
   });
 });
 
-describe('lockedSceneAt — de que cena travada é esta conta? (ENG-293)', () => {
+describe('lockedItemAt — de que cena travada é esta conta? (ENG-293)', () => {
   const cena = (part_id: string, span: ScenePart['span'], locked: boolean): ScenePart => ({
     part_id,
     span,
@@ -83,23 +83,23 @@ describe('lockedSceneAt — de que cena travada é esta conta? (ENG-293)', () =>
   const travadas = [cena('PT1', { s: 0, e: 3 }, true), cena('PT2', { s: 4, e: 6 }, true)];
 
   it('acha a cena que contém a conta, com as duas bordas dentro', () => {
-    expect(lockedSceneAt(travadas, 0)?.part_id).toBe('PT1');
-    expect(lockedSceneAt(travadas, 2)?.part_id).toBe('PT1');
-    expect(lockedSceneAt(travadas, 3)?.part_id).toBe('PT1');
-    expect(lockedSceneAt(travadas, 4)?.part_id).toBe('PT2');
-    expect(lockedSceneAt(travadas, 6)?.part_id).toBe('PT2');
+    expect(lockedItemAt(travadas, 0)?.part_id).toBe('PT1');
+    expect(lockedItemAt(travadas, 2)?.part_id).toBe('PT1');
+    expect(lockedItemAt(travadas, 3)?.part_id).toBe('PT1');
+    expect(lockedItemAt(travadas, 4)?.part_id).toBe('PT2');
+    expect(lockedItemAt(travadas, 6)?.part_id).toBe('PT2');
   });
 
   it('conta fora de toda cena travada não tem cena', () => {
-    expect(lockedSceneAt(travadas, 7)).toBeNull();
+    expect(lockedItemAt(travadas, 7)).toBeNull();
   });
 
   it('a cena em corte não conta: só as travadas são para ouvir', () => {
-    expect(lockedSceneAt([cena('PT1', { s: 0, e: 3 }, false)], 2)).toBeNull();
+    expect(lockedItemAt([cena('PT1', { s: 0, e: 3 }, false)], 2)).toBeNull();
   });
 
   it('cena travada sem span ainda não ocupa conta nenhuma', () => {
-    expect(lockedSceneAt([cena('PT1', null, true)], 0)).toBeNull();
+    expect(lockedItemAt([cena('PT1', null, true)], 0)).toBeNull();
   });
 });
 
