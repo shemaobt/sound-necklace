@@ -24,6 +24,8 @@
     "voz:aquecer": "node --experimental-strip-types scripts/warm-tts.mjs"
   },
   "dependencies": {
+    "@dicebear/collection": "^9.4.2",
+    "@dicebear/core": "^9.4.3",
     "@fontsource/merriweather": "^5.2.11",
     "@fontsource/montserrat": "^5.2.8",
     "@radix-ui/react-dialog": "^1.1.19",
