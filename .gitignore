@@ -3,8 +3,9 @@ node_modules/
 dist/
 coverage/
 
-# worktrees locais (skill using-git-worktrees)
+# worktrees locais (skill using-git-worktrees / worktrees do Claude Code)
 .worktrees/
+.claude/
 
 # artefatos de teste
 playwright-report/

@@ -1,69 +1,98 @@
 /*
- * A figura humana calorosa do guia, viva (redesign §6.6, §9.7). Herda as tintas
- * terrosas da estática; o movimento — respiração (bob), piscar e lip-sync — vive
- * TODO dentro da guarda de opt-in abaixo. Sob `prefers-reduced-motion: reduce` a
- * figura fica na mesma pose parada da estática (§4.5).
+ * A figura do guia (redesign §6.6, §9.7; ENG-295). O SVG é UM só: o movimento
+ * mora aqui e é INTERPOLADO pelo navegador — trocar markup (quadros inteiros,
+ * ou só a boca) dá um salto por troca e um rosto mecânico. Mesma técnica do
+ * protótipo do design (§11). Tudo atrás da guarda de opt-in; sob
+ * `prefers-reduced-motion: reduce` a figura segura a pose de repouso (§4.5).
  */
 .cds-guide-figure {
   display: block;
+  width: var(--cds-guide-size, 220px);
   max-width: 100%;
+}
+
+.cds-guide-figure svg {
+  display: block;
+  width: 100%;
   height: auto;
 }
 
-.cds-guide-skin {
-  fill: #e2b78f;
-}
-
-.cds-guide-hair {
-  fill: #4a3728;
-}
-
-.cds-guide-body {
-  fill: var(--cds-telha, #be4a01);
-}
-
-.cds-guide-eye {
-  fill: #2c2416;
-}
-
-.cds-guide-line {
-  fill: none;
-  stroke: #2c2416;
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.cds-guide-mouth {
-  fill: none;
-  stroke: #2c2416;
-  stroke-width: 3;
-  stroke-linecap: round;
+/* as partes escalam em torno de si mesmas, não da origem do viewBox */
+.cds-guide-mouth-talk,
+.cds-guide-eyes,
+.cds-guide-brows {
   transform-box: fill-box;
-  transform-origin: center;
 }
 
-/* pálpebra em repouso: recolhida para cima (invisível) — só o piscar a fecha */
-.cds-guide-lid {
-  fill: #e2b78f;
-  transform-box: fill-box;
-  transform-origin: top;
-  transform: scaleY(0);
+/*
+ * As duas bocas convivem no SVG e a opacidade escolhe qual aparece — é o que
+ * permite ao navegador INTERPOLAR o começo e o fim da fala, em vez de trocar o
+ * desenho num corte seco. Estes dois valores são também a pose sob `reduce`
+ * (nada aqui transiciona) e o estado inicial antes de qualquer voz: boca
+ * fechada, como quem escuta.
+ */
+.cds-guide-mouth-rest {
+  opacity: 1;
+}
+
+.cds-guide-mouth-talk {
+  opacity: 0;
 }
 
 /* movimento decorativo é opt-in: quem prefere menos movimento nunca o recebe (§4.5) */
 @media (prefers-reduced-motion: no-preference) {
   .cds-guide-bob {
-    transform-box: fill-box;
-    transform-origin: center bottom;
     animation: cds-guide-bob 4.2s ease-in-out infinite;
   }
 
-  .cds-guide-lid {
+  /* piscar: a pálpebra desce e sobe interpolada — nunca um corte seco */
+  .cds-guide-eyes {
+    transform-origin: center;
     animation: cds-guide-blink 5.4s ease-in-out infinite;
   }
 
-  .cds-guide-anim[data-speaking='true'] .cds-guide-mouth {
-    animation: cds-guide-talk 320ms ease-in-out infinite;
+  /*
+   * as sobrancelhas acompanham a VOZ: sobem enquanto ela fala e descem quando
+   * ela para — a ênfase de quem pergunta, não um tique em loop. A transição é o
+   * que separa "levantar a sobrancelha" de "trocar a sobrancelha".
+   */
+  .cds-guide-brows {
+    transform-origin: center bottom;
+    transition: transform 320ms ease-out;
+  }
+
+  .cds-guide-anim[data-speaking='true'] .cds-guide-brows {
+    transform: translateY(-3px);
+  }
+
+  /*
+   * a troca entre a boca parada e a que fala é um cross-fade: sem ele, dar play
+   * (e calar) era um corte seco no rosto. Sai um pouco mais devagar do que
+   * entra — a fala começa junto com a voz, mas a boca se aquieta com calma.
+   */
+  .cds-guide-mouth-rest {
+    transition: opacity 260ms ease-in;
+  }
+
+  .cds-guide-mouth-talk {
+    transform-origin: center top;
+    transition: opacity 180ms ease-out;
+  }
+
+  .cds-guide-anim[data-speaking='true'] .cds-guide-mouth-rest {
+    opacity: 0;
+    transition: opacity 180ms ease-out;
+  }
+
+  /*
+   * o lábio abre e fecha a partir da linha de cima. Tempos desiguais no ciclo:
+   * a fala humana não bate como metrônomo, e um ciclo simétrico é exatamente o
+   * que faz o rosto parecer uma máquina.
+   */
+  .cds-guide-anim[data-speaking='true'] .cds-guide-mouth-talk {
+    opacity: 1;
+    transition: opacity 260ms ease-in;
+    animation: cds-guide-talk 620ms ease-in-out infinite;
   }
 
   @keyframes cds-guide-bob {
@@ -80,20 +109,38 @@
     0%,
     92%,
     100% {
-      transform: scaleY(0);
+      transform: scaleY(1);
     }
     96% {
-      transform: scaleY(1);
+      transform: scaleY(0.1);
     }
   }
 
+  /*
+   * começa e termina quase fechada: é o quadro que encosta no repouso, então o
+   * cross-fade cai sobre bocas parecidas em vez de sobre um salto.
+   */
   @keyframes cds-guide-talk {
-    0%,
-    100% {
+    0% {
+      transform: scaleY(0.22);
+    }
+    18% {
+      transform: scaleY(0.92);
+    }
+    34% {
+      transform: scaleY(0.4);
+    }
+    52% {
       transform: scaleY(1);
     }
-    50% {
-      transform: scaleY(0.35);
+    68% {
+      transform: scaleY(0.34);
+    }
+    84% {
+      transform: scaleY(0.76);
+    }
+    100% {
+      transform: scaleY(0.22);
     }
   }
 }
