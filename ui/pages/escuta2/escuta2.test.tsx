@@ -246,10 +246,13 @@ describe('Escuta 2 — momento de revisão quando a história está toda em cena
     );
     render(<Escuta2 />);
 
-    expect(screen.getByText('A história está toda em cenas.')).toBeTruthy();
+    expect(screen.getByText(/A história está toda em cenas/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '✓ Confirmar esta cena' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Confirmar as cenas →' })).toBeNull();
+    // nada resta a cortar: é conferindo aqui que se decide Continuar, então é aqui
+    // que a dica de reouvir mais importa — e era exatamente aqui que ela sumia
+    expect(screen.getByText(/Toque numa cena para reouvir/)).toBeTruthy();
   });
 
   it('“Continuar →” avança para a Triagem', async () => {
@@ -282,7 +285,10 @@ describe('Escuta 2 — momento de revisão quando a história está toda em cena
     render(<Escuta2 />);
 
     expect(screen.getByRole('button', { name: 'Confirmar as cenas →' })).toBeTruthy();
-    expect(screen.queryByText('A história está toda em cenas.')).toBeNull();
+    expect(screen.queryByText(/A história está toda em cenas/)).toBeNull();
+    // com cena travada, a linha única sinaliza que dá para reouvir — a afordância
+    // é invisível no colar, então sem esta frase ninguém descobre que existe
+    expect(screen.getByText(/Toque numa cena pronta para reouvir/)).toBeTruthy();
   });
 });
 
@@ -324,6 +330,9 @@ describe('Escuta 2 — tratamento creme (redesign §6.3, §4.5)', () => {
 
     expect(container.querySelector('.cds-escuta2')).not.toBeNull();
     expect(container.querySelector('.cds-escuta2-emph')?.textContent).toBe('esta cena termina');
+    // sem cena travada não há o que reouvir: a linha explica a emenda e nada mais
+    expect(screen.getByText(/O começo já está costurado/)).toBeTruthy();
+    expect(screen.queryByText(/para reouvir/)).toBeNull();
     expect(escuta2Css).toMatch(/\.cds-escuta2\s*\{[^}]*var\(--cds-cream\)/);
     expect(escuta2Css).toMatch(/\.cds-escuta2-emph\s*\{[^}]*var\(--cds-telha\)/);
   });
@@ -407,7 +416,7 @@ describe('Escuta 2 — a revisão exige cobertura de VERDADE', () => {
     render(<Escuta2 />);
 
     // não pode jurar cobertura: as contas 3,4,5 estão sem cena
-    expect(screen.queryByText('A história está toda em cenas.')).toBeNull();
+    expect(screen.queryByText(/A história está toda em cenas/)).toBeNull();
     // e a estação segue no modo de corte (o CTA do PRD, não o Continuar da revisão)
     expect(screen.getByRole('button', { name: 'Confirmar as cenas →' })).toBeTruthy();
   });
@@ -423,6 +432,6 @@ describe('Escuta 2 — a revisão exige cobertura de VERDADE', () => {
     );
     render(<Escuta2 />);
 
-    expect(screen.getByText('A história está toda em cenas.')).toBeTruthy();
+    expect(screen.getByText(/A história está toda em cenas/)).toBeTruthy();
   });
 });

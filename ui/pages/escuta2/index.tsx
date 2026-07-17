@@ -15,7 +15,7 @@ import {
 import { Button } from '../../atoms';
 import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
-import { playActionOn, sceneColor, sceneLabel } from './cutting';
+import { lockedSceneAt, playActionOn, sceneColor, sceneLabel } from './cutting';
 import { ScenePhraseChip } from '../../molecules';
 import './escuta2.css';
 
@@ -99,12 +99,36 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
       session.totalBeads,
     );
 
+  /**
+   * Tocar numa cena já travada a reproduz inteira — o `clickCut`/`_sceneOf` de
+   * "Ouvir no colar" (o estudo `pure` escolhido, redesign §11; o arquivo chamado
+   * "Protótipo" é o estudo VELHO e traz o oposto: play no chip e nenhum ramo de
+   * cena travada). A Triagem faz o mesmo pelo colar da cena em foco. Vem ANTES do
+   * `clickBead` porque o redutor é port 1:1 da referência v1: ele clampa o clique
+   * até a emenda e, ao fazer isso, consome a pré-ancoragem da próxima cena. Levar
+   * a regra para o domínio muda camada congelada — o golden é o juiz, não esta
+   * estação. Devolve true quando a conta era de cena travada (o corte não corre).
+   */
+  const playLockedSceneAt = (bead: number): boolean => {
+    const s = sessionStore.getState().session;
+    const locked = s ? lockedSceneAt(s.parts, bead) : null;
+    if (!locked?.span) return false;
+    player?.toggle(locked.part_id, locked.span.s, locked.span.e);
+    return true;
+  };
+
   const onBead = (bead: number): void => {
+    if (playLockedSceneAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
     if (play && player) playActionOn(player, play);
+  };
+
+  /** A conta que brilha durante a cena pausa — mesma chave no `toggle`. */
+  const onHeadTap = (): void => {
+    if (head !== null) playLockedSceneAt(head);
   };
 
   const onEdgeHover = (edge: number): void => {
@@ -171,7 +195,7 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
           <p className="cds-escuta2-instruction" data-role="instruction">
             {t('escuta2.instructionPre')}
             <span className="cds-escuta2-emph">{t('escuta2.instructionEmph')}</span>
-            {t('escuta2.instructionPost')}
+            {hasLocked ? t('escuta2.instructionReplay') : t('escuta2.instructionPost')}
           </p>
         )}
       </div>
@@ -187,6 +211,7 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
           size={SIZE_L}
           playbackHead={head}
           onBeadPointerDown={onBead}
+          onHeadTap={onHeadTap}
           onEdgeHover={onEdgeHover}
         />
       </div>

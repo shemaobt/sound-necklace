@@ -153,10 +153,11 @@ export const en: Dict = {
   },
   escuta2: {
     title: 'Cut the story into scenes',
-    reviewHeadline: 'The whole story is in scenes.',
+    reviewHeadline: 'The whole story is in scenes. Tap a scene to hear it again.',
     instructionPre: 'Tap the necklace where ',
     instructionEmph: 'this scene ends',
     instructionPost: '. The beginning is already stitched.',
+    instructionReplay: '. Tap a finished scene to hear it again.',
     reopen: 'Reopen',
     back: '← Back',
     confirmScene: '✓ Confirm this scene',
@@ -179,7 +180,7 @@ export const en: Dict = {
       escuta1:
         'Listen to the whole story together, without rushing. The big button plays and pauses; confirm once the story has been heard in full.',
       escuta2:
-        'Tap a bead to listen from there. Mark together where each scene ends and confirm one scene at a time.',
+        'Mark together where each scene ends and confirm one scene at a time. Tapping a scene that is already finished plays it whole.',
       triagem:
         'Classify each scene by listening to it again. When no type fits, «none fits» is a finding too.',
       segmentacao:

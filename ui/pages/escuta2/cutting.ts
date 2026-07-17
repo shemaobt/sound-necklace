@@ -1,5 +1,5 @@
 import type { Player } from '../../../adapters/audio';
-import type { PlayAction } from '../../../domain';
+import type { PlayAction, ScenePart } from '../../../domain';
 import { type PaletteEntry, scenePalette } from '../../tokens';
 
 /**
@@ -8,6 +8,15 @@ import { type PaletteEntry, scenePalette } from '../../tokens';
  * `PlayAction` (efeito-como-valor); aqui o intérprete a toca no `Player`, o
  * rótulo de cena vira palavra (sem dígitos, §9.2) e a cor sai da paleta terrosa.
  */
+
+/**
+ * A cena travada dona desta conta, se houver — o `_sceneOf` do estudo "Ouvir no
+ * colar" (redesign §11, o `pure` escolhido), com as duas bordas dentro. Uma cena
+ * travada é para ouvir, não para cortar.
+ */
+export function lockedSceneAt(parts: readonly ScenePart[], bead: number): ScenePart | null {
+  return parts.find((p) => p.locked && p.span && bead >= p.span.s && bead <= p.span.e) ?? null;
+}
 
 /** Toca a ação de seleção: conta única e intervalo por `play`, fronteira por `playEdge`. */
 export function playActionOn(player: Player, action: PlayAction): void {

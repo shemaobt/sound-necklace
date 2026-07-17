@@ -170,10 +170,11 @@ export const pt = {
   },
   escuta2: {
     title: 'Corte a história em cenas',
-    reviewHeadline: 'A história está toda em cenas.',
+    reviewHeadline: 'A história está toda em cenas. Toque numa cena para reouvir.',
     instructionPre: 'Toque no colar onde ',
     instructionEmph: 'esta cena termina',
     instructionPost: '. O começo já está costurado.',
+    instructionReplay: '. Toque numa cena pronta para reouvir.',
     reopen: 'Reabrir',
     back: '← Voltar',
     confirmScene: '✓ Confirmar esta cena',
@@ -196,7 +197,7 @@ export const pt = {
       escuta1:
         'Ouçam a história inteira, sem pressa. O botão grande toca e pausa; confirme quando a história tiver sido ouvida por completo.',
       escuta2:
-        'Toque uma conta para ouvir dali. Marquem juntos onde cada cena termina e confirme uma cena de cada vez.',
+        'Marquem juntos onde cada cena termina e confirme uma cena de cada vez. Tocar numa cena já pronta a reproduz inteira.',
       triagem:
         'Classifiquem cada cena ouvindo-a de novo. Quando nenhum tipo se encaixa, «nenhum se encaixa» também é um achado.',
       segmentacao:
