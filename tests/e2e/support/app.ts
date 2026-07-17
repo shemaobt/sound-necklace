@@ -74,6 +74,42 @@ export async function readPersistedStatus(page: Page, id: string): Promise<strin
   return entry?.[1]?.summary?.status ?? null;
 }
 
+/**
+ * Um microfone sintético para o runner, que não tem hardware de áudio: lá o
+ * `getUserMedia` morre com `NotFoundError: Requested device not found` (medido no
+ * CI), e as flags `--use-fake-device-for-media-capture` do Chromium não resolvem —
+ * passam num Mac com microfone de verdade atrás e falham no Linux headless.
+ *
+ * Trocamos SÓ a borda do sistema operacional: um oscilador vira um `MediaStream` de
+ * verdade, então o `WebVoiceRecorder`, o `MediaRecorder`, o medidor de nível e o blob
+ * gravado seguem todos reais. Sem isto, o e2e só conseguiria exercitar o dublê — e foi
+ * um dublê convincente que deixou a entrevista muda por uma semana (ENG-298).
+ */
+async function microfoneSintetico(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    osc.frequency.value = 440;
+    osc.start();
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+      configurable: true,
+      value: async () => {
+        // o contexto nasce suspenso pela política de autoplay, e um oscilador parado
+        // grava silêncio (110 bytes de cabeçalho, indistinguível do dublê); a captura
+        // sempre vem depois de cliques reais, então aqui já é permitido retomá-lo
+        await ctx.resume();
+        // um destino NOVO por captura: o recorder encerra a gravação com
+        // `stopTracks(stream)`, então um stream reaproveitado volta com as tracks
+        // mortas e a 2ª resposta morre em `MediaRecorder.start()` (NotSupportedError).
+        // A entrevista grava 21 respostas — reutilizar quebraria da segunda em diante.
+        const destino = ctx.createMediaStreamDestination();
+        osc.connect(destino);
+        return destino.stream;
+      },
+    });
+  });
+}
+
 export class ColarApp {
   constructor(readonly page: Page) {}
 
@@ -81,6 +117,7 @@ export class ColarApp {
 
   /** Login (§7.1): a auth fixture aceita `facilitadora`/`admin` com qualquer senha não vazia. */
   async login(username = 'facilitadora', password = 'senha'): Promise<void> {
+    await microfoneSintetico(this.page);
     await this.page.goto('/login');
     await this.page.locator('input[name="username"]').fill(username);
     await this.page.locator('input[name="password"]').fill(password);

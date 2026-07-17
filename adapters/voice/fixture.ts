@@ -3,6 +3,13 @@
  * níveis pseudo-aleatórios DETERMINÍSTICOS (LCG, mesma família do harness
  * dourado) avançados por um hook `tick()`, e um blob WebM estático de
  * placeholder. Persiste no VoiceResourceStore injetado (default: MemoryVoiceStore).
+ *
+ * NÃO É O ADAPTER DO APP (ENG-298). Ele é convincente demais para isso: o medidor de
+ * nível se mexe, o "Parar" aparece, o caminho é salvo — e o que fica no disco são 9
+ * bytes de cabeçalho sem uma amostra de som. O app ficou mudo uma semana atrás dele,
+ * com a suíte verde, porque os testes afirmavam o CAMINHO da resposta e nunca o
+ * conteúdo. Só monte este dublê onde não existe microfone (jsdom), e prefira testes
+ * que pesem o áudio a testes que confiem no medidor.
  */
 
 import type { ResourcePath } from '../../contracts';
