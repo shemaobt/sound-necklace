@@ -49,6 +49,26 @@ describe('registro do adapter de TTS', () => {
     expect(calls[0]?.headers['authorization']).toBe('Bearer tok-eng247');
   });
 
+  it('um 401 no speak avisa o wiring (onUnauthorized) — a sessão caducou, o app decide', async () => {
+    const fakeFetch = (async () =>
+      ({ ok: false, status: 401 }) as Response) as unknown as typeof globalThis.fetch;
+    const expired: string[] = [];
+
+    const registration = (await import('./register')).default;
+    const synth = registration.real({
+      baseUrl: 'https://api.prod/api',
+      token: () => 'tok-caducado',
+      fetch: fakeFetch,
+      onUnauthorized: () => expired.push('401'),
+      AudioCtor: class {} as unknown as typeof Audio,
+      createObjectURL: () => 'blob:tts',
+    });
+    synth.speak('Onde essa história acontece?', 'pt-BR');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(expired).toEqual(['401']);
+  });
+
   it('a composição REAL cai no Web Speech quando o endpoint não existe', async () => {
     // Este é o único teste que exercita o que `register.real()` de fato entrega: o
     // HttpSpeechSynthesizer com um WebSpeechSynthesizer de verdade por dentro. Os testes do

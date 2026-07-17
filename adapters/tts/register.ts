@@ -37,6 +37,7 @@ const registration: AdapterRegistration<SpeechSynthesizer> = {
       baseUrl: wiring.baseUrl ?? '/api',
       fetch: wiring.fetch ?? globalThis.fetch.bind(globalThis),
       token: wiring.token,
+      onUnauthorized: wiring.onUnauthorized,
       AudioCtor: wiring.AudioCtor,
       createObjectURL: wiring.createObjectURL,
       fallback: new WebSpeechSynthesizer(),

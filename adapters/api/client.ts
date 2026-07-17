@@ -94,6 +94,24 @@ export class HttpApiClient implements ApiClient {
   }
 }
 
+/** `exp` do payload de um JWT, em ms — ou null se o token não for decodável. */
+function jwtExpMs(token: string | null): number | null {
+  if (!token) return null;
+  const payload = token.split('.')[1];
+  if (!payload) return null;
+  try {
+    const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+      exp?: unknown;
+    };
+    return typeof json.exp === 'number' ? json.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Antecedência do refresh automático sobre o exp do access token. */
+const REFRESH_MARGIN_MS = 60_000;
+
 /** Extrai a mensagem legível do envelope de erro (FastAPI usa `{ detail }`). */
 function messageOf(body: unknown, fallback: string): string {
   if (body && typeof body === 'object' && 'detail' in body) {
@@ -113,6 +131,9 @@ export interface HttpAuthProviderOptions {
 
 export class HttpAuthProvider implements AuthProvider {
   readonly #client: HttpApiClient;
+  /** Expiração detectada pelo PROVIDER (refresh agendado que falhou) — soma-se aos 401 do client. */
+  readonly #expired = new Emitter();
+  #refreshTimer: ReturnType<typeof setTimeout> | null = null;
   #refreshToken: string | null = null;
   #token: string | null = null;
   #user: AuthUser | null = null;
@@ -163,6 +184,7 @@ export class HttpAuthProvider implements AuthProvider {
       username: res.user.display_name ?? res.user.email,
       roles,
     };
+    this.#scheduleRefresh();
     return this.#user;
   }
 
@@ -175,9 +197,40 @@ export class HttpAuthProvider implements AuthProvider {
     });
     this.#token = res.access_token;
     this.#refreshToken = res.refresh_token; // rotação: o refresh antigo morre no uso
+    this.#scheduleRefresh();
+  }
+
+  /**
+   * O access token da casa dura 30 min — menos que uma sessão de facilitação. O
+   * refresh roda sozinho com 60s de antecedência sobre o `exp` do JWT; se falhar
+   * (refresh revogado/expirado), a sessão está morta: limpa e dispara auth-expired,
+   * e o app volta ao login em vez de degradar em silêncio.
+   */
+  #scheduleRefresh(): void {
+    this.#clearRefreshTimer();
+    const expMs = jwtExpMs(this.#token);
+    if (expMs === null) return;
+    const delay = Math.max(0, expMs - Date.now() - REFRESH_MARGIN_MS);
+    this.#refreshTimer = setTimeout(() => {
+      void this.refresh().catch(() => {
+        this.#clearRefreshTimer();
+        this.#token = null;
+        this.#refreshToken = null;
+        this.#user = null;
+        this.#expired.emit();
+      });
+    }, delay);
+  }
+
+  #clearRefreshTimer(): void {
+    if (this.#refreshTimer !== null) {
+      clearTimeout(this.#refreshTimer);
+      this.#refreshTimer = null;
+    }
   }
 
   async logout(): Promise<void> {
+    this.#clearRefreshTimer();
     const refreshToken = this.#refreshToken;
     this.#token = null;
     this.#refreshToken = null;
@@ -201,6 +254,11 @@ export class HttpAuthProvider implements AuthProvider {
   }
 
   onAuthExpired(cb: () => void): Unsubscribe {
-    return this.#client.onAuthExpired(cb);
+    const offClient = this.#client.onAuthExpired(cb);
+    const offOwn = this.#expired.subscribe(cb);
+    return () => {
+      offClient();
+      offOwn();
+    };
   }
 }

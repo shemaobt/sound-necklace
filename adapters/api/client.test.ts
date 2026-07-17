@@ -101,6 +101,13 @@ describe('HttpAuthProvider', () => {
   };
   const myRoles = [{ app_key: 'sound-necklace', role_key: 'facilitator' }];
 
+  /** JWT mínimo (header.payload.assinatura) com `exp` em segundos — só o payload importa. */
+  const jwtCom = (expSec: number): string =>
+    `e30.${btoa(JSON.stringify({ exp: expSec }))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')}.sig`;
+
   it('login envia o identificador como e-mail, guarda o par de tokens e busca os papéis', async () => {
     const { fetch, calls } = stubFetch({
       'POST /api/auth/login': { body: wireLogin },
@@ -184,6 +191,87 @@ describe('HttpAuthProvider', () => {
     const { fetch } = stubFetch({});
     const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
     await expect(auth.refresh()).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it('agenda o refresh 60s antes do exp do JWT e rotaciona sozinho', async () => {
+    vi.useFakeTimers({ now: 1_000_000 });
+    try {
+      // exp em +300s → refresh dispara em +240s (margem de 60s)
+      const { fetch, calls } = stubFetch({
+        'POST /api/auth/login': {
+          body: {
+            ...wireLogin,
+            tokens: { access_token: jwtCom(1300), refresh_token: 'r1', token_type: 'bearer' },
+          },
+        },
+        'GET /api/auth/my-roles': { body: myRoles },
+        'POST /api/auth/refresh': {
+          body: { access_token: 'a2', refresh_token: 'r2', token_type: 'bearer' },
+        },
+      });
+      const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+      await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
+
+      await vi.advanceTimersByTimeAsync(239_999);
+      expect(calls.some((c) => c.url.includes('/auth/refresh'))).toBe(false);
+      await vi.advanceTimersByTimeAsync(2);
+      expect(calls.filter((c) => c.url.includes('/auth/refresh'))).toHaveLength(1);
+      expect(auth.token()).toBe('a2');
+      await auth.logout();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('refresh agendado que FALHA derruba a sessão e dispara auth-expired', async () => {
+    vi.useFakeTimers({ now: 1_000_000 });
+    try {
+      const { fetch } = stubFetch({
+        'POST /api/auth/login': {
+          body: {
+            ...wireLogin,
+            tokens: { access_token: jwtCom(1120), refresh_token: 'r1', token_type: 'bearer' },
+          },
+        },
+        'GET /api/auth/my-roles': { body: myRoles },
+        'POST /api/auth/refresh': { status: 401, body: { detail: 'revogado' } },
+      });
+      const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+      const expired = vi.fn();
+      auth.onAuthExpired(expired);
+      await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
+
+      await vi.advanceTimersByTimeAsync(60_001);
+      expect(expired).toHaveBeenCalledTimes(1);
+      expect(auth.token()).toBeNull();
+      expect(auth.currentUser()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('logout cancela o refresh agendado', async () => {
+    vi.useFakeTimers({ now: 1_000_000 });
+    try {
+      const { fetch, calls } = stubFetch({
+        'POST /api/auth/login': {
+          body: {
+            ...wireLogin,
+            tokens: { access_token: jwtCom(1300), refresh_token: 'r1', token_type: 'bearer' },
+          },
+        },
+        'GET /api/auth/my-roles': { body: myRoles },
+        'POST /api/auth/logout': { status: 204 },
+      });
+      const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+      await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
+      await auth.logout();
+
+      await vi.advanceTimersByTimeAsync(400_000);
+      expect(calls.some((c) => c.url.includes('/auth/refresh'))).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('logout revoga o refresh token e limpa a sessão mesmo se a API falhar', async () => {

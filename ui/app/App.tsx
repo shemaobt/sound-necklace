@@ -15,6 +15,7 @@ import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
 import { API_BASE_URL, API_MODE } from './api-config';
 import { appAuth } from './auth-adapter';
+import { shouldGateToLogin } from './auth-gate';
 import { buildSessionPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
@@ -173,6 +174,20 @@ function useAuthExpiry(): void {
 }
 
 /**
+ * Gate de sessão do modo real (ENG-247): o token vive só em memória (§12 — um
+ * reload o perde de propósito, nunca localStorage). Sem sessão viva, qualquer rota
+ * além do login volta ao login, em vez de o app seguir usável e silenciosamente
+ * desautenticado (voz do guia no fallback, listagens 401). Na fixture não gateia.
+ */
+function useAuthGate(routeName: string): void {
+  useEffect(() => {
+    if (shouldGateToLogin(API_MODE, routeName, appAuth().currentUser())) {
+      navigate('/login', { replace: true });
+    }
+  }, [routeName]);
+}
+
+/**
  * Reidratação de sessão (§7.3): num reload ou ao retomar do Dashboard, a URL é
  * `/session/:id` mas o `ui/state` em memória está vazio. Carrega o estado salvo da
  * store app-global e o injeta, de modo que a sessão retome no passo corrente em vez
@@ -308,6 +323,7 @@ export function App() {
   const muted = useAppStore((s) => s.muted);
   const online = useOnline();
   useAuthExpiry();
+  useAuthGate(route.name);
 
   const session = useSessionStore((s) => s.session);
   const review = useSessionStore((s) => s.review);
@@ -359,6 +375,8 @@ export function App() {
       ttsRegistration.real({
         ...(API_MODE === 'real' ? { baseUrl: API_BASE_URL } : {}),
         token: () => appAuth().token(),
+        // sessão caducada no meio da entrevista: volta ao login em vez de robotizar
+        onUnauthorized: () => navigate('/login', { replace: true }),
       }),
     [],
   );
