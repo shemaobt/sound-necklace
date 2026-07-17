@@ -77,13 +77,23 @@ export function Setup({
 
   useEffect(() => {
     let alive = true;
-    void bucket.list().then((list) => {
-      if (alive) setAudios(list);
-    });
+    void bucket
+      .list()
+      .then((list) => {
+        if (alive) setAudios(list);
+      })
+      .catch(() => {
+        // fronteira de IO real (ENG-247): a listagem pode falhar — mostra o aviso
+        // em vez de deixar a promise escapar e a tela presa em "carregando"
+        if (alive) {
+          setAudios([]);
+          setError(t('setup.bucketError'));
+        }
+      });
     return () => {
       alive = false;
     };
-  }, [bucket]);
+  }, [bucket, t]);
 
   const create = async (): Promise<void> => {
     setError(null);

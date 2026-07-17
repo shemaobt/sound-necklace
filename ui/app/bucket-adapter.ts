@@ -8,7 +8,7 @@
 import { FixtureBucketSource, HttpBucketSource, type BucketSource } from '../../adapters/bucket';
 import { MyProjectRolesResponseSchema } from '../../contracts';
 import { API_BASE_URL, API_MODE } from './api-config';
-import { appAuth } from './auth-adapter';
+import { appAuth, authReady } from './auth-adapter';
 
 let projectId: string | null = null;
 
@@ -19,6 +19,7 @@ let projectId: string | null = null;
  */
 export async function resolveProjectId(): Promise<string> {
   if (projectId) return projectId;
+  await authReady(); // num reload, o token só existe depois da retomada assentar
   const token = appAuth().token();
   const res = await fetch(`${API_BASE_URL}/auth/my-project-roles`, {
     headers: token ? { authorization: `Bearer ${token}` } : undefined,

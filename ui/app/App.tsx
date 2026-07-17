@@ -14,7 +14,7 @@ import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
 import { API_BASE_URL, API_MODE } from './api-config';
-import { appAuth } from './auth-adapter';
+import { appAuth, authReady } from './auth-adapter';
 import { shouldGateToLogin } from './auth-gate';
 import { buildSessionPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
@@ -186,11 +186,9 @@ function useAuthGate(routeName: string): void {
   useEffect(() => {
     if (API_MODE === 'fixture') return;
     let alive = true;
-    void appAuth()
-      .resume()
-      .finally(() => {
-        if (alive) setResumed(true);
-      });
+    void authReady().finally(() => {
+      if (alive) setResumed(true);
+    });
     return () => {
       alive = false;
     };
@@ -390,8 +388,13 @@ export function App() {
       ttsRegistration.real({
         ...(API_MODE === 'real' ? { baseUrl: API_BASE_URL } : {}),
         token: () => appAuth().token(),
-        // sessão caducada no meio da entrevista: volta ao login em vez de robotizar
-        onUnauthorized: () => navigate('/login', { replace: true }),
+        // sessão caducada no meio da entrevista: volta ao login em vez de robotizar.
+        // O 401 pode ser só a corrida do boot (resume em voo) — decide após assentar.
+        onUnauthorized: () => {
+          void authReady().then(() => {
+            if (!appAuth().currentUser()) navigate('/login', { replace: true });
+          });
+        },
       }),
     [],
   );

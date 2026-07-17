@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { AudioDecodeError, FixtureAudioEngine, type AudioEngine } from '../../../adapters/audio';
-import { FixtureBucketSource } from '../../../adapters/bucket';
+import { FixtureBucketSource, type BucketSource } from '../../../adapters/bucket';
 import { AcoustemeGranularityResolver } from '../../../adapters/granularity';
 import { FixtureSessionStore } from '../../../adapters/sessions';
 import { sessionStore } from '../../state';
@@ -22,7 +22,7 @@ import Setup from './index';
 const BOTO_MEDIA_HASH = 'fnv1a32:9943a4ff';
 
 interface Ports {
-  bucket: FixtureBucketSource;
+  bucket: BucketSource;
   resolver: AcoustemeGranularityResolver;
   audioEngine: AudioEngine;
   store: FixtureSessionStore;
@@ -136,6 +136,16 @@ describe('Setup — criação de sessão (§8.1)', () => {
 });
 
 describe('Setup — validação (§8.1)', () => {
+  it('listagem do bucket que FALHA mostra o aviso em vez de prender a tela (ENG-247)', async () => {
+    const quebrado: BucketSource = {
+      list: () => Promise.reject(new Error('HTTP 401 na listagem do bucket')),
+      fetchBytes: () => Promise.reject(new Error('sem áudio')),
+    };
+    renderSetup(ports({ bucket: quebrado }));
+
+    expect(await screen.findByText(pt.setup.bucketError)).toBeTruthy();
+  });
+
   it('sem áudio, orienta a escolher primeiro e não cria', async () => {
     const p = ports();
     const createSpy = vi.spyOn(p.store, 'create');

@@ -13,6 +13,20 @@ import { FixtureAuthProvider, HttpAuthProvider } from '../../adapters/api';
 import { API_BASE_URL, API_MODE } from './api-config';
 
 let auth: FixtureAuthProvider | HttpAuthProvider | undefined;
+let ready: Promise<void> | undefined;
+
+/**
+ * A retomada da sessão em VOO ÚNICO (ENG-247): quem depende de token espera aqui
+ * antes de ler `appAuth().token()`. Sem isto, um reload dispara chamadas 401
+ * enquanto o refresh persistido ainda está virando sessão (corrida real: o Setup
+ * lista o bucket antes de o resume terminar).
+ */
+export function authReady(): Promise<void> {
+  return (ready ??= appAuth()
+    .resume()
+    .then(() => undefined)
+    .catch(() => undefined));
+}
 
 export function appAuth(): FixtureAuthProvider | HttpAuthProvider {
   return (auth ??=

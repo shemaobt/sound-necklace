@@ -41,6 +41,7 @@ export const pt = {
       'A voz do guia é sintética, gerada por IA. As perguntas são escritas por pessoas — a ferramenta não inventa conteúdo.',
     gridWarning: 'Trave o tamanho da conta antes de ancorar. Mudá-lo depois desloca as fronteiras.',
     noAudio: 'Escolha um arquivo de áudio primeiro.',
+    bucketError: 'Não foi possível carregar os áudios do projeto. Recarregue a página.',
     noConsent: 'Confirme o consentimento de uso no pipeline para continuar.',
     noBeadSec: 'Não consegui definir o tamanho da conta para este áudio.',
     createFailed: 'Não foi possível criar a sessão. Tente de novo.',
