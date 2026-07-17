@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
+import ttsRegistration from '../../adapters/tts/register';
 import type { SpeechSynthesizer } from '../../adapters/tts/types';
 import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
 import type { VoiceRecorder } from '../../adapters/voice/types';
@@ -12,6 +13,7 @@ import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
+import { API_BASE_URL, API_MODE } from './api-config';
 import { appAuth } from './auth-adapter';
 import { buildSessionPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
@@ -348,13 +350,18 @@ export function App() {
     return (useFixture ? registration.fixture() : registration.real()) as VoiceRecorder;
   }, []);
   // A voz do guia é a implementação REAL, não a fixture: falar de verdade É a feature
-  // (ENG-280). Hoje ela busca o clipe ElevenLabs na API e carrega o Web Speech dentro de
-  // si como fallback (ENG-284), então a porta é registrada SEMPRE e `speaker` nunca é
-  // null — o `registration ?` abaixo é só a forma compartilhada da registry.
-  const speaker = useMemo<SpeechSynthesizer | null>(() => {
-    const registration = buildAdapterRegistry().tts;
-    return registration ? (registration.real() as SpeechSynthesizer) : null;
-  }, []);
+  // (ENG-280). Ela busca o clipe ElevenLabs na API com o Web Speech dentro de si como
+  // fallback (ENG-284). O wiring (ENG-247) injeta a base real e o Bearer vivo do
+  // AuthProvider; sem VITE_API_MODE=real, a base relativa 404a e o fallback assume —
+  // o comportamento de sempre. Import direto (não a registry): o wiring é tipado.
+  const speaker = useMemo<SpeechSynthesizer | null>(
+    () =>
+      ttsRegistration.real({
+        ...(API_MODE === 'real' ? { baseUrl: API_BASE_URL } : {}),
+        token: () => appAuth().token(),
+      }),
+    [],
+  );
   // O som da UI é a implementação REAL: tocar de volta É a feature num app
   // ear-first. Mudo troca a PORTA pela silenciosa — assim nenhum chamador precisa
   // saber o que é estar mudo, e o botão do cabeçalho passa a silenciar de fato

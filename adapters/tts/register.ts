@@ -9,28 +9,36 @@
  * antes ela sumia num ambiente sem `speechSynthesis`, o que hoje apagaria também os
  * clipes da API, que não dependem dele.
  *
- * baseUrl/token reais são injetados pelo wiring (ENG-247); até lá vale o mesmo esqueleto
- * dos outros adapters (adapters/bucket/register.ts) — baseUrl relativo e o fetch do browser.
+ * baseUrl/token reais chegam pelo wiring do composition root (ENG-247): `real()` aceita
+ * as dependências injetáveis do HttpSpeechSynthesizer (menos o fallback, que É a
+ * composição de produção). Sem wiring, vale o esqueleto — baseUrl relativo + fetch do
+ * browser, e o fallback assume no 404.
  */
 
 import { FixtureSpeechSynthesizer } from './fixture';
-import { HttpSpeechSynthesizer } from './http';
+import { HttpSpeechSynthesizer, type HttpSpeechDeps } from './http';
 import type { SpeechSynthesizer } from './types';
 import { WebSpeechSynthesizer } from './web';
+
+/** Wiring opcional do composition root; o fallback nunca é substituível. */
+export type RealTtsWiring = Partial<Omit<HttpSpeechDeps, 'fallback'>>;
 
 export interface AdapterRegistration<TPort> {
   port: string;
   fixture: () => TPort;
-  real: () => TPort;
+  real: (wiring?: RealTtsWiring) => TPort;
 }
 
 const registration: AdapterRegistration<SpeechSynthesizer> = {
   port: 'tts',
   fixture: () => new FixtureSpeechSynthesizer(),
-  real: () =>
+  real: (wiring = {}) =>
     new HttpSpeechSynthesizer({
-      baseUrl: '/api',
-      fetch: globalThis.fetch.bind(globalThis),
+      baseUrl: wiring.baseUrl ?? '/api',
+      fetch: wiring.fetch ?? globalThis.fetch.bind(globalThis),
+      token: wiring.token,
+      AudioCtor: wiring.AudioCtor,
+      createObjectURL: wiring.createObjectURL,
       fallback: new WebSpeechSynthesizer(),
     }),
 };

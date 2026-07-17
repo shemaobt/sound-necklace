@@ -8,6 +8,7 @@
  * `context.setOffline`, que a window reflete direto no gate (App.tsx `useOnline`).
  */
 
+import { FixtureAuthProvider } from '../../adapters/api';
 import { FixtureSessionStore, type LockHolder } from '../../adapters/sessions';
 import { appAuth } from './auth-adapter';
 import { appSessionBackend } from './session-adapter';
@@ -25,7 +26,11 @@ export function installTestSeam(
   target: { __cds?: TestSeam } = globalThis as { __cds?: TestSeam },
 ): void {
   target.__cds = {
-    expireAuth: () => appAuth().simulateExpiry(),
+    expireAuth: () => {
+      // só o fixture tem expiração simulável; no modo real (ENG-247) quem caduca é o servidor
+      const auth = appAuth();
+      if (auth instanceof FixtureAuthProvider) auth.simulateExpiry();
+    },
     seedForeignLock: async (sessionId, holder = OTHER_HOLDER) => {
       const other = new FixtureSessionStore({ backend: appSessionBackend(), user: holder });
       await other.acquireLock(sessionId);

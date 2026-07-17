@@ -8,11 +8,12 @@
  */
 import { writeFileSync } from 'node:fs';
 
-const URL = process.env.TRIPOD_OPENAPI_URL ?? 'https://tripod-backend-f7ssqjozfq-uc.a.run.app/openapi.json';
+const URL =
+  process.env.TRIPOD_OPENAPI_URL ?? 'https://tripod-backend-f7ssqjozfq-uc.a.run.app/openapi.json';
 const OUT = new globalThis.URL('../contracts/openapi.json', import.meta.url);
 const KEEP = [/^\/api\/auth\//, /^\/api\/sound-necklace\//];
 
-const res = await fetch(URL);
+const res = await globalThis.fetch(URL);
 if (!res.ok) throw new Error(`GET ${URL} → ${res.status}`);
 const spec = await res.json();
 
