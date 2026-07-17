@@ -41,8 +41,10 @@ export interface HttpSessionStoreOptions {
   debounceMs?: number;
   /**
    * A trava desta sessão foi tomada por outra pessoa — um autosave foi recusado com
-   * 409. O autosave é fire-and-forget (§7.3), então é por aqui que a UI fica sabendo;
-   * `complete`/`reopen` são aguardados e propagam o `LockLostError` pelo throw.
+   * 409. O autosave é fire-and-forget (§7.3): não há promessa para o chamador aguardar,
+   * então este callback é a ÚNICA via pela qual a UI descobre. Só o autosave passa por
+   * aqui; `complete`/`reopen` são aguardados e o 409 sobe por throw para quem chamou —
+   * como `ApiError` cru, sem virar `LockLostError` (a tradução vive no `persist`).
    */
   onLockLost?: (id: string) => void;
 }

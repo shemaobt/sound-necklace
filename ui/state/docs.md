@@ -28,6 +28,6 @@ Path: @/ui/state
 - **Pausing is not clearing.** Offline/review/lock make `apply` a no-op but leave `session` intact; the mechanism deliberately preserves state so a dropped connection or a review toggle never loses work.
 - The store never imports adapters by design — if you need persistence, inject it through `SessionStoreDeps.autosave`; do not reach for the SessionStore adapter here.
 - Zustand 5 selector trap (see @/ui/docs.md): selectors returning fresh references need `useShallow`; the `useSessionStore`/`useAppStore` hooks take a plain selector via `useStore`.
-- `EditorLock` is an advisory presence marker (`{ holder }`) — its mere presence means the session is open by someone else; it is surfaced read-only by @/ui/app/review-banner.tsx.
+- `EditorLock` is an advisory presence marker — its mere presence means editing is suspended and cannot be unlocked; it is surfaced read-only by @/ui/app/review-banner.tsx. `holder` is `string | null`: a name means another editor's session is open, `null` means contact with the server was lost before a renewal landed (@/ui/app/use-editor-lock.ts's renew deadline) and this client can no longer vouch it still holds the lock — both cases lock out editing, but the banner shows a different message for each.
 
 Created and maintained by Nori.
