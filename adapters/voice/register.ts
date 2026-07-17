@@ -4,26 +4,31 @@
  * portas por nome — fixture é o default; o modo real liga por configuração de
  * ambiente (ENG-247).
  *
- * Ambos os modos nascem com um MemoryVoiceStore. A estação Conversa (ENG-249)
- * liga o recorder aos recursos da SESSÃO ATIVA do SessionStore (§10.4/O5) — como
- * o SessionStore ainda não expõe delete de recurso, essa ligação é um follow-up.
+ * O armazém é POR SESSÃO (§10.4): o wiring injeta o `store` da sessão ativa
+ * (`ui/app/voice-adapter.ts`); sem wiring nasce um MemoryVoiceStore avulso. A
+ * ligação aos recursos REAIS do SessionStore (tripod-api) é o resto da ENG-247.
  */
 
 import { FixtureVoiceRecorder } from './fixture';
 import { MemoryVoiceStore } from './memory-store';
-import type { VoiceRecorder } from './types';
+import type { VoiceRecorder, VoiceResourceStore } from './types';
 import { WebVoiceRecorder } from './web';
+
+/** Wiring do composition root: o armazém de respostas da SESSÃO ativa. */
+export interface RealVoiceWiring {
+  store?: VoiceResourceStore;
+}
 
 export interface AdapterRegistration<TPort> {
   port: string;
   fixture: () => TPort;
-  real: () => TPort;
+  real: (wiring?: RealVoiceWiring) => TPort;
 }
 
 const registration: AdapterRegistration<VoiceRecorder> = {
   port: 'voice',
   fixture: () => new FixtureVoiceRecorder(),
-  real: () => new WebVoiceRecorder({ store: new MemoryVoiceStore() }),
+  real: (wiring = {}) => new WebVoiceRecorder({ store: wiring.store ?? new MemoryVoiceStore() }),
 };
 
 export default registration;

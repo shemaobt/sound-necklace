@@ -5,6 +5,7 @@ import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
 import ttsRegistration from '../../adapters/tts/register';
 import type { SpeechSynthesizer } from '../../adapters/tts/types';
+import voiceRegistration from '../../adapters/voice/register';
 import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
 import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
@@ -23,6 +24,7 @@ import { buildAdapterRegistry, buildStationRegistry, type StationComponent } fro
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
 import { StationHost } from './station-host';
+import { voiceStoreFor } from './voice-adapter';
 import { Stepper } from './stepper';
 import { stepperStations } from './stepper-model';
 import { navigate, useRoute } from './router';
@@ -372,12 +374,17 @@ export function App() {
   // fixture se mexe igual, ENG-298). O dublê só entra onde não existe microfone:
   // jsdom e qualquer harness que peça `VITE_VOICE=fixture`. O e2e NÃO pede — ele roda
   // com o microfone falso do Chromium, para o portão exigir áudio de verdade.
+  // O armazém de respostas é POR SESSÃO (§10.4: `respostas/…` é relativo à sessão —
+  // o namespace é de quem guarda, como o servidor faz). Reconstruir por routeId isola
+  // as gravações entre sessões; na mesma aba, voltar à sessão reencontra os bytes
+  // (voiceStoreFor). Sem isto, a mesma pergunta de DUAS sessões dividia UMA gravação.
+  // Import direto (não a registry): o wiring do armazém é tipado.
   const recorder = useMemo<VoiceRecorder | null>(() => {
-    const registration = buildAdapterRegistry().voice;
-    if (!registration) return null;
     const useFixture = import.meta.env.VITE_VOICE === 'fixture';
-    return (useFixture ? registration.fixture() : registration.real()) as VoiceRecorder;
-  }, []);
+    return useFixture
+      ? voiceRegistration.fixture()
+      : voiceRegistration.real({ store: voiceStoreFor(routeId) });
+  }, [routeId]);
   // A voz do guia é a implementação REAL, não a fixture: falar de verdade É a feature
   // (ENG-280). Ela busca o clipe ElevenLabs na API com o Web Speech dentro de si como
   // fallback (ENG-284). O wiring (ENG-247) injeta a base real e o Bearer vivo do
