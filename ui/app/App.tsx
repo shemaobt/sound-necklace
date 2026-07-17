@@ -331,9 +331,17 @@ export function App() {
   );
 
   const registry = useMemo(() => buildStationRegistry(), []);
+  // O microfone é a implementação REAL: gravar de verdade É a feature (§8.7) — a
+  // resposta em `.webm` é o artefato que o Compilador consome, e um dublê aqui não
+  // deixa a entrevista incompleta, deixa ela MUDA sem avisar (o medidor de nível do
+  // fixture se mexe igual, ENG-298). O dublê só entra onde não existe microfone:
+  // jsdom e qualquer harness que peça `VITE_VOICE=fixture`. O e2e NÃO pede — ele roda
+  // com o microfone falso do Chromium, para o portão exigir áudio de verdade.
   const recorder = useMemo<VoiceRecorder | null>(() => {
     const registration = buildAdapterRegistry().voice;
-    return registration ? (registration.fixture() as VoiceRecorder) : null;
+    if (!registration) return null;
+    const useFixture = import.meta.env.VITE_VOICE === 'fixture';
+    return (useFixture ? registration.fixture() : registration.real()) as VoiceRecorder;
   }, []);
   // A voz do guia é a implementação REAL, não a fixture: falar de verdade É a feature
   // (ENG-280). Hoje ela busca o clipe ElevenLabs na API e carrega o Web Speech dentro de

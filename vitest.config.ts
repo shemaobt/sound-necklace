@@ -22,6 +22,10 @@ export default defineConfig({
         test: {
           name: 'dom',
           environment: 'jsdom',
+          // jsdom não tem MediaRecorder: o shell monta o gravador REAL por padrão
+          // (ENG-298), então aqui — e SÓ aqui — ele pede o dublê. O e2e não pede: lá
+          // o Chromium dá um microfone falso e o portão exige áudio de verdade.
+          env: { VITE_VOICE: 'fixture' },
           // globals ligado para a auto-limpeza do Testing Library (afterEach cleanup);
           // sem isso, múltiplos render() no mesmo arquivo acumulam DOM e geram flakes.
           globals: true,

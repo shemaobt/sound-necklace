@@ -288,7 +288,12 @@ describe('App shell', () => {
     expect(persisted.slug).toBe('avancada');
   });
 
-  it('liga o gravador de voz fixture no Mapeamento (o microfone grava)', async () => {
+  // Sob `VITE_VOICE=fixture` (vitest.config: jsdom não tem MediaRecorder) o shell monta
+  // o DUBLÊ. Este teste prova a fiação da estação, NÃO que existe áudio: quem exige som
+  // de verdade é `tests/e2e/voice-really-records.spec.ts`, onde o gravador é o real. O
+  // título anterior dizia "o microfone grava" e foi exatamente essa a ilusão que deixou
+  // o app mudo por uma semana (ENG-298) — um teste verde afirmando o que não acontecia.
+  it('liga o gravador no Mapeamento: o botão de voz abre a gravação', async () => {
     await act(async () => {
       navigate('/session/s1');
       sessionStore.getState().load(completableSession());
@@ -299,7 +304,6 @@ describe('App shell', () => {
     await act(async () => {
       mic.click();
     });
-    // A fixture inicia a gravação → surge o controle "Parar" (microfone vivo).
     expect(await screen.findByRole('button', { name: 'Parar' })).toBeDefined();
   });
 
