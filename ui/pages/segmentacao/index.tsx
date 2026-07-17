@@ -34,7 +34,7 @@ import {
 } from '../../organisms';
 import { resolveWindow } from '../../organisms/necklace/geometry';
 import { sessionStore, useSessionStore } from '../../state';
-import { playActionOn, sceneColor, sceneLabel } from '../escuta2/cutting';
+import { lockedItemAt, playActionOn, sceneColor, sceneLabel } from '../escuta2/cutting';
 import { phraseColor, phraseLabel } from './wiring';
 import './segmentacao.css';
 
@@ -115,12 +115,39 @@ export function Segmentacao({ player = null, sound }: SegmentacaoProps) {
   const isLast = sceneIdx >= ps.length - 1;
   const anchor = activeAnchor(session);
 
+  /**
+   * Tocar numa frase já travada a reproduz inteira (ENG-296), como a Escuta 2 faz
+   * com as cenas: o `clickBead` é port 1:1 da v1 e clamparia o toque até a emenda,
+   * consumindo a pré-ancoragem da frase seguinte. Só as frases DESTA cena entram —
+   * são as únicas na janela do colar.
+   */
+  const playLockedPhraseAt = (bead: number): boolean => {
+    const locked = lockedItemAt(
+      scenePhrases.map(({ f }) => f),
+      bead,
+    );
+    if (!locked?.span) return false;
+    player?.toggle(locked.prop_id, locked.span.s, locked.span.e);
+    return true;
+  };
+
   const onBead = (bead: number): void => {
+    if (playLockedPhraseAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
     if (play && player) playActionOn(player, play);
+  };
+
+  /** A conta acesa pausa — chave alheia reiniciaria a frase (ENG-297). */
+  const onHeadTap = (): void => {
+    if (!player) return;
+    if (player.state.key === null) {
+      player.stop();
+      return;
+    }
+    if (head !== null) playLockedPhraseAt(head);
   };
 
   const onEdgeHover = (edge: number): void => {
@@ -173,6 +200,8 @@ export function Segmentacao({ player = null, sound }: SegmentacaoProps) {
 
   const reopen = (i: number): void => {
     setError(null);
+    // a frase que estava tocando deixa de existir aqui: o áudio dela não sobrevive
+    player?.stop();
     sessionStore.getState().apply((s) => reopenFrase(s, i));
   };
 
@@ -247,6 +276,7 @@ export function Segmentacao({ player = null, sound }: SegmentacaoProps) {
         </p>
         <p className="cds-segmentacao-instruction" data-role="instruction">
           {covered ? t('segmentacao.reviewHeadline') : t('segmentacao.instruction')}
+          {!covered && scenePhrases.length > 0 ? t('segmentacao.instructionReplay') : null}
         </p>
       </div>
 
@@ -262,6 +292,7 @@ export function Segmentacao({ player = null, sound }: SegmentacaoProps) {
           window={scSpan}
           playbackHead={head}
           onBeadPointerDown={onBead}
+          onHeadTap={onHeadTap}
           onEdgeHover={onEdgeHover}
         />
       </div>

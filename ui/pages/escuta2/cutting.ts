@@ -1,5 +1,5 @@
 import type { Player } from '../../../adapters/audio';
-import type { PlayAction, ScenePart } from '../../../domain';
+import type { PlayAction, Span } from '../../../domain';
 import { type PaletteEntry, scenePalette } from '../../tokens';
 
 /**
@@ -10,12 +10,17 @@ import { type PaletteEntry, scenePalette } from '../../tokens';
  */
 
 /**
- * A cena travada dona desta conta, se houver — o `_sceneOf` do estudo "Ouvir no
- * colar" (redesign §11, o `pure` escolhido), com as duas bordas dentro. Uma cena
- * travada é para ouvir, não para cortar.
+ * O item travado dono desta conta, se houver — o `_sceneOf`/`_phraseOf` do estudo
+ * "Ouvir no colar" (redesign §11, o `pure` escolhido), com as duas bordas dentro.
+ * Serve cena e frase porque a regra não olha o id: item travado é para ouvir, não
+ * para cortar. Item reaberto mantém o span e só perde o `locked` — por isso o
+ * filtro, sem o qual reabrir viraria armadilha (o corte novo seria engolido).
  */
-export function lockedSceneAt(parts: readonly ScenePart[], bead: number): ScenePart | null {
-  return parts.find((p) => p.locked && p.span && bead >= p.span.s && bead <= p.span.e) ?? null;
+export function lockedItemAt<T extends { locked: boolean; span: Span | null }>(
+  items: readonly T[],
+  bead: number,
+): T | null {
+  return items.find((i) => i.locked && i.span && bead >= i.span.s && bead <= i.span.e) ?? null;
 }
 
 /** Toca a ação de seleção: conta única e intervalo por `play`, fronteira por `playEdge`. */

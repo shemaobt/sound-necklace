@@ -2,8 +2,13 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Player } from '../../../adapters/audio';
-import { buildBeads, createSession, type SessionState } from '../../../domain';
+import {
+  createPlayer,
+  type DecodedAudio,
+  FixtureTransport,
+  type Player,
+} from '../../../adapters/audio';
+import { buildBeads, createSession, type Frase, type SessionState } from '../../../domain';
 import { sessionStore } from '../../state';
 import Segmentacao from './index';
 
@@ -18,11 +23,13 @@ const WIDTH = 500; // slot 25 → 20 contas por linha
 const DURATION = 2.5;
 const BEAD_SEC = 0.25; // 10 contas (0…9); cena {0,6} ⇒ janela começa na conta 0
 
-type Call = { m: 'play' | 'playEdge' | 'toggle'; args: number[] };
+/** Espião: serve às asserções de DESPACHO. Quem afirma pausa usa o `realPlayer`. */
+type Call =
+  { m: 'play' | 'playEdge'; args: number[] } | { m: 'toggle'; key: string; args: number[] };
 function spyPlayer(): { player: Player; calls: Call[] } {
   const calls: Call[] = [];
   const player: Player = {
-    toggle: (_k, s, e) => calls.push({ m: 'toggle', args: [s, e] }),
+    toggle: (k, s, e) => calls.push({ m: 'toggle', key: k, args: [s, e] }),
     play: (s, e) => calls.push({ m: 'play', args: [s, e] }),
     playEdge: (b) => calls.push({ m: 'playEdge', args: [b] }),
     stop: () => {},
@@ -108,6 +115,126 @@ beforeEach(() => {
 });
 afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
+});
+
+function frase(over: Partial<Frase>): Frase {
+  return {
+    prop_id: 'P1',
+    statement_pt: '',
+    qa: [],
+    span: null,
+    part_link: null,
+    locked: false,
+    flagged: false,
+    ...over,
+  };
+}
+
+/** Frase um travada em 1…3, com a próxima aberta — a cena PT1 vai de 0 a 6. */
+function withLockedPhrase(): SessionState {
+  const base = segmenting();
+  return {
+    ...base,
+    frases: [
+      frase({ prop_id: 'P1', span: { s: 1, e: 3 }, part_link: 'PT1', locked: true }),
+      frase({ prop_id: 'P2' }),
+    ],
+    current: { layer: 'frases', index: 1 },
+  };
+}
+
+/** Player REAL sobre transport manual — a pausa mora no adapter; espião provaria o fake. */
+const DECODED: DecodedAudio = {
+  duration: DURATION,
+  pcm: { numberOfChannels: 1, sampleRate: 8000, getChannelData: () => new Float32Array(20000) },
+};
+function realPlayer(): { player: Player; transport: FixtureTransport } {
+  const transport = new FixtureTransport();
+  return { player: createPlayer(transport, DECODED, BEAD_SEC), transport };
+}
+function advanceBy(transport: FixtureTransport, seconds: number, step = 0.05): void {
+  let left = seconds;
+  while (left > 1e-12) {
+    const dt = Math.min(step, left);
+    flushSync(() => transport.advance(dt));
+    left -= dt;
+  }
+}
+
+describe('Segmentação — uma frase travada pode ser ouvida (ENG-296)', () => {
+  it('tocar numa conta da frase travada toca a FRASE inteira e deixa o corte quieto', () => {
+    const { player, calls } = spyPlayer();
+    sessionStore.getState().load(withLockedPhrase());
+    const { root, el } = mount(player);
+
+    firePointer(el, 2); // conta no meio da frase um (1…3)
+
+    expect(calls).toEqual([{ m: 'toggle', key: 'P1', args: [1, 3] }]);
+    expect(sessionStore.getState().session!.selection).toBeNull();
+    expect(sessionStore.getState().session!.pendingStart).toBeNull();
+    root.unmount();
+  });
+
+  it('a conta ainda livre continua cortando a próxima frase', () => {
+    const { player, calls } = spyPlayer();
+    sessionStore.getState().load(withLockedPhrase());
+    const { root, el } = mount(player);
+
+    firePointer(el, 5); // fora da frase travada, dentro da cena
+
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [5, 5] });
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 5, e: 5 });
+    root.unmount();
+  });
+
+  it('a conta acesa pausa a frase pela chave própria — e não é clique morto', () => {
+    const { player, transport } = realPlayer();
+    sessionStore.getState().load(withLockedPhrase());
+    const { root, el } = mount(player);
+
+    firePointer(el, 2); // toca a frase travada
+    advanceBy(transport, 0.3);
+    expect(player.state).toEqual({ key: 'P1', playing: true, paused: false });
+
+    const acesa = el.querySelector('.cds-necklace-bead[data-play="head"]');
+    firePointer(el, Number(acesa!.getAttribute('data-idx')));
+
+    expect(player.state).toEqual({ key: 'P1', playing: true, paused: true });
+    root.unmount();
+  });
+
+  it('a conta acesa numa prévia de borda PARA — a estação não herda o bug da ENG-297', () => {
+    const { player, transport } = realPlayer();
+    sessionStore.getState().load(withLockedPhrase());
+    const { root, el } = mount(player);
+
+    // esta estação tem `onEdgeHover` → `playEdge`, que é SEM chave: sem o mesmo
+    // guard da Escuta 2, a cabeça acesa aqui reiniciaria a frase em vez de parar
+    flushSync(() => player.playEdge(2));
+    advanceBy(transport, 0.3);
+    const acesa = el.querySelector('.cds-necklace-bead[data-play="head"]');
+
+    firePointer(el, Number(acesa!.getAttribute('data-idx')));
+
+    expect(player.state.playing).toBe(false);
+    root.unmount();
+  });
+
+  it('reabrir a frase cala o áudio dela', () => {
+    const { player, transport } = realPlayer();
+    sessionStore.getState().load(withLockedPhrase());
+    const { host, root, el } = mount(player);
+
+    firePointer(el, 2);
+    advanceBy(transport, 0.2);
+    expect(player.state.playing).toBe(true);
+
+    const reabrir = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Reabrir');
+    flushSync(() => reabrir!.click());
+
+    expect(player.state.playing).toBe(false);
+    root.unmount();
+  });
 });
 
 describe('Segmentação — modelo de clique com áudio na cena em janela (PRD v2 §8.2/§8.6)', () => {

@@ -15,7 +15,7 @@ import {
 import { Button } from '../../atoms';
 import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
-import { lockedSceneAt, playActionOn, sceneColor, sceneLabel } from './cutting';
+import { lockedItemAt, playActionOn, sceneColor, sceneLabel } from './cutting';
 import { ScenePhraseChip } from '../../molecules';
 import './escuta2.css';
 
@@ -111,7 +111,7 @@ export function Escuta2({ player = null, sound }: Escuta2Props) {
    */
   const playLockedSceneAt = (bead: number): boolean => {
     const s = sessionStore.getState().session;
-    const locked = s ? lockedSceneAt(s.parts, bead) : null;
+    const locked = s ? lockedItemAt(s.parts, bead) : null;
     if (!locked?.span) return false;
     player?.toggle(locked.part_id, locked.span.s, locked.span.e);
     return true;
