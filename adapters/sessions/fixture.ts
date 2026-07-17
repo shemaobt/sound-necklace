@@ -105,15 +105,15 @@ function stepFor(status: SessionStatus, state: SessionStateDto | undefined): Ses
 }
 
 export class FixtureSessionStore implements SessionStore {
+  readonly me: LockHolder;
   readonly #backend: FixtureSessionBackend;
-  readonly #user: LockHolder;
   readonly #lockTtlMs: number;
   readonly #latencyMs: number;
   readonly #autosaver: Autosaver;
 
   constructor(opts: FixtureSessionStoreOptions = {}) {
     this.#backend = opts.backend ?? new FixtureSessionBackend();
-    this.#user = opts.user ?? DEFAULT_FIXTURE_USER;
+    this.me = opts.user ?? DEFAULT_FIXTURE_USER;
     this.#lockTtlMs = opts.lockTtlMs ?? 30_000;
     this.#latencyMs = opts.latencyMs ?? 0;
     this.#autosaver = createAutosaver({
@@ -215,7 +215,7 @@ export class FixtureSessionStore implements SessionStore {
   async renewLock(id: string): Promise<LockStatus> {
     await this.#settle();
     const rec = this.#requireRec(id);
-    if (rec.lock?.holder.user_id === this.#user.user_id) {
+    if (rec.lock?.holder.user_id === this.me.user_id) {
       rec.lock = this.#mintLock();
       this.#backend.persist();
     }
@@ -225,7 +225,7 @@ export class FixtureSessionStore implements SessionStore {
   async releaseLock(id: string): Promise<void> {
     await this.#settle();
     const rec = this.#requireRec(id);
-    if (rec.lock?.holder.user_id === this.#user.user_id) {
+    if (rec.lock?.holder.user_id === this.me.user_id) {
       rec.lock = undefined;
       this.#backend.persist();
     }
@@ -271,13 +271,13 @@ export class FixtureSessionStore implements SessionStore {
     return (
       rec.lock !== undefined &&
       Date.parse(rec.lock.expires_at) > Date.now() &&
-      rec.lock.holder.user_id !== this.#user.user_id
+      rec.lock.holder.user_id !== this.me.user_id
     );
   }
 
   #mintLock(): LockRecord {
     return {
-      holder: { ...this.#user },
+      holder: { ...this.me },
       expires_at: new Date(Date.now() + this.#lockTtlMs).toISOString(),
     };
   }

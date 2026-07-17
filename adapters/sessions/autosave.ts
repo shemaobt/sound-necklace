@@ -9,6 +9,7 @@
 
 import type { SessionStateDto } from '../../contracts';
 import type { ConnectivityMonitor } from '../connectivity/types';
+import { LockLostError } from './types';
 
 export interface AutosaverOptions {
   /** Escreve o estado no armazenamento (fixture ou PUT real). Pode falhar (retry). */
@@ -70,7 +71,14 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
           // só descarta se ninguém coalesceu um estado mais novo nesse meio-tempo
           if (pending.get(id) === state) pending.delete(id);
           return;
-        } catch {
+        } catch (err) {
+          // Trava perdida é veredito, não falha transitória: o backend recusou a escrita
+          // e vai recusar de novo. Descarta o pendente — segurá-lo em memória à espera de
+          // um reconnect que nunca autoriza perde a escrita quando a aba fecha.
+          if (err instanceof LockLostError) {
+            pending.delete(id);
+            return;
+          }
           if (attempt < maxRetries - 1) await delay(backoffMs * 2 ** attempt);
         }
       }

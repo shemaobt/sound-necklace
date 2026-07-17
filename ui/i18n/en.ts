@@ -101,6 +101,7 @@ export const en: Dict = {
     loadingSession: 'loading the session…',
     stationUnderConstruction: 'station under construction',
     reviewLocked: '🔒 Review mode — session in use by {{holder}}.',
+    reviewStale: '🔒 Review mode — reconnecting to the session…',
     reviewOwn: '🔒 Review mode — segmentation is locked.',
     unlock: 'Unlock to edit',
   },
