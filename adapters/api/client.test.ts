@@ -86,20 +86,66 @@ describe('HttpApiClient', () => {
 });
 
 describe('HttpAuthProvider', () => {
-  it('login posts credentials, fetches /me, and stores token + user', async () => {
+  const wireUser = {
+    id: 'u1',
+    email: 'facilitadora@shema.org',
+    display_name: 'Marcia',
+    avatar_url: null,
+    is_active: true,
+    is_platform_admin: false,
+    locale: null,
+  };
+  const wireLogin = {
+    user: wireUser,
+    tokens: { access_token: 'a1', refresh_token: 'r1', token_type: 'bearer' },
+  };
+  const myRoles = [{ app_key: 'sound-necklace', role_key: 'facilitator' }];
+
+  it('login envia o identificador como e-mail, guarda o par de tokens e busca os papéis', async () => {
     const { fetch, calls } = stubFetch({
-      'POST /api/auth/login': { body: { access_token: 'a1', token_type: 'bearer' } },
-      'GET /api/auth/me': { body: { id: 'u1', username: 'facilitadora', roles: ['facilitator'] } },
+      'POST /api/auth/login': { body: wireLogin },
+      'GET /api/auth/my-roles': { body: myRoles },
     });
     const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
-    const user = await auth.login({ username: 'facilitadora', password: 'x' });
+    const user = await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
 
-    expect(calls[0]?.init.body).toBe(JSON.stringify({ username: 'facilitadora', password: 'x' }));
-    expect(user.roles).toEqual(['facilitator']);
+    expect(calls[0]?.init.body).toBe(
+      JSON.stringify({ email: 'facilitadora@shema.org', password: 'x' }),
+    );
+    expect(calls[1]?.url).toContain('/auth/my-roles?app_key=sound-necklace');
+    // a chamada de papéis carregou o Bearer recém-emitido
+    const rolesHeaders = calls[1]?.init.headers as Record<string, string>;
+    expect(rolesHeaders['authorization']).toBe('Bearer a1');
+    expect(user).toEqual({ id: 'u1', username: 'Marcia', roles: ['facilitator'] });
     expect(auth.token()).toBe('a1');
-    // the /me call carried the freshly minted Bearer token
-    const meHeaders = calls[1]?.init.headers as Record<string, string>;
-    expect(meHeaders['authorization']).toBe('Bearer a1');
+  });
+
+  it('sem display_name o username cai para o e-mail; papel de outro vocabulário é filtrado', async () => {
+    const { fetch } = stubFetch({
+      'POST /api/auth/login': {
+        body: { ...wireLogin, user: { ...wireUser, display_name: null } },
+      },
+      'GET /api/auth/my-roles': {
+        body: [...myRoles, { app_key: 'sound-necklace', role_key: 'viewer' }],
+      },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+    const user = await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
+    expect(user.username).toBe('facilitadora@shema.org');
+    expect(user.roles).toEqual(['facilitator']);
+  });
+
+  it('conta válida SEM papel no app é recusada (AuthError) e não deixa sessão', async () => {
+    const { fetch } = stubFetch({
+      'POST /api/auth/login': { body: wireLogin },
+      'GET /api/auth/my-roles': { body: [] },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+    await expect(
+      auth.login({ username: 'facilitadora@shema.org', password: 'x' }),
+    ).rejects.toBeInstanceOf(AuthError);
+    expect(auth.token()).toBeNull();
+    expect(auth.currentUser()).toBeNull();
   });
 
   it('maps a rejected login to AuthError without firing auth-expired', async () => {
@@ -113,24 +159,45 @@ describe('HttpAuthProvider', () => {
     expect(expired).not.toHaveBeenCalled();
   });
 
-  it('refresh posts the refresh token and updates the access token', async () => {
+  it('refresh usa o refresh do login e ROTACIONA o par a cada uso', async () => {
     const { fetch, calls } = stubFetch({
-      'POST /api/auth/refresh': { body: { access_token: 'a2', token_type: 'bearer' } },
-    });
-    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch, refreshToken: 'r1' });
-    await auth.refresh();
-    expect(calls[0]?.init.body).toBe(JSON.stringify({ refresh_token: 'r1' }));
-    expect(auth.token()).toBe('a2');
-  });
-
-  it('logout clears token and user', async () => {
-    const { fetch } = stubFetch({
-      'POST /api/auth/login': { body: { access_token: 'a1', token_type: 'bearer' } },
-      'GET /api/auth/me': { body: { id: 'u1', username: 'facilitadora', roles: ['facilitator'] } },
+      'POST /api/auth/login': { body: wireLogin },
+      'GET /api/auth/my-roles': { body: myRoles },
+      'POST /api/auth/refresh': {
+        body: { access_token: 'a2', refresh_token: 'r2', token_type: 'bearer' },
+      },
     });
     const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
-    await auth.login({ username: 'facilitadora', password: 'x' });
+    await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
+
+    await auth.refresh();
+    const first = calls.filter((c) => c.url.includes('/auth/refresh'))[0];
+    expect(first?.init.body).toBe(JSON.stringify({ refresh_token: 'r1' }));
+    expect(auth.token()).toBe('a2');
+
+    await auth.refresh();
+    const second = calls.filter((c) => c.url.includes('/auth/refresh'))[1];
+    expect(second?.init.body).toBe(JSON.stringify({ refresh_token: 'r2' }));
+  });
+
+  it('refresh sem sessão lança AuthError', async () => {
+    const { fetch } = stubFetch({});
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+    await expect(auth.refresh()).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it('logout revoga o refresh token e limpa a sessão mesmo se a API falhar', async () => {
+    const { fetch, calls } = stubFetch({
+      'POST /api/auth/login': { body: wireLogin },
+      'GET /api/auth/my-roles': { body: myRoles },
+      'POST /api/auth/logout': { status: 500, body: { detail: 'indisponível' } },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+    await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
     await auth.logout();
+
+    const revoke = calls.find((c) => c.url.includes('/auth/logout'));
+    expect(revoke?.init.body).toBe(JSON.stringify({ refresh_token: 'r1' }));
     expect(auth.token()).toBeNull();
     expect(auth.currentUser()).toBeNull();
   });

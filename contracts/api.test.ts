@@ -7,56 +7,95 @@ import { describe, expect, it } from 'vitest';
 import {
   ArtifactKindSchema,
   ArtifactTripleSchema,
+  AuthResponseSchema,
   AutosaveRequestSchema,
   AutosaveResponseSchema,
   CompleteSessionRequestSchema,
   CreateSessionRequestSchema,
   LockStatusSchema,
-  LoginRequestSchema,
-  MeResponseSchema,
+  MyRoleResponseSchema,
   OpaqueArtifactSchema,
-  RefreshRequestSchema,
   ResourceRefSchema,
   RoleSchema,
   SessionListResponseSchema,
   SessionStatePayloadSchema,
   SessionStatusSchema,
   SessionSummarySchema,
+  TokenRefreshRequestSchema,
   TokenResponseSchema,
+  UserLoginRequestSchema,
+  UserResponseSchema,
 } from './api';
 
 const manifestId = 'fnv1a32:0f2a9c3d';
 
-describe('auth — login/refresh/token/me', () => {
-  it('valida login e rejeita chave faltando', () => {
-    expect(LoginRequestSchema.safeParse({ username: 'ana', password: 's3nha' }).success).toBe(true);
-    expect(LoginRequestSchema.safeParse({ username: 'ana' }).success).toBe(false);
+describe('auth — wire real do tripod-api (login/refresh/me/my-roles)', () => {
+  const tokens = { access_token: 'jwt', refresh_token: 'r1', token_type: 'bearer' };
+  const userWire = {
+    id: 'u1',
+    email: 'ana@shema.org',
+    display_name: 'Ana',
+    avatar_url: null,
+    is_active: true,
+    is_platform_admin: false,
+    locale: 'pt-BR',
+  };
+
+  it('login é por e-mail e rejeita a forma antiga por username', () => {
+    expect(
+      UserLoginRequestSchema.safeParse({ email: 'ana@shema.org', password: 's3nha' }).success,
+    ).toBe(true);
+    expect(UserLoginRequestSchema.safeParse({ email: 'ana@shema.org' }).success).toBe(false);
+    expect(UserLoginRequestSchema.safeParse({ username: 'ana', password: 's3nha' }).success).toBe(
+      false,
+    );
   });
 
-  it('valida o token Bearer e rejeita chave extra', () => {
+  it('o par de tokens rotaciona: refresh_token é obrigatório; chave extra é recusada', () => {
+    expect(TokenResponseSchema.safeParse(tokens).success).toBe(true);
     expect(
       TokenResponseSchema.safeParse({ access_token: 'jwt', token_type: 'bearer' }).success,
-    ).toBe(true);
-    expect(
-      TokenResponseSchema.safeParse({ access_token: 'jwt', token_type: 'bearer', evil: 1 }).success,
     ).toBe(false);
+    expect(TokenResponseSchema.safeParse({ ...tokens, evil: 1 }).success).toBe(false);
   });
 
   it('valida o refresh e rejeita tipo errado', () => {
-    expect(RefreshRequestSchema.safeParse({ refresh_token: 'r' }).success).toBe(true);
-    expect(RefreshRequestSchema.safeParse({ refresh_token: 42 }).success).toBe(false);
+    expect(TokenRefreshRequestSchema.safeParse({ refresh_token: 'r' }).success).toBe(true);
+    expect(TokenRefreshRequestSchema.safeParse({ refresh_token: 42 }).success).toBe(false);
   });
 
-  it('me traz os dois papéis do app (§7.1/O2) e rejeita papel desconhecido', () => {
+  it('o /me da casa não traz username nem roles; display_name é anulável mas obrigatório', () => {
+    expect(UserResponseSchema.safeParse(userWire).success).toBe(true);
+    expect(UserResponseSchema.safeParse({ ...userWire, display_name: null }).success).toBe(true);
+    const semDisplay: Record<string, unknown> = { ...userWire };
+    delete semDisplay.display_name;
+    expect(UserResponseSchema.safeParse(semDisplay).success).toBe(false);
+    expect(UserResponseSchema.safeParse({ ...userWire, roles: ['facilitator'] }).success).toBe(
+      false,
+    );
+  });
+
+  it('avatar_url e locale são opcionais no wire (default do Pydantic)', () => {
+    const minimo: Record<string, unknown> = { ...userWire };
+    delete minimo.avatar_url;
+    delete minimo.locale;
+    expect(UserResponseSchema.safeParse(minimo).success).toBe(true);
+  });
+
+  it('login devolve o envelope user + tokens', () => {
+    expect(AuthResponseSchema.safeParse({ user: userWire, tokens }).success).toBe(true);
+    expect(AuthResponseSchema.safeParse({ user: userWire }).success).toBe(false);
+  });
+
+  it('papéis do app vêm de my-roles; RoleSchema segue os dois papéis (§7.1/O2)', () => {
+    expect(
+      MyRoleResponseSchema.safeParse({ app_key: 'sound-necklace', role_key: 'facilitator' })
+        .success,
+    ).toBe(true);
+    expect(MyRoleResponseSchema.safeParse({ role_key: 'facilitator' }).success).toBe(false);
     expect(RoleSchema.safeParse('facilitator').success).toBe(true);
     expect(RoleSchema.safeParse('project_admin').success).toBe(true);
     expect(RoleSchema.safeParse('admin').success).toBe(false);
-    expect(
-      MeResponseSchema.safeParse({ id: 'u1', username: 'ana', roles: ['facilitator'] }).success,
-    ).toBe(true);
-    expect(MeResponseSchema.safeParse({ id: 'u1', username: 'ana', roles: ['root'] }).success).toBe(
-      false,
-    );
   });
 });
 

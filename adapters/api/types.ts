@@ -1,25 +1,39 @@
 /**
  * Portas de acesso ao tripod-api (PRD v2 §7.1/§5/§12): `AuthProvider` (o esquema JWT
- * Bearer EXISTENTE da API — python-jose; o SPA não introduz esquema próprio) e
- * `ApiClient` (wrapper `fetch` tipado: baseUrl, injeção de Bearer, 401 → dispara
- * auth-expired UMA vez e falha a chamada de forma previsível, parsing do envelope de
- * erro JSON). Implementações: fixture headless (default) e o esqueleto HTTP real que
- * compila contra os DTOs PROVISÓRIOS de contracts/api.ts.
+ * Bearer EXISTENTE da API — o SPA não introduz esquema próprio) e `ApiClient`
+ * (wrapper `fetch` tipado: baseUrl, injeção de Bearer, 401 → dispara auth-expired
+ * UMA vez e falha a chamada de forma previsível, parsing do envelope de erro JSON).
+ * Implementações: fixture headless (default) e o cliente HTTP real dos endpoints
+ * `/api/auth/*` do OpenAPI (contracts/generated/tripod.d.ts).
  *
  * §12 (higiene de sessão): tokens vivem SÓ em memória (+ refresh) — nunca em
  * localStorage. A expiração devolve à tela de login SEM limpar o estado do app: o
  * estado em memória é do CHAMADOR; estes adapters nunca o tocam.
  */
 
-import type { LoginRequest, MeResponse, Role } from '../../contracts';
+import type { Role } from '../../contracts';
 
 export type Unsubscribe = () => void;
 
-/** Credenciais de login (§7.1) — reusa o DTO do contrato. */
-export type Credentials = LoginRequest;
+/**
+ * Credenciais de login (§7.1): identificador + senha. No modo real o identificador
+ * é o E-MAIL da conta tripod (o wire é `UserLoginRequest{email}`); a fixture aceita
+ * os usernames de teste. A porta não distingue — o adapter mapeia.
+ */
+export interface Credentials {
+  username: string;
+  password: string;
+}
 
-/** Usuário autenticado com papéis (§7.1/O2) — reusa o DTO `/me` do contrato. */
-export type AuthUser = MeResponse;
+/**
+ * Usuário autenticado com papéis (§7.1/O2) — forma da PORTA, não do wire: o adapter
+ * real a monta de `/auth/login` (display_name ?? email) + `/auth/my-roles`.
+ */
+export interface AuthUser {
+  id: string;
+  username: string;
+  roles: Role[];
+}
 
 export type { Role };
 

@@ -7,7 +7,13 @@
  * do tripod-api (ENG-211/ENG-247).
  */
 
-import { MeResponseSchema, TokenResponseSchema } from '../../contracts';
+import {
+  AuthResponseSchema,
+  MyRolesResponseSchema,
+  RoleSchema,
+  TokenResponseSchema,
+  type AuthResponse,
+} from '../../contracts';
 import { Emitter } from './emitter';
 import {
   ApiError,
@@ -97,21 +103,21 @@ function messageOf(body: unknown, fallback: string): string {
   return fallback || 'erro de API';
 }
 
+/** app_key do Colar no tripod-api (decisão ENG-259). */
+const APP_KEY = 'sound-necklace';
+
 export interface HttpAuthProviderOptions {
   baseUrl: string;
   fetch: typeof globalThis.fetch;
-  /** Refresh token capturado no login (forma real PROVISÓRIA, §12). */
-  refreshToken?: string;
 }
 
 export class HttpAuthProvider implements AuthProvider {
   readonly #client: HttpApiClient;
-  readonly #refreshToken?: string;
+  #refreshToken: string | null = null;
   #token: string | null = null;
   #user: AuthUser | null = null;
 
   constructor(opts: HttpAuthProviderOptions) {
-    this.#refreshToken = opts.refreshToken;
     this.#client = new HttpApiClient({
       baseUrl: opts.baseUrl,
       fetch: opts.fetch,
@@ -120,21 +126,43 @@ export class HttpAuthProvider implements AuthProvider {
   }
 
   async login(creds: Credentials): Promise<AuthUser> {
-    let token: string;
+    let res: AuthResponse;
     try {
-      // login é endpoint não autenticado: um 401 aqui é credencial inválida, não expiração
-      const res = await this.#client.request('POST', '/auth/login', {
-        body: creds,
-        schema: TokenResponseSchema,
+      // login é endpoint não autenticado: um 401 aqui é credencial inválida, não
+      // expiração. A casa autentica por e-mail — o identificador viaja como `email`.
+      res = await this.#client.request('POST', '/auth/login', {
+        body: { email: creds.username, password: creds.password },
+        schema: AuthResponseSchema,
         suppressAuthExpired: true,
       });
-      token = res.access_token;
     } catch (err) {
       if (err instanceof ApiError) throw new AuthError('credenciais inválidas');
       throw err;
     }
-    this.#token = token;
-    this.#user = await this.#client.request('GET', '/auth/me', { schema: MeResponseSchema });
+    this.#token = res.tokens.access_token;
+    this.#refreshToken = res.tokens.refresh_token;
+
+    // os papéis do app não vêm no /me da plataforma — vêm de my-roles, já filtrados
+    // pelo app_key; um role_key fora do vocabulário do Colar é ignorado
+    const myRoles = await this.#client.request('GET', `/auth/my-roles?app_key=${APP_KEY}`, {
+      schema: MyRolesResponseSchema,
+    });
+    const roles = myRoles.flatMap((r) => {
+      const parsed = RoleSchema.safeParse(r.role_key);
+      return parsed.success ? [parsed.data] : [];
+    });
+    if (roles.length === 0) {
+      // conta válida na plataforma, mas sem papel no Colar: não há sessão a manter
+      this.#token = null;
+      this.#refreshToken = null;
+      throw new AuthError('sem acesso ao Colar de Sons');
+    }
+
+    this.#user = {
+      id: res.user.id,
+      username: res.user.display_name ?? res.user.email,
+      roles,
+    };
     return this.#user;
   }
 
@@ -146,12 +174,22 @@ export class HttpAuthProvider implements AuthProvider {
       suppressAuthExpired: true,
     });
     this.#token = res.access_token;
+    this.#refreshToken = res.refresh_token; // rotação: o refresh antigo morre no uso
   }
 
-  logout(): Promise<void> {
+  async logout(): Promise<void> {
+    const refreshToken = this.#refreshToken;
     this.#token = null;
+    this.#refreshToken = null;
     this.#user = null;
-    return Promise.resolve();
+    if (!refreshToken) return;
+    // revogação best-effort: a sessão local já morreu; falha de rede não a ressuscita
+    await this.#client
+      .request('POST', '/auth/logout', {
+        body: { refresh_token: refreshToken },
+        suppressAuthExpired: true,
+      })
+      .catch(() => undefined);
   }
 
   currentUser(): AuthUser | null {

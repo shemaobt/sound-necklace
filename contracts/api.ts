@@ -19,35 +19,64 @@ import { GranularityLevelSchema } from './bucket';
 /** Mesmo padrão do manifest_id do domínio (FNV-1a 32 bits). */
 const manifestIdSchema = z.string().regex(/^fnv1a32:[0-9a-f]{8}$/);
 
-// ── Auth (§7.1/O1: JWT Bearer do tripod-api; o SPA não introduz esquema próprio) ──
+// ── Auth (§7.1/O1: JWT Bearer compartilhado do tripod-api; formas do OpenAPI real) ──
 
-export const LoginRequestSchema = z.strictObject({
-  username: z.string(),
+/** O login da casa autentica por E-MAIL (UserLoginRequest do OpenAPI). */
+export const UserLoginRequestSchema = z.strictObject({
+  email: z.string(),
   password: z.string(),
 });
-export type LoginRequest = z.infer<typeof LoginRequestSchema>;
+export type UserLoginRequest = z.infer<typeof UserLoginRequestSchema>;
 
+/** Par de tokens com ROTAÇÃO: cada refresh devolve um refresh_token novo. */
 export const TokenResponseSchema = z.strictObject({
   access_token: z.string(),
+  refresh_token: z.string(),
   token_type: z.string(),
 });
 export type TokenResponse = z.infer<typeof TokenResponseSchema>;
 
-export const RefreshRequestSchema = z.strictObject({
+export const TokenRefreshRequestSchema = z.strictObject({
   refresh_token: z.string(),
 });
-export type RefreshRequest = z.infer<typeof RefreshRequestSchema>;
+export type TokenRefreshRequest = z.infer<typeof TokenRefreshRequestSchema>;
 
-/** §7.1/O2: dois papéis do app, mapeados nos papéis equivalentes da API. */
+/** §7.1/O2: dois papéis do app; o wire (`my-roles`) traz `role_key` cru e o adapter filtra. */
 export const RoleSchema = z.enum(['facilitator', 'project_admin']);
 export type Role = z.infer<typeof RoleSchema>;
 
-export const MeResponseSchema = z.strictObject({
+/**
+ * O `/auth/me` da casa: usuário da PLATAFORMA — sem username e sem papéis de app.
+ * `display_name` é anulável porém obrigatório; `avatar_url`/`locale` são opcionais
+ * (defaults do Pydantic). O AuthUser da porta é montado disto + my-roles.
+ */
+export const UserResponseSchema = z.strictObject({
   id: z.string(),
-  username: z.string(),
-  roles: z.array(RoleSchema),
+  email: z.string(),
+  display_name: z.string().nullable(),
+  avatar_url: z.string().nullable().optional(),
+  is_active: z.boolean(),
+  is_platform_admin: z.boolean(),
+  locale: z.string().nullable().optional(),
 });
-export type MeResponse = z.infer<typeof MeResponseSchema>;
+export type UserResponse = z.infer<typeof UserResponseSchema>;
+
+/** Login devolve o envelope usuário + par de tokens (AuthResponse do OpenAPI). */
+export const AuthResponseSchema = z.strictObject({
+  user: UserResponseSchema,
+  tokens: TokenResponseSchema,
+});
+export type AuthResponse = z.infer<typeof AuthResponseSchema>;
+
+/** Um papel concedido ao usuário num app (`GET /auth/my-roles?app_key=`). */
+export const MyRoleResponseSchema = z.strictObject({
+  app_key: z.string(),
+  role_key: z.string(),
+});
+export type MyRoleResponse = z.infer<typeof MyRoleResponseSchema>;
+
+export const MyRolesResponseSchema = z.array(MyRoleResponseSchema);
+export type MyRolesResponse = z.infer<typeof MyRolesResponseSchema>;
 
 // ── Sessions (§7.2/§7.3) ──
 
