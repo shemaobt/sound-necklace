@@ -11,7 +11,13 @@ import { ShemaIcon } from '../../tokens';
 import { buildBeads, createSession, hashPCM } from '../../../domain';
 import { navigate as routerNavigate } from '../../app/router';
 import { sessionStore } from '../../state';
-import { defaultAudioEngine, defaultBucket, defaultResolver, defaultSessionStore } from './ports';
+import {
+  defaultAudioEngine,
+  defaultBucket,
+  defaultProjectId,
+  defaultResolver,
+  defaultSessionStore,
+} from './ports';
 import './setup.css';
 
 /**
@@ -52,7 +58,7 @@ export interface SetupProps {
   resolver?: GranularityResolver;
   audioEngine?: AudioEngine;
   store?: SessionStore;
-  /** Projeto dono da sessão; em produção vem da auth (follow-up do composition root). */
+  /** Projeto dono da sessão; sem prop, resolve por `defaultProjectId()` ao criar. */
   projectId?: string;
   navigate?: (to: string) => void;
 }
@@ -62,7 +68,7 @@ export function Setup({
   resolver = defaultResolver(),
   audioEngine = defaultAudioEngine(),
   store = defaultSessionStore(),
-  projectId = 'projeto',
+  projectId,
   navigate = routerNavigate,
 }: SetupProps) {
   const { t } = useTranslation();
@@ -127,7 +133,7 @@ export function Setup({
       const name = title.trim() || audio.filename.replace(/\.[^.]+$/, '') || 'colar';
 
       const summary = await store.create({
-        projectId,
+        projectId: projectId ?? (await defaultProjectId()),
         storyName: name,
         storySlug: name,
         audioId: audio.id,

@@ -24,6 +24,7 @@ import { buildAdapterRegistry, buildStationRegistry, type StationComponent } fro
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
 import { StationHost } from './station-host';
+import { useEditorLock } from './use-editor-lock';
 import { voiceStoreFor } from './voice-adapter';
 import { Stepper } from './stepper';
 import { stepperStations } from './stepper-model';
@@ -236,26 +237,12 @@ function useSessionHydration(
         // própria voz) já o reflete (ENG-276).
         metaRef.current = meta;
         sessionStore.getState().load(state);
-        // Trava consultiva (§7.3): se a sessão está em uso por OUTRA pessoa, abre em
-        // revisão com o aviso de quem a detém. Este fluxo não adquire trava própria,
-        // então qualquer trava por um holder distinto de nós é alheia.
-        //
-        // ENG-247: quando o modo real ligar, troque esta leitura única por
-        // `useEditorLock(routeId)` (use-editor-lock.ts) — ele adquire a trava, renova
-        // enquanto a sessão fica aberta e a solta ao sair. As duas não convivem: ambas
-        // escrevem o mesmo `setLock`/`setReview`.
-        const store = appSessionStore();
-        const lock = await store.lockStatus(routeId);
-        if (!alive) return;
-        const foreignHolder =
-          lock.held && lock.holder && lock.holder.user_id !== store.me.user_id
-            ? lock.holder.display_name
-            : null;
-        // Trava/revisão são POR SESSÃO, mas o store é singleton e `load` não os reseta:
-        // estabeleço o estado do zero a cada (re)hidratação para a trava/revisão de uma
-        // sessão não vazar para a próxima ao TROCAR de sessão in-SPA (sem reload).
+        // Revisão é POR SESSÃO, mas o store é singleton e `load` não a reseta:
+        // estabeleço do zero a cada (re)hidratação para a revisão de uma sessão não
+        // vazar para a próxima ao TROCAR de sessão in-SPA (sem reload). A TRAVA é do
+        // `useEditorLock` (ENG-247): ele adquire, renova e escreve o `setLock` — a
+        // leitura única que vivia aqui competiria com ele.
         sessionStore.getState().setReview(false);
-        sessionStore.getState().setLock(foreignHolder ? { holder: foreignHolder } : null);
         // Liga o autosave contínuo (§7.3): a partir daqui cada mutação do domínio
         // persiste o estado INTEIRO no store app-global, sob o meta desta sessão
         // (granularidade/áudio/consentimento/voz), de modo que um reload retome no
@@ -347,6 +334,10 @@ export function App() {
   const routeId = route.name === 'session' ? route.id : null;
   const metaRef = useRef<SessionMeta | null>(null);
   useSessionHydration(routeId, metaRef);
+  // A trava consultiva (§7.3) tem dono único: adquire ao abrir, renova a cada 15 s,
+  // solta ao sair — e abre em revisão se outra pessoa a detém. Vale nos dois modos
+  // (a fixture também serve trava), então há UM caminho de código, não dois.
+  useEditorLock(routeId);
   useAutosaveFlush(routeId);
   const player = useSessionPlayer(routeId);
 

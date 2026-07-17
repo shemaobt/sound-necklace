@@ -184,11 +184,21 @@ export const ArtifactTripleSchema = z.strictObject({
 });
 export type ArtifactTriple = z.infer<typeof ArtifactTripleSchema>;
 
-/** Conclusão (§8.8): sobe o trio de artefatos materializado no cliente. */
-export const CompleteSessionRequestSchema = z.strictObject({
-  artifacts: ArtifactTripleSchema,
+/**
+ * Recibo de UM artefato no 201 do upload multipart (POST /artifacts). O trio sobe
+ * como bytes crus em form-data (campos manifest/anchoring/report) e o servidor
+ * responde os checksums — a conclusão em si (POST /complete) não tem corpo.
+ */
+export const ArtifactResponseSchema = z.strictObject({
+  kind: ArtifactKindSchema,
+  size: z.int(),
+  crc32c: z.string(),
+  sha256: z.string(),
 });
-export type CompleteSessionRequest = z.infer<typeof CompleteSessionRequestSchema>;
+export type ArtifactResponse = z.infer<typeof ArtifactResponseSchema>;
+
+export const ArtifactUploadResponseSchema = z.array(ArtifactResponseSchema);
+export type ArtifactUploadResponse = z.infer<typeof ArtifactUploadResponseSchema>;
 
 // ── Advisory lock (§7.3/O4: editor único por sessão) ──
 
@@ -220,8 +230,24 @@ export const ResourcePathSchema = z
   );
 export type ResourcePath = z.infer<typeof ResourcePathSchema>;
 
-/** Referência/ack de um recurso de voz (os bytes WebM viajam opacos, fora do JSON). */
-export const ResourceRefSchema = z.strictObject({
+/**
+ * Uma resposta gravada na listagem (GET /resources) e no ack do PUT — o caminho é a
+ * chave pela qual o Mapeamento sabe que perguntas têm resposta; os bytes WebM viajam
+ * opacos, fora do JSON.
+ */
+export const ResourceSummarySchema = z.strictObject({
   path: ResourcePathSchema,
+  size: z.int(),
 });
-export type ResourceRef = z.infer<typeof ResourceRefSchema>;
+export type ResourceSummary = z.infer<typeof ResourceSummarySchema>;
+
+export const ResourceListResponseSchema = z.strictObject({
+  resources: z.array(ResourceSummarySchema),
+});
+export type ResourceListResponse = z.infer<typeof ResourceListResponseSchema>;
+
+/** URL GET assinada de curta duração para tocar uma resposta (2º salto, sem Bearer). */
+export const ResourceUrlResponseSchema = z.strictObject({
+  url: z.string(),
+});
+export type ResourceUrlResponse = z.infer<typeof ResourceUrlResponseSchema>;

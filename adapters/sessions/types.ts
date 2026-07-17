@@ -41,7 +41,11 @@ export class SessionNotFoundError extends Error {
 export class LockLostError extends Error {
   override readonly name = 'LockLostError';
 
-  constructor(readonly sessionId: string) {
+  /** `holder` nomeia quem detém agora (o 409 SESSION_LOCKED traz `holder_name`). */
+  constructor(
+    readonly sessionId: string,
+    readonly holder: string | null = null,
+  ) {
     super(`trava perdida na sessão: ${sessionId}`);
   }
 }
@@ -112,6 +116,8 @@ export interface SessionStore {
   getResource(id: string, path: ResourcePath): Promise<Uint8Array>;
   /** Caminhos de recurso com o prefixo dado (ex.: `respostas/level3/P2/`). */
   listResources(id: string, prefix: string): Promise<ResourcePath[]>;
+  /** Apaga um recurso (objeto + registro). Caminho nunca gravado é no-op. */
+  deleteResource(id: string, path: ResourcePath): Promise<void>;
 }
 
 /** Identidade do editor desta store (dono dos locks que ela adquire). */

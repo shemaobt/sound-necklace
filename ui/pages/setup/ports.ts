@@ -17,7 +17,7 @@ import {
 } from '../../../adapters/granularity';
 import type { SessionStore } from '../../../adapters/sessions';
 import { API_MODE } from '../../app/api-config';
-import { appBucket } from '../../app/bucket-adapter';
+import { appBucket, resolveProjectId } from '../../app/bucket-adapter';
 import { appSessionStore } from '../../app/session-adapter';
 
 export function defaultBucket(): BucketSource {
@@ -38,4 +38,13 @@ export function defaultAudioEngine(): AudioEngine {
 
 export function defaultSessionStore(): SessionStore {
   return appSessionStore();
+}
+
+/**
+ * Projeto dono da sessão nova (§8.1): no modo real vem de `my-project-roles` (o
+ * mesmo cache do bucket — o projeto cujos áudios o Setup lista é o projeto da
+ * sessão); na fixture, o id sintético de sempre.
+ */
+export function defaultProjectId(): Promise<string> {
+  return API_MODE === 'real' ? resolveProjectId() : Promise.resolve('projeto');
 }

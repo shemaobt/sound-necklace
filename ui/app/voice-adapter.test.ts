@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ResourcePath } from '../../contracts';
 import { voiceStoreFor } from './voice-adapter';
@@ -22,5 +22,24 @@ describe('voiceStoreFor — as respostas de voz são POR SESSÃO (§10.4)', () =
     const depois = voiceStoreFor('sessao-volta');
     expect(depois).toBe(antes);
     expect(await depois.has(PATH)).toBe(true);
+  });
+});
+
+describe('voiceStoreFor — modo real liga aos recursos da sessão (ENG-247)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('VITE_API_MODE=real devolve o SessionVoiceStore (persistência no tripod-api)', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.prod/api');
+    vi.resetModules();
+    const { voiceStoreFor: realFor } = await import('./voice-adapter');
+    const { SessionVoiceStore } = await import('../../adapters/voice/session-store');
+    const { MemoryVoiceStore } = await import('../../adapters/voice/memory-store');
+    expect(realFor('sessao-x')).toBeInstanceOf(SessionVoiceStore);
+    // fora de sessão não há namespace de recursos — cai no armazém em memória
+    expect(realFor(null)).toBeInstanceOf(MemoryVoiceStore);
   });
 });

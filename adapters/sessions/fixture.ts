@@ -261,6 +261,12 @@ export class FixtureSessionStore implements SessionStore {
     return [...map.keys()].filter((p) => p.startsWith(prefix)) as ResourcePath[];
   }
 
+  async deleteResource(id: string, path: ResourcePath): Promise<void> {
+    await this.#settle();
+    this.#requireRec(id);
+    this.#backend.resources.get(id)?.delete(path);
+  }
+
   #requireRec(id: string): SessionRecord {
     const rec = this.#backend.sessions.get(id);
     if (!rec) throw new SessionNotFoundError(id);

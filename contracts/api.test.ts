@@ -6,17 +6,20 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ArtifactKindSchema,
+  ArtifactResponseSchema,
   ArtifactTripleSchema,
+  ArtifactUploadResponseSchema,
   AuthResponseSchema,
   AutosaveRequestSchema,
   AutosaveResponseSchema,
-  CompleteSessionRequestSchema,
   CreateSessionRequestSchema,
   LockStatusSchema,
   MyProjectRolesResponseSchema,
   MyRoleResponseSchema,
   OpaqueArtifactSchema,
-  ResourceRefSchema,
+  ResourceListResponseSchema,
+  ResourceSummarySchema,
+  ResourceUrlResponseSchema,
   RoleSchema,
   SessionListResponseSchema,
   SessionStatePayloadSchema,
@@ -217,10 +220,17 @@ describe('artifacts — payload OPACO (§10.5): nunca desserializar/reserializar
   it('valida o trio na conclusão da sessão (§8.8)', () => {
     const triple = { manifest: '{...}', anchoring: '{...}', report: '# md' };
     expect(ArtifactTripleSchema.safeParse(triple).success).toBe(true);
-    expect(CompleteSessionRequestSchema.safeParse({ artifacts: triple }).success).toBe(true);
     expect(ArtifactTripleSchema.safeParse({ manifest: '{...}', anchoring: '{...}' }).success).toBe(
       false,
     );
+  });
+
+  it('valida o recibo do upload multipart (POST /artifacts → 201)', () => {
+    const receipt = { kind: 'manifest', size: 1234, crc32c: 'AAAAAA==', sha256: 'ab'.repeat(32) };
+    expect(ArtifactResponseSchema.safeParse(receipt).success).toBe(true);
+    expect(ArtifactUploadResponseSchema.safeParse([receipt]).success).toBe(true);
+    expect(ArtifactResponseSchema.safeParse({ ...receipt, kind: 'outro' }).success).toBe(false);
+    expect(ArtifactResponseSchema.safeParse({ kind: 'manifest', size: 1 }).success).toBe(false);
   });
 });
 
@@ -252,7 +262,7 @@ describe('resources — respostas de voz por caminho (§10.4/O5)', () => {
     'respostas/level2/PT1/descrever.webm',
     'respostas/level3/P12/tempo.webm',
   ])('aceita o caminho %s', (path) => {
-    expect(ResourceRefSchema.safeParse({ path }).success).toBe(true);
+    expect(ResourceSummarySchema.safeParse({ path, size: 9 }).success).toBe(true);
   });
 
   it.each([
@@ -262,6 +272,15 @@ describe('resources — respostas de voz por caminho (§10.4/O5)', () => {
     'respostas/level1/quem.mp3',
     'outro/level1/quem.webm',
   ])('rejeita o caminho %s', (path) => {
-    expect(ResourceRefSchema.safeParse({ path }).success).toBe(false);
+    expect(ResourceSummarySchema.safeParse({ path, size: 9 }).success).toBe(false);
+  });
+
+  it('valida a listagem (GET /resources) e a URL assinada (GET /resources/url)', () => {
+    const item = { path: 'respostas/level1/quem.webm', size: 42 };
+    expect(ResourceListResponseSchema.safeParse({ resources: [item] }).success).toBe(true);
+    expect(ResourceListResponseSchema.safeParse({ resources: [] }).success).toBe(true);
+    expect(ResourceListResponseSchema.safeParse({ paths: [] }).success).toBe(false);
+    expect(ResourceUrlResponseSchema.safeParse({ url: 'https://x/y?sig=1' }).success).toBe(true);
+    expect(ResourceUrlResponseSchema.safeParse({}).success).toBe(false);
   });
 });
