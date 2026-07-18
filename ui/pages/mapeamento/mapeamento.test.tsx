@@ -205,6 +205,32 @@ describe('Mapeamento — a sequência completa da conversa (PRD v2 §8.7)', () =
     await next();
     expect(screen.getByRole('region', { name: 'relatório' })).toBeTruthy();
   });
+
+  it('com gravador, o preparo segura a revisão até as respostas serem descobertas (ENG-337)', async () => {
+    // has() pendurado: a descoberta em voo é a janela real do modo real
+    const recorder = new FixtureVoiceRecorder();
+    let releaseHas: (() => void) | null = null;
+    const pending = new Promise<boolean>((res) => {
+      releaseHas = () => res(false);
+    });
+    vi.spyOn(recorder, 'has').mockImplementation(() => pending);
+
+    const state = mapping();
+    const total = questionSequence(state).length;
+    load(state);
+    render(<Mapeamento recorder={recorder} />);
+
+    for (let i = 0; i < total - 1; i += 1) await next();
+    await next();
+
+    // preparo no lugar da revisão: o palco de contas + nenhuma region de relatório
+    expect(document.querySelector('.cds-preparing')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'relatório' })).toBeNull();
+
+    await act(async () => releaseHas?.());
+    expect(await screen.findByRole('region', { name: 'relatório' })).toBeTruthy();
+    expect(document.querySelector('.cds-preparing')).toBeNull();
+  });
 });
 
 describe('Mapeamento — o ▶ do span de cada nível (PRD v2 §8.7)', () => {

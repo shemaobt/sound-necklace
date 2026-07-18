@@ -201,6 +201,31 @@ describe('Relatório — a voz aparece conforme cada resposta resolve (ENG-319)'
     expect(within(card).queryByPlaceholderText('ainda sem resposta gravada')).toBeNull();
   });
 
+  it('descoberta pré-carregada abre a linha pronta, sem "procurando" (ENG-337)', () => {
+    const knownQ = L1_Q[0]!;
+    const knownPath = voiceAnswerPath({ level: 1, k: knownQ.k });
+    const emptyQ = L1_Q[1]!;
+    const emptyPath = voiceAnswerPath({ level: 1, k: emptyQ.k });
+    const recorder = controllableRecorder({}); // nada resolve por conta própria
+
+    load(report());
+    render(
+      <Relatorio
+        recorder={recorder}
+        preloaded={{ checked: new Set([knownPath, emptyPath]), has: new Set([knownPath]) }}
+      />,
+    );
+
+    // com gravação conhecida: a linha de voz já está lá, sem espera
+    const known = cardFor(knownQ.q);
+    expect(within(known).getByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+    expect(within(known).queryByLabelText('procurando a resposta gravada')).toBeNull();
+    // conhecida SEM gravação: o vazio normal, também sem espera
+    const empty = cardFor(emptyQ.q);
+    expect(within(empty).getByPlaceholderText('ainda sem resposta gravada')).toBeTruthy();
+    expect(within(empty).queryByLabelText('procurando a resposta gravada')).toBeNull();
+  });
+
   it('verificada SEM gravação perde o "procurando" e volta ao vazio normal', async () => {
     const q = L1_Q[2]!;
     const path = voiceAnswerPath({ level: 1, k: q.k });

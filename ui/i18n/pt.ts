@@ -306,6 +306,7 @@ export const pt = {
     recordError: 'A resposta não foi guardada. Grave de novo.',
     reportAria: 'relatório',
     reportFallback: 'A conversa terminou. O relatório abre aqui.',
+    preparingReview: 'Preparando a revisão da conversa…',
     toExport: 'Guardar os documentos →',
     prev: '← anterior',
   },

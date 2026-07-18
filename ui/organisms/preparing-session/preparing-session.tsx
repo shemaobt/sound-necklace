@@ -13,7 +13,12 @@ const BEADS = 8;
  * parece travada. O pulso vive no CSS, dentro da guarda de movimento (§4.5); o
  * anúncio acessível é o texto (role=status).
  */
-export function PreparingSession() {
+export interface PreparingSessionProps {
+  /** Linha exibida sob as contas; default = a espera de sessão do shell. */
+  line?: string;
+}
+
+export function PreparingSession({ line }: PreparingSessionProps) {
   const { t } = useTranslation();
   return (
     <div className="cds-preparing" role="status">
@@ -24,7 +29,7 @@ export function PreparingSession() {
           </span>
         ))}
       </span>
-      <p className="cds-preparing-line">{t('shell.preparingSession')}</p>
+      <p className="cds-preparing-line">{line ?? t('shell.preparingSession')}</p>
     </div>
   );
 }

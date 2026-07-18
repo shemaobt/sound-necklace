@@ -22,6 +22,7 @@ import {
   type RecorderState,
   WAVE_BARS,
 } from '../../organisms/conversation-stage/conversation-stage';
+import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { sessionStore, useAppStore, useSessionStore } from '../../state';
 import './mapeamento.css';
 
@@ -75,7 +76,16 @@ const relatorioModules = import.meta.glob('/ui/pages/relatorio/index.tsx', {
 /** O relatório descobre as gravações pela MESMA porta de voz da entrevista. */
 interface RelatorioSlotProps {
   recorder?: VoiceRecorder | null;
+  /** Descoberta de voz feita pelo preparo pré-revisão (ENG-337). */
+  preloaded?: { checked: ReadonlySet<string>; has: ReadonlySet<string> };
 }
+
+/**
+ * Teto da pré-descoberta (ENG-337): um caminho que não responder até aqui entra
+ * na revisão sem veredito e a própria linha re-descobre (fallback da ENG-319) —
+ * o preparo nunca vira beco.
+ */
+const PREPARE_TIMEOUT_MS = 8000;
 
 /** Resolvido uma vez, no carregamento do módulo (o glob é eager e estático). */
 const RelatorioStation: ComponentType<RelatorioSlotProps> | null =
@@ -369,7 +379,22 @@ export function Mapeamento({
     return first === -1 ? sequence.length - 1 : first;
   });
   const [atReport, setAtReport] = useState(false);
+  // Preparo pré-revisão (ENG-337): a descoberta das respostas roda ANTES de abrir
+  // o relatório — ele chega pronto, sem "procurando" pipocando linha a linha. Uma
+  // vez pronto, re-entradas abrem direto (o preparo re-roda por baixo, silencioso).
+  const [reportReady, setReportReady] = useState(false);
+  const [reportVoice, setReportVoice] = useState<{
+    checked: ReadonlySet<string>;
+    has: ReadonlySet<string>;
+  } | null>(null);
+  const aliveRef = useRef(true);
 
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
   useEffect(() => {
     if (session && !session.mapping) sessionStore.getState().apply((s) => ensureMapping(s));
   }, [session]);
@@ -386,12 +411,20 @@ export function Mapeamento({
   const path = voiceAnswerPath(slot);
 
   if (atReport) {
+    if (!reportReady) {
+      // ainda não é o relatório: a região se anuncia como o preparo (role=status dentro)
+      return (
+        <section className="cds-mapeamento" aria-label={t('mapeamento.preparingReview')}>
+          <PreparingSession line={t('mapeamento.preparingReview')} />
+        </section>
+      );
+    }
     return (
       <section className="cds-mapeamento" aria-label={t('mapeamento.reportAria')}>
         {RelatorioStation ? (
           // sem o recorder o relatório não acha gravação nenhuma e todo card cai no
           // "ainda sem resposta gravada" — a voz da entrevista ficava inalcançável lá
-          <RelatorioStation recorder={recorder} />
+          <RelatorioStation recorder={recorder} preloaded={reportVoice ?? undefined} />
         ) : (
           <div className="cds-mapeamento-report-fallback">
             <p>{t('mapeamento.reportFallback')}</p>
@@ -422,11 +455,44 @@ export function Mapeamento({
     if (idx > 0) setIndex(idx - 1);
     else sessionStore.getState().apply((s) => setMode(s, 'segmentacao'));
   };
+  /**
+   * Descobre as respostas gravadas ANTES da revisão (ENG-337). Um caminho que não
+   * responder no teto entra sem veredito (a linha re-descobre); falha resolve como
+   * "sem gravação" pelo catch — o preparo nunca segura a revisão para sempre. É
+   * também onde os rascunhos de transcrição (ENG-327) serão aguardados.
+   */
+  const prepareReview = async (): Promise<void> => {
+    if (!recorder) {
+      setReportReady(true);
+      return;
+    }
+    const paths = sequence.map((s2) => voiceAnswerPath(s2));
+    const results = await Promise.all(
+      paths.map((p) =>
+        Promise.race([
+          recorder.has(p).catch(() => false),
+          new Promise<null>((res) => setTimeout(() => res(null), PREPARE_TIMEOUT_MS)),
+        ]),
+      ),
+    );
+    if (!aliveRef.current) return;
+    const checked = new Set<string>();
+    const has = new Set<string>();
+    results.forEach((r, i) => {
+      if (r === null) return; // sem veredito: a linha da revisão re-descobre
+      checked.add(paths[i]!);
+      if (r) has.add(paths[i]!);
+    });
+    setReportVoice({ checked, has });
+    setReportReady(true);
+  };
+
   const goNext = (): void => {
     if (idx < total - 1) setIndex(idx + 1);
     else {
       sound?.advance(); // a conversa acabou: a prévia do relatório é a próxima etapa
       setAtReport(true);
+      void prepareReview();
     }
   };
   // Fio de progresso (indicador, não gate): as perguntas com resposta de TEXTO.
