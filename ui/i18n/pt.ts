@@ -163,6 +163,7 @@ export const pt = {
     countMany: '{{count}} histórias',
     progressLabel: 'progresso: {{station}} — passo {{step}} de {{total}}',
     loading: 'Carregando as histórias…',
+    downloads: 'Baixar',
     listError: 'Não consegui carregar as histórias. Verifique a conexão e recarregue.',
   },
   sessionList: {

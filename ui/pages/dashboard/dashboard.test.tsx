@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -55,12 +55,6 @@ async function seedCompleted(
 
 function goto(path: string): void {
   window.history.replaceState({}, '', path);
-}
-
-function downloadCard(filename: string): HTMLElement {
-  const card = screen.getByText(filename).closest('.cds-document-card');
-  if (!card) throw new Error(`card não encontrado: ${filename}`);
-  return within(card as HTMLElement).getByRole('button');
 }
 
 beforeEach(() => goto('/dashboard'));
@@ -188,8 +182,8 @@ describe('Dashboard — retomar (§7.3)', () => {
   });
 });
 
-describe('Dashboard — downloads diretos de sessão concluída (§7.2/§10.5)', () => {
-  it('expõe exatamente três downloads byte-idênticos aos guardados, com os nomes exatos', async () => {
+describe('Dashboard — downloads no cartão da concluída (§7.2/§10.5, ENG-305)', () => {
+  it('o menu "Baixar" do cartão entrega os três artefatos byte-idênticos e marca os baixados', async () => {
     const triple: ArtifactTriple = {
       anchoring: '{"anchoring":true}',
       manifest: '{"manifest":true}',
@@ -201,29 +195,37 @@ describe('Dashboard — downloads diretos de sessão concluída (§7.2/§10.5)',
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={save} />);
 
-    const group = (await screen.findByText('retorno-ancoragem.json')).closest(
-      '.cds-dashboard-download-group',
-    ) as HTMLElement;
-    expect(group.querySelectorAll('.cds-document-card')).toHaveLength(3);
-
-    await userEvent.click(downloadCard('retorno-ancoragem.json'));
-    await userEvent.click(downloadCard('manifesto-contas.json'));
-    await userEvent.click(downloadCard('relatorio-mapeamento.md'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Baixar' }));
+    await userEvent.click(await screen.findByRole('button', { name: /As decisões de vocês/ }));
+    // o popover fecha ao interagir? Radix mantém aberto em cliques internos — segue
+    await userEvent.click(screen.getByRole('button', { name: /O mapa das contas/ }));
+    await userEvent.click(screen.getByRole('button', { name: /A conversa sobre o sentido/ }));
 
     const sent = Object.fromEntries(save.mock.calls.map(([name, bytes]) => [name, bytes]));
     expect(sent['concluida-x-retorno-ancoragem.json']).toBe(triple.anchoring);
     expect(sent['concluida-x-manifesto-contas.json']).toBe(triple.manifest);
     expect(sent['concluida-x-relatorio-mapeamento.md']).toBe(triple.report);
+
+    // baixado marca o item (as chaves agora batem com o kind — bug antigo corrigido)
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('button', { name: /As decisões de vocês/ })
+          .getAttribute('data-downloaded'),
+      ).toBe('true'),
+    );
+    // e os cards soltos sumiram da home
+    expect(document.querySelector('.cds-dashboard-download-group')).toBeNull();
   });
 
-  it('uma sessão em progresso não expõe downloads', async () => {
+  it('uma sessão em progresso não tem o menu Baixar', async () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Só andamento', storySlug: 'so-andamento' });
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
 
     await screen.findAllByText('Só andamento');
-    expect(screen.queryByText('retorno-ancoragem.json')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Baixar' })).toBeNull();
   });
 });
 

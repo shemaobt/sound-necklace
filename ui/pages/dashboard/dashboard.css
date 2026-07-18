@@ -167,3 +167,53 @@
   height: 30px;
   margin-bottom: 6px;
 }
+
+/* ---------- menu de downloads do cartão concluído (ENG-305) ---------- */
+.cds-dashboard-dl-trigger {
+  padding: 8px 14px;
+  border: 1px solid var(--cds-hairline);
+  border-radius: var(--cds-radius-pill);
+  background: transparent;
+  color: var(--cds-olive);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cds-dashboard-dl-pop {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 240px;
+  padding: 10px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--cds-olive);
+  box-shadow: 0 10px 30px rgba(10, 7, 3, 0.2);
+  z-index: 40;
+}
+
+.cds-dashboard-dl-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 600;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cds-dashboard-dl-item:hover {
+  background: var(--cds-cream);
+}
+
+.cds-dashboard-dl-item[data-downloaded] {
+  color: var(--cds-ink-subtle);
+}
