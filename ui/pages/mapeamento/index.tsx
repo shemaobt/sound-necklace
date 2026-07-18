@@ -219,6 +219,10 @@ function QuestionScreen({
     if (!rec) return;
     unsubRef.current?.();
     unsubRef.current = null;
+    // o stop embute o PUT da resposta (modo real): daqui até confirmar, o estado é
+    // "guardando" — spinner no botão, sem aceitar clique (ENG-318); antes disto a
+    // tela dizia "Gravando…" enquanto na verdade persistia.
+    setRecorderState('saving');
     try {
       await rec.stop();
     } catch {

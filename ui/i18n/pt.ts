@@ -334,6 +334,7 @@ export const pt = {
   conversationStage: {
     listen: 'Ouvir a pergunta',
     pause: 'Pausar a pergunta',
+    saving: 'guardando a resposta',
     record: 'gravar a resposta',
     stop: 'Parar',
     idleHint: 'Toque e fale a sua resposta',

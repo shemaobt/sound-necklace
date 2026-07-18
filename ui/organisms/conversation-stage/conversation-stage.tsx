@@ -5,8 +5,12 @@ import { BeadRow, type BeadCell, QuestionCard } from '../../molecules';
 import { StorytellerGuide } from '../storyteller-guide';
 import './conversation-stage.css';
 
-/** Estado da resposta em voz — a máquina vive na página; o organismo só a desenha. */
-export type RecorderState = 'idle' | 'recording' | 'recorded';
+/**
+ * Estado da resposta em voz — a máquina vive na página; o organismo só a desenha.
+ * `saving`: entre o toque de parar e a persistência confirmada (o PUT embutido no
+ * stop, ENG-318) — o estado vive no botão: spinner, sem aceitar clique.
+ */
+export type RecorderState = 'idle' | 'recording' | 'saving' | 'recorded';
 
 /**
  * Barras da forma de onda (protótipo recBars). Exportado porque quem alimenta
@@ -62,6 +66,24 @@ function StopGlyph() {
       fill="currentColor"
     >
       <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  );
+}
+
+/** Arco girante do "guardando a resposta" (ENG-318); a rotação vive no CSS (reduced-motion-safe). */
+function SavingGlyph() {
+  return (
+    <svg
+      className="cds-conversation-stage-mic-glyph cds-conversation-stage-saving-glyph"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+    >
+      <path d="M12 3a9 9 0 1 1-9 9" />
     </svg>
   );
 }
@@ -255,14 +277,23 @@ export function ConversationStage({
                 type="button"
                 className="cds-conversation-stage-mic"
                 data-recording={recorderState === 'recording' || undefined}
+                disabled={recorderState === 'saving'}
                 aria-label={
                   recorderState === 'recording'
                     ? t('conversationStage.stop')
-                    : t('conversationStage.record')
+                    : recorderState === 'saving'
+                      ? t('conversationStage.saving')
+                      : t('conversationStage.record')
                 }
                 onClick={recorderState === 'recording' ? onStop : onRecord}
               >
-                {recorderState === 'recording' ? <StopGlyph /> : <MicGlyph />}
+                {recorderState === 'recording' ? (
+                  <StopGlyph />
+                ) : recorderState === 'saving' ? (
+                  <SavingGlyph />
+                ) : (
+                  <MicGlyph />
+                )}
               </button>
 
               <div className="cds-conversation-stage-hint">

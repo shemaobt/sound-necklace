@@ -350,3 +350,21 @@
     }
   }
 }
+
+/* guardando a resposta (ENG-318): o arco do botão gira; sem movimento, fica o arco parado */
+.cds-conversation-stage-mic:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes cds-conversation-stage-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .cds-conversation-stage-saving-glyph {
+    animation: cds-conversation-stage-spin 0.9s linear infinite;
+  }
+}
