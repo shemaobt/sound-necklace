@@ -9,6 +9,8 @@ export type SessionStatus = 'in-progress' | 'completed';
 
 export interface SessionCardData {
   id: string;
+  /** Nó extra na área de ação (ex.: o menu de downloads da concluída, ENG-305). */
+  menu?: React.ReactNode;
   storyName: string;
   slug: string;
   project: string;
@@ -116,6 +118,7 @@ function SessionCard({
           {emProgresso ? t('sessionList.resume') : t('sessionList.open')}
           <span className="cds-session-card-vh">{session.storyName}</span>
         </Button>
+        {session.menu ?? null}
       </div>
     </li>
   );

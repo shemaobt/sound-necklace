@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import * as Popover from '@radix-ui/react-popover';
 
 import type { AuthProvider } from '../../../adapters/api';
 import type { SessionStore } from '../../../adapters/sessions';
@@ -13,7 +14,6 @@ import {
 import { Button, Skeleton } from '../../atoms';
 import { ShemaIcon } from '../../tokens';
 import {
-  ArtifactCards,
   type ArtifactDownloads,
   type ArtifactKind,
 } from '../../organisms/artifact-cards/artifact-cards';
@@ -100,6 +100,50 @@ export function progressOf(step: SessionStep, t: Translate): { progress: number;
   };
 }
 
+const KINDS: readonly ArtifactKind[] = ['anchoring', 'manifest', 'report'];
+
+/**
+ * O menu de downloads do cartão concluído (ENG-305): os três artefatos atrás de
+ * um "Baixar" no próprio cartão — os cards soltos abaixo da grade eram uma
+ * segunda superfície competindo com as histórias. Os bytes vêm do MESMO
+ * onDownload de sempre (§10.5, byte-idênticos aos guardados).
+ */
+function DownloadMenu({
+  t,
+  downloads,
+  onKind,
+}: {
+  t: Translate;
+  downloads: ArtifactDownloads;
+  onKind: (kind: ArtifactKind) => void;
+}) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <button type="button" className="cds-dashboard-dl-trigger">
+          {t('dashboard.downloads')}
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content className="cds-dashboard-dl-pop" sideOffset={6} align="end">
+          {KINDS.map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              className="cds-dashboard-dl-item"
+              data-downloaded={downloads[kind] || undefined}
+              onClick={() => onKind(kind)}
+            >
+              <span aria-hidden="true">{downloads[kind] ? '✓' : '⤓'}</span>
+              {t(`artifactCards.${kind}.title`)}
+            </button>
+          ))}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
 function toCard(s: SessionSummary, t: Translate, locale: string): SessionCardData {
   const { progress, label } = progressOf(s.progress.current_step, t);
   return {
@@ -168,15 +212,40 @@ export function Dashboard({
   // `replace`: não se volta a uma rota cuja sessão de auth já caducou.
   useEffect(() => auth.onAuthExpired(() => navigate('/login', { replace: true })), [auth]);
 
-  const cards = useMemo(
-    () => (sessions ?? []).map((s) => toCard(s, t, locale)),
-    [sessions, t, locale],
-  );
-  const completed = useMemo(
-    () => (sessions ?? []).filter((s) => s.status === 'completed'),
-    [sessions],
+  const onDownload = useCallback(
+    async (s: SessionSummary, kind: ArtifactKind): Promise<void> => {
+      const bytes = (await store.getArtifacts(s.id))[kind];
+      saveBytes(filenameFor(kind, s.story_slug), bytes);
+      setDownloaded((prev) => new Set(prev).add(`${s.id}:${kind}`));
+    },
+    [store, saveBytes],
   );
 
+  const downloadsFor = useCallback(
+    (id: string): ArtifactDownloads => ({
+      anchoring: downloaded.has(`${id}:anchoring`),
+      manifest: downloaded.has(`${id}:manifest`),
+      report: downloaded.has(`${id}:report`),
+    }),
+    [downloaded],
+  );
+
+  const cards = useMemo(
+    () =>
+      (sessions ?? []).map((s) => ({
+        ...toCard(s, t, locale),
+        // concluída: os três documentos atrás do "Baixar" do próprio cartão (ENG-305)
+        menu:
+          s.status === 'completed' ? (
+            <DownloadMenu
+              t={t}
+              downloads={downloadsFor(s.id)}
+              onKind={(kind) => void onDownload(s, kind)}
+            />
+          ) : undefined,
+      })),
+    [sessions, t, locale, downloadsFor, onDownload],
+  );
   const user = auth.currentUser();
 
   const onLogout = async (): Promise<void> => {
@@ -184,18 +253,6 @@ export function Dashboard({
     // `replace`: o Voltar não deve reabrir o dashboard de uma sessão já encerrada.
     navigate('/login', { replace: true });
   };
-
-  const onDownload = async (s: SessionSummary, kind: ArtifactKind): Promise<void> => {
-    const bytes = (await store.getArtifacts(s.id))[kind];
-    saveBytes(filenameFor(kind, s.story_slug), bytes);
-    setDownloaded((prev) => new Set(prev).add(`${s.id}:${kind}`));
-  };
-
-  const downloadsFor = (id: string): ArtifactDownloads => ({
-    anchoring: downloaded.has(`${id}:retorno`),
-    manifest: downloaded.has(`${id}:manifesto`),
-    report: downloaded.has(`${id}:relatorio`),
-  });
 
   const count = cards.length;
   const countLabel = count === 1 ? t('dashboard.countOne') : t('dashboard.countMany', { count });
@@ -267,20 +324,6 @@ export function Dashboard({
               onResume={(id) => navigate(`/session/${id}`)}
               onOpen={(id) => navigate(`/session/${id}`)}
             />
-
-            {completed.length > 0 && (
-              <div className="cds-dashboard-downloads">
-                {completed.map((s) => (
-                  <section key={s.id} className="cds-dashboard-download-group">
-                    <h3 className="cds-dashboard-download-title">{s.story_name}</h3>
-                    <ArtifactCards
-                      downloaded={downloadsFor(s.id)}
-                      onDownload={(kind) => void onDownload(s, kind)}
-                    />
-                  </section>
-                ))}
-              </div>
-            )}
           </>
         )}
       </main>

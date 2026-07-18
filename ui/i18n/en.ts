@@ -147,6 +147,7 @@ export const en: Dict = {
     countMany: '{{count}} stories',
     progressLabel: 'progress: {{station}} — step {{step}} of {{total}}',
     loading: 'Loading the stories…',
+    downloads: 'Download',
     listError: 'Could not load the stories. Check the connection and reload.',
   },
   sessionList: {
