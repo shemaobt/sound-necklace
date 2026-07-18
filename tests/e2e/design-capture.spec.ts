@@ -37,39 +37,39 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await shot('04-setup-preenchido');
   await page.getByRole('button', { name: 'Criar a sessão →' }).click();
   await page.waitForURL(/\/session\/[^/]+$/);
-  await shot('05-escuta1');
+  await shot('05-listen');
 
   await app.confirmWholeStory();
-  await shot('06-escuta2');
+  await shot('06-cut');
   for (const end of SCENARIO.sceneEndBeads) {
     await app.clickBead(end);
     await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
   }
-  await shot('06b-escuta2-revisao');
+  await shot('06b-cut-revisao');
   await page.getByRole('button', { name: 'Continuar →' }).click();
-  await shot('07-triagem');
+  await shot('07-triage');
   await app.triage();
-  await shot('08-segmentacao');
+  await shot('08-phrases');
 
   await app.cutPhrase(SCENARIO.crossingPhrase.s, SCENARIO.crossingPhrase.e);
   await shot('08b-seam-modal');
   await app.moveSeam();
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
-  await app.finishSegmentacao();
-  await shot('09-mapeamento');
+  await app.finishPhrases();
+  await shot('09-conversation');
 
   // os três estados da resposta em voz: vazio (acima) → gravando → pronta. É onde
   // moram o contraste dos ghost sobre o oliva e as barras da forma de onda.
   await page.getByRole('button', { name: 'gravar a resposta' }).click();
-  await shot('09b-mapeamento-gravando');
+  await shot('09b-conversation-gravando');
   await page.getByRole('button', { name: 'Parar' }).click();
   await expect(page.getByRole('button', { name: 'ouvir', exact: true })).toBeVisible();
-  await shot('09c-mapeamento-resposta-pronta');
+  await shot('09c-conversation-resposta-pronta');
 
   // a prévia do relatório (a "revisão"): a conversa reunida, antes de guardar
   await app.walkToReport();
-  await shot('09d-relatorio');
+  await shot('09d-report');
 
   await app.completeSession();
   await shot('10-export');

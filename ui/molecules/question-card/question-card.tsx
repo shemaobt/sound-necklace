@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import './question-card.css';
 
 /**
- * A pergunta do Mapeamento como cartão de conversa (redesign §6.6): a pergunta
+ * A pergunta do Conversation como cartão de conversa (redesign §6.6): a pergunta
  * na voz quieta (Merriweather), um marcador de papel opcional quando é conduzida
  * pela facilitadora ("nunca preencha por conta própria"), o botão "Ouvir a
  * pergunta" e um slot para a resposta (gravada em voz / observação da facilitadora).

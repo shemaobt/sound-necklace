@@ -7,7 +7,7 @@
 export const colors = {
   /** fundo quieto das telas de trabalho (§4.1) */
   cream: '#F6F5EB',
-  /** fundo full-bleed dos momentos cerimoniais: Escuta 1 e Mapeamento (§4.1) */
+  /** fundo full-bleed dos momentos cerimoniais: Escuta 1 e Conversation (§4.1) */
   olive: '#3F3E20',
   /** acento único de ação/trilha de reprodução (§4.1) */
   telha: '#BE4A01',
@@ -88,7 +88,7 @@ export const motion = {
 export const typography = {
   /** carrega tudo estrutural: títulos, botões, eyebrows, chips (§4.1) */
   loadBearing: "'Montserrat', system-ui, sans-serif",
-  /** a voz quieta: taglines e perguntas do Mapeamento, em itálico (§4.1) */
+  /** a voz quieta: taglines e perguntas do Conversation, em itálico (§4.1) */
   quietVoice: "'Merriweather', Georgia, serif",
 } as const;
 

@@ -40,11 +40,11 @@ const SILENT_SOUND: UiSound = new SilentUiSound();
 
 /** Estação (diretório em ui/pages) → modo do domínio, para a navegação do fio. */
 const KEY_TO_MODE: Record<string, Mode> = {
-  escuta1: 'escuta',
-  escuta2: 'escuta',
-  triagem: 'triagem',
-  segmentacao: 'segmentacao',
-  mapeamento: 'mapeamento',
+  listen: 'escuta',
+  cut: 'escuta',
+  triage: 'triagem',
+  phrases: 'segmentacao',
+  conversation: 'mapeamento',
 };
 
 /**
@@ -84,7 +84,7 @@ function SessionStations({
   onVoiceSaved: (path: string) => void;
   /** Sessão concluída reabre na Export (ENG-320); o `key={sessionId}` remonta por sessão. */
   initialExport: boolean;
-  /** Getter for `meta.voice` — resuming Mapeamento opens on the first unanswered question (ENG-321). */
+  /** Getter for `meta.voice` — resuming Conversation opens on the first unanswered question (ENG-321). */
   voicePaths: () => readonly string[];
 }) {
   // Escolha MANUAL da cauda "Guardar": enquanto null, a vista segue o status da
@@ -94,7 +94,7 @@ function SessionStations({
   const viewingExport = manualExport ?? initialExport;
 
   const stations = stepperStations(session, { viewingExport });
-  const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'escuta1';
+  const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'listen';
   const navigateStation = (key: string) => {
     if (key === 'export') {
       setManualExport(true);
@@ -105,14 +105,14 @@ function SessionStations({
     if (mode) sessionStore.getState().apply((s) => setMode(s, mode));
   };
   // Portas de wiring por estação: a Export conclui/baixa com o SessionStore
-  // app-global + o id da rota; o Mapeamento grava a resposta por voz (§8.7) E toca
-  // os trechos; as demais estações do colar (Escuta 1/2, Triagem, Segmentação)
+  // app-global + o id da rota; o Conversation grava a resposta por voz (§8.7) E toca
+  // os trechos; as demais estações do colar (Escuta 1/2, Triage, Segmentação)
   // recebem o player para tocar contas/bordas/cenas (§8.2).
   // O som da UI vai para TODAS: cada estação tem decisões que precisam soar (§9).
   const stationProps =
     currentKey === 'export'
       ? { store: exportStore, sessionId, sound }
-      : currentKey === 'mapeamento'
+      : currentKey === 'conversation'
         ? {
             recorder,
             player,
@@ -235,7 +235,7 @@ function useSessionHydration(
 ): boolean {
   const loadedId = useRef<string | null>(null);
   // Sessão concluída reabre na Export (§7.3), não no último modo salvo do domínio
-  // (mapeamento) — o status vive no resumo, não no DTO de estado (ENG-320). O id
+  // (conversation) — o status vive no resumo, não no DTO de estado (ENG-320). O id
   // acompanha o status para o "concluída" de uma sessão não vazar para a próxima
   // enquanto a hidratação dela ainda voa.
   const [completedId, setCompletedId] = useState<string | null>(null);
@@ -410,7 +410,7 @@ export function App() {
   );
 
   // A getter (not a direct read): `meta.voice` lives in a ref, and reading a ref
-  // in render is forbidden — Mapeamento reads it ONCE, in the cursor initializer
+  // in render is forbidden — Conversation reads it ONCE, in the cursor initializer
   // (ENG-321).
   const getVoicePaths = useCallback(() => metaRef.current?.voice ?? [], []);
 

@@ -29,7 +29,7 @@ function seedForeignLock(page: Page, id: string): Promise<void> {
   return page.evaluate((sid) => (window as unknown as CdsWindow).__cds.seedForeignLock(sid), id);
 }
 
-/** Conta as cenas cuja triagem já as classificou (tag firme). */
+/** Conta as cenas cuja triage já as classificou (tag firme). */
 function taggedScenes(state: Awaited<ReturnType<typeof readPersistedState>>): number {
   const parts = (state?.parts ?? []) as { tag_state?: string }[];
   return parts.filter((p) => p.tag_state === 'tagged').length;
@@ -89,7 +89,7 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     await app.clickBead(0);
     await app.clickBead(3);
     await page.getByRole('button', { name: '✓ Confirmar esta frase' }).click({ force: true });
-    await expect(page.locator('.cds-segmentacao-chips li')).toHaveCount(0);
+    await expect(page.locator('.cds-phrases-chips li')).toHaveCount(0);
     // …e o estado persistido não mudou uma vírgula.
     expect(await readPersistedState(page, id)).toEqual(before);
 
@@ -107,7 +107,7 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     expect(after?.parts).toEqual(before?.parts);
   });
 
-  test('expiração de auth no meio da Triagem: re-login retoma no mesmo passo, decisões intactas', async ({
+  test('expiração de auth no meio da Triage: re-login retoma no mesmo passo, decisões intactas', async ({
     page,
   }) => {
     const app = new ColarApp(page);
@@ -116,7 +116,7 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     await app.confirmWholeStory();
     await app.cutScenes();
 
-    // Classifica a 1ª cena (uma decisão de triagem viva) antes de o token caducar.
+    // Classifica a 1ª cena (uma decisão de triage viva) antes de o token caducar.
     await page.getByRole('radio', { name: SCENARIO.triage[0].kind, exact: true }).click();
     await page.getByRole('radio', { name: SCENARIO.triage[0].confidence, exact: true }).click();
     await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
@@ -142,9 +142,9 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     await page.getByRole('button', { name: /Retomar/ }).click();
     await expect(page).toHaveURL(new RegExp(`/session/${id}$`));
 
-    // volta EXATAMENTE à Triagem, com todo o estado (incl. a classificação) intacto.
+    // volta EXATAMENTE à Triage, com todo o estado (incl. a classificação) intacto.
     await expect(page.getByText('Essa cena é sobre o quê?')).toBeVisible();
-    // `before` foi polido em `triagem`; o deep-equal prova o passo E as decisões intactos.
+    // `before` foi polido em `triage`; o deep-equal prova o passo E as decisões intactos.
     expect(await readPersistedState(page, id)).toEqual(before);
   });
 
@@ -175,7 +175,7 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     // Em revisão o botão fica visível-porém-inerte (o store barra a escrita, não a UI);
     // `force` clica sem depender desse invariante, para falhar rápido se ele mudar.
     await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click({ force: true });
-    await expect(page.locator('.cds-escuta2-chips li')).toHaveCount(0);
+    await expect(page.locator('.cds-cut-chips li')).toHaveCount(0);
     expect(await readPersistedState(page, id)).toEqual(before);
   });
 });

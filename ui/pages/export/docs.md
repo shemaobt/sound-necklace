@@ -10,10 +10,10 @@ Path: @/ui/pages/export
 
 ### How it fits into the larger codebase
 
-- **Terminal station after @/ui/pages/mapeamento.** Stations self-register through `import.meta.glob('/ui/pages/*/index.tsx')` (@/ui/app/registries.ts), so the default export in `index.tsx` is mandatory — the registry value keyed by the directory name `export`.
-- **Reachable in the running app** (ENG-270/272). The shell makes the Guardar bead reachable when `modeLocks().mapeamento` holds and passes `store`/`sessionId` when it is current (@/ui/app/docs.md). The store is the app-global `appSessionStore()` shared with Setup/Dashboard, so a session created in Setup is readable here. The jsdom tests inject a `FixtureSessionStore` directly.
+- **Terminal station after @/ui/pages/conversation.** Stations self-register through `import.meta.glob('/ui/pages/*/index.tsx')` (@/ui/app/registries.ts), so the default export in `index.tsx` is mandatory — the registry value keyed by the directory name `export`.
+- **Reachable in the running app** (ENG-270/272). The shell makes the Guardar bead reachable when `modeLocks().conversation` holds and passes `store`/`sessionId` when it is current (@/ui/app/docs.md). The store is the app-global `appSessionStore()` shared with Setup/Dashboard, so a session created in Setup is readable here. The jsdom tests inject a `FixtureSessionStore` directly.
 - **Wiring layer.** Per @/.dependency-cruiser.cjs, @/ui/pages may import adapters, @/domain, @/ui/state and the ui component layers. It reads state via `useSessionStore` and reopen clears review via `sessionStore.getState().setReview(false)` (see @/ui/state/docs.md).
-- The `ArtifactCards` organism is imported by **direct path** (`../../organisms/artifact-cards/artifact-cards`), not the frozen @/ui/organisms/index.ts barrel — the same sibling-direct-import pattern @/ui/pages/triagem uses. The `Necklace` comes from the barrel.
+- The `ArtifactCards` organism is imported by **direct path** (`../../organisms/artifact-cards/artifact-cards`), not the frozen @/ui/organisms/index.ts barrel — the same sibling-direct-import pattern @/ui/pages/triage uses. The `Necklace` comes from the barrel.
 - Consumes the @/contracts builders (`buildManifesto`/`buildRetorno`/`buildMapReport`, `serializeArtifact`, `toSessionDto`) and the export-gate predicates (`retornoExportStatus`, `canExportManifesto`) — the contract seam between the domain session and the downstream pipeline ("o Compilador").
 
 ### Core Implementation
@@ -26,7 +26,7 @@ Path: @/ui/pages/export
 
 ### Things to Know
 
-- **Two filename sets.** `saveBytes` uses the slug-prefixed @/contracts helpers `retornoFilename`/`manifestoFilename`/`relatorioFilename(slug)` (e.g. `historia-retorno-ancoragem.json`), distinct from the **unprefixed** display filenames shown inside the `ArtifactCards` organism (`retorno-ancoragem.json`).
+- **Two filename sets.** `saveBytes` uses the slug-prefixed @/contracts helpers `retornoFilename`/`manifestoFilename`/`reportFilename(slug)` (e.g. `historia-retorno-ancoragem.json`), distinct from the **unprefixed** display filenames shown inside the `ArtifactCards` organism (`retorno-ancoragem.json`).
 - **The download is the system-boundary seam.** `saveBytes(filename, bytes)` defaults to a Blob + object URL + anchor click (`domSaveBytes`); tests inject a spy to assert byte-identity against `store.getArtifacts(id)`.
 - **The semFim advisory** renders only in `edit` when `retornoExportStatus(session).semFim > 0`: the literal "N frase(s) ainda sem fim travado." (the "(s)" is literal, the count exact). It is advisory — it does not block completion.
 - **Facilitator surface.** Unlike listener screens, this is §7.2/§8.8 facilitator-facing, so the counts/numbers in the advisory and the document cards are allowed.

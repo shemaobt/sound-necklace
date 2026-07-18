@@ -1,0 +1,77 @@
+/* Conversa (Conversation — Protótipo.dc.html): a tela INTEIRA é oliva — o fundo
+   vem do shell (.cds-app:has(.cds-conversation-stage)), a página não pinta nada
+   por cima. O ▶ do trecho relevante fica acima do palco; o próprio palco (guia +
+   pergunta + gravador + fio de perguntas) vem do organismo. Sem números na
+   superfície do ouvinte (§9.2). A prévia do relatório volta ao creme sozinha
+   (o palco sai do DOM). */
+
+.cds-conversation {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  min-height: calc(100vh - 110px);
+  padding: clamp(1rem, 3vh, 2rem) 0 0;
+  text-align: center;
+}
+
+/* tinta creme só na fase de conversa — a prévia do relatório é creme-sobre-creme */
+.cds-conversation:has(.cds-conversation-stage) {
+  color: var(--cds-cream);
+}
+
+.cds-conversation-instruction {
+  margin: 0;
+  max-width: 34ch;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--cds-olive-soft);
+}
+
+/* creme só quando o shell escureceu junto (mesmo seletor :has() do app.css) —
+   sem suporte a :has(), o fundo segue creme e a instrução fica oliva, legível */
+.cds-conversation:has(.cds-conversation-stage) .cds-conversation-instruction {
+  color: rgba(246, 245, 235, 0.72);
+}
+
+.cds-conversation-listen {
+  display: flex;
+  justify-content: center;
+}
+
+/* o ▶ do trecho, fantasma sobre o oliva (só quando o shell escureceu) */
+.cds-conversation:has(.cds-conversation-stage)
+  .cds-conversation-listen
+  .cds-button[data-variant='ghost'] {
+  border-color: rgba(246, 245, 235, 0.3);
+  background: rgba(246, 245, 235, 0.12);
+  color: var(--cds-cream);
+}
+
+.cds-conversation .cds-conversation-stage {
+  align-self: stretch;
+  flex: 1;
+  text-align: left;
+}
+
+/* a prévia do relatório é creme (o palco saiu do DOM → o chrome clareia junto) */
+.cds-conversation-report-fallback {
+  max-width: 34ch;
+  font-family: var(--cds-font-load-bearing);
+  color: var(--cds-olive-soft);
+}
+
+/* rodapé da prévia do relatório: o `.cds-conversation` não tem padding embaixo (o
+   palco da conversa cuida do próprio), então a folga até a borda mora aqui — sem
+   ela o CTA encostava no fim da tela. `gap` porque "← anterior" e o CTA estavam
+   colados um no outro. */
+.cds-conversation-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding-bottom: clamp(1.5rem, 5vh, 3rem);
+}

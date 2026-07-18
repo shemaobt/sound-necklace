@@ -13,7 +13,7 @@ describe('station-registry', () => {
       '/ui/pages/setup/index.tsx': { default: Fake },
     });
     expect(registry.setup).toBe(Fake);
-    expect(registry.triagem).toBeUndefined();
+    expect(registry.triage).toBeUndefined();
   });
 });
 

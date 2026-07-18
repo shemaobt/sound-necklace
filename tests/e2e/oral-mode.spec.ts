@@ -16,7 +16,7 @@ import { ColarApp, SCENARIO } from './support';
  *   antes de texto" por ORDEM não é observável quando a ação também renderiza texto
  *   síncrono (o `player.play()` roda após o `apply` do domínio); a asserção honesta
  *   e viva é "som, e nenhum texto competindo". Onde o som NÃO é DOM-observável
- *   (toque que completa seleção, cujo confirm renderiza síncrono; e o Mapeamento,
+ *   (toque que completa seleção, cujo confirm renderiza síncrono; e o Conversation,
  *   que não tem colar) a propriedade é provada pelo sinal não-textual do controle e
  *   pelo avanço in-station.
  * - NUDGE DE BORDA (§9.3): o dwell dispara o playback da janela da fronteira SEM
@@ -188,7 +188,7 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   // ——— Escuta 1: a primeira tela do ouvinte ———
   await expect(page.getByText('Ouça a história.')).toBeVisible();
   // sinal não-textual: uma linha de instrução identificável e contas sem texto/aria.
-  await expect(page.locator('.cds-escuta1 [data-role="instruction"]')).toBeVisible();
+  await expect(page.locator('.cds-listen [data-role="instruction"]')).toBeVisible();
   const bead = page.locator('.cds-necklace-bead[data-idx="3"]');
   await expect(bead).toHaveText('');
   expect(await bead.locator('.cds-pearl').getAttribute('aria-hidden')).toBe('true');
@@ -208,9 +208,7 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   // ——— Escuta 2: corte de cenas + nudge de borda (§9.3) ———
   const [firstEnd, ...restEnds] = SCENARIO.sceneEndBeads;
   await app.clickBead(firstEnd); // seleciona a 1ª cena {costura, firstEnd}
-  await expect(
-    page.locator('.cds-escuta2-confirm-scene[data-role="primary-action"]'),
-  ).toBeVisible();
+  await expect(page.locator('.cds-cut-confirm-scene[data-role="primary-action"]')).toBeVisible();
   await hoverEdgeKeepsSelection(page, firstEnd);
   await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
   for (const end of restEnds) {
@@ -219,7 +217,7 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   }
   await page.getByRole('button', { name: 'Continuar →' }).click();
 
-  // ——— Triagem: classificação (controles do picker, não chrome) ———
+  // ——— Triage: classificação (controles do picker, não chrome) ———
   await app.triage();
 
   // ——— Segmentação: o toque-início de frase dá som antes de qualquer confirm ———
@@ -230,10 +228,10 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   await app.moveSeam();
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
-  await app.finishSegmentacao();
+  await app.finishPhrases();
 
-  // ——— Mapeamento → relatório: pergunta tocada + gravação por voz, avanço in-station ———
-  await expect(page.locator('.cds-mapeamento-listen button')).toBeVisible(); // ▶ ouvir o trecho
+  // ——— Conversation → relatório: pergunta tocada + gravação por voz, avanço in-station ———
+  await expect(page.locator('.cds-conversation-listen button')).toBeVisible(); // ▶ ouvir o trecho
   await app.recordVoiceAnswer(); // o microfone é sinal não-textual (forma de onda)
   for (let i = 0; i < 80; i++) {
     if (await page.getByRole('region', { name: 'relatório' }).count()) break;

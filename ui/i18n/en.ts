@@ -160,12 +160,12 @@ export const en: Dict = {
     open: 'Open',
     listAria: 'stories',
   },
-  escuta1: {
+  listen: {
     tagline: 'Listen to the story.',
     reopen: 'Reopen',
     confirm: 'I have heard the whole story',
   },
-  escuta2: {
+  cut: {
     title: 'Cut the story into scenes',
     reviewHeadline: 'The whole story is in scenes. Tap a scene to hear it again.',
     instructionPre: 'Tap the necklace where ',
@@ -177,7 +177,7 @@ export const en: Dict = {
     confirmScene: '✓ Confirm this scene',
     confirmAll: 'Confirm the scenes →',
   },
-  segmentacao: {
+  phrases: {
     reviewHeadline: 'The phrases of this scene are ready. Tap a phrase to hear it again.',
     instruction: 'Tap the necklace at the start and the end of each phrase.',
     instructionReplay: ' Tap a finished phrase to hear it again.',
@@ -192,15 +192,14 @@ export const en: Dict = {
   },
   tutorial: {
     tips: {
-      escuta1:
+      listen:
         'Listen to the whole story together, without rushing. The big button plays and pauses; confirm once the story has been heard in full.',
-      escuta2:
-        'Mark together where each scene ends and confirm one scene at a time. Tapping a scene that is already finished plays it whole.',
-      triagem:
+      cut: 'Mark together where each scene ends and confirm one scene at a time. Tapping a scene that is already finished plays it whole.',
+      triage:
         'Classify each scene by listening to it again. When no type fits, «none fits» is a finding too.',
-      segmentacao:
+      phrases:
         'Within each scene, mark the phrases: one tap where it begins, another where it ends. If a phrase runs past the border, the necklace offers paths.',
-      mapeamento:
+      conversation:
         'Ask the questions aloud and record the answers of the one who tells. You can write later — never for the listener.',
       export:
         'The whole story is in the necklace. Save the session to generate the project documents.',
@@ -234,7 +233,7 @@ export const en: Dict = {
   guide: {
     ariaLabel: 'the conversation guide',
   },
-  triagem: {
+  triage: {
     reviewHeadline: 'Every scene is classified.',
     empty: 'No scene confirmed yet.',
     instruction: 'What is this scene about?',
@@ -248,7 +247,7 @@ export const en: Dict = {
     lockout:
       '⚠ No scene fits Ruth. Segmentation and Mapping stay locked — this story yields no Ruth coverage. The marks are kept as evidence of a native type.',
   },
-  triagemPicker: {
+  triagePicker: {
     theme: {
       'indo-e-vindo': 'Coming and going',
       'fala-e-acordo': 'Speech and agreement',
@@ -278,7 +277,7 @@ export const en: Dict = {
     counts: 'firm {{firm}} · hesitant {{hesitant}} · target {{target}}',
     absence: 'Absence candidates (rare ones still open)',
   },
-  mapeamento: {
+  conversation: {
     listenStory: '▶ listen to the story',
     listenScene: '▶ listen to the scene',
     listenPhrase: '▶ listen to the phrase',
@@ -296,12 +295,12 @@ export const en: Dict = {
     consequence: 'This scene grows, the neighbouring one shrinks',
     move: 'Move the border to here',
     moveAnyway: 'Move anyway',
-    backToTriagem: 'Back to Triage',
+    backToTriage: 'Back to Triage',
     reanchor: 'Re-anchor inside the scene',
     markerBefore: 'current border',
     markerAfter: 'new border',
   },
-  relatorio: {
+  report: {
     eyebrow: 'The conversation about meaning',
     headline: 'Everything you said, gathered.',
     facilitatorLed: 'facilitator-led',

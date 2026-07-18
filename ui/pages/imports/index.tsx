@@ -22,7 +22,7 @@ import './imports.css';
  * reaplicadas). Superfície de FACILITADORA (§7.2) → contagens permitidas.
  *
  * A página só faz seleção de arquivo, exibição de erro e substituição do estado:
- * TODO o mapeamento vem de contracts/imports.ts (parse pelo schema na borda +
+ * TODO o conversation vem de contracts/imports.ts (parse pelo schema na borda +
  * `applyDelivery`/`applyReturn`, ports 1:1 da referência). O estado resultante
  * substitui a sessão viva via `sessionStore.apply` (autosave + gate de edição);
  * arquivo ilegível não toca o store. Ambas exigem áudio já segmentado (grade) —

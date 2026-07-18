@@ -1,0 +1,128 @@
+/* Escuta 1 — tratamento cerimonial full-bleed (Protótipo.dc.html, isOuvir):
+   olive profundo, "Ouça a história." em Merriweather itálico 38px, o ícone da
+   marca vazando no canto inferior-direito, o colar de contas 26px sobre o fio,
+   o play redondo de 72px e o pill fantasma que acende quando a história foi
+   ouvida até o fim. O movimento decorativo fica sob reduced-motion (§4.5). */
+
+.cds-listen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 3.5vh, 40px);
+  min-height: calc(100vh - 110px);
+  padding: 24px 1.5rem;
+  background: var(--cds-olive);
+  color: var(--cds-cream);
+  text-align: center;
+  overflow: hidden;
+
+  /* o fio das fileiras do colar, claro sobre o oliva (protótipo _rowStyle dark) */
+  --cds-necklace-cord: rgba(246, 245, 235, 0.25);
+}
+
+/* marca d'água vazando no canto (protótipo: right -70, bottom -90, 380px, .05) */
+.cds-listen-watermark {
+  position: absolute;
+  right: -70px;
+  bottom: -90px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.cds-listen-tagline {
+  position: relative;
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 38px;
+  line-height: 1.1;
+  color: var(--cds-cream);
+}
+
+.cds-listen-stage {
+  position: relative;
+  width: 100%;
+  /* 28 contas por fileira no slot de 34px (protótipo _chunk(beads, 28)) */
+  max-width: 952px;
+}
+
+/* contas ainda não ouvidas sobre o oliva: translúcidas (protótipo unDark) */
+.cds-listen .cds-necklace-bead:not([data-play]) .cds-pearl {
+  background: radial-gradient(
+    circle at 34% 30%,
+    rgba(246, 245, 235, 0.22),
+    rgba(246, 245, 235, 0.09) 70%
+  );
+  border: 1px solid rgba(246, 245, 235, 0.18);
+}
+
+/* trilha percorrida e cabeça acendem na pérola telha (protótipo PAL[0]) */
+.cds-listen .cds-necklace-bead[data-play] .cds-pearl {
+  --cds-pearl-lit: #e8813e;
+  --cds-pearl-base: var(--cds-telha);
+}
+
+.cds-listen-controls {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* pill fantasma "Já ouvi a história completa" — acende (creme sólido) quando a
+   cabeça de reprodução alcançou o fim (protótipo heardBg/heardBorder/heardColor) */
+.cds-listen-confirm {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 30px;
+  border: 1.5px solid rgba(246, 245, 235, 0.35);
+  border-radius: var(--cds-radius-pill);
+  background: rgba(246, 245, 235, 0.1);
+  color: var(--cds-cream);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  transition: all 0.22s;
+}
+
+.cds-listen-decision[data-heard='true'] .cds-listen-confirm {
+  background: var(--cds-cream);
+  border-color: var(--cds-cream);
+  color: var(--cds-olive);
+}
+
+/* o "Reabrir" fantasma precisa ler sobre o oliva */
+.cds-listen .cds-button[data-variant='ghost'] {
+  border-color: rgba(246, 245, 235, 0.35);
+  color: var(--cds-cream);
+}
+
+.cds-listen-error {
+  margin: 0;
+  max-width: 32ch;
+  font-family: var(--cds-font-load-bearing);
+  color: var(--cds-cream);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-listen-tagline {
+    animation: cds-listen-rise 0.9s var(--cds-motion-easing) both;
+  }
+
+  @keyframes cds-listen-rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

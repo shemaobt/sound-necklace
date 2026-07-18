@@ -43,7 +43,7 @@ function baseProps(over: Partial<SeamModalProps> = {}): SeamModalProps {
     },
     onMove: vi.fn(),
     onReanchor: vi.fn(),
-    onGoTriagem: vi.fn(),
+    onGoTriage: vi.fn(),
     ...over,
   };
 }

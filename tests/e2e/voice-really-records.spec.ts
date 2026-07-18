@@ -39,7 +39,7 @@ test('gravar uma resposta produz áudio audível, não um arquivo vazio', async 
   await app.moveSeam();
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
-  await app.finishSegmentacao();
+  await app.finishPhrases();
 
   // sem o helper: ele aperta gravar/parar de enfiada, e uma gravação de zero segundo
   // rende um WebM só de cabeçalho — real, mas inaudível. Aqui a pessoa "fala".

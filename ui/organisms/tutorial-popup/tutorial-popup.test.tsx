@@ -28,16 +28,16 @@ function tip(): HTMLElement | null {
 
 describe('TutorialPopup', () => {
   it('auto-abre com a dica da estação atual', () => {
-    render(<TutorialPopup station="escuta1" />);
+    render(<TutorialPopup station="listen" />);
     const aberto = tip();
     expect(aberto).not.toBeNull();
     expect(aberto?.textContent?.length).toBeGreaterThan(0);
   });
 
   it('a dica muda quando a estação muda', () => {
-    const { rerender } = render(<TutorialPopup station="escuta1" />);
+    const { rerender } = render(<TutorialPopup station="listen" />);
     const primeira = tip()?.textContent;
-    rerender(<TutorialPopup station="triagem" />);
+    rerender(<TutorialPopup station="triage" />);
     const segunda = tip()?.textContent;
     expect(segunda?.length).toBeGreaterThan(0);
     expect(segunda).not.toBe(primeira);
@@ -49,23 +49,23 @@ describe('TutorialPopup', () => {
   });
 
   it('auto-abrir não rouba o foco da facilitadora', () => {
-    render(<TutorialPopup station="escuta1" />);
+    render(<TutorialPopup station="listen" />);
     expect(tip()).not.toBeNull();
     expect(document.activeElement).toBe(document.body);
   });
 
   it('fechar esconde a dica pela sessão, mesmo trocando de estação', () => {
-    const { rerender } = render(<TutorialPopup station="escuta1" />);
+    const { rerender } = render(<TutorialPopup station="listen" />);
     fireEvent.click(screen.getByRole('button', { name: 'Fechar dica' }));
     expect(tip()).toBeNull();
-    rerender(<TutorialPopup station="triagem" />);
+    rerender(<TutorialPopup station="triage" />);
     expect(tip()).toBeNull();
     // o gatilho de reencontro permanece disponível
     expect(screen.getByRole('button', { name: 'Como funciona esta etapa' })).toBeDefined();
   });
 
   it('ESC esconde a dica', () => {
-    render(<TutorialPopup station="escuta1" />);
+    render(<TutorialPopup station="listen" />);
     const aberto = tip();
     expect(aberto).not.toBeNull();
     fireEvent.keyDown(aberto!, { key: 'Escape' });
@@ -73,7 +73,7 @@ describe('TutorialPopup', () => {
   });
 
   it('o gatilho reabre a dica depois de fechada', () => {
-    render(<TutorialPopup station="escuta1" />);
+    render(<TutorialPopup station="listen" />);
     fireEvent.click(screen.getByRole('button', { name: 'Fechar dica' }));
     expect(tip()).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Como funciona esta etapa' }));
@@ -81,13 +81,13 @@ describe('TutorialPopup', () => {
   });
 
   it('"não mostrar de novo" persiste entre remontagens (storage) e mantém o gatilho', () => {
-    const primeiro = render(<TutorialPopup station="escuta1" />);
+    const primeiro = render(<TutorialPopup station="listen" />);
     fireEvent.click(screen.getByRole('button', { name: 'Não mostrar de novo' }));
     expect(tip()).toBeNull();
     expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
 
     primeiro.unmount();
-    render(<TutorialPopup station="escuta1" />);
+    render(<TutorialPopup station="listen" />);
     expect(tip()).toBeNull();
     // reabertura explícita continua possível (a informação não se perde)
     fireEvent.click(screen.getByRole('button', { name: 'Como funciona esta etapa' }));
@@ -101,13 +101,13 @@ describe('TutorialPopup', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('bloqueado');
     });
-    render(<TutorialPopup station="escuta1" />);
+    render(<TutorialPopup station="listen" />);
     expect(tip()).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Não mostrar de novo' }));
     expect(tip()).toBeNull();
   });
 
-  it.each(['escuta1', 'escuta2', 'triagem', 'segmentacao', 'mapeamento', 'export'])(
+  it.each(['listen', 'cut', 'triagem', 'segmentacao', 'mapeamento', 'export'])(
     'não expõe dígitos em texto, aria-label ou title (%s)',
     (station) => {
       render(<TutorialPopup station={station} />);

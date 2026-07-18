@@ -30,7 +30,7 @@ function goldenBytes(caseName: string, file: string): Buffer {
 }
 
 /**
- * Triagem de um caso golden GLEANING+none_fit. `GLEANING_SCENE` é tier ALTA (label
+ * Triage de um caso golden GLEANING+none_fit. `GLEANING_SCENE` é tier ALTA (label
  * "Respiga"), fora da grade "mais comuns" — alcançado pelo filtro. A confiança "alta"
  * do caso é o rádio "Certeza". A 2ª parte é "Nenhum se encaixa".
  */
@@ -93,7 +93,7 @@ test('minimal-flow: os três artefatos exportados pela UI são byte-idênticos a
 
   await app.cutPhrase(0, 4); // frase contida em PT1 (0–9) → trava direto
   await page.getByRole('button', { name: '⚑ revisar' }).click(); // flag NEEDS_REVIEW em P1
-  await app.finishSegmentacao(); // 1 cena produtiva → finaliza a segmentação
+  await app.finishPhrases(); // 1 cena produtiva → finaliza a segmentação
 
   // Respostas digitadas nas posições exatas: L1 recontar(0), L2 PT1 quem(12),
   // L2 PT2 descrever(16), L3 P1 oque(21). `tempo`(4) vazio é inerte → omitido.
@@ -137,7 +137,7 @@ test('seam-small-move: manifesto+retorno exportados pela UI são byte-idênticos
 
   await app.cutPhrase(0, 13); // fim 13 cruza a borda 11 (delta 2 ≤ max(3, 25%)) → oferta simples
   await app.moveSeam(); // a costura desliza: PT1 → 0–13, PT2 → 14–23
-  await app.finishSegmentacao();
+  await app.finishPhrases();
 
   await app.completeSession(); // sem respostas: o gate de export só pede ≥1 frase produtiva
 
@@ -170,7 +170,7 @@ test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate co
   await triageGleaningThenNoneFit(page);
   await app.cutPhrase(0, 4);
   await page.getByRole('button', { name: '⚑ revisar' }).click();
-  await app.finishSegmentacao();
+  await app.finishPhrases();
   await typeAnswersAt(app, page, [
     [0, 'Uma história sobre respiga e retorno ao lar.'],
     [12, 'Duas mulheres e os ceifeiros.'],

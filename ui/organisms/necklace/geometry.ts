@@ -1,7 +1,7 @@
 /**
  * Geometria do colar — porta pura da referência (docs/reference/index.html):
  * a janela de render da Segmentação (L506–509), a posição absoluta de cada conta
- * (L521–526), o mapeamento pointer→conta `beadAtXY` (L554–560) e os retângulos de
+ * (L521–526), o conversation pointer→conta `beadAtXY` (L554–560) e os retângulos de
  * banda `drawBand` (L485–498). Sem DOM, sem framework: entradas → saídas exatas.
  */
 
@@ -47,7 +47,7 @@ export interface Rect {
  * organismo abre uma margem `max(3, round(2/beadSec))` de cada lado (L509). Sem
  * cena ativa, mostra a história inteira.
  *
- * `marginBeads` sobrepõe essa margem: a Triagem pede 0 porque o protótipo mostra
+ * `marginBeads` sobrepõe essa margem: a Triage pede 0 porque o protótipo mostra
  * ali a cena SOZINHA (tColarRows vai de start a end) — vizinhas na tela seriam
  * ruído numa estação que só pergunta "esta cena é sobre o quê?".
  */

@@ -2,7 +2,7 @@ import type { PaletteEntry } from '../../tokens';
 import './kind-card.css';
 
 /**
- * Um cartão de tipo de cena da Triagem (redesign §6.4): ponto de cor + rótulo
+ * Um cartão de tipo de cena da Triage (redesign §6.4): ponto de cor + rótulo
  * PT-BR (o valor inglês fica no title, revelado no hover). A variante none-fit
  * é o cartão tracejado "Nenhum se encaixa", sem cor. É um `radio` isolado: o
  * grupo de escolha única e o roving tabindex são orquestrados pelo organismo.

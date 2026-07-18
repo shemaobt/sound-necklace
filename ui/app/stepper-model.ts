@@ -19,11 +19,11 @@ export interface StepperStationView {
 }
 
 const STATIONS: readonly { key: string; labelKey: string }[] = [
-  { key: 'escuta1', labelKey: 'stations.listen' },
-  { key: 'escuta2', labelKey: 'stations.cut' },
-  { key: 'triagem', labelKey: 'stations.triage' },
-  { key: 'segmentacao', labelKey: 'stations.phrases' },
-  { key: 'mapeamento', labelKey: 'stations.conversation' },
+  { key: 'listen', labelKey: 'stations.listen' },
+  { key: 'cut', labelKey: 'stations.cut' },
+  { key: 'triage', labelKey: 'stations.triage' },
+  { key: 'phrases', labelKey: 'stations.phrases' },
+  { key: 'conversation', labelKey: 'stations.conversation' },
   { key: 'export', labelKey: 'stations.save' },
 ];
 
@@ -53,7 +53,7 @@ export function stepperStations(
     locks.mapeamento,
     // Guardar (export) é a cauda: alcançável exatamente quando a Conversa está —
     // história confirmada e ≥1 frase travada numa cena produtiva (o mesmo gate de
-    // mapeamento). O shell a torna a conta atual ao entrar nela (`viewingExport`),
+    // conversation). O shell a torna a conta atual ao entrar nela (`viewingExport`),
     // pois o domínio não tem um modo `export`.
     locks.mapeamento,
   ];

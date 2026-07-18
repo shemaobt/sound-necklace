@@ -5,9 +5,9 @@ import { Stepper } from './stepper';
 import type { StepperStationView } from './stepper-model';
 
 const stations: StepperStationView[] = [
-  { key: 'escuta1', labelKey: 'stations.listen', state: 'done', reachable: true },
-  { key: 'triagem', labelKey: 'stations.triage', state: 'current', reachable: true },
-  { key: 'segmentacao', labelKey: 'stations.phrases', state: 'future', reachable: false },
+  { key: 'listen', labelKey: 'stations.listen', state: 'done', reachable: true },
+  { key: 'triage', labelKey: 'stations.triage', state: 'current', reachable: true },
+  { key: 'phrases', labelKey: 'stations.phrases', state: 'future', reachable: false },
 ];
 
 describe('Stepper — fio de contas (redesign §5.1)', () => {
@@ -26,7 +26,7 @@ describe('Stepper — fio de contas (redesign §5.1)', () => {
     const onNavigate = vi.fn();
     render(<Stepper stations={stations} onNavigate={onNavigate} />);
     fireEvent.click(screen.getByText('Ouvir'));
-    expect(onNavigate).toHaveBeenCalledWith('escuta1');
+    expect(onNavigate).toHaveBeenCalledWith('listen');
   });
 
   it('clicar numa estação travada não faz nada', () => {

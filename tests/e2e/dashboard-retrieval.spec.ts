@@ -65,7 +65,7 @@ test('baixa os três artefatos direto do dashboard, byte-idênticos, sem abrir a
   await app.moveSeam(); // a frase cruza a borda → a costura desliza
   await app.nextScene();
   await app.cutPhrase(6, 7);
-  await app.finishSegmentacao();
+  await app.finishPhrases();
 
   await app.answerConversation();
   await app.completeSession();
