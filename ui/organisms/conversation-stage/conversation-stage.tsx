@@ -5,8 +5,12 @@ import { BeadRow, type BeadCell, QuestionCard } from '../../molecules';
 import { StorytellerGuide } from '../storyteller-guide';
 import './conversation-stage.css';
 
-/** Estado da resposta em voz — a máquina vive na página; o organismo só a desenha. */
-export type RecorderState = 'idle' | 'recording' | 'recorded';
+/**
+ * Estado da resposta em voz — a máquina vive na página; o organismo só a desenha.
+ * `saving`: entre o toque de parar e a persistência confirmada (o PUT embutido no
+ * stop, ENG-318) — o estado vive no botão: spinner, sem aceitar clique.
+ */
+export type RecorderState = 'idle' | 'recording' | 'saving' | 'recorded';
 
 /**
  * Barras da forma de onda (protótipo recBars). Exportado porque quem alimenta
@@ -38,6 +42,10 @@ export interface ConversationStageProps {
   onStop?: () => void;
   onPlay?: () => void;
   onRerecord?: () => void;
+  /** A resposta gravada está TOCANDO agora (eventos reais da porta) — ouvir ⇄ pausar (ENG-322). */
+  answerPlaying?: boolean;
+  /** Pausa a reprodução da resposta (o clique do "pausar"). */
+  onStopPlay?: () => void;
   progress: ConversationProgress;
   onPrev?: () => void;
   onNext?: () => void;
@@ -62,6 +70,41 @@ function StopGlyph() {
       fill="currentColor"
     >
       <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  );
+}
+
+/** Arco girante do "guardando a resposta" (ENG-318); a rotação vive no CSS (reduced-motion-safe). */
+function SavingGlyph() {
+  return (
+    <svg
+      className="cds-conversation-stage-mic-glyph cds-conversation-stage-saving-glyph"
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+    >
+      <path d="M12 3a9 9 0 1 1-9 9" />
+    </svg>
+  );
+}
+
+/** Barras de pausa do "Pausar a pergunta" (ENG-317), irmão do SpeakGlyph. */
+function PauseGlyph() {
+  return (
+    <svg
+      width={17}
+      height={17}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="6" y="5" width="4" height="14" rx="1.5" />
+      <rect x="14" y="5" width="4" height="14" rx="1.5" />
     </svg>
   );
 }
@@ -128,6 +171,8 @@ export function ConversationStage({
   onStop,
   onPlay,
   onRerecord,
+  answerPlaying = false,
+  onStopPlay,
   progress,
   onPrev,
   onNext,
@@ -136,38 +181,28 @@ export function ConversationStage({
 }: ConversationStageProps) {
   const { t } = useTranslation();
   // protótipo thread: respondidas/passadas 15px, a atual 22px com halo (CSS).
-  // O protótipo mostra 11 perguntas; o roteiro real chega a 41 — janela em volta
-  // da atual para o fio nunca estourar a largura (sem scroll, §9.2).
-  const THREAD_WINDOW = 23;
-  const start =
-    progress.total <= THREAD_WINDOW
-      ? 0
-      : Math.max(
-          0,
-          Math.min(
-            progress.current - Math.floor(THREAD_WINDOW / 2),
-            progress.total - THREAD_WINDOW,
-          ),
-        );
-  const beads: BeadCell[] = Array.from(
-    { length: Math.min(progress.total, THREAD_WINDOW) },
-    (_, offset) => {
-      const i = start + offset;
-      return {
-        key: i,
-        state:
-          i === progress.current
-            ? 'head'
-            : // protótipo: `i < qIndex || answers[i]` — o fio conta o caminho ANDADO,
-              // não só o que ficou gravado. Sem o `i < current` nada acendia: a
-              // entrevista é só-voz e `answered` enumera apenas respostas de texto.
-              i < progress.current || progress.answered.has(i)
-              ? 'lit'
-              : 'unplayed',
-        size: i === progress.current ? 22 : 15,
-      } satisfies BeadCell;
-    },
-  );
+  // O protótipo mostra 11 perguntas; o roteiro real passa de 40 — SEM janela
+  // (ENG-329): a janela cravava o cursor no centro e o fio parecia congelado no
+  // meio da entrevista (padrão idêntico a cada avanço). Todas as perguntas ficam
+  // no fio; roteiros longos encolhem as contas (o §9.2 pede caber sem scroll).
+  const density = progress.total > 52 ? 'dense' : progress.total > 23 ? 'compact' : null;
+  const headSize = density === 'dense' ? 10 : density === 'compact' ? 12 : 22;
+  const beadSize = density === 'dense' ? 4 : density === 'compact' ? 7 : 15;
+  const beads: BeadCell[] = Array.from({ length: progress.total }, (_, i) => {
+    return {
+      key: i,
+      state:
+        i === progress.current
+          ? 'head'
+          : // protótipo: `i < qIndex || answers[i]` — o fio conta o caminho ANDADO,
+            // não só o que ficou gravado. Sem o `i < current` nada acendia: a
+            // entrevista é só-voz e `answered` enumera apenas respostas de texto.
+            i < progress.current || progress.answered.has(i)
+            ? 'lit'
+            : 'unplayed',
+      size: i === progress.current ? headSize : beadSize,
+    } satisfies BeadCell;
+  });
 
   return (
     <div className="cds-conversation-stage">
@@ -175,13 +210,14 @@ export function ConversationStage({
         <div className="cds-conversation-stage-guide">
           <StorytellerGuide speaking={speaking} />
           {onSpeakQuestion ? (
+            // o botão segue o estado REAL da fala (ENG-317): falando oferece pausar
             <button
               type="button"
               className="cds-conversation-stage-speak"
               onClick={onSpeakQuestion}
             >
-              <SpeakGlyph />
-              {t('conversationStage.listen')}
+              {speaking ? <PauseGlyph /> : <SpeakGlyph />}
+              {speaking ? t('conversationStage.pause') : t('conversationStage.listen')}
             </button>
           ) : null}
         </div>
@@ -211,16 +247,19 @@ export function ConversationStage({
                       Array.from({ length: WAVE_BARS }, (_, i) => (
                         <WaveformBar key={i} height={levels[i] ?? 10 + ((i * 7) % 34)} active />
                       ))
-                    : Array.from({ length: WAVE_BARS }, (_, i) => (
-                        <WaveformBar key={i} height={10 + ((i * 7) % 34)} />
+                    : // reproduzindo a resposta, as barras acendem (ENG-322)
+                      Array.from({ length: WAVE_BARS }, (_, i) => (
+                        <WaveformBar key={i} height={10 + ((i * 7) % 34)} active={answerPlaying} />
                       ))}
                 </div>
               )}
 
               {recorderState === 'recorded' ? (
                 <div className="cds-conversation-stage-review">
-                  <Button variant="ghost" size="sm" onClick={onPlay}>
-                    {t('conversationStage.play')}
+                  <Button variant="ghost" size="sm" onClick={answerPlaying ? onStopPlay : onPlay}>
+                    {answerPlaying
+                      ? t('conversationStage.pausePlayback')
+                      : t('conversationStage.play')}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={onRerecord}>
                     {t('conversationStage.again')}
@@ -237,14 +276,23 @@ export function ConversationStage({
                 type="button"
                 className="cds-conversation-stage-mic"
                 data-recording={recorderState === 'recording' || undefined}
+                disabled={recorderState === 'saving'}
                 aria-label={
                   recorderState === 'recording'
                     ? t('conversationStage.stop')
-                    : t('conversationStage.record')
+                    : recorderState === 'saving'
+                      ? t('conversationStage.saving')
+                      : t('conversationStage.record')
                 }
                 onClick={recorderState === 'recording' ? onStop : onRecord}
               >
-                {recorderState === 'recording' ? <StopGlyph /> : <MicGlyph />}
+                {recorderState === 'recording' ? (
+                  <StopGlyph />
+                ) : recorderState === 'saving' ? (
+                  <SavingGlyph />
+                ) : (
+                  <MicGlyph />
+                )}
               </button>
 
               <div className="cds-conversation-stage-hint">
@@ -277,6 +325,7 @@ export function ConversationStage({
         </div>
         <div
           className="cds-conversation-stage-progress"
+          data-density={density ?? undefined}
           role="group"
           aria-label={t('conversationStage.progressAria')}
         >

@@ -55,6 +55,7 @@ export class WebVoiceRecorder implements VoiceRecorder {
   readonly #AudioContextCtor?: typeof AudioContext;
   readonly #createAudio: (blob: Blob) => HTMLAudioElement;
   #playing: HTMLAudioElement | null = null;
+  readonly #playbackSubs = new Set<(path: ResourcePath | null) => void>();
 
   constructor(deps: WebVoiceDeps) {
     this.#store = deps.store;
@@ -144,16 +145,34 @@ export class WebVoiceRecorder implements VoiceRecorder {
     audio.addEventListener(
       'ended',
       () => {
-        if (this.#playing === audio) this.#playing = null;
+        // o guard `#playing === audio` deixa o ended de um áudio JÁ substituído
+        // morrer sem apagar o estado do novo (ENG-322)
+        if (this.#playing === audio) {
+          this.#playing = null;
+          this.#emitPlayback(null);
+        }
       },
       { once: true },
     );
     await audio.play();
+    // só DEPOIS do começo real: o estado "tocando" nunca é palpite (ENG-322)
+    this.#emitPlayback(path);
   }
 
   stopPlayback(): void {
-    this.#playing?.pause();
+    if (this.#playing === null) return;
+    this.#playing.pause();
     this.#playing = null;
+    this.#emitPlayback(null);
+  }
+
+  onPlayback(cb: (path: ResourcePath | null) => void): Unsubscribe {
+    this.#playbackSubs.add(cb);
+    return () => this.#playbackSubs.delete(cb);
+  }
+
+  #emitPlayback(path: ResourcePath | null): void {
+    for (const cb of this.#playbackSubs) cb(path);
   }
 
   async duration(path: ResourcePath): Promise<number> {

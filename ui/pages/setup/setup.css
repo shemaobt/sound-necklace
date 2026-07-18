@@ -52,22 +52,22 @@
 }
 
 /* §O7 — linha de confiança fixada e proeminente. */
-.cds-setup-trust {
-  margin: 0;
-  padding: 0.75rem 1rem;
-  border-radius: var(--cds-radius-tile);
-  background: var(--cds-warning-bg);
-  color: var(--cds-warning-ink);
-  font-weight: 600;
+/* rodapé quieto (ENG-309): confiança + divulgação de IA (§12) fora do caminho
+   da decisão — presentes, legíveis, sem competir com o formulário */
+.cds-setup-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 0 1rem;
+  text-align: center;
 }
 
-/* Divulgação de uso de IA (§12): informa sem competir com a linha de confiança. */
-.cds-setup-ai-notice {
+.cds-setup-notes p {
   margin: 0;
-  padding: 0 1rem;
-  color: var(--cds-warning-ink);
-  font-size: 0.875rem;
-  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--cds-ink-subtle);
 }
 
 .cds-setup-heading {
@@ -86,10 +86,12 @@
   flex-wrap: wrap;
 }
 
+/* grid compacto (ENG-310): 20+ áudios cabem na tela em colunas responsivas,
+   em vez da coluna única que virava um scroll comprido */
 .cds-setup-audios {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
 }
 
 /* cards brancos do protótipo (bigStyle): borda quase invisível + sombra baixa */
@@ -303,4 +305,25 @@
   max-width: none;
   opacity: 0.045;
   pointer-events: none;
+}
+
+/* ---------- ENG-311: portas desabilitadas + esqueleto da lista ---------- */
+/* entrega/retorno presentes, porém sem fingir ação: apagadas e sem ponteiro */
+.cds-setup-door[data-disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* anúncio acessível sem pixel na tela (visually-hidden da casa) */
+.cds-setup-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cds-setup-audio-skeleton {
+  gap: 8px;
 }

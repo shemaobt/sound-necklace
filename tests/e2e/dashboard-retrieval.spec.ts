@@ -45,9 +45,10 @@ async function downloadFrom(
 
 /** Os três documentos §8.8: nome exibido no card, chave guardada, helper do filename. */
 const ARTIFACTS = [
-  { shown: 'retorno-ancoragem.json', key: 'anchoring', filenameFor: retornoFilename },
-  { shown: 'manifesto-contas.json', key: 'manifest', filenameFor: manifestoFilename },
-  { shown: 'relatorio-mapeamento.md', key: 'report', filenameFor: relatorioFilename },
+  // os itens do menu do cartão mostram os TÍTULOS humanos (ENG-305)
+  { shown: 'As decisões de vocês', key: 'anchoring', filenameFor: retornoFilename },
+  { shown: 'O mapa das contas', key: 'manifest', filenameFor: manifestoFilename },
+  { shown: 'A conversa sobre o sentido', key: 'report', filenameFor: relatorioFilename },
 ] as const;
 
 test('baixa os três artefatos direto do dashboard, byte-idênticos, sem abrir a sessão', async ({
@@ -79,13 +80,15 @@ test('baixa os três artefatos direto do dashboard, byte-idênticos, sem abrir a
   await page.goto('/dashboard');
   await expect(page.getByRole('heading', { name: 'Suas histórias' })).toBeVisible();
 
-  const group = page.locator('.cds-dashboard-download-group');
-  await expect(group).toHaveCount(1); // exatamente a sessão concluída
+  // o menu "Baixar" vive no cartão da concluída (ENG-305) — um só na grade
+  const trigger = page.getByRole('button', { name: 'Baixar' });
+  await expect(trigger).toHaveCount(1); // exatamente a sessão concluída
+  await trigger.click();
 
-  // ——— baixa os três, um a um, do card ———
+  // ——— baixa os três, um a um, do menu do cartão ———
   for (const { shown, key, filenameFor } of ARTIFACTS) {
-    const card = group.locator('.cds-document-card', { hasText: shown });
-    const { filename, bytes } = await downloadFrom(page, card);
+    const item = page.getByRole('button', { name: shown });
+    const { filename, bytes } = await downloadFrom(page, item);
 
     // filename exato (§8.8: <slug>-<nome-do-artefato>).
     expect(filename).toBe(filenameFor(stored.slug));

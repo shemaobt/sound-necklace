@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import * as Popover from '@radix-ui/react-popover';
 
 import { ShemaIcon } from '../tokens';
 import { setLang, type Lang } from '../i18n';
@@ -15,10 +16,19 @@ export function Header({
   muted,
   onToggleMuted,
   onBack,
+  volume = 1,
+  onVolume,
 }: {
   muted: boolean;
   onToggleMuted: () => void;
   onBack: () => void;
+  /** Volume da história (0–2; 1 = neutro) — só faz sentido com sessão aberta. */
+  volume?: number;
+  /**
+   * Presente, o ícone de som abre o popover com o reforço de volume (ENG-314);
+   * ausente (fora de sessão), o botão segue o toggle simples de sempre.
+   */
+  onVolume?: (value: number) => void;
 }) {
   const { t, i18n } = useTranslation();
   const other: Lang = i18n.language.startsWith('en') ? 'pt' : 'en';
@@ -62,15 +72,51 @@ export function Header({
         >
           {other.toUpperCase()}
         </button>
-        <button
-          type="button"
-          className="cds-header-sound"
-          aria-pressed={muted}
-          aria-label={muted ? t('header.unmute') : t('header.mute')}
-          onClick={onToggleMuted}
-        >
-          <SoundGlyph muted={muted} />
-        </button>
+        {onVolume ? (
+          <Popover.Root>
+            <Popover.Trigger asChild>
+              <button type="button" className="cds-header-sound" aria-label={t('header.soundMenu')}>
+                <SoundGlyph muted={muted} />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content className="cds-header-sound-pop" sideOffset={8} align="end">
+                <button
+                  type="button"
+                  className="cds-header-sound-mute"
+                  aria-pressed={muted}
+                  aria-label={muted ? t('header.unmute') : t('header.mute')}
+                  onClick={onToggleMuted}
+                >
+                  <SoundGlyph muted={muted} />
+                  {muted ? t('header.unmute') : t('header.mute')}
+                </button>
+                <label className="cds-header-volume">
+                  <span className="cds-header-volume-label">{t('header.storyVolume')}</span>
+                  {/* range nativo: 1 = neutro, o rabo acima de 1 é o reforço (§ ENG-314) */}
+                  <input
+                    type="range"
+                    min={0}
+                    max={2}
+                    step={0.05}
+                    value={volume}
+                    onChange={(e) => onVolume(Number(e.target.value))}
+                  />
+                </label>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        ) : (
+          <button
+            type="button"
+            className="cds-header-sound"
+            aria-pressed={muted}
+            aria-label={muted ? t('header.unmute') : t('header.mute')}
+            onClick={onToggleMuted}
+          >
+            <SoundGlyph muted={muted} />
+          </button>
+        )}
       </div>
     </header>
   );

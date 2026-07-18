@@ -9,6 +9,8 @@ export type SessionStatus = 'in-progress' | 'completed';
 
 export interface SessionCardData {
   id: string;
+  /** Nó extra na área de ação (ex.: o menu de downloads da concluída, ENG-305). */
+  menu?: React.ReactNode;
   storyName: string;
   slug: string;
   project: string;
@@ -89,9 +91,11 @@ function SessionCard({
 
       <div className="cds-session-card-body">
         <h3 className="cds-session-card-title">{session.storyName}</h3>
-        {/* §7.2 pede slug E projeto no cartão — o protótipo mostra só o slug. */}
+        {/* §7.2 pede slug E projeto no cartão — o protótipo mostra só o slug. O
+            projeto só entra quando há um NOME exibível (o wiring esconde ids
+            crus — nenhum UUID em cartão, ENG-307). */}
         <p className="cds-session-card-slug">
-          {session.slug} · {session.project}
+          {session.project ? `${session.slug} · ${session.project}` : session.slug}
         </p>
 
         <div className="cds-session-card-meta">
@@ -114,6 +118,7 @@ function SessionCard({
           {emProgresso ? t('sessionList.resume') : t('sessionList.open')}
           <span className="cds-session-card-vh">{session.storyName}</span>
         </Button>
+        {session.menu ?? null}
       </div>
     </li>
   );

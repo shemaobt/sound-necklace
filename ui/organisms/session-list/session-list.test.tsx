@@ -32,6 +32,16 @@ function cardOf(storyName: string): HTMLElement {
   return card;
 }
 
+describe('SessionList — sem projeto exibível, o card não mostra o separador (ENG-307)', () => {
+  it("project vazio: o subtítulo é só o slug, sem ' · '", () => {
+    render(<SessionList sessions={[{ ...emProgresso, project: '' }]} />);
+    const card = cardOf('A história de Rute');
+    const slug = card.querySelector('.cds-session-card-slug');
+    expect(slug?.textContent).toBe('historia-de-rute');
+    expect(slug?.textContent).not.toContain('·');
+  });
+});
+
 describe('SessionList (PRD §7.2 — dashboard de sessões)', () => {
   it('renderiza uma lista nomeada com um card por sessão e os campos da sessão', () => {
     render(<SessionList sessions={[emProgresso, concluida]} />);

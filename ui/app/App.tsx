@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import { ApiError, AuthError } from '../../adapters/api';
@@ -21,6 +20,7 @@ import { shouldGateToLogin } from './auth-gate';
 import { buildSessionPlayer, createDeferredPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
+import { PreparingSession } from './preparing-session';
 import { buildAdapterRegistry, buildStationRegistry, type StationComponent } from './registries';
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
@@ -305,7 +305,11 @@ function useAutosaveFlush(routeId: string | null): void {
  * TROCAR de sessão; o cleanup para o player e cancela a ponte. Uma sessão sem áudio
  * resolvível degrada para player dormente (`null`) — as estações lidam com isso.
  */
-function useSessionPlayer(routeId: string | null): AudioPlayer | null {
+function useSessionPlayer(routeId: string | null): {
+  player: AudioPlayer | null;
+  /** Volume master do playback (ENG-314): vale já, e re-aplica ao áudio que ainda chega. */
+  setGain: (value: number) => void;
+} {
   // Player deferido desde a montagem: no modo real, baixar+decodificar o áudio
   // leva segundos, e com `null` a estação descartava o primeiro clique em
   // silêncio (ENG-313). Agora o gesto vira intenção e soa assim que o áudio chega.
@@ -313,6 +317,8 @@ function useSessionPlayer(routeId: string | null): AudioPlayer | null {
   // instância cujo build falhou (sessão sem estado salvo ou áudio não resolvível):
   // volta ao player dormente, como antes do deferido
   const [dead, setDead] = useState<AudioPlayer | null>(null);
+  const audioRef = useRef<SessionAudio | null>(null);
+  const volumeRef = useRef(1);
   useEffect(() => {
     if (routeId === null || deferred === null) return;
     let alive = true;
@@ -325,6 +331,8 @@ function useSessionPlayer(routeId: string | null): AudioPlayer | null {
           return;
         }
         audio = built;
+        audioRef.current = built;
+        built.setGain(volumeRef.current); // o reforço pedido antes do build vale agora
         deferred.attach(built.player);
       } catch {
         if (alive) setDead(deferred.player);
@@ -333,10 +341,18 @@ function useSessionPlayer(routeId: string | null): AudioPlayer | null {
     return () => {
       alive = false;
       audio?.stop();
+      audioRef.current = null;
       deferred.player.stop();
     };
   }, [routeId, deferred]);
-  return deferred !== null && deferred.player !== dead ? deferred.player : null;
+  const setGain = useCallback((value: number) => {
+    volumeRef.current = value;
+    audioRef.current?.setGain(value);
+  }, []);
+  return {
+    player: deferred !== null && deferred.player !== dead ? deferred.player : null,
+    setGain,
+  };
 }
 
 /**
@@ -346,7 +362,6 @@ function useSessionPlayer(routeId: string | null): AudioPlayer | null {
  * em ui/pages — este shell nunca muda depois.
  */
 export function App() {
-  const { t } = useTranslation();
   const route = useRoute();
   const muted = useAppStore((s) => s.muted);
   const online = useOnline();
@@ -365,7 +380,17 @@ export function App() {
   // (a fixture também serve trava), então há UM caminho de código, não dois.
   useEditorLock(routeId);
   useAutosaveFlush(routeId);
-  const player = useSessionPlayer(routeId);
+  const { player, setGain: setStoryGain } = useSessionPlayer(routeId);
+  // Booster de volume da história (ENG-314): estado do shell; >1 reforça gravações
+  // baixas. Vive entre sessões da mesma visita — quem precisa de reforço, precisa nelas todas.
+  const [storyVolume, setStoryVolume] = useState(1);
+  const onStoryVolume = useCallback(
+    (v: number) => {
+      setStoryVolume(v);
+      setStoryGain(v);
+    },
+    [setStoryGain],
+  );
 
   // Registra o caminho canônico de uma resposta de voz recém-gravada no `meta.voice`
   // desta sessão e persiste JÁ (autosave + flush): a voz é uma ação discreta e entrar
@@ -467,13 +492,18 @@ export function App() {
       muted={muted}
       onToggleMuted={() => appStore.getState().toggleMuted()}
       onBack={() => navigate('/dashboard')}
+      // o booster só faz sentido com uma sessão tocável aberta (ENG-314)
+      volume={storyVolume}
+      onVolume={route.name === 'session' ? onStoryVolume : undefined}
     />
   );
 
   let body: React.ReactNode;
   if (route.name === 'session') {
     if (!session) {
-      body = <p className="cds-station-fallback">{t('shell.loadingSession')}</p>;
+      // a espera vira palco (ENG-312): contas em onda + uma linha, nunca um
+      // parágrafo parado — cobre criar E retomar (hidratação + decode do áudio)
+      body = <PreparingSession />;
     } else {
       body = (
         <SessionStations

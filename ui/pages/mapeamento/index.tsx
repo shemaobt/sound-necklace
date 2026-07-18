@@ -156,6 +156,8 @@ function QuestionScreen({
   const [levels, setLevels] = useState<number[]>([]);
   const [speaking, setSpeaking] = useState(false);
   const [recordError, setRecordError] = useState(false);
+  // A RESPOSTA desta pergunta está tocando — dos eventos reais da porta (ENG-322).
+  const [answerPlaying, setAnswerPlaying] = useState(false);
   const recordingRef = useRef<Recording | null>(null);
   const unsubRef = useRef<Unsubscribe | null>(null);
   const mountedRef = useRef(true);
@@ -171,6 +173,13 @@ function QuestionScreen({
     if (!speaker) return;
     return speaker.onSpeaking(setSpeaking);
   }, [speaker]);
+
+  // Ouvir ⇄ pausar da resposta gravada: o estado vem dos eventos de reprodução da
+  // porta (nunca palpite) e é DESTA pergunta — outra resposta tocando não acende aqui.
+  useEffect(() => {
+    if (!recorder) return;
+    return recorder.onPlayback((p) => setAnswerPlaying(p === path));
+  }, [recorder, path]);
 
   // Chegar numa pergunta a faz ser falada (a tela remonta por `key={path}`). Com o som
   // desligado não fala; sair da pergunta cancela a fala em curso (nada de voz órfã).
@@ -227,6 +236,10 @@ function QuestionScreen({
     if (!rec) return;
     unsubRef.current?.();
     unsubRef.current = null;
+    // o stop embute o PUT da resposta (modo real): daqui até confirmar, o estado é
+    // "guardando" — spinner no botão, sem aceitar clique (ENG-318); antes disto a
+    // tela dizia "Gravando…" enquanto na verdade persistia.
+    setRecorderState('saving');
     try {
       await rec.stop();
     } catch {
@@ -292,11 +305,18 @@ function QuestionScreen({
         onStop={onStop}
         onPlay={onPlay}
         onRerecord={onRerecord}
+        answerPlaying={answerPlaying}
+        onStopPlay={() => recorder?.stopPlayback()}
         progress={progress}
         onPrev={onPrev}
         onNext={onNext}
         speaking={speaking}
-        onSpeakQuestion={canSpeak ? () => speaker.speak(questionText, speechLang) : undefined}
+        onSpeakQuestion={
+          // falando ⇒ pausar; calado ⇒ (re)falar — o rótulo do organismo acompanha (ENG-317)
+          canSpeak
+            ? () => (speaking ? speaker.stop() : speaker.speak(questionText, speechLang))
+            : undefined
+        }
       />
     </section>
   );

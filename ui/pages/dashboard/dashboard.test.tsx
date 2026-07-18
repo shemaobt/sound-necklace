@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -57,12 +57,6 @@ function goto(path: string): void {
   window.history.replaceState({}, '', path);
 }
 
-function downloadCard(filename: string): HTMLElement {
-  const card = screen.getByText(filename).closest('.cds-document-card');
-  if (!card) throw new Error(`card não encontrado: ${filename}`);
-  return within(card as HTMLElement).getByRole('button');
-}
-
 beforeEach(() => goto('/dashboard'));
 afterEach(() => goto('/dashboard'));
 
@@ -95,7 +89,58 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
   });
 });
 
+describe('Dashboard — nenhum UUID no cartão (ENG-307)', () => {
+  it('project_id cru (UUID) não aparece; um nome de projeto continua aparecendo', async () => {
+    const uuid = '7ae3eca9-2747-4b3c-ba38-4f835f1b4bbc';
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, {
+      storyName: 'Sessão real',
+      storySlug: 'sessao-real',
+      projectId: uuid,
+    });
+    await seedInProgress(store, {
+      storyName: 'Sessão nomeada',
+      storySlug: 'sessao-nomeada',
+      projectId: 'proj-fulani',
+    });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+
+    await screen.findAllByText('Sessão real');
+    expect(screen.queryByText(new RegExp(uuid))).toBeNull();
+    expect(screen.getByText(/proj-fulani/)).toBeTruthy();
+  });
+});
+
+describe('Dashboard — esqueleto enquanto a lista voa (ENG-308)', () => {
+  it('mostra cartões-esqueleto no lugar do texto parado; a lista real os substitui', async () => {
+    const store = new FixtureSessionStore();
+    let release: (() => void) | null = null;
+    vi.spyOn(store, 'list').mockImplementation(
+      () =>
+        new Promise((res) => {
+          release = () => res([]);
+        }),
+    );
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+
+    // enquanto a API responde: esqueletos pulsando + o anúncio acessível
+    expect(document.querySelectorAll('.cds-skeleton').length).toBeGreaterThan(0);
+    expect(screen.getByRole('status')).toBeTruthy();
+
+    await act(async () => release?.());
+    expect(await screen.findByRole('list', { name: 'histórias' })).toBeTruthy();
+    expect(document.querySelectorAll('.cds-skeleton')).toHaveLength(0);
+  });
+});
+
 describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
+  it('a barra usa o MESMO chrome claro das estações (var do shell, ENG-306)', () => {
+    const bar = /\.cds-dashboard-bar\s*{[^}]*}/.exec(dashboardCss)?.[0] ?? '';
+    expect(bar).toContain('var(--cds-chrome-bg');
+  });
+
   it('mostra a marca, a usuária autenticada e o título da casa', async () => {
     const store = new FixtureSessionStore();
     const auth = new FixtureAuthProvider();
@@ -137,8 +182,8 @@ describe('Dashboard — retomar (§7.3)', () => {
   });
 });
 
-describe('Dashboard — downloads diretos de sessão concluída (§7.2/§10.5)', () => {
-  it('expõe exatamente três downloads byte-idênticos aos guardados, com os nomes exatos', async () => {
+describe('Dashboard — downloads no cartão da concluída (§7.2/§10.5, ENG-305)', () => {
+  it('o menu "Baixar" do cartão entrega os três artefatos byte-idênticos e marca os baixados', async () => {
     const triple: ArtifactTriple = {
       anchoring: '{"anchoring":true}',
       manifest: '{"manifest":true}',
@@ -150,29 +195,37 @@ describe('Dashboard — downloads diretos de sessão concluída (§7.2/§10.5)',
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={save} />);
 
-    const group = (await screen.findByText('retorno-ancoragem.json')).closest(
-      '.cds-dashboard-download-group',
-    ) as HTMLElement;
-    expect(group.querySelectorAll('.cds-document-card')).toHaveLength(3);
-
-    await userEvent.click(downloadCard('retorno-ancoragem.json'));
-    await userEvent.click(downloadCard('manifesto-contas.json'));
-    await userEvent.click(downloadCard('relatorio-mapeamento.md'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Baixar' }));
+    await userEvent.click(await screen.findByRole('button', { name: /As decisões de vocês/ }));
+    // o popover fecha ao interagir? Radix mantém aberto em cliques internos — segue
+    await userEvent.click(screen.getByRole('button', { name: /O mapa das contas/ }));
+    await userEvent.click(screen.getByRole('button', { name: /A conversa sobre o sentido/ }));
 
     const sent = Object.fromEntries(save.mock.calls.map(([name, bytes]) => [name, bytes]));
     expect(sent['concluida-x-retorno-ancoragem.json']).toBe(triple.anchoring);
     expect(sent['concluida-x-manifesto-contas.json']).toBe(triple.manifest);
     expect(sent['concluida-x-relatorio-mapeamento.md']).toBe(triple.report);
+
+    // baixado marca o item (as chaves agora batem com o kind — bug antigo corrigido)
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('button', { name: /As decisões de vocês/ })
+          .getAttribute('data-downloaded'),
+      ).toBe('true'),
+    );
+    // e os cards soltos sumiram da home
+    expect(document.querySelector('.cds-dashboard-download-group')).toBeNull();
   });
 
-  it('uma sessão em progresso não expõe downloads', async () => {
+  it('uma sessão em progresso não tem o menu Baixar', async () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Só andamento', storySlug: 'so-andamento' });
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
 
     await screen.findAllByText('Só andamento');
-    expect(screen.queryByText('retorno-ancoragem.json')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Baixar' })).toBeNull();
   });
 });
 

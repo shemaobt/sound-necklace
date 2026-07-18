@@ -14,10 +14,25 @@ import { AudioDecodeError } from './types';
 
 export class WebAudioEngine implements AudioEngine {
   private ctx: AudioContext | null = null;
+  private gainNode: GainNode | null = null;
+  /** Guardado fora do contexto: setGain antes do 1º decode vale para o próximo (lazy). */
+  private gainValue = 1;
 
   private ensureCtx(): AudioContext {
-    if (!this.ctx) this.ctx = new AudioContext();
+    if (!this.ctx) {
+      this.ctx = new AudioContext();
+      // o master da cadeia (ENG-314): todo source passa por aqui — o reforço
+      // vale para contas, cenas e frases igualmente
+      this.gainNode = this.ctx.createGain();
+      this.gainNode.gain.value = this.gainValue;
+      this.gainNode.connect(this.ctx.destination);
+    }
     return this.ctx;
+  }
+
+  setGain(value: number): void {
+    this.gainValue = value;
+    if (this.gainNode) this.gainNode.gain.value = value;
   }
 
   /**
@@ -27,6 +42,7 @@ export class WebAudioEngine implements AudioEngine {
   close(): void {
     void this.ctx?.close().catch(() => undefined);
     this.ctx = null;
+    this.gainNode = null;
   }
 
   async decode(bytes: ArrayBuffer): Promise<DecodedAudio> {
@@ -56,7 +72,7 @@ export class WebAudioEngine implements AudioEngine {
       start: (t0: number, dur: number, onEnded: () => void): PlaybackHandle => {
         const src = ctx.createBufferSource();
         src.buffer = buffer;
-        src.connect(ctx.destination);
+        src.connect(this.gainNode ?? ctx.destination);
         src.onended = onEnded;
         src.start(0, t0, dur);
         return {
