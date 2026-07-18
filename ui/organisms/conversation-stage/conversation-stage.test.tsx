@@ -78,33 +78,50 @@ describe('ConversationStage — botão da pergunta pelo estado da fala (ENG-317)
  * Fio de progresso (§8.7): uma conta por pergunta, respondida e atual distintas,
  * jamais um número (§9.2) — é conversa, não formulário.
  */
-describe('ConversationStage — fio de progresso janelado (roteiro real de 41)', () => {
+describe('ConversationStage — fio inteiro, sem janela (ENG-329)', () => {
   const pearls = (el: HTMLElement) =>
     el.querySelectorAll('.cds-conversation-stage-progress .cds-pearl');
-  const headCount = (el: HTMLElement) =>
-    el.querySelectorAll('.cds-conversation-stage-progress .cds-pearl[data-state="head"]').length;
 
-  it('com 41 perguntas mostra no máximo 23 contas e a atual SEMPRE visível (início/meio/fim)', () => {
-    for (const current of [0, 20, 40]) {
+  it('41 perguntas = 41 contas, e CADA avanço move a conta acesa (nada de cursor cravado)', () => {
+    for (const current of [0, 20, 21, 40]) {
       const { container, unmount } = render(
         <ConversationStage
           {...baseProps({ progress: { total: 41, answered: new Set(), current } })}
         />,
       );
-      expect(pearls(container).length).toBe(23);
-      expect(headCount(container)).toBe(1);
+      const all = pearls(container);
+      expect(all.length).toBe(41);
+      const heads = container.querySelectorAll(
+        '.cds-conversation-stage-progress .cds-pearl[data-state="head"]',
+      );
+      expect(heads).toHaveLength(1);
+      // a atual é a conta `current` da fileira: avançar 20→21 muda a posição acesa
+      expect([...all].indexOf(heads[0] as HTMLElement)).toBe(current);
       unmount();
     }
   });
 
-  it('com poucas perguntas o fio mostra todas (sem janela)', () => {
+  it('um roteiro enorme continua inteiro no fio (denso), com a atual certa', () => {
+    const { container } = render(
+      <ConversationStage
+        {...baseProps({ progress: { total: 101, answered: new Set(), current: 60 } })}
+      />,
+    );
+    const all = pearls(container);
+    expect(all.length).toBe(101);
+    const heads = container.querySelectorAll(
+      '.cds-conversation-stage-progress .cds-pearl[data-state="head"]',
+    );
+    expect([...all].indexOf(heads[0] as HTMLElement)).toBe(60);
+  });
+
+  it('com poucas perguntas o fio mostra todas', () => {
     const { container } = render(
       <ConversationStage
         {...baseProps({ progress: { total: 11, answered: new Set(), current: 5 } })}
       />,
     );
     expect(pearls(container).length).toBe(11);
-    expect(headCount(container)).toBe(1);
   });
 });
 
