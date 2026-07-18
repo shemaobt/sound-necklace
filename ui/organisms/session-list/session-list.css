@@ -124,6 +124,8 @@
 /* invólucro de layout — o visual do botão é do átomo Button (primary) */
 .cds-session-card-action {
   display: flex;
+  align-items: stretch;
+  gap: 10px;
   padding: 0 20px 18px;
 }
 

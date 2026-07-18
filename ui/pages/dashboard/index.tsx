@@ -120,8 +120,15 @@ function DownloadMenu({
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button type="button" className="cds-dashboard-dl-trigger">
-          {t('dashboard.downloads')}
+        {/* ícone discreto (ENG-333): o nome vive no aria-label — os leitores e os
+            testes seguem achando "Baixar"; a palavra não disputa com o Retomar */}
+        <button
+          type="button"
+          className="cds-dashboard-dl-trigger"
+          aria-label={t('dashboard.downloads')}
+          title={t('dashboard.downloads')}
+        >
+          <span aria-hidden="true">⋮</span>
         </button>
       </Popover.Trigger>
       <Popover.Portal>
