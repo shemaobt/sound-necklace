@@ -400,10 +400,14 @@ export function App() {
             try {
               await appAuth().refresh();
             } catch (err) {
-              // recusa da API = sessão morta: derruba TUDO (token/refresh/usuário)
+              // RECUSA da API = sessão morta: derruba TUDO (token/refresh/usuário)
               // antes de voltar — senão o gate ainda vê um usuário e deixa navegar
-              // com token defunto. Falha de REDE fica: a próxima fala tenta de novo.
-              if (err instanceof ApiError || err instanceof AuthError) {
+              // com token defunto. Rede/429/5xx são transitórios (mesmo critério do
+              // login): ficam, e a próxima fala tenta de novo.
+              const terminal =
+                err instanceof AuthError ||
+                (err instanceof ApiError && err.status < 500 && err.status !== 429);
+              if (terminal) {
                 await appAuth()
                   .logout()
                   .catch(() => undefined);
