@@ -57,6 +57,12 @@ export interface VoiceRecorder {
   /** Há gravação para esta pergunta? */
   has(path: ResourcePath): Promise<boolean>;
   /**
+   * Aquece a resposta deste caminho (baixa os bytes para um cache local), para o
+   * play/duration seguintes não pagarem rede (ENG-339). Opcional: recorders de
+   * teste e ambientes sem rede não precisam dele — chamar via `prefetch?.()`.
+   */
+  prefetch?(path: ResourcePath): Promise<void>;
+  /**
    * Assina o que está tocando AGORA (o caminho; `null` = nada). Vem dos eventos
    * reais de reprodução — alimenta o feedback tocando/pausado da UI (ENG-322/323).
    */

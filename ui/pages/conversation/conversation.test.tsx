@@ -206,6 +206,25 @@ describe('Conversation — a sequência completa da conversa (PRD v2 §8.7)', ()
     expect(screen.getByRole('region', { name: 'relatório' })).toBeTruthy();
   });
 
+  it('o preparo AQUECE as respostas que existem: prefetch antes de abrir a revisão (ENG-339)', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    const state = mapping();
+    const seq = questionSequence(state);
+    const answered = voiceAnswerPath(seq[0]!);
+    vi.spyOn(recorder, 'has').mockImplementation((p) => Promise.resolve(p === answered));
+    const prefetch = vi.fn(() => Promise.resolve());
+    (recorder as VoiceRecorder).prefetch = prefetch;
+
+    load(state);
+    render(<Conversation recorder={recorder} />);
+    for (let i = 0; i < seq.length; i += 1) await next();
+
+    expect(await screen.findByRole('region', { name: 'relatório' })).toBeTruthy();
+    // só o caminho COM resposta aquece — nada de baixar 41 inexistentes
+    expect(prefetch).toHaveBeenCalledTimes(1);
+    expect(prefetch).toHaveBeenCalledWith(answered);
+  });
+
   it('com gravador, o preparo segura a revisão até as respostas serem descobertas (ENG-337)', async () => {
     // has() pendurado: a descoberta em voo é a janela real do modo real
     const recorder = new FixtureVoiceRecorder();
