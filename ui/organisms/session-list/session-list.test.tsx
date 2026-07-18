@@ -1,7 +1,20 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import sessionListCss from './session-list.css?raw';
 import { SessionList, type SessionCardData } from './session-list';
+
+describe('SessionList — alturas iguais entre idiomas (ENG-341)', () => {
+  it('a pílula de status nunca quebra linha ("Em andamento" PT esticava o cartão)', () => {
+    const rule = /\.cds-session-card-status\s*{[^}]*}/.exec(sessionListCss)?.[0] ?? '';
+    expect(rule).toContain('white-space: nowrap');
+  });
+
+  it('a data ao lado da pílula também não quebra no meio', () => {
+    const rule = /\.cds-session-card-when\s*{[^}]*}/.exec(sessionListCss)?.[0] ?? '';
+    expect(rule).toContain('white-space: nowrap');
+  });
+});
 
 const emProgresso: SessionCardData = {
   id: 'sess-1',
