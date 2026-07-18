@@ -9,7 +9,7 @@
  */
 
 import { FixtureAuthProvider } from '../../adapters/api';
-import { FixtureSessionStore, type LockHolder } from '../../adapters/sessions';
+import { type LockHolder } from '../../adapters/sessions';
 import { appAuth } from './auth-adapter';
 import { appSessionBackend } from './session-adapter';
 
@@ -32,8 +32,15 @@ export function installTestSeam(
       if (auth instanceof FixtureAuthProvider) auth.simulateExpiry();
     },
     seedForeignLock: async (sessionId, holder = OTHER_HOLDER) => {
-      const other = new FixtureSessionStore({ backend: appSessionBackend(), user: holder });
-      await other.acquireLock(sessionId);
+      // FORÇA a posse direto no backend: com o useEditorLock (ENG-247) o editor
+      // detém a trava DE VERDADE enquanto a sessão está aberta, então um acquire
+      // da Ana seria honestamente recusado. O seam semeia o estado-alvo ("sessão
+      // em uso por outra pessoa"), não disputa o lease.
+      const backend = appSessionBackend();
+      const rec = backend.sessions.get(sessionId);
+      if (!rec) throw new Error(`seam: sessão desconhecida ${sessionId}`);
+      rec.lock = { holder, expires_at: new Date(Date.now() + 60_000).toISOString() };
+      backend.persist();
     },
   };
 }
