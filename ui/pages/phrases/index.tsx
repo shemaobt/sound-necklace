@@ -157,6 +157,15 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   const confirmPhrase = (): void => {
     const s = sessionStore.getState().session;
     if (!s || s.current.layer !== 'frases' || s.current.index < 0) return;
+    // Meia-seleção (um toque só): o domínio aceitaria (quirk 1:1 da referência) e
+    // travaria uma frase de UMA conta em silêncio — o modelo mental das cenas
+    // ("toque onde termina") produzia exatamente isso (ENG-335). A UI guia o gesto
+    // completo; a frase de 1 conta segue possível tocando a mesma conta duas vezes.
+    if (s.pendingStart !== null) {
+      setError(t('phrases.halfSelection'));
+      sound?.refuse();
+      return;
+    }
     const result = confirmFrase(s, s.current.index);
     switch (result.kind) {
       case 'error':

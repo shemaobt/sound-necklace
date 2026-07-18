@@ -143,6 +143,29 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
     expect(screen.getByRole('group', { name: 'Frase um' })).toBeTruthy();
   });
 
+  it('meia-seleção (um toque só) guia o gesto completo em vez de travar 1 conta (ENG-335)', async () => {
+    // o dono tocava só "onde a frase termina" (modelo das cenas) e o quirk da
+    // referência travava uma frase de UMA conta em silêncio — só o quadrado pintava
+    load(segmenting({ selection: { s: 14, e: 14 }, pendingStart: 14 }));
+    render(<Phrases />);
+
+    await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
+
+    expect(screen.getByText('Toque também onde a frase termina, no colar.')).toBeTruthy();
+    expect(sessionStore.getState().session!.frases[0]!.locked).toBe(false);
+  });
+
+  it('frase de UMA conta continua possível com o gesto completo (dois toques na mesma conta)', async () => {
+    load(segmenting({ selection: { s: 14, e: 14 }, pendingStart: null }));
+    render(<Phrases />);
+
+    await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
+
+    const locked = sessionStore.getState().session!.frases.find((f) => f.prop_id === 'P1')!;
+    expect(locked.locked).toBe(true);
+    expect(locked.span).toEqual({ s: 14, e: 14 });
+  });
+
   it('sem seleção completa mostra a cópia exata e não trava', async () => {
     load(segmenting({ selection: null, pendingStart: null }));
     render(<Phrases />);
