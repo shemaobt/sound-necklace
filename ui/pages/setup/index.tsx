@@ -256,11 +256,24 @@ export function Setup({
                   {audios.map((a) => (
                     <RadioGroup.Item key={a.id} value={a.id} className="cds-setup-audio">
                       <span className="cds-setup-audio-name">{a.filename}</span>
+                      {/* badge curto (ENG-310): a frase completa do indicador §12/O6
+                          continua no title/aria — repetida por cartão ela virava parede */}
                       {a.consent_present ? (
-                        <span className="cds-setup-consent-ok">{t('setup.consentOk')}</span>
+                        <span
+                          className="cds-setup-consent-ok"
+                          title={t('setup.consentOk')}
+                          aria-label={t('setup.consentOk')}
+                        >
+                          {t('setup.consentOkShort')}
+                        </span>
                       ) : (
-                        <span className="cds-setup-consent-warn" data-role="warning">
-                          {t('setup.consentWarn')}
+                        <span
+                          className="cds-setup-consent-warn"
+                          data-role="warning"
+                          title={t('setup.consentWarn')}
+                          aria-label={t('setup.consentWarn')}
+                        >
+                          {t('setup.consentWarnShort')}
                         </span>
                       )}
                       {audioId === a.id ? (

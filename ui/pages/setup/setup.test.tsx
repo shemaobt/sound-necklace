@@ -8,6 +8,7 @@ import { AcoustemeGranularityResolver } from '../../../adapters/granularity';
 import { FixtureSessionStore } from '../../../adapters/sessions';
 import { sessionStore } from '../../state';
 import { pt } from '../../i18n/pt';
+import setupCss from './setup.css?raw';
 import Setup from './index';
 
 /**
@@ -240,10 +241,11 @@ describe('Setup — consentimento de coleta (§12/O6)', () => {
     await screen.findByRole('radio', { name: /conto-do-boto/ });
 
     const present = screen.getByRole('radio', { name: /conto-do-boto/ });
-    expect(within(present).getByText('Consentimento de coleta registrado')).toBeTruthy();
+    // badge curto (ENG-310): a frase contratual completa segue no title/aria
+    expect(within(present).getByTitle('Consentimento de coleta registrado')).toBeTruthy();
 
     const absent = screen.getByRole('radio', { name: /gravacao-antiga/ });
-    expect(within(absent).getByText('Sem registro de consentimento de coleta.')).toBeTruthy();
+    expect(within(absent).getByTitle('Sem registro de consentimento de coleta.')).toBeTruthy();
   });
 });
 
@@ -287,6 +289,14 @@ describe('Setup — cópias fixadas (§8.1/O7)', () => {
     renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
     expect(screen.getByText(pt.setup.aiVoiceNotice)).toBeTruthy();
+  });
+});
+
+describe('Setup — grid compacto de áudios (ENG-310)', () => {
+  it('a lista é um grid responsivo, não uma coluna única', () => {
+    const rule = /\.cds-setup-audios\s*{[^}]*}/.exec(setupCss)?.[0] ?? '';
+    expect(rule).toContain('display: grid');
+    expect(rule).toContain('auto-fill');
   });
 });
 
