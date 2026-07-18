@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { splitByGuard } from '../atoms/testing/css';
+import { splitByGuard } from '../../atoms/testing/css';
 import { PreparingSession } from './preparing-session';
 import preparingCss from './preparing-session.css?raw';
 

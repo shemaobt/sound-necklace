@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Pearl } from '../atoms';
+import { Pearl } from '../../atoms';
 import './preparing-session.css';
 
 /** Quantas contas o fio da espera mostra — só ritmo visual, não é a grade real. */
