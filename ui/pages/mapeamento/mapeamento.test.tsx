@@ -9,6 +9,7 @@ import type { VoiceRecorder } from '../../../adapters/voice/types';
 import {
   buildBeads,
   createSession,
+  ensureMapping,
   type Frase,
   L1_Q,
   L2_Q,
@@ -16,7 +17,9 @@ import {
   questionSequence,
   type ScenePart,
   type SessionState,
+  setAnswer,
   type Span,
+  voiceAnswerPath,
 } from '../../../domain';
 import i18n from '../../i18n';
 import { appStore, sessionStore } from '../../state';
@@ -129,6 +132,44 @@ beforeEach(() => {
 });
 afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
+});
+
+describe('Mapeamento — retomada no ponto onde parou (ENG-321)', () => {
+  it('reabre na primeira pergunta sem resposta quando há respostas de texto salvas', () => {
+    let state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    for (const slot of seq.slice(0, 3)) state = setAnswer(state, slot, 'respondida');
+
+    load(state);
+    render(<Mapeamento />);
+    expect(questionText()).toBe(seq[3]!.question.q);
+  });
+
+  it('resposta por voz persistida também conta (entrevista só-voz)', () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = seq.slice(0, 5).map((s) => voiceAnswerPath(s));
+
+    load(state);
+    render(<Mapeamento voicePaths={() => voice} />);
+    expect(questionText()).toBe(seq[5]!.question.q);
+  });
+
+  it('com tudo respondido, reabre na última pergunta (o relatório fica a um passo)', () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = seq.map((s) => voiceAnswerPath(s));
+
+    load(state);
+    render(<Mapeamento voicePaths={() => voice} />);
+    expect(questionText()).toBe(seq[seq.length - 1]!.question.q);
+  });
+
+  it('sem resposta nenhuma, começa na primeira pergunta', () => {
+    load(mapping());
+    render(<Mapeamento />);
+    expect(questionText()).toBe(questionSequence(ensureMapping(mapping()))[0]!.question.q);
+  });
 });
 
 describe('Mapeamento — a sequência completa da conversa (PRD v2 §8.7)', () => {

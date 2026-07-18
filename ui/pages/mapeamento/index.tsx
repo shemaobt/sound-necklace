@@ -51,6 +51,14 @@ export interface MapeamentoProps {
   /** O shell registra o caminho `respostas/…` recém-gravado no `meta.voice` da sessão (ENG-276). */
   onVoiceSaved?: (path: string) => void;
   /**
+   * Caminhos `respostas/…` já persistidos (`meta.voice`) — a retomada abre na
+   * primeira pergunta sem NENHUMA resposta, e numa entrevista só-voz o answer
+   * store de texto não sabe o que já foi falado (ENG-321). É um getter, chamado
+   * UMA vez na montagem (inicialização), porque a fonte vive num ref do shell —
+   * lê-la em render é proibido, lê-la ao inicializar não.
+   */
+  voicePaths?: () => readonly string[];
+  /**
    * Entra na cauda "Guardar" (protótipo `toExport`). Ausente = sem a saída: a
    * Export é estado LOCAL do shell (o domínio não tem modo `export`), então quem
    * a abre é ele. Sem isto o relatório era um beco — só o fio de contas do
@@ -301,12 +309,11 @@ export function Mapeamento({
   sound,
   onVoiceSaved,
   onGoToExport,
+  voicePaths = () => [],
 }: MapeamentoProps) {
   const { t } = useTranslation();
   const muted = useAppStore((s) => s.muted);
   const session = useSessionStore((s) => s.session);
-  const [index, setIndex] = useState(0);
-  const [atReport, setAtReport] = useState(false);
 
   // Para LEITURA, uma visão com o answer store garantido mesmo antes do efeito de
   // persistência rodar; a extensão real do store passa pelo apply guardado abaixo.
@@ -315,6 +322,20 @@ export function Mapeamento({
     return session.mapping ? session : ensureMapping(session);
   }, [session]);
   const sequence = useMemo(() => (mapped ? questionSequence(mapped) : []), [mapped]);
+
+  // Retomada (ENG-321): a conversa reabre na primeira pergunta sem NENHUMA
+  // resposta — texto no answer store OU voz persistida em `meta.voice`. Quem
+  // parou na 5ª volta à 5ª; tudo respondido reabre na última (o relatório fica a
+  // um passo). Só na montagem: dali em diante o cursor é do usuário.
+  const [index, setIndex] = useState(() => {
+    if (!mapped || sequence.length === 0) return 0;
+    const voiced = voicePaths();
+    const first = sequence.findIndex(
+      (s2) => !readAnswer(mapped.mapping, s2).trim() && !voiced.includes(voiceAnswerPath(s2)),
+    );
+    return first === -1 ? sequence.length - 1 : first;
+  });
+  const [atReport, setAtReport] = useState(false);
 
   useEffect(() => {
     if (session && !session.mapping) sessionStore.getState().apply((s) => ensureMapping(s));

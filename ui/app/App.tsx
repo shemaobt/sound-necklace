@@ -68,6 +68,7 @@ function SessionStations({
   sound,
   onVoiceSaved,
   initialExport,
+  voicePaths,
 }: {
   session: SessionState;
   sessionId: string;
@@ -83,6 +84,8 @@ function SessionStations({
   onVoiceSaved: (path: string) => void;
   /** Sessão concluída reabre na Export (ENG-320); o `key={sessionId}` remonta por sessão. */
   initialExport: boolean;
+  /** Getter de `meta.voice` — a retomada do Mapeamento abre na 1ª pergunta sem resposta (ENG-321). */
+  voicePaths: () => readonly string[];
 }) {
   // Escolha MANUAL da cauda "Guardar": enquanto null, a vista segue o status da
   // sessão (concluída abre na Export — ENG-320), que pode chegar depois da montagem
@@ -116,6 +119,7 @@ function SessionStations({
             speaker,
             sound,
             onVoiceSaved,
+            voicePaths,
             // a prévia do relatório fecha com "Guardar os documentos →" (protótipo
             // toExport); a Export é estado local do shell, então a chave é nossa
             onGoToExport: () => setManualExport(true),
@@ -380,6 +384,10 @@ export function App() {
     [routeId],
   );
 
+  // Getter (não leitura direta): `meta.voice` vive num ref, e ref em render é
+  // proibido — o Mapeamento o lê UMA vez, no inicializador do cursor (ENG-321).
+  const getVoicePaths = useCallback(() => metaRef.current?.voice ?? [], []);
+
   const registry = useMemo(() => buildStationRegistry(), []);
   // O microfone é a implementação REAL: gravar de verdade É a feature (§8.7) — a
   // resposta em `.webm` é o artefato que o Compilador consome, e um dublê aqui não
@@ -483,6 +491,7 @@ export function App() {
           sound={sound}
           onVoiceSaved={onVoiceSaved}
           initialExport={completed}
+          voicePaths={getVoicePaths}
         />
       );
     }
