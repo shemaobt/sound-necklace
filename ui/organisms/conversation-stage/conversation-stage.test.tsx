@@ -32,6 +32,34 @@ describe('ConversationStage — marcador de papel (§8.7)', () => {
   });
 });
 
+/** Reproduzindo a resposta gravada: ouvir ⇄ pausar + as barras acesas (ENG-322). */
+describe('ConversationStage — feedback de reprodução da resposta (ENG-322)', () => {
+  it("tocando, 'ouvir' vira 'pausar' e a forma de onda acende", () => {
+    const { container, rerender } = render(
+      <ConversationStage
+        {...baseProps({ recorderState: 'recorded', answerPlaying: true, onStopPlay: vi.fn() })}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'pausar' })).toBeTruthy();
+    expect(
+      container.querySelectorAll('.cds-waveform-bar[data-state="active"]').length,
+    ).toBeGreaterThan(0);
+
+    rerender(<ConversationStage {...baseProps({ recorderState: 'recorded' })} />);
+    expect(screen.getByRole('button', { name: 'ouvir' })).toBeTruthy();
+    expect(container.querySelectorAll('.cds-waveform-bar[data-state="active"]').length).toBe(0);
+  });
+});
+
+/** Parar → guardar: o estado vive no botão (ENG-318) — spinner, desabilitado, sem texto novo. */
+describe('ConversationStage — guardando a resposta (ENG-318)', () => {
+  it("em 'saving', o microfone vira 'guardando a resposta' e não aceita clique", () => {
+    render(<ConversationStage {...baseProps({ recorderState: 'saving' })} />);
+    const btn = screen.getByRole('button', { name: 'guardando a resposta' });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
 /** O botão da pergunta segue o estado REAL da fala (ENG-317): falando ⇄ pausado. */
 describe('ConversationStage — botão da pergunta pelo estado da fala (ENG-317)', () => {
   it('falando, oferece "Pausar a pergunta"; calado, "Ouvir a pergunta"', () => {

@@ -123,6 +123,7 @@ function controllableRecorder(known: Record<string, boolean>): VoiceRecorder {
     has: (p: ResourcePath) =>
       p in known ? Promise.resolve(known[p]!) : new Promise<boolean>(() => {}),
     delete: () => Promise.resolve(),
+    onPlayback: () => () => {},
   };
 }
 

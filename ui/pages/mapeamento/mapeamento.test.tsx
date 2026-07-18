@@ -188,6 +188,56 @@ describe('Mapeamento — o ▶ do span de cada nível (PRD v2 §8.7)', () => {
 });
 
 describe('Mapeamento — resposta por voz, entrevista só-voz (PRD v2 §8.7, §10.4, design parity)', () => {
+  it('ouvir a resposta gravada mostra pausar enquanto toca; pausar volta a ouvir (ENG-322)', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    render(<Mapeamento recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+
+    await userEvent.click(await screen.findByRole('button', { name: /^ouvir$/ }));
+    expect(recorder.playing).not.toBeNull();
+    // tocando: o botão oferece pausar
+    await userEvent.click(screen.getByRole('button', { name: 'pausar' }));
+    expect(recorder.playing).toBeNull();
+    expect(screen.getByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+  });
+
+  it('parar entra em "guardando" até a persistência confirmar (ENG-318)', async () => {
+    // recorder com stop() controlável: o PUT embutido fica pendurado até liberarmos
+    let release: (() => void) | null = null;
+    const recorder: VoiceRecorder = {
+      start: () =>
+        Promise.resolve({
+          onLevel: () => () => {},
+          stop: () =>
+            new Promise((res) => {
+              release = () => res({ blob: new Blob(), durationSec: 1 });
+            }),
+          cancel: () => {},
+        }),
+      play: () => Promise.resolve(),
+      duration: () => Promise.resolve(1),
+      stopPlayback: () => {},
+      has: () => Promise.resolve(false),
+      delete: () => Promise.resolve(),
+      onPlayback: () => () => {},
+    };
+    load(mapping());
+    render(<Mapeamento recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+
+    // enquanto a resposta persiste: estado no botão — guardando, sem aceitar clique
+    const saving = screen.getByRole('button', { name: 'guardando a resposta' });
+    expect((saving as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => release?.());
+    expect(await screen.findByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+  });
+
   it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
