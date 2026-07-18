@@ -286,6 +286,7 @@ export const en: Dict = {
     recordError: 'The answer was not saved. Record it again.',
     reportAria: 'report',
     reportFallback: 'The conversation is over. The report opens here.',
+    preparingReview: 'Preparing the conversation review…',
     toExport: 'Save the documents →',
     prev: '← previous',
   },

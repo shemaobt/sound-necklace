@@ -38,8 +38,17 @@ import './relatorio.css';
  * `buildMapReport` só emite as chaves das perguntas → a nota NUNCA sai no `.md`
  * (§10.4: o esqueleto congelado não tem linhas de nota).
  */
+/** Descoberta de voz feita ANTES de abrir a revisão (ENG-337): as linhas nascem prontas. */
+export interface PreloadedVoice {
+  /** caminhos cuja verificação já respondeu (com ou sem gravação) */
+  checked: ReadonlySet<string>;
+  /** caminhos COM gravação */
+  has: ReadonlySet<string>;
+}
+
 export interface RelatorioProps {
   recorder?: VoiceRecorder | null;
+  preloaded?: PreloadedVoice;
 }
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string;
@@ -289,14 +298,18 @@ function ReportCard({
   );
 }
 
-export function Relatorio({ recorder = null }: RelatorioProps) {
+export function Relatorio({ recorder = null, preloaded }: RelatorioProps) {
   const { t } = useTranslation();
   const session = useSessionStore((s) => s.session);
-  const [voiceSet, setVoiceSet] = useState<ReadonlySet<string>>(new Set());
+  // O preload (ENG-337) semeia os dois conjuntos: linha conhecida nasce resolvida,
+  // sem passar pelo "procurando"; o efeito abaixo só completa o que faltou.
+  const [voiceSet, setVoiceSet] = useState<ReadonlySet<string>>(() => preloaded?.has ?? new Set());
   const [voiceDurations, setVoiceDurations] = useState<ReadonlyMap<string, number>>(new Map());
   // Caminhos cuja verificação já RESPONDEU (com ou sem gravação): antes disso o
   // cartão mostra "procurando", nunca o vazio — carregando ≠ sem resposta (ENG-319).
-  const [voiceChecked, setVoiceChecked] = useState<ReadonlySet<string>>(new Set());
+  const [voiceChecked, setVoiceChecked] = useState<ReadonlySet<string>>(
+    () => preloaded?.checked ?? new Set(),
+  );
   // Reprodução com cara de reprodução (ENG-323): o caminho TOCANDO vem dos eventos
   // reais da porta; `opening` é a janela entre o toque e o som começar (fetch do blob).
   const [playingPath, setPlayingPath] = useState<string | null>(null);
@@ -338,23 +351,24 @@ export function Relatorio({ recorder = null }: RelatorioProps) {
     // setState síncrono no efeito — react-hooks/set-state-in-effect).
     if (!recorder) return;
     let alive = true;
+    const discover = async (p: string, known: boolean | undefined): Promise<void> => {
+      const h = known ?? (await recorder.has(p).catch(() => false));
+      if (!alive) return;
+      setVoiceChecked((prev) => (prev.has(p) ? prev : new Set(prev).add(p)));
+      if (!h) return;
+      setVoiceSet((prev) => (prev.has(p) ? prev : new Set(prev).add(p)));
+      const sec = await recorder.duration(p).catch(() => 0);
+      if (alive) setVoiceDurations((prev) => new Map(prev).set(p, sec));
+    };
     for (const p of voicePaths) {
-      void recorder
-        .has(p)
-        .catch(() => false)
-        .then(async (h) => {
-          if (!alive) return;
-          setVoiceChecked((prev) => (prev.has(p) ? prev : new Set(prev).add(p)));
-          if (!h) return;
-          setVoiceSet((prev) => (prev.has(p) ? prev : new Set(prev).add(p)));
-          const sec = await recorder.duration(p).catch(() => 0);
-          if (alive) setVoiceDurations((prev) => new Map(prev).set(p, sec));
-        });
+      // caminho já resolvido pelo preload (ENG-337): não re-pergunta à API — só a
+      // duração ainda chega assíncrona, sem segurar a linha
+      void discover(p, preloaded?.checked.has(p) ? preloaded.has.has(p) : undefined);
     }
     return () => {
       alive = false;
     };
-  }, [recorder, voicePaths]);
+  }, [recorder, voicePaths, preloaded]);
 
   if (!session || !mapped || !sequence.length) return null;
 
