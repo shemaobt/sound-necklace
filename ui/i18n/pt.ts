@@ -332,6 +332,8 @@ export const pt = {
     groupScene: 'Cena {{n}}',
     groupPhrase: 'Frase {{n}}',
     playAnswer: '▶ ouvir a resposta',
+    pauseAnswer: '⏸ pausar a resposta',
+    openingAnswer: 'abrindo a resposta…',
     noAnswerYet: 'ainda sem resposta gravada',
     voicePending: 'procurando a resposta gravada',
     writeAnswer: 'escrever a resposta',

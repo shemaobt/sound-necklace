@@ -312,6 +312,8 @@ export const en: Dict = {
     groupScene: 'Scene {{n}}',
     groupPhrase: 'Phrase {{n}}',
     playAnswer: '▶ listen to the answer',
+    pauseAnswer: '⏸ pause the answer',
+    openingAnswer: 'opening the answer…',
     noAnswerYet: 'no answer recorded yet',
     voicePending: 'looking for the recorded answer',
     writeAnswer: 'write the answer',

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -132,6 +132,49 @@ beforeEach(() => {
 });
 afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
+});
+
+describe('Relatório — reprodução com cara de reprodução (ENG-323)', () => {
+  it('clicar em ouvir mostra "abrindo…" até o som começar; tocando vira pausar; pausar volta', async () => {
+    const q = L1_Q[0]!;
+    const path = voiceAnswerPath({ level: 1, k: q.k });
+    let emit: ((p: string | null) => void) | null = null;
+    let releasePlay: (() => void) | null = null;
+    const recorder: VoiceRecorder = {
+      start: () => Promise.reject(new Error('não usado')),
+      play: () =>
+        new Promise((res) => {
+          releasePlay = () => {
+            emit?.(path);
+            res();
+          };
+        }),
+      duration: () => Promise.resolve(9),
+      stopPlayback: () => emit?.(null),
+      has: () => Promise.resolve(true),
+      delete: () => Promise.resolve(),
+      onPlayback: (cb) => {
+        emit = cb;
+        return () => {
+          emit = null;
+        };
+      },
+    };
+    load(report());
+    render(<Relatorio recorder={recorder} />);
+
+    const card = cardFor(q.q);
+    await userEvent.click(await within(card).findByRole('button', { name: /ouvir a resposta/ }));
+    // entre o toque e o som: o botão diz que está abrindo, sem aceitar clique
+    const opening = within(card).getByRole('button', { name: /abrindo a resposta/ });
+    expect((opening as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => releasePlay?.());
+    // tocando: pausar + ondas acesas
+    await userEvent.click(within(card).getByRole('button', { name: /pausar a resposta/ }));
+    // pausado: volta ao ouvir
+    expect(within(card).getByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+  });
 });
 
 describe('Relatório — a voz aparece conforme cada resposta resolve (ENG-319)', () => {
