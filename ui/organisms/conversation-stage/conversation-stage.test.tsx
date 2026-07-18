@@ -32,6 +32,15 @@ describe('ConversationStage — marcador de papel (§8.7)', () => {
   });
 });
 
+/** Parar → guardar: o estado vive no botão (ENG-318) — spinner, desabilitado, sem texto novo. */
+describe('ConversationStage — guardando a resposta (ENG-318)', () => {
+  it("em 'saving', o microfone vira 'guardando a resposta' e não aceita clique", () => {
+    render(<ConversationStage {...baseProps({ recorderState: 'saving' })} />);
+    const btn = screen.getByRole('button', { name: 'guardando a resposta' });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
 /** O botão da pergunta segue o estado REAL da fala (ENG-317): falando ⇄ pausado. */
 describe('ConversationStage — botão da pergunta pelo estado da fala (ENG-317)', () => {
   it('falando, oferece "Pausar a pergunta"; calado, "Ouvir a pergunta"', () => {

@@ -188,6 +188,39 @@ describe('Mapeamento — o ▶ do span de cada nível (PRD v2 §8.7)', () => {
 });
 
 describe('Mapeamento — resposta por voz, entrevista só-voz (PRD v2 §8.7, §10.4, design parity)', () => {
+  it('parar entra em "guardando" até a persistência confirmar (ENG-318)', async () => {
+    // recorder com stop() controlável: o PUT embutido fica pendurado até liberarmos
+    let release: (() => void) | null = null;
+    const recorder: VoiceRecorder = {
+      start: () =>
+        Promise.resolve({
+          onLevel: () => () => {},
+          stop: () =>
+            new Promise((res) => {
+              release = () => res({ blob: new Blob(), durationSec: 1 });
+            }),
+          cancel: () => {},
+        }),
+      play: () => Promise.resolve(),
+      duration: () => Promise.resolve(1),
+      stopPlayback: () => {},
+      has: () => Promise.resolve(false),
+      delete: () => Promise.resolve(),
+    };
+    load(mapping());
+    render(<Mapeamento recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+
+    // enquanto a resposta persiste: estado no botão — guardando, sem aceitar clique
+    const saving = screen.getByRole('button', { name: 'guardando a resposta' });
+    expect((saving as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => release?.());
+    expect(await screen.findByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+  });
+
   it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
