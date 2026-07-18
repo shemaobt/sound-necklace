@@ -86,10 +86,12 @@
   flex-wrap: wrap;
 }
 
+/* grid compacto (ENG-310): 20+ áudios cabem na tela em colunas responsivas,
+   em vez da coluna única que virava um scroll comprido */
 .cds-setup-audios {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
 }
 
 /* cards brancos do protótipo (bigStyle): borda quase invisível + sombra baixa */
