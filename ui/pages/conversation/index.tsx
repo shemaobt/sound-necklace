@@ -467,10 +467,18 @@ export function Conversation({
       return;
     }
     const paths = sequence.map((s2) => voiceAnswerPath(s2));
+    // descobrir E aquecer (ENG-339): a resposta que existe já baixa aqui, para a
+    // revisão abrir com o áudio pronto de tocar — não só sabido. Falha do aquecer
+    // não muda o veredito (a linha toca baixando na hora, como antes).
+    const discover = async (p: string): Promise<boolean> => {
+      const h = await recorder.has(p).catch(() => false);
+      if (h) await recorder.prefetch?.(p).catch(() => undefined);
+      return h;
+    };
     const results = await Promise.all(
       paths.map((p) =>
         Promise.race([
-          recorder.has(p).catch(() => false),
+          discover(p),
           new Promise<null>((res) => setTimeout(() => res(null), PREPARE_TIMEOUT_MS)),
         ]),
       ),

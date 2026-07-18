@@ -52,6 +52,41 @@ describe('WebVoiceRecorder — persistência delega ao store (sem microfone)', (
     expect(await rec.has(P1)).toBe(false);
   });
 
+  it('prefetch aquece o cache: play e duration reusam os bytes sem novo get (ENG-339)', async () => {
+    const store = new MemoryVoiceStore();
+    await store.put(P1, Uint8Array.of(7, 7, 7));
+    const get = vi.spyOn(store, 'get');
+    const audio = {
+      play: vi.fn(async () => {}),
+      pause: vi.fn(),
+      addEventListener: vi.fn(),
+    } as unknown as HTMLAudioElement;
+    const rec = new WebVoiceRecorder({ store, createAudio: () => audio });
+
+    await rec.prefetch(P1);
+    expect(get).toHaveBeenCalledTimes(1);
+
+    await rec.play(P1);
+    rec.stopPlayback();
+    expect(get).toHaveBeenCalledTimes(1); // reusa o cache — nada de segundo download
+
+    await rec.duration(P1); // sem AudioContext injetado devolve 0, mas não re-baixa
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it('apagar a resposta invalida o cache: a próxima leitura volta ao store (ENG-339)', async () => {
+    const store = new MemoryVoiceStore();
+    await store.put(P1, Uint8Array.of(1));
+    const get = vi.spyOn(store, 'get');
+    const rec = new WebVoiceRecorder({ store });
+
+    await rec.prefetch(P1);
+    await rec.delete(P1);
+    await store.put(P1, Uint8Array.of(2));
+    await rec.prefetch(P1);
+    expect(get).toHaveBeenCalledTimes(2); // o delete derrubou a entrada aquecida
+  });
+
   it('play toca uma resposta existente; ausente → lança', async () => {
     const store = new MemoryVoiceStore();
     const play = vi.fn(async () => {});

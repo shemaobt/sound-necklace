@@ -56,6 +56,9 @@ export class WebVoiceRecorder implements VoiceRecorder {
   readonly #createAudio: (blob: Blob) => HTMLAudioElement;
   #playing: HTMLAudioElement | null = null;
   readonly #playbackSubs = new Set<(path: ResourcePath | null) => void>();
+  /** Bytes aquecidos por caminho (ENG-339): o preparo pré-revisão baixa uma vez;
+   *  play/duration reusam. Gravar ou apagar o caminho derruba a entrada. */
+  readonly #warm = new Map<ResourcePath, Uint8Array>();
 
   constructor(deps: WebVoiceDeps) {
     this.#store = deps.store;
@@ -117,6 +120,8 @@ export class WebVoiceRecorder implements VoiceRecorder {
             resolve({ blob, durationSec });
             return;
           }
+          // gravar de novo derruba a entrada aquecida — o cache nunca serve take velha
+          this.#warm.delete(path);
           blob
             .arrayBuffer()
             .then((buf) => this.#store.put(path, new Uint8Array(buf)))
@@ -137,8 +142,20 @@ export class WebVoiceRecorder implements VoiceRecorder {
     };
   }
 
-  async play(path: ResourcePath): Promise<void> {
+  async #bytes(path: ResourcePath): Promise<Uint8Array> {
+    const hit = this.#warm.get(path);
+    if (hit) return hit;
     const bytes = await this.#store.get(path);
+    this.#warm.set(path, bytes);
+    return bytes;
+  }
+
+  async prefetch(path: ResourcePath): Promise<void> {
+    await this.#bytes(path);
+  }
+
+  async play(path: ResourcePath): Promise<void> {
+    const bytes = await this.#bytes(path);
     this.stopPlayback();
     const audio = this.#createAudio(new Blob([bytes as BlobPart], { type: MIME }));
     this.#playing = audio;
@@ -176,7 +193,7 @@ export class WebVoiceRecorder implements VoiceRecorder {
   }
 
   async duration(path: ResourcePath): Promise<number> {
-    const bytes = await this.#store.get(path); // lança se não houver gravação
+    const bytes = await this.#bytes(path); // lança se não houver gravação
     if (!this.#AudioContextCtor) return 0; // sem Web Audio → duração desconhecida
     const ctx = new this.#AudioContextCtor();
     try {
@@ -192,6 +209,7 @@ export class WebVoiceRecorder implements VoiceRecorder {
   }
 
   async delete(path: ResourcePath): Promise<void> {
+    this.#warm.delete(path);
     await this.#store.delete(path);
   }
 
