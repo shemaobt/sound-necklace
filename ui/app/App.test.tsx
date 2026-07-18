@@ -256,7 +256,7 @@ describe('App shell', () => {
       manifestId: 'fnv1a32:deadbeef',
       pipelineConsent: true,
     });
-    // o estado salvo ficou no Mapeamento (o último modo do domínio) — é o que hoje
+    // o estado salvo ficou no Conversation (o último modo do domínio) — é o que hoje
     // faz a reentrada cair na entrevista
     const dto = toSessionDto(completableSession(), {
       granularityLevel: 'medium',
@@ -330,7 +330,7 @@ describe('App shell', () => {
   // de verdade é `tests/e2e/voice-really-records.spec.ts`, onde o gravador é o real. O
   // título anterior dizia "o microfone grava" e foi exatamente essa a ilusão que deixou
   // o app mudo por uma semana (ENG-298) — um teste verde afirmando o que não acontecia.
-  it('liga o gravador no Mapeamento: o botão de voz abre a gravação', async () => {
+  it('liga o gravador no Conversation: o botão de voz abre a gravação', async () => {
     await act(async () => {
       navigate('/session/s1');
       sessionStore.getState().load(completableSession());
@@ -345,7 +345,7 @@ describe('App shell', () => {
   });
 
   it('persiste o caminho da resposta de voz em meta.voice → o relatório exportado a referencia', async () => {
-    // Gravar voz no Mapeamento (§8.7) deve entrar no `meta.voice` da sessão persistida,
+    // Gravar voz no Conversation (§8.7) deve entrar no `meta.voice` da sessão persistida,
     // de modo que o Export/relatório reflita a resposta como caminho `respostas/…` em vez
     // de "sem resposta" (ENG-276). O gravador em si já funciona; o que faltava era o shell
     // fiar o caminho salvo de volta ao DTO.

@@ -42,9 +42,9 @@ export interface NecklaceProps {
   pendingStart?: number | null;
   /** span da cena ativa (Segmentação): abre a janela cena ± margem, dim fora, banda tracejada */
   window?: Span | null;
-  /** margem da janela em contas; 0 = só a cena (Triagem). Padrão: max(3, 2s) */
+  /** margem da janela em contas; 0 = só a cena (Triage). Padrão: max(3, 2s) */
   windowMargin?: number;
-  /** banda tracejada da cena; a Triagem a dispensa (a cena já vem sozinha, no cartão) */
+  /** banda tracejada da cena; a Triage a dispensa (a cena já vem sozinha, no cartão) */
   sceneBand?: boolean;
   /** cabeça de reprodução: acende as contas ≤ head de forma imperativa (60fps) */
   playbackHead?: number | null;

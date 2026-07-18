@@ -12,7 +12,7 @@ describe('StationHost', () => {
   });
 
   it('estação ausente cai no fallback "estação em construção"', () => {
-    render(<StationHost stationKey="triagem" registry={{}} />);
+    render(<StationHost stationKey="triage" registry={{}} />);
     expect(screen.getByText('estação em construção')).toBeDefined();
   });
 

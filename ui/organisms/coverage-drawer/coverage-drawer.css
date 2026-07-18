@@ -1,5 +1,5 @@
 /* Drawer de cobertura — painel olive da direita (protótipo "Colar de Sons -
-   Protótipo", Triagem). Movimento (slide/fade) só sob a guarda reduced-motion:
+   Protótipo", Triage). Movimento (slide/fade) só sob a guarda reduced-motion:
    sem animação o Radix desmonta imediato, que é o comportamento base. */
 
 .cds-coverage-drawer-tab {

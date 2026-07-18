@@ -9,7 +9,7 @@ export interface ProgressDotScene {
 }
 
 /**
- * Pontos de progresso da Triagem (Protótipo.dc.html, tDots): uma pérola por
+ * Pontos de progresso da Triage (Protótipo.dc.html, tDots): uma pérola por
  * cena — taggeada = pérola da cor da cena com check branco; none_fit = a mesma
  * pérola esmaecida; pendente = aro vazio. A atual é maior (30px) e ganha o halo
  * telha. Sem números — cada ponto é um botão nomeado genericamente (§9.2), o

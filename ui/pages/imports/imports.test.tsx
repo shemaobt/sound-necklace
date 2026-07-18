@@ -10,7 +10,7 @@ import Imports from './index';
  * Estação de interoperabilidade com o pipeline (§8.9): as duas portas — carregar
  * uma ENTREGA (propostas destravadas, "confirme de ouvido") e retomar um RETORNO
  * (confirmações travadas, flags reaplicadas). A página só seleciona o arquivo,
- * exibe erro e substitui o estado; todo o mapeamento vem de contracts/imports.ts.
+ * exibe erro e substitui o estado; todo o conversation vem de contracts/imports.ts.
  * Os testes dirigem a página por upload de arquivo real e afirmam o estado
  * resultante no sessionStore + as cópias verbatim da referência.
  */

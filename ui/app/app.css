@@ -1,9 +1,9 @@
 /*
  * Layout do shell (Protótipo.dc.html): cabeçalho de 64px, fio de contas de 46px,
  * a estação ativa ocupando o resto. As cores do chrome são custom properties que
- * a variante escura das telas cerimoniais (Escuta 1 = .cds-escuta1; Conversa =
+ * a variante escura das telas cerimoniais (Escuta 1 = .cds-listen; Conversa =
  * .cds-conversation-stage) troca via :has() — CSS puro, sem prop-drilling; quando
- * o Mapeamento alterna para a prévia do relatório, o palco sai do DOM e o chrome
+ * o Conversation alterna para a prévia do relatório, o palco sai do DOM e o chrome
  * volta ao claro sozinho.
  */
 .cds-app {
@@ -26,7 +26,7 @@
   --cds-chrome-dot-future-border: rgba(63, 62, 32, 0.24);
 }
 
-.cds-app:has(.cds-escuta1),
+.cds-app:has(.cds-listen),
 .cds-app:has(.cds-conversation-stage) {
   background: var(--cds-olive);
 

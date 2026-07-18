@@ -19,7 +19,7 @@ import './tutorial-popup.css';
  */
 
 /** Estações com dica (a cópia vive no dicionário i18n — ENG-279). */
-const STATIONS = ['escuta1', 'escuta2', 'triagem', 'segmentacao', 'mapeamento', 'export'];
+const STATIONS = ['listen', 'cut', 'triage', 'phrases', 'conversation', 'export'];
 
 /** Chave do dismissal permanente (documentada no README deste organismo). */
 const STORAGE_KEY = 'colar-de-sons:tutorial:dismissed:v1';

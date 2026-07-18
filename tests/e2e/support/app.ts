@@ -32,7 +32,7 @@ export const SCENARIO = {
   totalBeads: 12,
   /** cortes de cena em Escuta 2: cada clique fixa o FIM da cena (o começo já está costurado). */
   sceneEndBeads: [3, 7, 11] as const,
-  /** classificação de cada cena travada, na ordem em que a Triagem as foca. */
+  /** classificação de cada cena travada, na ordem em que a Triage as foca. */
   triage: [
     { kind: 'Apelo', confidence: 'Certeza' },
     { kind: 'Chegada', confidence: 'Quase' },
@@ -176,7 +176,7 @@ export class ColarApp {
     else await this.page.getByRole('button', { name: 'Confirmar as cenas →' }).click();
   }
 
-  // ——— Triagem ———
+  // ——— Triage ———
 
   async triage(
     steps: readonly (typeof SCENARIO.triage)[number][] = SCENARIO.triage,
@@ -215,13 +215,13 @@ export class ColarApp {
     else await this.page.getByRole('button', { name: 'Pronto com esta cena →' }).click();
   }
 
-  async finishSegmentacao(): Promise<void> {
+  async finishPhrases(): Promise<void> {
     const continuar = this.page.getByRole('button', { name: 'Continuar →' });
     if (await continuar.count()) await continuar.click();
     else await this.page.getByRole('button', { name: 'Já segmentei todas as cenas →' }).click();
   }
 
-  // ——— Mapeamento ———
+  // ——— Conversation ———
 
   /** Grava uma resposta por voz (gravador fixture): gravar → parar. */
   async recordVoiceAnswer(): Promise<void> {
@@ -238,7 +238,7 @@ export class ColarApp {
   /** Anda até a prévia do relatório clicando "Próxima pergunta" até a conversa acabar. */
   async walkToReport(): Promise<void> {
     for (let step = 0; step < 60; step++) {
-      if (await this.page.locator('.cds-relatorio').count()) return;
+      if (await this.page.locator('.cds-report').count()) return;
       await this.page.getByRole('button', { name: 'Próxima pergunta' }).click();
     }
     throw new Error('relatório não apareceu após 60 passos');

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { QuestionCard } from './question-card';
 
-describe('QuestionCard — pergunta do Mapeamento com marcador de papel (redesign §6.6)', () => {
+describe('QuestionCard — pergunta do Conversation com marcador de papel (redesign §6.6)', () => {
   it('mostra o texto da pergunta', () => {
     render(<QuestionCard question="Sobre o que é essa história?" />);
     expect(screen.getByText('Sobre o que é essa história?')).toBeDefined();

@@ -4,7 +4,7 @@ import './chip.css';
 
 /**
  * Pílula de cena/frase (redesign §6.3): swatch-pérola opcional tingido pela
- * cor do segmento; variante tracejada para "nenhum se encaixa" (Triagem).
+ * cor do segmento; variante tracejada para "nenhum se encaixa" (Triage).
  */
 export function Chip({
   label,

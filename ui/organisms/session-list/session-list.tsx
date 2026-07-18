@@ -19,7 +19,7 @@ export interface SessionCardData {
   lastModified: string;
   /** 0..1 — quanto do fio já foi enfiado; a página deriva do passo salvo */
   progress: number;
-  /** nome acessível do relance de progresso, ex.: "Triagem — passo 3 de 6" */
+  /** nome acessível do relance de progresso, ex.: "Triage — passo 3 de 6" */
   progressLabel: string;
 }
 

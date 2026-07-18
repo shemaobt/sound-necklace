@@ -156,7 +156,7 @@ function MicGlyph() {
 }
 
 /**
- * O palco da conversa do Mapeamento (redesign §6.6): guia à esquerda, a pergunta
+ * O palco da conversa do Conversation (redesign §6.6): guia à esquerda, a pergunta
  * grande em Merriweather à direita, a resposta por voz (microfone → forma de onda
  * ao vivo → ouvir/de novo), o canal digitado opcional e um fio de contas de
  * progresso — uma conta por pergunta, sem números (§9.2). Apresentacional: toda

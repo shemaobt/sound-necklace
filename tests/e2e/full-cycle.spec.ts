@@ -10,14 +10,14 @@ import {
 
 /**
  * Acceptance 1 (plano-de-acao §3.1): uma facilitadora completa um ciclo real inteiro
- * — áudio do bucket → sessão → Escuta 1/2 → Triagem → Segmentação → Mapeamento (voz) →
+ * — áudio do bucket → sessão → Escuta 1/2 → Triage → Segmentação → Conversation (voz) →
  * concluída — em DUAS sessões de trabalho (reload + retomar no meio), sem manuseio de
  * arquivo e sem perda de trabalho. Modo fixture; o Playwright dirige a UI real.
  */
 test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) => {
   const app = new ColarApp(page);
 
-  // ——— assento 1: entrada → cenas → triagem ———
+  // ——— assento 1: entrada → cenas → triage ———
   await app.login();
   const sessionId = await app.createSession();
 
@@ -25,7 +25,7 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
   await app.cutScenes();
   await app.triage();
 
-  // A Triagem terminada leva o domínio ao modo `segmentacao`; o autosave contínuo
+  // A Triage terminada leva o domínio ao modo `phrases`; o autosave contínuo
   // (§7.3) persiste o estado inteiro. Espera a gravação assentar antes do reload.
   await expect
     .poll(async () => (await readPersistedState(page, sessionId))?.mode)
@@ -49,7 +49,7 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
   await app.moveSeam(); // a frase cruzou a borda → a costura desliza
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
-  await app.finishSegmentacao();
+  await app.finishPhrases();
 
   const conversation = await app.answerConversation();
   expect(conversation.voicedLevels).toEqual([1, 2, 3]); // ≥1 por nível por voz

@@ -35,7 +35,7 @@ function baseProps(over: Partial<SeamModalProps> = {}): SeamModalProps {
     neighbor: { span: { s: 25, e: 40 }, tint: VERDE },
     onMove: vi.fn(),
     onReanchor: vi.fn(),
-    onGoTriagem: vi.fn(),
+    onGoTriage: vi.fn(),
     ...over,
   };
 }
@@ -54,7 +54,7 @@ describe('SeamModal — conjuntos de opções por variante (§8.6)', () => {
     expect(screen.getByText('A cena de hoje cresce, a vizinha encolhe')).toBeTruthy();
   });
 
-  it('large overshoot não-consumido: Triagem + Mover mesmo assim + reancorar, sem consequência', () => {
+  it('large overshoot não-consumido: Triage + Mover mesmo assim + reancorar, sem consequência', () => {
     render(
       <SeamModal
         {...baseProps({
@@ -76,7 +76,7 @@ describe('SeamModal — conjuntos de opções por variante (§8.6)', () => {
     expect(screen.queryByText('A cena de hoje cresce, a vizinha encolhe')).toBeNull();
   });
 
-  it('large overshoot consumido: só Triagem + reancorar (nunca mover)', () => {
+  it('large overshoot consumido: só Triage + reancorar (nunca mover)', () => {
     render(
       <SeamModal
         {...baseProps({
@@ -94,14 +94,14 @@ describe('SeamModal — conjuntos de opções por variante (§8.6)', () => {
     expect(buttonNames()).toEqual(['Voltar à Triagem', 'Reancorar dentro da cena']);
   });
 
-  it('escalada two-productive: só Triagem + reancorar', () => {
+  it('escalada two-productive: só Triage + reancorar', () => {
     render(
       <SeamModal
         {...baseProps({
           offer: makeOffer({
             kind: 'two-productive',
             canMove: false,
-            warning: '⚑ A cena vizinha é produtiva e já tem frases — trate na Triagem.',
+            warning: '⚑ A cena vizinha é produtiva e já tem frases — trate na Triage.',
           }),
         })}
       />,
@@ -132,7 +132,7 @@ describe('SeamModal — headline e a11y', () => {
 
 /** Cada botão dispara o seu callback exatamente uma vez (DoD). */
 describe('SeamModal — callbacks', () => {
-  it('mover / reancorar / triagem disparam 1× cada, sem cruzamento', () => {
+  it('mover / reancorar / triage disparam 1× cada, sem cruzamento', () => {
     const props = baseProps({
       offer: makeOffer({ kind: 'escalation', canMove: true, delta: 9, sel: { s: 12, e: 33 } }),
     });
@@ -140,7 +140,7 @@ describe('SeamModal — callbacks', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mover mesmo assim' }));
     expect(props.onMove).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: 'Voltar à Triagem' }));
-    expect(props.onGoTriagem).toHaveBeenCalledTimes(1);
+    expect(props.onGoTriage).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: 'Reancorar dentro da cena' }));
     expect(props.onReanchor).toHaveBeenCalledTimes(1);
   });
@@ -151,7 +151,7 @@ describe('SeamModal — callbacks', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mover a borda até aqui' }));
     expect(props.onMove).toHaveBeenCalledTimes(1);
     expect(props.onReanchor).not.toHaveBeenCalled();
-    expect(props.onGoTriagem).not.toHaveBeenCalled();
+    expect(props.onGoTriage).not.toHaveBeenCalled();
   });
 
   it('ESC mapeia para onReanchor (default seguro), uma vez', () => {

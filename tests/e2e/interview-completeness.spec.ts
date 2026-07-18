@@ -66,7 +66,7 @@ async function readState(page: Page, id: string): Promise<PersistedState> {
 }
 
 /** Lê os bytes do `.md` guardado (o artefato = a exportação, §10.5). */
-async function readRelatorioMd(page: Page, id: string): Promise<string> {
+async function readReportMd(page: Page, id: string): Promise<string> {
   const raw = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
   const parsed = JSON.parse(raw!) as {
     sessions: [string, { artifacts?: { report?: string } }][];
@@ -79,7 +79,7 @@ async function readRelatorioMd(page: Page, id: string): Promise<string> {
 test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page }) => {
   const app = new ColarApp(page);
 
-  // ——— entrada → cenas → triagem (2 classificadas + 1 none_fit) ———
+  // ——— entrada → cenas → triage (2 classificadas + 1 none_fit) ———
   await app.login();
   const sessionId = await app.createSession();
   await app.confirmWholeStory();
@@ -91,7 +91,7 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
   await app.cutPhrase(2, 3);
   await app.nextScene(); // "Pronto com esta cena →"
   await app.cutPhrase(4, 5);
-  await app.finishSegmentacao(); // "Já segmentei todas as cenas →" → mapeamento
+  await app.finishPhrases(); // "Já segmentei todas as cenas →" → conversation
 
   // ——— a conversa inteira: 41 perguntas, enunciado a enunciado ———
   const questionText = page.locator('.cds-question-card-text');
@@ -105,8 +105,8 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
   }
 
   // a prévia do relatório abre com a estrutura certa (3 seções, 3 cenas, 3 frases)
-  await expect(page.locator('.cds-relatorio-card')).toHaveCount(EXPECTED_WORDINGS.length);
-  await expect(page.locator('.cds-relatorio-section')).toHaveText([
+  await expect(page.locator('.cds-report-card')).toHaveCount(EXPECTED_WORDINGS.length);
+  await expect(page.locator('.cds-report-section')).toHaveText([
     'A história',
     'As cenas',
     'As frases',
@@ -123,7 +123,7 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
 
   // ——— asserções contra o estado persistido + o `.md` exportado ———
   const state = await readState(page, sessionId);
-  const md = await readRelatorioMd(page, sessionId);
+  const md = await readReportMd(page, sessionId);
   const seq = questionSequence(state);
 
   // a sequência que o domínio computa == a apresentada (que já batia com o esperado)

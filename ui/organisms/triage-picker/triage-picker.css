@@ -1,0 +1,167 @@
+/* Picker da Triage — visual do protótipo "Colar de Sons - Protótipo" (Triage).
+   Cores/tipografia dos tokens Shemá; movimento decorativo só sob a guarda. */
+
+.cds-triage-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 640px;
+}
+
+.cds-triage-picker-filter {
+  /* conveniência da facilitadora (não existe no protótipo): vestida como os
+     inputs do sistema — branco, radius 14, borda quase invisível, largura cheia */
+  width: 100%;
+  border: 1px solid rgba(63, 62, 32, 0.18);
+  border-radius: var(--cds-radius-tile, 14px);
+  padding: 12px 16px;
+  font-family: var(--cds-font-load-bearing, 'Montserrat', system-ui, sans-serif);
+  font-size: 14px;
+  color: var(--cds-ink, #0a0703);
+  background: #ffffff;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
+}
+
+.cds-triage-picker-filter:focus-visible {
+  border-color: var(--cds-telha);
+}
+
+.cds-triage-picker-filter::placeholder {
+  color: #6d6c56;
+}
+
+.cds-triage-picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cds-triage-picker-section,
+.cds-triage-picker-theme-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 2px 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6d6c56;
+}
+
+.cds-triage-picker-theme-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cds-triage-picker-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.cds-triage-picker-theme {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cds-triage-picker-disclosure {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1.5px dashed rgba(63, 62, 32, 0.28);
+  color: #5a5a3e;
+  font-weight: 600;
+  font-size: 13.5px;
+  background: transparent;
+}
+
+.cds-triage-picker-disclosure:hover {
+  background: #f1efe3;
+}
+
+.cds-triage-picker-collapse {
+  align-self: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cds-telha, #be4a01);
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+}
+
+.cds-triage-picker-chosen-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+/* cartão sob medida do protótipo (tStageConf): só swatch + nome do tipo */
+.cds-triage-picker-chosen {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: fit-content;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(63, 62, 32, 0.08);
+  padding: 14px 24px;
+}
+
+.cds-triage-picker-chosen-label {
+  min-width: 0;
+  font-weight: 700;
+  font-size: 19px;
+  color: #0a0703;
+}
+
+.cds-triage-picker-swap {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cds-telha, #be4a01);
+  background: transparent;
+  border: none;
+}
+
+.cds-triage-picker-question {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0a0703;
+}
+
+.cds-triage-picker-confirm {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes cds-triage-picker-fade {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .cds-triage-picker-theme,
+  .cds-triage-picker[data-stage='confianca'] {
+    animation: cds-triage-picker-fade 0.2s ease-out;
+  }
+}

@@ -127,7 +127,7 @@ describe('Necklace — centragem e hit-test leem a mesma largura', () => {
    * MESMA medida. Uma borda no contêiner (ou uma barra de rolagem) separa
    * `clientWidth` de `getBoundingClientRect().width` — e a caixa onde as contas
    * vivem (a de padding) deixa de começar em `rect.left`. As coordenadas aqui vêm
-   * do rect real da conta, não da geometria replicada: se o mapeamento deslocar,
+   * do rect real da conta, não da geometria replicada: se o conversation deslocar,
    * o toque cai na vizinha.
    */
   // a borda entra por folha de estilo e sai SEMPRE — se vazasse para os testes

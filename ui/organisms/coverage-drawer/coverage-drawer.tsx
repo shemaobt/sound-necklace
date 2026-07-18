@@ -7,7 +7,7 @@ import './coverage-drawer.css';
 
 /**
  * "Cobertura · só facilitadora" (PRD v2 §8.5; protótipo "Colar de Sons -
- * Protótipo", drawer da Triagem): painel olive que desliza da direita, fechado
+ * Protótipo", drawer da Triage): painel olive que desliza da direita, fechado
  * por padrão e invisível ao ouvinte até a facilitadora abrir pela aba lateral.
  * Contagens por tipo em mono (superfície densa de facilitadora — dígitos são
  * permitidos aqui) e "candidatos a ausência" = raras sem cobertura firme.

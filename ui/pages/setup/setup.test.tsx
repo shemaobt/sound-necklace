@@ -104,7 +104,7 @@ describe('Setup — criação de sessão (§8.1)', () => {
     );
 
     // A sessão viva do domínio existe com grade e cai em Escuta 1 (modo escuta +
-    // colar não confirmado é o discriminador escuta1 vs escuta2 no shell).
+    // colar não confirmado é o discriminador listen vs cut no shell).
     const s = sessionStore.getState().session;
     expect(s?.beads.length).toBeGreaterThan(0);
     expect(s?.mode).toBe('escuta');

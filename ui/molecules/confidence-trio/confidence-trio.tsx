@@ -23,7 +23,7 @@ const DEFAULT_CHOICE_LABELS: Record<ConfidenceChoice, string> = {
 };
 
 /**
- * O segundo gesto da Triagem (redesign §4.4, §6.4): confiança em três formas —
+ * O segundo gesto da Triage (redesign §4.4, §6.4): confiança em três formas —
  * disco cheio / meio / tracejado — não em texto. Grupo de rádio de escolha única
  * (APG): uma parada de tab, setas movem e selecionam (roving tabindex).
  */

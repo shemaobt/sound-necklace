@@ -178,12 +178,12 @@ export const pt = {
     open: 'Abrir',
     listAria: 'histórias',
   },
-  escuta1: {
+  listen: {
     tagline: 'Ouça a história.',
     reopen: 'Reabrir',
     confirm: 'Já ouvi a história completa',
   },
-  escuta2: {
+  cut: {
     title: 'Corte a história em cenas',
     reviewHeadline: 'A história está toda em cenas. Toque numa cena para reouvir.',
     instructionPre: 'Toque no colar onde ',
@@ -195,7 +195,7 @@ export const pt = {
     confirmScene: '✓ Confirmar esta cena',
     confirmAll: 'Confirmar as cenas →',
   },
-  segmentacao: {
+  phrases: {
     reviewHeadline: 'As frases desta cena estão prontas. Toque numa frase para reouvir.',
     instruction: 'Toque no colar o começo e o fim de cada frase.',
     instructionReplay: ' Toque numa frase pronta para reouvir.',
@@ -210,15 +210,14 @@ export const pt = {
   },
   tutorial: {
     tips: {
-      escuta1:
+      listen:
         'Ouçam a história inteira, sem pressa. O botão grande toca e pausa; confirme quando a história tiver sido ouvida por completo.',
-      escuta2:
-        'Marquem juntos onde cada cena termina e confirme uma cena de cada vez. Tocar numa cena já pronta a reproduz inteira.',
-      triagem:
+      cut: 'Marquem juntos onde cada cena termina e confirme uma cena de cada vez. Tocar numa cena já pronta a reproduz inteira.',
+      triage:
         'Classifiquem cada cena ouvindo-a de novo. Quando nenhum tipo se encaixa, «nenhum se encaixa» também é um achado.',
-      segmentacao:
+      phrases:
         'Dentro de cada cena, marquem as frases: um toque onde começa, outro onde termina. Se a frase passar da borda, o colar oferece caminhos.',
-      mapeamento:
+      conversation:
         'Faça as perguntas em voz alta e grave as respostas de quem conta. Você pode escrever depois — nunca pelo ouvinte.',
       export:
         'A história está inteira no colar. Guarde a sessão para gerar os documentos do projeto.',
@@ -250,7 +249,7 @@ export const pt = {
   guide: {
     ariaLabel: 'o guia da conversa',
   },
-  triagem: {
+  triage: {
     reviewHeadline: 'Todas as cenas classificadas.',
     empty: 'Nenhuma cena confirmada ainda.',
     instruction: 'Essa cena é sobre o quê?',
@@ -265,7 +264,7 @@ export const pt = {
     lockout:
       '⚠ Nenhuma cena se encaixa em Rute. Segmentação e Mapeamento ficam travadas — esta história não rende cobertura de Rute. As marcas ficam salvas como evidência de tipo nativo.',
   },
-  triagemPicker: {
+  triagePicker: {
     // Aninhado de verdade: chaves planas com ponto só resolviam por um FALLBACK do
     // i18next (ignoreJSONStructure). Se esse default mudar, os 6 títulos de tema viram
     // a chave crua na tela — e nada quebraria.
@@ -298,7 +297,7 @@ export const pt = {
     counts: 'firme {{firm}} · hesitante {{hesitant}} · alvo {{target}}',
     absence: 'Candidatos a ausência (raras em aberto)',
   },
-  mapeamento: {
+  conversation: {
     listenStory: '▶ ouvir a história',
     listenScene: '▶ ouvir a cena',
     listenPhrase: '▶ ouvir a frase',
@@ -316,12 +315,12 @@ export const pt = {
     consequence: 'A cena de hoje cresce, a vizinha encolhe',
     move: 'Mover a borda até aqui',
     moveAnyway: 'Mover mesmo assim',
-    backToTriagem: 'Voltar à Triagem',
+    backToTriage: 'Voltar à Triagem',
     reanchor: 'Reancorar dentro da cena',
     markerBefore: 'borda de hoje',
     markerAfter: 'borda nova',
   },
-  relatorio: {
+  report: {
     eyebrow: 'A conversa sobre o sentido',
     headline: 'Tudo que vocês falaram, reunido.',
     facilitatorLed: 'conduzida pela facilitadora',

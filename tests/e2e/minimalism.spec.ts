@@ -11,8 +11,8 @@ import { scanListenerSurface } from './support/minimalism';
  * dígito que apareça é bug da estação dona, não do teste.
  *
  * Um único percurso (o mesmo roteiro do acceptance 1) visita os estados em ordem:
- * Escuta 1 → Escuta 2 (ancoragem + cena travada) → Triagem (foco/todos-os-tipos/
- * confiança) → Segmentação (ancoragem/aviso-de-cena-vazia/seam-modal) → Mapeamento
+ * Escuta 1 → Escuta 2 (ancoragem + cena travada) → Triage (foco/todos-os-tipos/
+ * confiança) → Segmentação (ancoragem/aviso-de-cena-vazia/seam-modal) → Conversation
  * (níveis história/cena/frase + gravando).
  */
 
@@ -22,13 +22,13 @@ const LISTEN = {
   3: '▶ ouvir a frase',
 } as const;
 
-/** Nível da pergunta em foco no Mapeamento, pelo ▶ do trecho (exatamente um por tela). */
+/** Nível da pergunta em foco no Conversation, pelo ▶ do trecho (exatamente um por tela). */
 async function currentLevel(page: Page): Promise<1 | 2 | 3> {
   await expect(page.locator('button', { hasText: '▶ ouvir a' })).toBeVisible();
   if (await page.getByRole('button', { name: LISTEN[1] }).count()) return 1;
   if (await page.getByRole('button', { name: LISTEN[2] }).count()) return 2;
   if (await page.getByRole('button', { name: LISTEN[3] }).count()) return 3;
-  throw new Error('pergunta do Mapeamento sem ▶ de nível reconhecível');
+  throw new Error('pergunta do Conversation sem ▶ de nível reconhecível');
 }
 
 /** Avança "Próxima pergunta" até a primeira pergunta do nível pedido. */
@@ -37,7 +37,7 @@ async function advanceToLevel(page: Page, target: 1 | 2 | 3): Promise<void> {
     if ((await currentLevel(page)) === target) return;
     await page.getByRole('button', { name: 'Próxima pergunta' }).click();
   }
-  throw new Error(`não alcançou o nível ${target} do Mapeamento`);
+  throw new Error(`não alcançou o nível ${target} do Conversation`);
 }
 
 test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ page }) => {
@@ -71,19 +71,19 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await scan('Escuta 2 — revisão das cenas');
   await page.getByRole('button', { name: 'Continuar →' }).click();
 
-  // ——— Triagem: foco na cena / picker (grade "Mais comuns") ———
+  // ——— Triage: foco na cena / picker (grade "Mais comuns") ———
   await expect(page.getByText('Essa cena é sobre o quê?')).toBeVisible();
-  await scan('Triagem — foco/picker');
+  await scan('Triage — foco/picker');
 
-  // ——— Triagem: todos os tipos por tema (picker expandido) ———
+  // ——— Triage: todos os tipos por tema (picker expandido) ———
   await page.getByRole('button', { name: 'Ver todos os tipos por tema' }).click();
-  await scan('Triagem — todos os tipos');
+  await scan('Triage — todos os tipos');
   await page.getByRole('button', { name: 'recolher' }).click();
 
-  // ——— Triagem: passo de confiança ———
+  // ——— Triage: passo de confiança ———
   await page.getByRole('radio', { name: SCENARIO.triage[0].kind, exact: true }).click();
   await expect(page.getByText('O quanto isso parece certo pra você?')).toBeVisible();
-  await scan('Triagem — confiança');
+  await scan('Triage — confiança');
 
   // classifica as três cenas para avançar (2 tipos + nenhum se encaixa)
   await page.getByRole('radio', { name: SCENARIO.triage[0].confidence, exact: true }).click();
@@ -93,7 +93,7 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
   await page.getByRole('radio', { name: 'Nenhum se encaixa', exact: true }).click();
   // todas classificadas → momento de revisão
-  await scan('Triagem — revisão');
+  await scan('Triage — revisão');
   await page.getByRole('button', { name: 'Continuar →' }).click();
 
   // ——— Segmentação: ancoragem (primeira cena produtiva, sem frases) ———
@@ -117,22 +117,22 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
 
   // segunda cena produtiva + conclui a segmentação
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
-  await app.finishSegmentacao();
+  await app.finishPhrases();
 
-  // ——— Mapeamento: nível história (L1) ———
+  // ——— Conversation: nível história (L1) ———
   await expect(page.getByRole('button', { name: LISTEN[1] })).toBeVisible();
-  await scan('Mapeamento — nível história');
+  await scan('Conversation — nível história');
 
-  // ——— Mapeamento: nível cena (L2) ———
+  // ——— Conversation: nível cena (L2) ———
   await advanceToLevel(page, 2);
-  await scan('Mapeamento — nível cena');
+  await scan('Conversation — nível cena');
 
-  // ——— Mapeamento: nível frase (L3) ———
+  // ——— Conversation: nível frase (L3) ———
   await advanceToLevel(page, 3);
-  await scan('Mapeamento — nível frase');
+  await scan('Conversation — nível frase');
 
-  // ——— Mapeamento: gravando ———
+  // ——— Conversation: gravando ———
   await page.getByRole('button', { name: 'gravar a resposta' }).click();
   await expect(page.getByRole('button', { name: 'Parar' })).toBeVisible();
-  await scan('Mapeamento — gravando');
+  await scan('Conversation — gravando');
 });

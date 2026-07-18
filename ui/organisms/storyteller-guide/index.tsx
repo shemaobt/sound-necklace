@@ -4,7 +4,7 @@ import './storyteller-guide.css';
 
 /**
  * O guia da conversa (redesign §6.6, §9.7) — uma pessoa calorosa à esquerda do
- * palco do Mapeamento. O visual vem de `variants/*` via `import.meta.glob`: a
+ * palco do Conversation. O visual vem de `variants/*` via `import.meta.glob`: a
  * ENG-232 acrescentou `animated.tsx` (hoje a variante ativa, preferida sobre
  * `static`) sem editar nenhum arquivo aqui — mecanismo aditivo do doc de
  * arquitetura §4.

@@ -35,7 +35,7 @@ export interface SeamModalProps {
   neighbor: SeamCordSide | null;
   onMove: () => void;
   onReanchor: () => void;
-  onGoTriagem: () => void;
+  onGoTriage: () => void;
 }
 
 type Zone = 'scene' | 'overshoot' | 'neighbor';
@@ -106,7 +106,7 @@ export function SeamModal({
   neighbor,
   onMove,
   onReanchor,
-  onGoTriagem,
+  onGoTriage,
 }: SeamModalProps) {
   const { t } = useTranslation();
   const stripRef = useRef<HTMLDivElement>(null);
@@ -152,9 +152,9 @@ export function SeamModal({
       : [
           {
             key: 'triagem',
-            label: t('seamModal.backToTriagem'),
+            label: t('seamModal.backToTriage'),
             variant: 'primary',
-            onClick: onGoTriagem,
+            onClick: onGoTriage,
           },
           ...(offer.canMove
             ? [

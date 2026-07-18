@@ -7,7 +7,7 @@ Fonte única dos tokens (redesign PRD §4; protótipo normativo
 | Token (TS / CSS)                                      | Valor                                             | Uso                                                             |
 | ----------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------- |
 | `colors.cream` / `--cds-cream`                        | `#F6F5EB`                                         | fundo das telas de trabalho                                     |
-| `colors.olive` / `--cds-olive`                        | `#3F3E20`                                         | full-bleed cerimonial (Escuta 1, Mapeamento)                    |
+| `colors.olive` / `--cds-olive`                        | `#3F3E20`                                         | full-bleed cerimonial (Escuta 1, Conversation)                  |
 | `colors.telha` / `--cds-telha`                        | `#BE4A01`                                         | ação única + trilha de reprodução                               |
 | `colors.telhaDeep` / `--cds-telha-deep`               | `#8F3701`                                         | hover/press (escurece, nunca clareia) + erro                    |
 | `colors.ink` / `--cds-ink`                            | `#0A0703`                                         | títulos em fundo claro                                          |

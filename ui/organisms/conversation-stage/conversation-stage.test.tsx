@@ -155,9 +155,9 @@ describe('ConversationStage — "Ouvir a pergunta" condicional', () => {
 });
 
 /**
- * Entrevista só-voz (design parity): o palco do Mapeamento não tem mais canal
+ * Entrevista só-voz (design parity): o palco do Conversation não tem mais canal
  * digitado — a digitação passou a viver só no relatório (já editável, ver
- * ui/pages/relatorio). A cópia contratual "nunca por você" permanece, mas
+ * ui/pages/report). A cópia contratual "nunca por você" permanece, mas
  * agora é permanente (idle), não condicionada a um slot de texto.
  */
 describe('ConversationStage — entrevista só-voz (design parity)', () => {
