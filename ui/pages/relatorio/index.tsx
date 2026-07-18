@@ -164,6 +164,11 @@ interface ReportCardProps {
   hasVoice: boolean;
   /** A verificação da gravação ainda voa: mostra "procurando", não o vazio (ENG-319). */
   voicePending: boolean;
+  /** ESTA resposta está tocando agora (eventos reais da porta, ENG-323). */
+  playing?: boolean;
+  /** Entre o toque e o som começar (o blob pode estar baixando): botão "abrindo…". */
+  opening?: boolean;
+  onStopPlay?: () => void;
   durationSec?: number;
   onTyped: (text: string) => void;
   onNote: (text: string) => void;
@@ -177,6 +182,9 @@ function ReportCard({
   note,
   hasVoice,
   voicePending,
+  playing = false,
+  opening = false,
+  onStopPlay,
   durationSec,
   onTyped,
   onNote,
@@ -210,12 +218,21 @@ function ReportCard({
 
       {voiceOnly ? (
         <div className="cds-relatorio-voice">
-          <Button variant="ghost" size="sm" onClick={onPlay}>
-            {t('relatorio.playAnswer')}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={opening}
+            onClick={playing ? onStopPlay : onPlay}
+          >
+            {opening
+              ? t('relatorio.openingAnswer')
+              : playing
+                ? t('relatorio.pauseAnswer')
+                : t('relatorio.playAnswer')}
           </Button>
           <span className="cds-relatorio-wave" aria-hidden="true">
             {WAVE_HEIGHTS.map((h, i) => (
-              <WaveformBar key={i} height={h} />
+              <WaveformBar key={i} height={h} active={playing} />
             ))}
           </span>
           <span className="cds-relatorio-duration" aria-label={t('relatorio.answerDuration')}>
@@ -280,6 +297,10 @@ export function Relatorio({ recorder = null }: RelatorioProps) {
   // Caminhos cuja verificação já RESPONDEU (com ou sem gravação): antes disso o
   // cartão mostra "procurando", nunca o vazio — carregando ≠ sem resposta (ENG-319).
   const [voiceChecked, setVoiceChecked] = useState<ReadonlySet<string>>(new Set());
+  // Reprodução com cara de reprodução (ENG-323): o caminho TOCANDO vem dos eventos
+  // reais da porta; `opening` é a janela entre o toque e o som começar (fetch do blob).
+  const [playingPath, setPlayingPath] = useState<string | null>(null);
+  const [openingPath, setOpeningPath] = useState<string | null>(null);
 
   // Visão de LEITURA com o answer store garantido mesmo antes do efeito persistir.
   const mapped = useMemo(() => {
@@ -296,6 +317,14 @@ export function Relatorio({ recorder = null }: RelatorioProps) {
   useEffect(() => {
     if (session && !session.mapping) sessionStore.getState().apply((s) => ensureMapping(s));
   }, [session]);
+
+  useEffect(() => {
+    if (!recorder) return;
+    return recorder.onPlayback((p) => {
+      setPlayingPath(p);
+      setOpeningPath(null); // o som começou (ou parou): a espera acabou
+    });
+  }, [recorder]);
 
   // Descobre quais respostas TÊM gravação (define a linha de voz e alimenta o
   // `voice` do `buildMapReport` para que o .md referencie a gravação, §10.4).
@@ -362,7 +391,15 @@ export function Relatorio({ recorder = null }: RelatorioProps) {
               durationSec={voiceDurations.get(path)}
               onTyped={(text) => writeTyped(slot, text)}
               onNote={(text) => writeNote(slot, text)}
-              onPlay={() => recorder && void recorder.play(path)}
+              playing={playingPath === path}
+              opening={openingPath === path}
+              onStopPlay={() => recorder?.stopPlayback()}
+              onPlay={() => {
+                if (!recorder) return;
+                setOpeningPath(path);
+                // falha ao abrir (rede): a espera não pode ficar presa
+                void recorder.play(path).catch(() => setOpeningPath(null));
+              }}
             />
           </div>
         );
