@@ -11,6 +11,8 @@ export const en: Dict = {
     back: 'Stories',
     backAria: 'Back to stories',
     mute: 'Turn interface sound off',
+    soundMenu: 'sound and volume',
+    storyVolume: 'story volume',
     unmute: 'Turn interface sound on',
     switchLanguage: 'Switch to Portuguese',
   },

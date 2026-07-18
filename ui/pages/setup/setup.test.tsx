@@ -179,6 +179,7 @@ describe('Setup — validação (§8.1)', () => {
       createPlayer: () => {
         throw new Error('não deve criar player');
       },
+      setGain: () => {},
     };
     const p = ports({ audioEngine });
     const createSpy = vi.spyOn(p.store, 'create');

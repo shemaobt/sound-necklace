@@ -47,3 +47,37 @@ describe('Header', () => {
     expect(pressed.getAttribute('aria-pressed')).toBe('true');
   });
 });
+
+describe('Header — som e volume da sessão (ENG-314)', () => {
+  it('com onVolume, o ícone abre o popover: mute dentro + reforço até 2×', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    const onVolume = vi.fn();
+    const onToggleMuted = vi.fn();
+    render(
+      <Header
+        muted={false}
+        onToggleMuted={onToggleMuted}
+        onBack={() => {}}
+        volume={1}
+        onVolume={onVolume}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'som e volume' }));
+    const slider = await screen.findByRole('slider', { name: 'volume da história' });
+    expect(slider.getAttribute('max')).toBe('2');
+
+    fireEvent.change(slider, { target: { value: '1.5' } });
+    expect(onVolume).toHaveBeenCalledWith(1.5);
+
+    await user.click(screen.getByRole('button', { name: 'Desligar o som da interface' }));
+    expect(onToggleMuted).toHaveBeenCalled();
+  });
+
+  it('sem onVolume, o botão segue o toggle simples de sempre', () => {
+    const onToggleMuted = vi.fn();
+    render(<Header muted={false} onToggleMuted={onToggleMuted} onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Desligar o som da interface' }));
+    expect(onToggleMuted).toHaveBeenCalled();
+  });
+});

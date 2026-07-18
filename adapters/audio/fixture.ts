@@ -86,6 +86,12 @@ export class FixtureTransport implements PlaybackTransport {
 
 export class FixtureAudioEngine implements AudioEngine {
   readonly transport = new FixtureTransport();
+  /** Volume master (hook de teste): a fixture não soa — guarda o valor pedido. */
+  gain = 1;
+
+  setGain(value: number): void {
+    this.gain = value;
+  }
 
   // async: qualquer falha vira rejeição — o contrato da porta é Promise,
   // nunca throw síncrono (o caller só instala .catch)
