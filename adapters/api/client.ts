@@ -167,17 +167,29 @@ export class HttpAuthProvider implements AuthProvider {
         suppressAuthExpired: true,
       });
     } catch (err) {
-      if (err instanceof ApiError) throw new AuthError('credenciais inválidas');
+      // só a recusa de credencial vira a cópia de login; 429/5xx sobem como
+      // ApiError — "senha errada" e "servidor fora" pedem reações diferentes.
+      if (err instanceof ApiError && err.status < 500 && err.status !== 429)
+        throw new AuthError('credenciais inválidas');
       throw err;
     }
     this.#token = res.tokens.access_token;
     this.#refreshToken = res.tokens.refresh_token;
 
-    const roles = await this.#fetchRoles();
+    // Daqui até o fim, o login é transacional: qualquer falha limpa a memória
+    // inteira (token novo + usuário anterior) — ninguém fica meio-logado com o
+    // token de um e o usuário de outro. O refresh persistido anterior sobrevive:
+    // um re-login falhado não destrói a sessão retomável do boot.
+    let roles: Role[];
+    try {
+      roles = await this.#fetchRoles();
+    } catch (err) {
+      this.#resetSession();
+      throw err;
+    }
     if (roles.length === 0) {
       // conta válida na plataforma, mas sem papel no Colar: não há sessão a manter
-      this.#token = null;
-      this.#refreshToken = null;
+      this.#resetSession();
       throw new AuthError('sem acesso ao Colar de Sons');
     }
 
@@ -187,6 +199,14 @@ export class HttpAuthProvider implements AuthProvider {
     return this.#user;
   }
 
+  /** Zera a sessão em memória (token/refresh/usuário/timer). Não toca o storage. */
+  #resetSession(): void {
+    this.#clearRefreshTimer();
+    this.#token = null;
+    this.#refreshToken = null;
+    this.#user = null;
+  }
+
   /**
    * Retoma a sessão persistida (§12 emendado): troca o refresh guardado por um par
    * novo (rotação), rebusca usuário + papéis e re-arma o refresh automático. Um
@@ -194,7 +214,12 @@ export class HttpAuthProvider implements AuthProvider {
    * REDE a preserva — o próximo boot tenta de novo.
    */
   async resume(): Promise<AuthUser | null> {
-    const stored = this.#storage?.getItem(REFRESH_STORAGE_KEY) ?? null;
+    let stored: string | null;
+    try {
+      stored = this.#storage?.getItem(REFRESH_STORAGE_KEY) ?? null;
+    } catch {
+      return null; // storage bloqueado (modo privado/política): sem retomada, sem lançar
+    }
     if (!stored) return null;
     try {
       const tokens = await this.#client.request('POST', '/auth/refresh', {

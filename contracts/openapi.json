@@ -548,6 +548,122 @@
         }
       }
     },
+    "/api/sound-necklace/projects/{project_id}/audit": {
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "List Audit Events",
+        "description": "One project's audit trail, newest first, within the window ``[since, until)``.\n\nAn empty list is an answer — a window in which nothing was reached — not an error.\n\nBoth bounds are normalised to UTC before they filter: a client may send an offset, and\nwithout this the SQLite bind would drop it and filter by wall-clock time under test.",
+        "operationId": "list_audit_events_api_sound_necklace_projects__project_id__audit_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only events at or after this instant",
+              "title": "Since"
+            },
+            "description": "Only events at or after this instant"
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only events strictly before this instant",
+              "title": "Until"
+            },
+            "description": "Only events strictly before this instant"
+          },
+          {
+            "name": "event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AuditEvent"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this kind of event",
+              "title": "Event"
+            },
+            "description": "Only this kind of event"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sound-necklace/sessions": {
       "post": {
         "tags": [
@@ -881,6 +997,110 @@
                     }
                   ],
                   "title": "Response 409 Complete Session Api Sound Necklace Sessions  Session Id  Complete Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/consent": {
+      "post": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Record Consent",
+        "description": "Record a consent, or re-confirm one that is already held.\n\nIdempotent per (session, type): re-confirming updates the record and its timestamp\nrather than opening a second one. 201 either way — the record exists as stated.",
+        "operationId": "record_consent_api_sound_necklace_sessions__session_id__consent_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "List Consents",
+        "description": "The consents held for a session. An empty list means none were given.",
+        "operationId": "list_consents_api_sound_necklace_sessions__session_id__consent_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentListResponse"
                 }
               }
             }
@@ -1517,6 +1737,88 @@
         "title": "AudioUrlResponse",
         "x-stability": "experimental"
       },
+      "AuditEvent": {
+        "type": "string",
+        "enum": [
+          "audio_url_issued",
+          "artifact_uploaded",
+          "artifact_url_issued",
+          "voice_url_issued",
+          "session_completed",
+          "session_reopened",
+          "consent_recorded"
+        ],
+        "title": "AuditEvent",
+        "description": "What was recorded (§12).\n\nEvery URL name says ISSUED, and that is the whole of what this API can honestly\nclaim. The bytes are served by storage against a short-lived signed URL and never\npass through here, so a download is something it never witnesses: the URL may be used\nonce, ten times, shared, or never opened. An ``audio_downloaded`` would be a lie the\nnext reader would build a retention or a breach report on.\n\n``ARTIFACT_UPLOADED`` is the only event here that claims a transfer, and those bytes\nreally do come through the API. It is not the only upload that does — a voice answer is\nalso posted through it — but that one is the listener recording their own voice, and\n§14 forbids logging the listener working. Reaching for a voice already recorded is the\nfacilitator action §12 asks about; making one is not."
+      },
+      "AuditEventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "title": "Occurred At"
+          },
+          "event": {
+            "$ref": "#/components/schemas/AuditEvent"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "resource_ref": {
+            "type": "string",
+            "title": "Resource Ref"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "occurred_at",
+          "event",
+          "resource_ref"
+        ],
+        "title": "AuditEventResponse",
+        "description": "One recorded reach, as stored.\n\nEvery field is nullable exactly where the row is: constraints on a RESPONSE model are\nassertions the framework enforces on the way out, and one unlucky row would 500 the\nwhole listing — in the one place whose job is to still answer when things went wrong.\n\n``ip`` is on the table but not here. Nothing writes it yet (behind Cloud Run's proxy\nthere is no address this API can honestly attribute to the caller), and a response\nfield is additive — it can join the day something fills the column, without breaking\nthe SPA. Shipping it now would only generate an ``ip: string | null`` the SPA might\nbuild a screen column for, forever null.",
+        "x-stability": "experimental"
+      },
+      "AuditListResponse": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEventResponse"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "title": "AuditListResponse",
+        "x-stability": "experimental"
+      },
       "AuthResponse": {
         "properties": {
           "user": {
@@ -1640,6 +1942,76 @@
         "title": "BucketAudioResponse",
         "description": "An audio the facilitator can pick from the project's bucket.\n\n``acousteme`` is null when no servable grid exists for the audio — an ingest that\nnever succeeded, or an audio that was never tokenized. That is a fallback, not an\nerror (PRD §6.1: the levels then map to fixed durations), so the audio still lists.\n\n``duration_sec`` is nullable because response models are validated on the way\nout: one un-probed audio would otherwise fail validation of the whole listing.\nThe invariant belongs at ingestion, where a violation is actionable.",
         "x-stability": "experimental"
+      },
+      "ConsentCreate": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ConsentType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "ConsentCreate",
+        "description": "Record a consent. Which one is the whole body: who confirmed it is the caller,\nand when is now — neither is the client's to assert.",
+        "x-stability": "experimental"
+      },
+      "ConsentListResponse": {
+        "properties": {
+          "consents": {
+            "items": {
+              "$ref": "#/components/schemas/ConsentResponse"
+            },
+            "type": "array",
+            "title": "Consents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consents"
+        ],
+        "title": "ConsentListResponse",
+        "x-stability": "experimental"
+      },
+      "ConsentResponse": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ConsentType"
+          },
+          "confirmed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed By"
+          },
+          "confirmed_at": {
+            "type": "string",
+            "title": "Confirmed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "confirmed_at"
+        ],
+        "title": "ConsentResponse",
+        "description": "One consent record — the evidence, as stored.\n\n``confirmed_by`` is nullable because the record outlives the account that typed it:\na deleted user leaves the consent standing and its confirmer null. It names whoever\nOPERATED the app, which for ``voice_answers`` is the facilitator who witnessed the\nlistener — the listener never holds an account.",
+        "x-stability": "experimental"
+      },
+      "ConsentType": {
+        "type": "string",
+        "enum": [
+          "pipeline_use",
+          "voice_answers"
+        ],
+        "title": "ConsentType",
+        "description": "Which consent a record attests to.\n\nBoth values exist from the first migration, and the second one is not speculation:\n§12 requires recorded consent PER SPEAKER, and the Colar records two people. The\nstory is one of them; the listener is the other, and the app captures 21+ recordings\nof their voice (§8.7). Adding the value later would mean an ``ALTER TYPE`` on the\ndatabase six production apps share, to say something already known today."
       },
       "ForgotPasswordRequest": {
         "properties": {
@@ -2315,6 +2687,17 @@
           "type"
         ],
         "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/auth/login"
+          }
+        }
       }
     }
   }

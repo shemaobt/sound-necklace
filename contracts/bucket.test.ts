@@ -51,6 +51,8 @@ describe('BucketAudioSchema — válida e inválidas', () => {
 
   it('aceita duration_sec null/ausente (áudio não-sondado — a API valida na saída)', () => {
     expect(BucketAudioSchema.safeParse({ ...valid, duration_sec: null }).success).toBe(true);
+    // fiel ao fio (OpenAPI aceita 0): uma linha degenerada não derruba a listagem
+    expect(BucketAudioSchema.safeParse({ ...valid, duration_sec: 0 }).success).toBe(true);
     const semDuracao: Record<string, unknown> = { ...valid };
     delete semDuracao.duration_sec;
     expect(BucketAudioSchema.safeParse(semDuracao).success).toBe(true);
@@ -62,7 +64,7 @@ describe('BucketAudioSchema — válida e inválidas', () => {
   it.each([
     ['chave faltando', (v: Record<string, unknown>) => delete v.consent_present],
     ['chave extra', (v: Record<string, unknown>) => (v.extra = 1)],
-    ['duração não positiva', (v: Record<string, unknown>) => (v.duration_sec = 0)],
+    ['duração com tipo errado', (v: Record<string, unknown>) => (v.duration_sec = '12')],
     ['consent com tipo errado', (v: Record<string, unknown>) => (v.consent_present = 'sim')],
   ])('rejeita: %s', (_label, mutate) => {
     const bad: Record<string, unknown> = { ...valid };

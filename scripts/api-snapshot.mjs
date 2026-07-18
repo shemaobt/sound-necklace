@@ -51,7 +51,9 @@ const out = {
   openapi: spec.openapi,
   info: spec.info,
   paths,
-  components: { schemas },
+  // securitySchemes preservados: as operações retidas referenciam OAuth2PasswordBearer —
+  // sem eles o documento filtrado fica estruturalmente incompleto
+  components: { schemas, securitySchemes: spec.components.securitySchemes },
 };
 writeFileSync(OUT, `${JSON.stringify(out, null, 2)}\n`);
 console.log(

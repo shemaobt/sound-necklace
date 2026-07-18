@@ -16,6 +16,7 @@ import {
   LockStatusSchema,
   MyProjectRolesResponseSchema,
   MyRoleResponseSchema,
+  MyRolesResponseSchema,
   OpaqueArtifactSchema,
   ResourceListResponseSchema,
   ResourceSummarySchema,
@@ -111,6 +112,12 @@ describe('auth — wire real do tripod-api (login/refresh/me/my-roles)', () => {
         .success,
     ).toBe(true);
     expect(MyRoleResponseSchema.safeParse({ role_key: 'facilitator' }).success).toBe(false);
+    // o wrapper (lista de my-roles): array válido/vazio passa; topo errado e item ruim, não
+    const role = { app_key: 'sound-necklace', role_key: 'facilitator' };
+    expect(MyRolesResponseSchema.safeParse([role]).success).toBe(true);
+    expect(MyRolesResponseSchema.safeParse([]).success).toBe(true);
+    expect(MyRolesResponseSchema.safeParse({ roles: [role] }).success).toBe(false);
+    expect(MyRolesResponseSchema.safeParse([{ app_key: 'sound-necklace' }]).success).toBe(false);
     expect(RoleSchema.safeParse('facilitator').success).toBe(true);
     expect(RoleSchema.safeParse('project_admin').success).toBe(true);
     expect(RoleSchema.safeParse('admin').success).toBe(false);
@@ -229,8 +236,12 @@ describe('artifacts — payload OPACO (§10.5): nunca desserializar/reserializar
     const receipt = { kind: 'manifest', size: 1234, crc32c: 'AAAAAA==', sha256: 'ab'.repeat(32) };
     expect(ArtifactResponseSchema.safeParse(receipt).success).toBe(true);
     expect(ArtifactUploadResponseSchema.safeParse([receipt]).success).toBe(true);
+    expect(ArtifactUploadResponseSchema.safeParse([]).success).toBe(true);
     expect(ArtifactResponseSchema.safeParse({ ...receipt, kind: 'outro' }).success).toBe(false);
     expect(ArtifactResponseSchema.safeParse({ kind: 'manifest', size: 1 }).success).toBe(false);
+    // o wrapper também recusa: topo que não é array, item malformado dentro
+    expect(ArtifactUploadResponseSchema.safeParse({ receipts: [receipt] }).success).toBe(false);
+    expect(ArtifactUploadResponseSchema.safeParse([{ ...receipt, size: 'x' }]).success).toBe(false);
   });
 });
 

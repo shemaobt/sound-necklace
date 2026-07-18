@@ -22,9 +22,39 @@ function stubApi(routes: Record<string, unknown>) {
 
 describe('resolveProjectId — conta multi-projeto fica com quem tem áudio', () => {
   afterEach(() => {
+    vi.doUnmock('./auth-adapter');
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     vi.resetModules();
+  });
+
+  it('o cache é POR USUÁRIO: trocar de conta re-resolve o projeto', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.test/api');
+    const calls = stubApi({
+      '/auth/my-project-roles': {
+        is_platform_admin: false,
+        project_roles: { 'p-unico': 'member' },
+      },
+    });
+    let userId = 'u-a';
+    vi.doMock('./auth-adapter', () => ({
+      appAuth: () => ({
+        currentUser: () => ({ id: userId, username: 'x', roles: [] }),
+        token: () => 't',
+      }),
+      authReady: () => Promise.resolve(),
+    }));
+    vi.resetModules();
+    const { resolveProjectId } = await import('./bucket-adapter');
+
+    await resolveProjectId();
+    await resolveProjectId(); // mesma conta: UMA resolução (cache)
+    expect(calls.filter((p) => p.endsWith('/my-project-roles'))).toHaveLength(1);
+
+    userId = 'u-b'; // logout → login com outra conta na mesma aba
+    await resolveProjectId();
+    expect(calls.filter((p) => p.endsWith('/my-project-roles'))).toHaveLength(2);
   });
 
   it('sonda os projetos na ordem e escolhe o primeiro com áudios', async () => {

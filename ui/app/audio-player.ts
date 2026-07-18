@@ -68,7 +68,15 @@ export async function buildSessionPlayer(sessionId: string): Promise<SessionAudi
     const engine = new WebAudioEngine();
     const decoded = await engine.decode(bytes);
     const player = engine.createPlayer(decoded, state.beadSec);
-    return { player, stop: () => player.stop() };
+    return {
+      player,
+      // fecha o AudioContext junto: cada sessão cria um, e o navegador corta o
+      // playback da aba depois de ~meia dúzia de contexts vivos
+      stop: () => {
+        player.stop();
+        engine.close();
+      },
+    };
   }
 
   const engine = new FixtureAudioEngine();

@@ -230,6 +230,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sound-necklace/projects/{project_id}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Audit Events
+         * @description One project's audit trail, newest first, within the window ``[since, until)``.
+         *
+         *     An empty list is an answer — a window in which nothing was reached — not an error.
+         *
+         *     Both bounds are normalised to UTC before they filter: a client may send an offset, and
+         *     without this the SQLite bind would drop it and filter by wall-clock time under test.
+         */
+        get: operations["list_audit_events_api_sound_necklace_projects__project_id__audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sound-necklace/sessions": {
         parameters: {
             query?: never;
@@ -336,6 +361,33 @@ export interface paths {
          * @description Complete a session (its artifacts are uploaded to the artifacts route).
          */
         post: operations["complete_session_api_sound_necklace_sessions__session_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sound-necklace/sessions/{session_id}/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Consents
+         * @description The consents held for a session. An empty list means none were given.
+         */
+        get: operations["list_consents_api_sound_necklace_sessions__session_id__consent_get"];
+        put?: never;
+        /**
+         * Record Consent
+         * @description Record a consent, or re-confirm one that is already held.
+         *
+         *     Idempotent per (session, type): re-confirming updates the record and its timestamp
+         *     rather than opening a second one. 201 either way — the record exists as stated.
+         */
+        post: operations["record_consent_api_sound_necklace_sessions__session_id__consent_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -525,6 +577,56 @@ export interface components {
             /** Url */
             url: string;
         };
+        /**
+         * AuditEvent
+         * @description What was recorded (§12).
+         *
+         *     Every URL name says ISSUED, and that is the whole of what this API can honestly
+         *     claim. The bytes are served by storage against a short-lived signed URL and never
+         *     pass through here, so a download is something it never witnesses: the URL may be used
+         *     once, ten times, shared, or never opened. An ``audio_downloaded`` would be a lie the
+         *     next reader would build a retention or a breach report on.
+         *
+         *     ``ARTIFACT_UPLOADED`` is the only event here that claims a transfer, and those bytes
+         *     really do come through the API. It is not the only upload that does — a voice answer is
+         *     also posted through it — but that one is the listener recording their own voice, and
+         *     §14 forbids logging the listener working. Reaching for a voice already recorded is the
+         *     facilitator action §12 asks about; making one is not.
+         * @enum {string}
+         */
+        AuditEvent: "audio_url_issued" | "artifact_uploaded" | "artifact_url_issued" | "voice_url_issued" | "session_completed" | "session_reopened" | "consent_recorded";
+        /**
+         * AuditEventResponse
+         * @description One recorded reach, as stored.
+         *
+         *     Every field is nullable exactly where the row is: constraints on a RESPONSE model are
+         *     assertions the framework enforces on the way out, and one unlucky row would 500 the
+         *     whole listing — in the one place whose job is to still answer when things went wrong.
+         *
+         *     ``ip`` is on the table but not here. Nothing writes it yet (behind Cloud Run's proxy
+         *     there is no address this API can honestly attribute to the caller), and a response
+         *     field is additive — it can join the day something fills the column, without breaking
+         *     the SPA. Shipping it now would only generate an ``ip: string | null`` the SPA might
+         *     build a screen column for, forever null.
+         */
+        AuditEventResponse: {
+            /** Id */
+            id: string;
+            /** Occurred At */
+            occurred_at: string;
+            event: components["schemas"]["AuditEvent"];
+            /** User Id */
+            user_id?: string | null;
+            /** Session Id */
+            session_id?: string | null;
+            /** Resource Ref */
+            resource_ref: string;
+        };
+        /** AuditListResponse */
+        AuditListResponse: {
+            /** Events */
+            events: components["schemas"]["AuditEventResponse"][];
+        };
         /** AuthResponse */
         AuthResponse: {
             user: components["schemas"]["UserResponse"];
@@ -583,6 +685,47 @@ export interface components {
             consent_present: boolean;
             acousteme?: components["schemas"]["AcoustemeEnvelope"] | null;
         };
+        /**
+         * ConsentCreate
+         * @description Record a consent. Which one is the whole body: who confirmed it is the caller,
+         *     and when is now — neither is the client's to assert.
+         */
+        ConsentCreate: {
+            type: components["schemas"]["ConsentType"];
+        };
+        /** ConsentListResponse */
+        ConsentListResponse: {
+            /** Consents */
+            consents: components["schemas"]["ConsentResponse"][];
+        };
+        /**
+         * ConsentResponse
+         * @description One consent record — the evidence, as stored.
+         *
+         *     ``confirmed_by`` is nullable because the record outlives the account that typed it:
+         *     a deleted user leaves the consent standing and its confirmer null. It names whoever
+         *     OPERATED the app, which for ``voice_answers`` is the facilitator who witnessed the
+         *     listener — the listener never holds an account.
+         */
+        ConsentResponse: {
+            type: components["schemas"]["ConsentType"];
+            /** Confirmed By */
+            confirmed_by?: string | null;
+            /** Confirmed At */
+            confirmed_at: string;
+        };
+        /**
+         * ConsentType
+         * @description Which consent a record attests to.
+         *
+         *     Both values exist from the first migration, and the second one is not speculation:
+         *     §12 requires recorded consent PER SPEAKER, and the Colar records two people. The
+         *     story is one of them; the listener is the other, and the app captures 21+ recordings
+         *     of their voice (§8.7). Adding the value later would mean an ``ALTER TYPE`` on the
+         *     database six production apps share, to say something already known today.
+         * @enum {string}
+         */
+        ConsentType: "pipeline_use" | "voice_answers";
         /** ForgotPasswordRequest */
         ForgotPasswordRequest: {
             /**
@@ -1260,6 +1403,45 @@ export interface operations {
             };
         };
     };
+    list_audit_events_api_sound_necklace_projects__project_id__audit_get: {
+        parameters: {
+            query?: {
+                /** @description Only events at or after this instant */
+                since?: string | null;
+                /** @description Only events strictly before this instant */
+                until?: string | null;
+                /** @description Only this kind of event */
+                event?: components["schemas"]["AuditEvent"] | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_sessions_api_sound_necklace_sessions_get: {
         parameters: {
             query?: {
@@ -1457,6 +1639,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionLockedResponse"] | components["schemas"]["SessionLockChangedResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_consents_api_sound_necklace_sessions__session_id__consent_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_consent_api_sound_necklace_sessions__session_id__consent_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentResponse"];
                 };
             };
             /** @description Validation Error */

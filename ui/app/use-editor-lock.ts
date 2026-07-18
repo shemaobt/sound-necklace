@@ -124,7 +124,10 @@ export function useEditorLock(routeId: string | null): void {
         armDeadline();
         armBeat();
       } catch {
-        // não deu para adquirir (rede/sessão inexistente): sem trava nossa, sem batidas
+        // não deu para adquirir (rede caída, sessão inexistente): sem lease não se
+        // edita — revisão com aviso de reconexão (holder desconhecido), como na
+        // demissão por prazo. Editar sem lease abriria a janela de dois editores.
+        if (alive) sessionStore.getState().setLock({ holder: null });
       }
     })();
 

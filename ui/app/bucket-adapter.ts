@@ -10,18 +10,24 @@ import { MyProjectRolesResponseSchema } from '../../contracts';
 import { API_BASE_URL, API_MODE } from './api-config';
 import { appAuth, authReady } from './auth-adapter';
 
-let projectId: string | null = null;
+let cached: { userId: string; projectId: string } | null = null;
 
 /**
- * Projeto do usuário logado (`GET /auth/my-project-roles`), cacheado pela vida da
- * aba. Uma facilitadora de campo pertence a UM projeto; a conta de dono/teste
- * pertence a vários — nesse caso fica o primeiro projeto QUE TEM ÁUDIO no bucket
- * (sondagem única, cacheada). ponytail: seletor de projeto na UI só quando o caso
- * "vários projetos com áudio" existir de verdade.
+ * Projeto do usuário logado (`GET /auth/my-project-roles`), cacheado POR USUÁRIO
+ * pela vida da aba — logout → login com outra conta re-resolve em vez de herdar o
+ * projeto anterior. Uma facilitadora de campo pertence a UM projeto; a conta de
+ * dono/teste pertence a vários — nesse caso fica o primeiro projeto QUE TEM ÁUDIO
+ * no bucket (sondagem única, cacheada). ponytail: seletor de projeto na UI só
+ * quando o caso "vários projetos com áudio" existir de verdade.
  */
 export async function resolveProjectId(): Promise<string> {
-  if (projectId) return projectId;
   await authReady(); // num reload, o token só existe depois da retomada assentar
+  const userId = appAuth().currentUser()?.id ?? null;
+  if (cached && cached.userId === userId) return cached.projectId;
+  const remember = (projectId: string): string => {
+    if (userId) cached = { userId, projectId };
+    return projectId;
+  };
   const res = await apiGet('/auth/my-project-roles');
   if (!res.ok) throw new Error(`my-project-roles → HTTP ${res.status}`);
   const parsed = MyProjectRolesResponseSchema.parse(await res.json());
@@ -34,15 +40,11 @@ export async function resolveProjectId(): Promise<string> {
       const probe = await apiGet(`/sound-necklace/projects/${encodeURIComponent(id)}/audios`);
       if (!probe.ok) continue;
       const body = (await probe.json()) as { audios?: unknown[] };
-      if ((body.audios?.length ?? 0) > 0) {
-        projectId = id;
-        return id;
-      }
+      if ((body.audios?.length ?? 0) > 0) return remember(id);
     }
   }
 
-  projectId = first;
-  return first;
+  return remember(first);
 }
 
 function apiGet(path: string): Promise<Response> {

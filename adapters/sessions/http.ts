@@ -125,9 +125,17 @@ export class HttpSessionStore implements SessionStore {
   }
 
   async list(): Promise<SessionSummary[]> {
-    // ponytail: o servidor pagina (limit default 50) e aqui só vem a 1ª página — a
-    // 51ª sessão some do Dashboard; paginar quando um piloto real chegar perto disso.
-    return SessionListResponseSchema.parse(await this.#req('GET', '/sessions')).sessions;
+    // o servidor pagina (limit ≤ 200); segue até a página curta — uma 201ª sessão
+    // não pode simplesmente sumir do Dashboard
+    const PAGE = 200;
+    const all: SessionSummary[] = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const page = SessionListResponseSchema.parse(
+        await this.#req('GET', `/sessions?offset=${offset}&limit=${PAGE}`),
+      ).sessions;
+      all.push(...page);
+      if (page.length < PAGE) return all;
+    }
   }
 
   async load(id: string): Promise<SessionStateDto> {
@@ -160,7 +168,12 @@ export class HttpSessionStore implements SessionStore {
     }
     // sem content-type nosso: o runtime assina o boundary do multipart
     const res = await this.#send('POST', `/sessions/${id}/artifacts`, { body: form });
-    ArtifactUploadResponseSchema.parse(await res.json());
+    const receipt = ArtifactUploadResponseSchema.parse(await res.json());
+    // o recibo tem de cobrir os TRÊS kinds antes de declarar a sessão concluída —
+    // um upload parcial aceito em silêncio deixaria o pipeline sem um dos documentos
+    const kinds = new Set(receipt.map((r) => r.kind));
+    for (const kind of ['manifest', 'anchoring', 'report'] as const)
+      if (!kinds.has(kind)) throw new Error(`recibo de artefatos sem o kind ${kind}`);
     await this.#req('POST', `/sessions/${id}/complete`);
   }
 

@@ -166,6 +166,28 @@ describe('HttpAuthProvider', () => {
     expect(expired).not.toHaveBeenCalled();
   });
 
+  it('login com 5xx sobe como ApiError — servidor fora não vira "credenciais inválidas"', async () => {
+    const { fetch } = stubFetch({
+      'POST /api/auth/login': { status: 503, body: { detail: 'manutenção' } },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+    await expect(auth.login({ username: 'x', password: 'y' })).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('falha ao buscar papéis limpa a sessão inteira — ninguém fica meio-logado', async () => {
+    const { fetch } = stubFetch({
+      'POST /api/auth/login': { body: wireLogin },
+      'GET /api/auth/my-roles': { status: 500, body: { detail: 'boom' } },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+    await expect(
+      auth.login({ username: 'facilitadora@shema.org', password: 'x' }),
+    ).rejects.toBeInstanceOf(ApiError);
+    // o token novo NÃO fica instalado com o usuário anterior (ou nenhum): memória zerada
+    expect(auth.token()).toBeNull();
+    expect(auth.currentUser()).toBeNull();
+  });
+
   it('refresh usa o refresh do login e ROTACIONA o par a cada uso', async () => {
     const { fetch, calls } = stubFetch({
       'POST /api/auth/login': { body: wireLogin },
@@ -322,6 +344,20 @@ describe('HttpAuthProvider', () => {
   it('resume() sem nada guardado devolve null sem tocar a rede', async () => {
     const { fetch, calls } = stubFetch({});
     const auth = new HttpAuthProvider({ baseUrl: '/api', fetch, storage: fakeStorage() });
+    expect(await auth.resume()).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('resume() com storage que LANÇA devolve null — o contrato é "nunca lança"', async () => {
+    const { fetch, calls } = stubFetch({});
+    const blocked = {
+      getItem: () => {
+        throw new Error('storage bloqueado');
+      },
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    };
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch, storage: blocked });
     expect(await auth.resume()).toBeNull();
     expect(calls).toHaveLength(0);
   });

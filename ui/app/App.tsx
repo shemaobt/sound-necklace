@@ -386,11 +386,21 @@ export function App() {
       ttsRegistration.real({
         ...(API_MODE === 'real' ? { baseUrl: API_BASE_URL } : {}),
         token: () => appAuth().token(),
-        // sessão caducada no meio da entrevista: volta ao login em vez de robotizar.
-        // O 401 pode ser só a corrida do boot (resume em voo) — decide após assentar.
+        // sessão caducada no meio da entrevista: recupera em vez de robotizar.
+        // O 401 pode ser só a corrida do boot (resume em voo) — decide após assentar;
+        // com usuário vivo, o token caducou antes do refresh agendado: renova JÁ (a
+        // próxima fala usa o token novo) e, se a renovação falhar, volta ao login.
         onUnauthorized: () => {
-          void authReady().then(() => {
-            if (!appAuth().currentUser()) navigate('/login', { replace: true });
+          void authReady().then(async () => {
+            if (!appAuth().currentUser()) {
+              navigate('/login', { replace: true });
+              return;
+            }
+            try {
+              await appAuth().refresh();
+            } catch {
+              navigate('/login', { replace: true });
+            }
           });
         },
       }),

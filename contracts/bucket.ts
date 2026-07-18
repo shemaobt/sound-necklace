@@ -59,7 +59,10 @@ export type GranularityLevel = z.infer<typeof GranularityLevelSchema>;
 export const BucketAudioSchema = z.strictObject({
   id: z.string(),
   filename: z.string(),
-  duration_sec: z.number().positive().nullable().optional(),
+  // fiel ao fio: o OpenAPI aceita qualquer número (0 inclusive) — endurecer aqui
+  // derrubaria a LISTAGEM inteira por uma linha degenerada; a grade real sai do
+  // PCM decodificado, nunca deste campo
+  duration_sec: z.number().nullable().optional(),
   consent_present: z.boolean(),
   acousteme: AcoustemeEnvelopeSchema.nullable().optional(),
 });

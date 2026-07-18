@@ -38,6 +38,14 @@ const FREE_LOCK: LockStatus = { held: false, holder: null, expires_at: null };
 
 const PATH = 'respostas/level1/recontar.webm' as ResourcePath;
 
+/** Recibo íntegro do upload multipart — um por kind (§10.5). */
+const FULL_RECEIPT = (['manifest', 'anchoring', 'report'] as const).map((kind) => ({
+  kind,
+  size: 1,
+  crc32c: 'c',
+  sha256: 's',
+}));
+
 /** Estado opaco — a store não olha a forma interna (§10.5). */
 const dto = (tag: string): SessionStateDto =>
   ({ schema_version: 1, tag }) as unknown as SessionStateDto;
@@ -112,6 +120,26 @@ describe('HttpSessionStore', () => {
     expect(calls[0]?.url).toBe('https://api.test/sound-necklace/sessions/sess-9');
   });
 
+  it('list pagina até esgotar — a 201ª sessão não some do Dashboard', async () => {
+    const calls: Call[] = [];
+    const pageOf = (n: number, from: number) =>
+      Array.from({ length: n }, (_, i) => ({ ...summary, id: `sess-${from + i}` }));
+    const store = storeWith(
+      recordingFetch(calls, (call) => {
+        const offset = Number(new URL(call.url).searchParams.get('offset'));
+        return json({ sessions: offset === 0 ? pageOf(200, 0) : pageOf(3, 200) });
+      }),
+    );
+
+    const all = await store.list();
+
+    expect(all).toHaveLength(203);
+    expect(calls.map((c) => new URL(c.url).search)).toEqual([
+      '?offset=0&limit=200',
+      '?offset=200&limit=200',
+    ]);
+  });
+
   it('acquireLock uses PUT — the backend serves acquire and renew with the same verb', async () => {
     const calls: Call[] = [];
     const store = storeWith(recordingFetch(calls, () => json(FREE_LOCK)));
@@ -130,6 +158,22 @@ describe('HttpSessionStore', () => {
   });
 
   describe('complete — a ordem do fio real (§8.8/§10.5)', () => {
+    it('recibo PARCIAL do upload (kind faltando) recusa a conclusão — nada de /complete', async () => {
+      const calls: Call[] = [];
+      const store = storeWith(
+        recordingFetch(calls, (call) =>
+          call.url.endsWith('/artifacts')
+            ? json(FULL_RECEIPT.slice(0, 2), 201) // sem o report
+            : json({ saved_at: 't', schema_version: 1 }),
+        ),
+      );
+
+      await expect(
+        store.complete('sess-9', dto('final'), { manifest: 'm', anchoring: 'a', report: 'r' }),
+      ).rejects.toThrow(/recibo de artefatos sem o kind report/);
+      expect(calls.some((c) => c.url.endsWith('/complete'))).toBe(false);
+    });
+
     it('se o POST /artifacts falha, o POST /complete não sai — a ordem é invariante', async () => {
       const calls: Call[] = [];
       const store = storeWith(
@@ -167,8 +211,7 @@ describe('HttpSessionStore', () => {
               return json({ saved_at: 't', schema_version: 1 });
             }
             calls.push(`${method} ${u.split('/sessions/sess-9')[1] ?? u}`);
-            if (u.endsWith('/artifacts'))
-              return json([{ kind: 'manifest', size: 1, crc32c: 'c', sha256: 's' }], 201);
+            if (u.endsWith('/artifacts')) return json(FULL_RECEIPT, 201);
             return json({ saved_at: 't', schema_version: 1 });
           },
           { debounceMs: 10 },
@@ -199,8 +242,7 @@ describe('HttpSessionStore', () => {
       const calls: Call[] = [];
       const store = storeWith(
         recordingFetch(calls, (call) => {
-          if (call.url.endsWith('/artifacts'))
-            return json([{ kind: 'manifest', size: 1, crc32c: 'c', sha256: 's' }], 201);
+          if (call.url.endsWith('/artifacts')) return json(FULL_RECEIPT, 201);
           return json({ saved_at: '2026-07-17T00:00:00Z', schema_version: 1 });
         }),
       );

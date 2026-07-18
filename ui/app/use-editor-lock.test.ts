@@ -50,6 +50,17 @@ describe('useEditorLock', () => {
     unmount();
   });
 
+  it('acquire falhado põe a sessão em revisão (holder desconhecido) — sem lease não se edita', async () => {
+    const id = await newSession();
+    vi.spyOn(appSessionStore(), 'acquireLock').mockRejectedValue(new Error('rede fora'));
+
+    const { unmount } = renderHook(() => useEditorLock(id));
+    await settle();
+
+    expect(sessionStore.getState().lock).toEqual({ holder: null });
+    unmount();
+  });
+
   it('renova a trava periodicamente enquanto a sessão fica aberta', async () => {
     const id = await newSession();
     const renew = vi.spyOn(appSessionStore(), 'renewLock');
