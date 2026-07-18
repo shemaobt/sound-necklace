@@ -44,6 +44,8 @@ export interface ConversationStageProps {
   onRerecord?: () => void;
   /** A resposta gravada está TOCANDO agora (eventos reais da porta) — ouvir ⇄ pausar (ENG-322). */
   answerPlaying?: boolean;
+  /** Reprodução pedida e ainda abrindo (fetch+decode no modo real) — ENG-336. */
+  answerOpening?: boolean;
   /** Pausa a reprodução da resposta (o clique do "pausar"). */
   onStopPlay?: () => void;
   progress: ConversationProgress;
@@ -172,6 +174,7 @@ export function ConversationStage({
   onPlay,
   onRerecord,
   answerPlaying = false,
+  answerOpening = false,
   onStopPlay,
   progress,
   onPrev,
@@ -256,10 +259,17 @@ export function ConversationStage({
 
               {recorderState === 'recorded' ? (
                 <div className="cds-conversation-stage-review">
-                  <Button variant="ghost" size="sm" onClick={answerPlaying ? onStopPlay : onPlay}>
-                    {answerPlaying
-                      ? t('conversationStage.pausePlayback')
-                      : t('conversationStage.play')}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={answerOpening}
+                    onClick={answerPlaying ? onStopPlay : onPlay}
+                  >
+                    {answerOpening
+                      ? t('conversationStage.openingAnswer')
+                      : answerPlaying
+                        ? t('conversationStage.pausePlayback')
+                        : t('conversationStage.play')}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={onRerecord}>
                     {t('conversationStage.again')}

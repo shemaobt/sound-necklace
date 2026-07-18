@@ -158,6 +158,9 @@ function QuestionScreen({
   const [recordError, setRecordError] = useState(false);
   // A RESPOSTA desta pergunta está tocando — dos eventos reais da porta (ENG-322).
   const [answerPlaying, setAnswerPlaying] = useState(false);
+  // Entre o toque e o som há fetch+decode no modo real (ENG-336): o botão diz
+  // que está abrindo; qualquer emissão da porta encerra a espera.
+  const [answerOpening, setAnswerOpening] = useState(false);
   const recordingRef = useRef<Recording | null>(null);
   const unsubRef = useRef<Unsubscribe | null>(null);
   const mountedRef = useRef(true);
@@ -178,7 +181,10 @@ function QuestionScreen({
   // porta (nunca palpite) e é DESTA pergunta — outra resposta tocando não acende aqui.
   useEffect(() => {
     if (!recorder) return;
-    return recorder.onPlayback((p) => setAnswerPlaying(p === path));
+    return recorder.onPlayback((p) => {
+      setAnswerPlaying(p === path);
+      setAnswerOpening(false);
+    });
   }, [recorder, path]);
 
   // Chegar numa pergunta a faz ser falada (a tela remonta por `key={path}`). Com o som
@@ -266,9 +272,14 @@ function QuestionScreen({
     onVoiceSaved?.(path);
   };
   const onPlay = (): void => {
+    if (!recorder) return;
     // tocar busca os bytes na API no modo real — falha vira o som de recusa, não
-    // uma rejeição solta
-    if (recorder) void recorder.play(path).catch(() => sound?.refuse());
+    // uma rejeição solta; a espera acaba com a emissão da porta ou com a falha
+    setAnswerOpening(true);
+    void recorder.play(path).catch(() => {
+      setAnswerOpening(false);
+      sound?.refuse();
+    });
   };
   const onRerecord = (): void => {
     setLevels([]);
@@ -306,6 +317,7 @@ function QuestionScreen({
         onPlay={onPlay}
         onRerecord={onRerecord}
         answerPlaying={answerPlaying}
+        answerOpening={answerOpening}
         onStopPlay={() => recorder?.stopPlayback()}
         progress={progress}
         onPrev={onPrev}

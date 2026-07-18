@@ -324,6 +324,7 @@ export const en: Dict = {
     listen: 'Listen to the question',
     pause: 'Pause the question',
     saving: 'saving the answer',
+    openingAnswer: 'opening the answer…',
     pausePlayback: 'pause',
     record: 'record the answer',
     stop: 'Stop',

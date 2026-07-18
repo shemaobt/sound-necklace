@@ -245,6 +245,47 @@ describe('Mapeamento — resposta por voz, entrevista só-voz (PRD v2 §8.7, §1
     expect(screen.getByRole('button', { name: /^ouvir$/ })).toBeTruthy();
   });
 
+  it('ouvir mostra "abrindo…" até a porta confirmar o início da reprodução (ENG-336)', async () => {
+    // play() pendurado: a janela real de fetch+decode do modo real. O botão precisa
+    // dizer que está abrindo — e só virar "pausar" quando o som de fato começa.
+    const recorder = new FixtureVoiceRecorder();
+    const playbackCbs: ((p: string | null) => void)[] = [];
+    vi.spyOn(recorder, 'onPlayback').mockImplementation((cb) => {
+      playbackCbs.push(cb);
+      return () => {};
+    });
+    let releasePlay: (() => void) | null = null;
+    vi.spyOn(recorder, 'play').mockImplementation(
+      () =>
+        new Promise((res) => {
+          releasePlay = () => res();
+        }),
+    );
+    load(mapping());
+    render(<Mapeamento recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    await userEvent.click(await screen.findByRole('button', { name: /^ouvir$/ }));
+
+    // em voo: abrindo, e sem segundo clique acumulando outra reprodução
+    const opening = screen.getByRole('button', { name: 'abrindo a resposta…' });
+    expect(opening.hasAttribute('disabled')).toBe(true);
+
+    // a porta confirma o início (emite o path DEPOIS do play resolver)
+    await act(async () => {
+      releasePlay?.();
+      playbackCbs.forEach((cb) => cb('respostas/level1/recontar.webm'));
+    });
+    expect(screen.getByRole('button', { name: 'pausar' })).toBeTruthy();
+
+    // o fim da reprodução volta a oferecer ouvir
+    await act(async () => {
+      playbackCbs.forEach((cb) => cb(null));
+    });
+    expect(screen.getByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+  });
+
   it('parar entra em "guardando" até a persistência confirmar (ENG-318)', async () => {
     // recorder com stop() controlável: o PUT embutido fica pendurado até liberarmos
     let release: (() => void) | null = null;
