@@ -104,6 +104,7 @@ export const en: Dict = {
   shell: {
     stepperAria: 'Session progress',
     loadingSession: 'loading the session…',
+    preparingSession: 'Getting everything ready for your session…',
     stationUnderConstruction: 'station under construction',
     reviewLocked: '🔒 Review mode — session in use by {{holder}}.',
     reviewStale: '🔒 Review mode — reconnecting to the session…',

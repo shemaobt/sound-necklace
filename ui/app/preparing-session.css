@@ -1,0 +1,46 @@
+/* A espera da sessão (ENG-312): fio de contas acendendo em onda + uma linha. */
+.cds-preparing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  min-height: 55vh;
+}
+
+.cds-preparing-beads {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cds-preparing-bead {
+  display: inline-flex;
+}
+
+.cds-preparing-line {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--cds-ink-subtle);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes cds-preparing-wave {
+    0%,
+    60%,
+    100% {
+      opacity: 0.35;
+      transform: translateY(0);
+    }
+    30% {
+      opacity: 1;
+      transform: translateY(-4px);
+    }
+  }
+
+  .cds-preparing-bead {
+    animation: cds-preparing-wave 1.6s ease-in-out infinite;
+  }
+}

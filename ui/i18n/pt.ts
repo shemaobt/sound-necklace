@@ -114,6 +114,7 @@ export const pt = {
   shell: {
     stepperAria: 'Progresso da sessão',
     loadingSession: 'carregando a sessão…',
+    preparingSession: 'Preparando tudo para a sua sessão…',
     stationUnderConstruction: 'estação em construção',
     reviewLocked: '🔒 Modo de revisão — sessão em uso por {{holder}}.',
     /** Perdemos contato com o servidor: guia, não pune — o trabalho salvo está a salvo. */

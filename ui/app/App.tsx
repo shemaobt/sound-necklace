@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import { ApiError, AuthError } from '../../adapters/api';
@@ -21,6 +20,7 @@ import { shouldGateToLogin } from './auth-gate';
 import { buildSessionPlayer, createDeferredPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
+import { PreparingSession } from './preparing-session';
 import { buildAdapterRegistry, buildStationRegistry, type StationComponent } from './registries';
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
@@ -342,7 +342,6 @@ function useSessionPlayer(routeId: string | null): AudioPlayer | null {
  * em ui/pages — este shell nunca muda depois.
  */
 export function App() {
-  const { t } = useTranslation();
   const route = useRoute();
   const muted = useAppStore((s) => s.muted);
   const online = useOnline();
@@ -465,7 +464,9 @@ export function App() {
   let body: React.ReactNode;
   if (route.name === 'session') {
     if (!session) {
-      body = <p className="cds-station-fallback">{t('shell.loadingSession')}</p>;
+      // a espera vira palco (ENG-312): contas em onda + uma linha, nunca um
+      // parágrafo parado — cobre criar E retomar (hidratação + decode do áudio)
+      body = <PreparingSession />;
     } else {
       body = (
         <SessionStations
