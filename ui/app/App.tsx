@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import { useTranslation } from 'react-i18next';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
+import { ApiError, AuthError } from '../../adapters/api';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
 import ttsRegistration from '../../adapters/tts/register';
 import type { SpeechSynthesizer } from '../../adapters/tts/types';
@@ -398,8 +399,16 @@ export function App() {
             }
             try {
               await appAuth().refresh();
-            } catch {
-              navigate('/login', { replace: true });
+            } catch (err) {
+              // recusa da API = sessão morta: derruba TUDO (token/refresh/usuário)
+              // antes de voltar — senão o gate ainda vê um usuário e deixa navegar
+              // com token defunto. Falha de REDE fica: a próxima fala tenta de novo.
+              if (err instanceof ApiError || err instanceof AuthError) {
+                await appAuth()
+                  .logout()
+                  .catch(() => undefined);
+                navigate('/login', { replace: true });
+              }
             }
           });
         },

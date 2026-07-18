@@ -66,17 +66,22 @@ export async function buildSessionPlayer(sessionId: string): Promise<SessionAudi
     // engine real: o relógio é o do AudioContext e o player se auto-dirige por
     // transport.requestFrame — a ponte de rAF é uma necessidade só do fixture
     const engine = new WebAudioEngine();
-    const decoded = await engine.decode(bytes);
-    const player = engine.createPlayer(decoded, state.beadSec);
-    return {
-      player,
-      // fecha o AudioContext junto: cada sessão cria um, e o navegador corta o
-      // playback da aba depois de ~meia dúzia de contexts vivos
-      stop: () => {
-        player.stop();
-        engine.close();
-      },
-    };
+    try {
+      const decoded = await engine.decode(bytes);
+      const player = engine.createPlayer(decoded, state.beadSec);
+      return {
+        player,
+        // fecha o AudioContext junto: cada sessão cria um, e o navegador corta o
+        // playback da aba depois de ~meia dúzia de contexts vivos
+        stop: () => {
+          player.stop();
+          engine.close();
+        },
+      };
+    } catch (err) {
+      engine.close(); // decode falhou: o context recém-aberto não pode vazar
+      throw err;
+    }
   }
 
   const engine = new FixtureAudioEngine();
