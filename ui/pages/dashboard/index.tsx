@@ -308,10 +308,21 @@ export function Dashboard({
             <ul className="cds-session-list" aria-hidden="true">
               {Array.from({ length: 3 }, (_, i) => (
                 <li key={i} className="cds-session-card cds-dashboard-card-skeleton">
-                  <Skeleton className="cds-dashboard-skeleton-thumb" />
-                  <Skeleton width="70%" height={18} />
-                  <Skeleton width="45%" height={13} />
-                  <Skeleton width="60%" height={13} />
+                  {/* a MESMA casca do cartão real (ENG-332): capa + corpo herdam os
+                      paddings/fundo do cds-session-card, então o esqueleto tem a
+                      altura e o respiro de um cartão de verdade */}
+                  <div className="cds-session-card-thumb">
+                    <Skeleton className="cds-dashboard-skeleton-thumb" />
+                  </div>
+                  <div className="cds-session-card-body">
+                    <Skeleton width="70%" height={18} />
+                    <Skeleton width="45%" height={13} />
+                    <div className="cds-session-card-meta">
+                      <Skeleton width={92} height={26} />
+                      <Skeleton width={64} height={12} />
+                    </div>
+                    <Skeleton width="100%" height={38} />
+                  </div>
                 </li>
               ))}
             </ul>

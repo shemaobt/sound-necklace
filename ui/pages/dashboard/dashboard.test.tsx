@@ -129,6 +129,14 @@ describe('Dashboard — esqueleto enquanto a lista voa (ENG-308)', () => {
     expect(document.querySelectorAll('.cds-skeleton').length).toBeGreaterThan(0);
     expect(screen.getByRole('status')).toBeTruthy();
 
+    // a MESMA casca do cartão real (ENG-332): zona da capa + corpo com os
+    // paddings do cds-session-card — sem isso os blocos colam na borda e o
+    // esqueleto não tem a altura de um cartão de verdade
+    const skeletonCard = document.querySelector('.cds-dashboard-card-skeleton');
+    expect(skeletonCard?.querySelector('.cds-session-card-thumb')).toBeTruthy();
+    expect(skeletonCard?.querySelector('.cds-session-card-body')).toBeTruthy();
+    expect(skeletonCard?.querySelector('.cds-session-card-meta')).toBeTruthy();
+
     await act(async () => release?.());
     expect(await screen.findByRole('list', { name: 'histórias' })).toBeTruthy();
     expect(document.querySelectorAll('.cds-skeleton')).toHaveLength(0);

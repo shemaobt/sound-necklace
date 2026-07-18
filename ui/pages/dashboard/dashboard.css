@@ -155,17 +155,15 @@
   white-space: nowrap;
 }
 
-.cds-dashboard-card-skeleton {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-}
-
+/* a casca (capa/corpo/meta) vem do próprio cds-session-card — aqui só as medidas
+   dos blocos que imitam o fio em miniatura e a pílula de status */
 .cds-dashboard-skeleton-thumb {
   width: 132px;
   height: 30px;
-  margin-bottom: 6px;
+}
+
+.cds-dashboard-card-skeleton .cds-skeleton {
+  border-radius: var(--cds-radius-pill);
 }
 
 /* ---------- menu de downloads do cartão concluído (ENG-305) ---------- */
