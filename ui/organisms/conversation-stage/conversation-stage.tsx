@@ -66,6 +66,23 @@ function StopGlyph() {
   );
 }
 
+/** Barras de pausa do "Pausar a pergunta" (ENG-317), irmão do SpeakGlyph. */
+function PauseGlyph() {
+  return (
+    <svg
+      width={17}
+      height={17}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="6" y="5" width="4" height="14" rx="1.5" />
+      <rect x="14" y="5" width="4" height="14" rx="1.5" />
+    </svg>
+  );
+}
+
 /** Alto-falante do "Ouvir a pergunta" (protótipo speakQ). */
 function SpeakGlyph() {
   return (
@@ -175,13 +192,14 @@ export function ConversationStage({
         <div className="cds-conversation-stage-guide">
           <StorytellerGuide speaking={speaking} />
           {onSpeakQuestion ? (
+            // o botão segue o estado REAL da fala (ENG-317): falando oferece pausar
             <button
               type="button"
               className="cds-conversation-stage-speak"
               onClick={onSpeakQuestion}
             >
-              <SpeakGlyph />
-              {t('conversationStage.listen')}
+              {speaking ? <PauseGlyph /> : <SpeakGlyph />}
+              {speaking ? t('conversationStage.pause') : t('conversationStage.listen')}
             </button>
           ) : null}
         </div>
