@@ -67,6 +67,7 @@ function SessionStations({
   speaker,
   sound,
   onVoiceSaved,
+  initialExport,
 }: {
   session: SessionState;
   sessionId: string;
@@ -80,17 +81,23 @@ function SessionStations({
   speaker: SpeechSynthesizer | null;
   sound: UiSound;
   onVoiceSaved: (path: string) => void;
+  /** Sessão concluída reabre na Export (ENG-320); o `key={sessionId}` remonta por sessão. */
+  initialExport: boolean;
 }) {
-  const [viewingExport, setViewingExport] = useState(false);
+  // Escolha MANUAL da cauda "Guardar": enquanto null, a vista segue o status da
+  // sessão (concluída abre na Export — ENG-320), que pode chegar depois da montagem
+  // numa entrada in-SPA. O primeiro clique de navegação assume e nunca é puxado.
+  const [manualExport, setManualExport] = useState<boolean | null>(null);
+  const viewingExport = manualExport ?? initialExport;
 
   const stations = stepperStations(session, { viewingExport });
   const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'escuta1';
   const navigateStation = (key: string) => {
     if (key === 'export') {
-      setViewingExport(true);
+      setManualExport(true);
       return;
     }
-    setViewingExport(false);
+    setManualExport(false);
     const mode = KEY_TO_MODE[key];
     if (mode) sessionStore.getState().apply((s) => setMode(s, mode));
   };
@@ -111,7 +118,7 @@ function SessionStations({
             onVoiceSaved,
             // a prévia do relatório fecha com "Guardar os documentos →" (protótipo
             // toExport); a Export é estado local do shell, então a chave é nossa
-            onGoToExport: () => setViewingExport(true),
+            onGoToExport: () => setManualExport(true),
           }
         : { player, sound };
 
@@ -221,16 +228,23 @@ function useAuthGate(routeName: string): void {
 function useSessionHydration(
   routeId: string | null,
   metaRef: MutableRefObject<SessionMeta | null>,
-): void {
+): boolean {
   const loadedId = useRef<string | null>(null);
+  // Sessão concluída reabre na Export (§7.3), não no último modo salvo do domínio
+  // (mapeamento) — o status vive no resumo, não no DTO de estado (ENG-320). O id
+  // acompanha o status para o "concluída" de uma sessão não vazar para a próxima
+  // enquanto a hidratação dela ainda voa.
+  const [completedId, setCompletedId] = useState<string | null>(null);
   useEffect(() => {
     if (routeId === null || routeId === loadedId.current) return;
     let alive = true;
     void (async () => {
       try {
-        const dto = await appSessionStore().load(routeId);
+        const store = appSessionStore();
+        const [dto, summary] = await Promise.all([store.load(routeId), store.get(routeId)]);
         if (!alive) return;
         loadedId.current = routeId;
+        setCompletedId(summary.status === 'completed' ? routeId : null);
         const { state, meta } = fromSessionDto(dto);
         // O meta desta sessão vive num ref para que tanto o autosave quanto o
         // registro de respostas de voz (`onVoiceSaved`) escrevam no MESMO objeto:
@@ -260,6 +274,7 @@ function useSessionHydration(
       alive = false;
     };
   }, [routeId, metaRef]);
+  return routeId !== null && completedId === routeId;
 }
 
 /**
@@ -340,7 +355,7 @@ export function App() {
 
   const routeId = route.name === 'session' ? route.id : null;
   const metaRef = useRef<SessionMeta | null>(null);
-  useSessionHydration(routeId, metaRef);
+  const completed = useSessionHydration(routeId, metaRef);
   // A trava consultiva (§7.3) tem dono único: adquire ao abrir, renova a cada 15 s,
   // solta ao sair — e abre em revisão se outra pessoa a detém. Vale nos dois modos
   // (a fixture também serve trava), então há UM caminho de código, não dois.
@@ -467,6 +482,7 @@ export function App() {
           speaker={speaker}
           sound={sound}
           onVoiceSaved={onVoiceSaved}
+          initialExport={completed}
         />
       );
     }

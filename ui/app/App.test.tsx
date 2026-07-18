@@ -244,6 +244,42 @@ describe('App shell', () => {
     expect(after.status).toBe('completed');
   });
 
+  it('sessão concluída reabre direto na Export, não na entrevista (ENG-320)', async () => {
+    const store = appSessionStore();
+    const summary = await store.create({
+      projectId: 'p1',
+      storyName: 'H',
+      storySlug: 'h',
+      audioId: 'a1',
+      granularityLevel: 'medium',
+      beadSec: 0.25,
+      manifestId: 'fnv1a32:deadbeef',
+      pipelineConsent: true,
+    });
+    // o estado salvo ficou no Mapeamento (o último modo do domínio) — é o que hoje
+    // faz a reentrada cair na entrevista
+    const dto = toSessionDto(completableSession(), {
+      granularityLevel: 'medium',
+      bucketAudioId: 'a1',
+      voice: [],
+      pipelineConsent: true,
+    });
+    store.autosave(summary.id, dto);
+    await store.flush(summary.id);
+    await store.complete(summary.id, dto, {
+      manifest: '{"m":1}',
+      anchoring: '{"a":1}',
+      report: '# r',
+    });
+
+    act(() => {
+      navigate(`/session/${summary.id}`);
+    });
+    render(<App />);
+    // a Export abre SEM nenhum clique — palco da conclusão visível
+    expect(await screen.findByText('A história está inteira no colar.')).toBeDefined();
+  });
+
   it('persiste continuamente cada decisão no store app-global e retoma no passo exato', async () => {
     // Setup persistiu o DTO inicial (mode=escuta). O shell reidrata e, a partir daí,
     // toda mutação do domínio deve ser autossalva no store app-global — sem isso um
