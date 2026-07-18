@@ -189,6 +189,39 @@ describe('useEditorLock', () => {
     unmount();
   });
 
+  it('deadline vencido com renovação em voo não demite quando o servidor responde "é sua"', async () => {
+    // ENG-331: com a aba dormindo (background/display do Mac), beat e deadline
+    // congelam JUNTOS e disparam em rajada ao acordar — o beat põe um renew em
+    // voo e o deadline vencia antes de a resposta chegar, demitindo um editor
+    // saudável. Demitido, o apply() vira no-op: os toques no colar são engolidos
+    // e a Escuta 2 repete "Clique onde a cena termina" sem nunca criar a cena 2.
+    const id = await newSession();
+    const store = appSessionStore();
+    const mine = await store.acquireLock(id);
+    const pending: ((s: typeof mine) => void)[] = [];
+    vi.spyOn(store, 'renewLock').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          pending.push(resolve);
+        }),
+    );
+
+    const { unmount } = renderHook(() => useEditorLock(id));
+    await settle();
+    expect(sessionStore.getState().lock).toBeNull();
+
+    await act(() => vi.advanceTimersByTimeAsync(HEARTBEAT_MS)); // beat: renew fica em voo
+    await act(() => vi.advanceTimersByTimeAsync(RENEW_DEADLINE_MS)); // deadline vence na rajada
+    // o servidor está saudável: toda renovação pendente responde "a trava é sua"
+    await act(async () => {
+      pending.forEach((resolve) => resolve(mine));
+    });
+
+    expect(sessionStore.getState().lock).toBeNull();
+    expect(sessionStore.getState().review).toBe(false);
+    unmount();
+  });
+
   it('abre em revisão sob a trava de outra pessoa, e não tenta renovar o que não é seu', async () => {
     const id = await newSession();
     const other = new FixtureSessionStore({
