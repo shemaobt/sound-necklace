@@ -30,15 +30,12 @@ async function readStored(
   return { slug: rec.summary.story_slug, artifacts: rec.artifacts };
 }
 
-/** Baixa um artefato pelo card e devolve o nome de arquivo sugerido + os bytes crus. */
+/** Clicks a menu item and returns the suggested filename + the raw bytes. */
 async function downloadFrom(
   page: Page,
-  card: Locator,
+  item: Locator,
 ): Promise<{ filename: string; bytes: Buffer }> {
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    card.getByRole('button', { name: 'Baixar' }).click(),
-  ]);
+  const [download] = await Promise.all([page.waitForEvent('download'), item.click()]);
   const path = await download.path();
   return { filename: download.suggestedFilename(), bytes: readFileSync(path) };
 }
