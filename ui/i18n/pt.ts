@@ -117,6 +117,7 @@ export const pt = {
     reviewLocked: '🔒 Modo de revisão — sessão em uso por {{holder}}.',
     /** Perdemos contato com o servidor: guia, não pune — o trabalho salvo está a salvo. */
     reviewStale: '🔒 Modo de revisão — reconectando à sessão…',
+    reviewOtherTab: '🔒 Modo de revisão — esta história está aberta em outra aba.',
     reviewOwn: '🔒 Modo de revisão — a segmentação está travada.',
     unlock: 'Destravar para editar',
   },
