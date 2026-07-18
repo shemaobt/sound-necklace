@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import { ApiError, AuthError } from '../../adapters/api';
@@ -343,7 +342,6 @@ function useSessionPlayer(routeId: string | null): AudioPlayer | null {
  * em ui/pages — este shell nunca muda depois.
  */
 export function App() {
-  const { t } = useTranslation();
   const route = useRoute();
   const muted = useAppStore((s) => s.muted);
   const online = useOnline();
