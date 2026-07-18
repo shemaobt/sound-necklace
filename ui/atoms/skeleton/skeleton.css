@@ -1,0 +1,19 @@
+/* Bloco de carregamento (ENG-308): o mesmo tom da hairline da casa, com um
+   pulso suave — parado sob prefers-reduced-motion (§4.5). */
+.cds-skeleton {
+  display: inline-block;
+  border-radius: 8px;
+  background: var(--cds-hairline);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes cds-skeleton-pulse {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  .cds-skeleton {
+    animation: cds-skeleton-pulse 1.4s ease-in-out infinite;
+  }
+}

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -115,6 +115,29 @@ describe('Dashboard — nenhum UUID no cartão (ENG-307)', () => {
     await screen.findAllByText('Sessão real');
     expect(screen.queryByText(new RegExp(uuid))).toBeNull();
     expect(screen.getByText(/proj-fulani/)).toBeTruthy();
+  });
+});
+
+describe('Dashboard — esqueleto enquanto a lista voa (ENG-308)', () => {
+  it('mostra cartões-esqueleto no lugar do texto parado; a lista real os substitui', async () => {
+    const store = new FixtureSessionStore();
+    let release: (() => void) | null = null;
+    vi.spyOn(store, 'list').mockImplementation(
+      () =>
+        new Promise((res) => {
+          release = () => res([]);
+        }),
+    );
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+
+    // enquanto a API responde: esqueletos pulsando + o anúncio acessível
+    expect(document.querySelectorAll('.cds-skeleton').length).toBeGreaterThan(0);
+    expect(screen.getByRole('status')).toBeTruthy();
+
+    await act(async () => release?.());
+    expect(await screen.findByRole('list', { name: 'histórias' })).toBeTruthy();
+    expect(document.querySelectorAll('.cds-skeleton')).toHaveLength(0);
   });
 });
 
