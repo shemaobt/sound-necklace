@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -140,6 +140,34 @@ beforeEach(() => {
 });
 afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
+});
+
+describe('Export — guardar mostra o estado no próprio botão (ENG-324)', () => {
+  it("enquanto o persist voa, o botão vira 'Guardando…' e não aceita clique", async () => {
+    const state = exportable();
+    const store = new FixtureSessionStore();
+    const id = await seedInProgress(store, state);
+    const real = store.complete.bind(store);
+    let release: (() => void) | null = null;
+    vi.spyOn(store, 'complete').mockImplementation(
+      (...args) =>
+        new Promise((res) => {
+          release = () => void real(...args).then(res);
+        }),
+    );
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
+    );
+
+    const saving = screen.getByRole('button', { name: 'Guardando…' });
+    expect((saving as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => release?.());
+    expect((await store.get(id)).status).toBe('completed');
+  });
 });
 
 describe('Export — conclusão guarda o trio byte-idêntico (PRD v2 §8.8/§10.5)', () => {

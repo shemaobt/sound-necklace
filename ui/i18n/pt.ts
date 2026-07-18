@@ -80,6 +80,7 @@ export const pt = {
     semFim: '{{n}} frase(s) ainda sem fim travado.',
     reopen: 'Destravar para editar',
     complete: 'Concluir e guardar os documentos',
+    saving: 'Guardando…',
     saveError: 'Não consegui guardar agora. Verifique a conexão e tente de novo.',
     reopenError: 'Não consegui destravar agora. Tente de novo.',
     downloadError: 'Não consegui baixar o documento. Tente de novo.',

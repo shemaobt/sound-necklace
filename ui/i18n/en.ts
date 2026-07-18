@@ -75,6 +75,7 @@ export const en: Dict = {
     semFim: '{{n}} phrase(s) still without a locked end.',
     reopen: 'Unlock to edit',
     complete: 'Finish and save the documents',
+    saving: 'Saving…',
     saveError: 'Could not save right now. Check the connection and try again.',
     reopenError: 'Could not unlock right now. Try again.',
     downloadError: 'Could not download the document. Try again.',
