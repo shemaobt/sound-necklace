@@ -51,11 +51,11 @@ export interface MapeamentoProps {
   /** O shell registra o caminho `respostas/…` recém-gravado no `meta.voice` da sessão (ENG-276). */
   onVoiceSaved?: (path: string) => void;
   /**
-   * Caminhos `respostas/…` já persistidos (`meta.voice`) — a retomada abre na
-   * primeira pergunta sem NENHUMA resposta, e numa entrevista só-voz o answer
-   * store de texto não sabe o que já foi falado (ENG-321). É um getter, chamado
-   * UMA vez na montagem (inicialização), porque a fonte vive num ref do shell —
-   * lê-la em render é proibido, lê-la ao inicializar não.
+   * `respostas/…` paths already persisted (`meta.voice`) — resume opens on the
+   * first question with NO answer at all, and in a voice-only interview the text
+   * answer store does not know what has been spoken (ENG-321). It is a getter,
+   * called ONCE on mount (initialization), because the source lives in a shell
+   * ref — reading it in render is forbidden, reading it at init is not.
    */
   voicePaths?: () => readonly string[];
   /**
@@ -343,10 +343,11 @@ export function Mapeamento({
   }, [session]);
   const sequence = useMemo(() => (mapped ? questionSequence(mapped) : []), [mapped]);
 
-  // Retomada (ENG-321): a conversa reabre na primeira pergunta sem NENHUMA
-  // resposta — texto no answer store OU voz persistida em `meta.voice`. Quem
-  // parou na 5ª volta à 5ª; tudo respondido reabre na última (o relatório fica a
-  // um passo). Só na montagem: dali em diante o cursor é do usuário.
+  // Resume (ENG-321): the conversation reopens on the first question with NO
+  // answer at all — text in the answer store OR voice persisted in `meta.voice`.
+  // Whoever stopped at the 5th returns to the 5th; everything answered reopens
+  // on the last one (the report is one step away). Mount only: from then on the
+  // cursor belongs to the user.
   const [index, setIndex] = useState(() => {
     if (!mapped || sequence.length === 0) return 0;
     const voiced = voicePaths();

@@ -84,7 +84,7 @@ function SessionStations({
   onVoiceSaved: (path: string) => void;
   /** Sessão concluída reabre na Export (ENG-320); o `key={sessionId}` remonta por sessão. */
   initialExport: boolean;
-  /** Getter de `meta.voice` — a retomada do Mapeamento abre na 1ª pergunta sem resposta (ENG-321). */
+  /** Getter for `meta.voice` — resuming Mapeamento opens on the first unanswered question (ENG-321). */
   voicePaths: () => readonly string[];
 }) {
   // Escolha MANUAL da cauda "Guardar": enquanto null, a vista segue o status da
@@ -409,8 +409,9 @@ export function App() {
     [routeId],
   );
 
-  // Getter (não leitura direta): `meta.voice` vive num ref, e ref em render é
-  // proibido — o Mapeamento o lê UMA vez, no inicializador do cursor (ENG-321).
+  // A getter (not a direct read): `meta.voice` lives in a ref, and reading a ref
+  // in render is forbidden — Mapeamento reads it ONCE, in the cursor initializer
+  // (ENG-321).
   const getVoicePaths = useCallback(() => metaRef.current?.voice ?? [], []);
 
   const registry = useMemo(() => buildStationRegistry(), []);
