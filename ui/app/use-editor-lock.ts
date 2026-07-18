@@ -24,11 +24,16 @@ import { appSessionStore } from './session-adapter';
 export const HEARTBEAT_MS = 15_000;
 
 /**
- * Sem NENHUMA renovação bem-sucedida por este tempo, o cliente se demite sozinho. É o
- * `RenewDeadline` do client-go, e é o que de fato fecha a janela de dois editores: aos
- * 45 s este cliente já parou de agir, enquanto outra pessoa só consegue tomar a sessão
+ * Sem NENHUMA renovação bem-sucedida por este tempo, o cliente prova o isolamento com
+ * uma última tentativa — e só então se demite. É o `RenewDeadline` do client-go: aos
+ * ~45 s este cliente já parou de agir, enquanto outra pessoa só consegue tomar a sessão
  * aos 60 s. Esperar um 409 para descobrir seria tarde — e chega por um caminho
  * (autosave) que pode nem estar em uso no momento.
+ *
+ * A demissão NÃO pode ser cega (ENG-331): com a aba em background ou o display do Mac
+ * dormindo, beat e deadline congelam JUNTOS e disparam em rajada ao acordar — o beat
+ * põe uma renovação em voo e o prazo vencido chegava antes da resposta, demitindo um
+ * editor com o servidor saudável. Demitido, toda edição vira no-op silencioso.
  */
 export const RENEW_DEADLINE_MS = 45_000;
 
@@ -83,16 +88,22 @@ export function useEditorLock(routeId: string | null): void {
 
     const armDeadline = (): void => {
       if (deadlineTimer !== undefined) clearTimeout(deadlineTimer);
+      // O prazo não demite por si: dispara a última chance (tick abaixo). Só se
+      // demite quem tenta falar com o servidor AGORA e falha — nunca um editor cujo
+      // relógio simplesmente dormiu junto com a aba (ENG-331).
       deadlineTimer = setTimeout(() => {
-        if (alive) demote(null);
+        if (alive) void tick(true);
       }, RENEW_DEADLINE_MS);
     };
 
     const armBeat = (): void => {
+      // clear antes de armar: na rajada pós-sono, beat e última chance re-armam em
+      // paralelo — sem isto ficariam DOIS heartbeats vivos para sempre
+      if (beatTimer !== undefined) clearTimeout(beatTimer);
       beatTimer = setTimeout(() => void tick(), HEARTBEAT_MS * (1 + Math.random() * JITTER_FACTOR));
     };
 
-    const tick = async (): Promise<void> => {
+    const tick = async (lastChance = false): Promise<void> => {
       if (!alive || !acting) return;
       try {
         const status = await store.renewLock(routeId);
@@ -106,7 +117,12 @@ export function useEditorLock(routeId: string | null): void {
         }
         armDeadline(); // só uma renovação BEM-SUCEDIDA estende o prazo
       } catch {
-        // falha isolada não decide nada: quem desiste é o prazo, e ele segue correndo
+        // falha isolada não decide nada — salvo na última chance do prazo: tentamos
+        // falar com o servidor agora mesmo e não deu; sem lease não se edita.
+        if (lastChance) {
+          demote(null);
+          return;
+        }
       }
       if (alive && acting) armBeat();
     };
