@@ -196,13 +196,7 @@ export function Setup({
       <header className="cds-setup-header">
         <p className="cds-setup-eyebrow">{t('setup.eyebrow')}</p>
         <h1 className="cds-setup-title">{t('setup.title')}</h1>
-        <p className="cds-setup-trust" role="note">
-          {t('setup.trustLine')}
-        </p>
       </header>
-      <p className="cds-setup-ai-notice" role="note">
-        {t('setup.aiVoiceNotice')}
-      </p>
 
       <RadioGroup.Root
         className="cds-setup-doors"
@@ -357,6 +351,13 @@ export function Setup({
           </button>
         </div>
       )}
+
+      {/* rodapé quieto (ENG-309): confiança + divulgação de IA (§12, obrigatória)
+          juntas, fora do caminho da decisão — antes eram dois avisos grandes no topo */}
+      <footer className="cds-setup-notes">
+        <p role="note">{t('setup.trustLine')}</p>
+        <p role="note">{t('setup.aiVoiceNotice')}</p>
+      </footer>
     </section>
   );
 }

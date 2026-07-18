@@ -52,22 +52,22 @@
 }
 
 /* §O7 — linha de confiança fixada e proeminente. */
-.cds-setup-trust {
-  margin: 0;
-  padding: 0.75rem 1rem;
-  border-radius: var(--cds-radius-tile);
-  background: var(--cds-warning-bg);
-  color: var(--cds-warning-ink);
-  font-weight: 600;
+/* rodapé quieto (ENG-309): confiança + divulgação de IA (§12) fora do caminho
+   da decisão — presentes, legíveis, sem competir com o formulário */
+.cds-setup-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 0 1rem;
+  text-align: center;
 }
 
-/* Divulgação de uso de IA (§12): informa sem competir com a linha de confiança. */
-.cds-setup-ai-notice {
+.cds-setup-notes p {
   margin: 0;
-  padding: 0 1rem;
-  color: var(--cds-warning-ink);
-  font-size: 0.875rem;
-  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--cds-ink-subtle);
 }
 
 .cds-setup-heading {
