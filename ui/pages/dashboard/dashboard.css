@@ -42,6 +42,20 @@
   color: var(--cds-ink, #0a0703);
 }
 
+/* o toggle PT/EN da casa (ENG-340) — o mesmo gesto do cds-header-lang do shell */
+.cds-dashboard-lang {
+  padding: 6px 10px;
+  border: 1px solid var(--cds-hairline);
+  border-radius: var(--cds-radius-pill);
+  background: transparent;
+  color: var(--cds-olive);
+  font-family: var(--cds-font-load-bearing);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
 .cds-dashboard-user {
   display: flex;
   align-items: center;

@@ -165,6 +165,19 @@ describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
     await screen.findByRole('list', { name: 'histórias' });
   });
 
+  it('a casa troca o idioma sem abrir sessão (ENG-340)', async () => {
+    const store = new FixtureSessionStore();
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await screen.findByRole('list', { name: 'histórias' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mudar para inglês' }));
+    expect(screen.getByRole('heading', { name: 'Your stories' })).toBeTruthy();
+
+    // devolve o idioma para não vazar aos demais testes
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to Portuguese' }));
+    expect(screen.getByRole('heading', { name: 'Suas histórias' })).toBeTruthy();
+  });
+
   it('“Sair” encerra a sessão e volta ao login', async () => {
     const store = new FixtureSessionStore();
     const auth = new FixtureAuthProvider();
