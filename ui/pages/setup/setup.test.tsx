@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
@@ -289,15 +289,39 @@ describe('Setup — cópias fixadas (§8.1/O7)', () => {
   });
 });
 
-describe('Setup — portas de entrada (§8.9)', () => {
-  it('a porta “Confirmar uma entrega” leva aos arquivos do pipeline', async () => {
+describe('Setup — portas de entrada (§8.9, ENG-311)', () => {
+  it('“entrega” e “retorno” ficam visíveis mas DESABILITADAS — clicar não sai do zero', async () => {
     const p = ports();
     renderSetup(p);
 
-    await userEvent.click(screen.getByRole('radio', { name: /confirmar uma entrega/i }));
-    await userEvent.click(screen.getByRole('button', { name: /arquivos do pipeline/i }));
+    const entrega = screen.getByRole('radio', { name: /confirmar uma entrega/i });
+    const retorno = screen.getByRole('radio', { name: /retomar um retorno/i });
+    expect((entrega as HTMLButtonElement).disabled).toBe(true);
+    expect((retorno as HTMLButtonElement).disabled).toBe(true);
 
-    expect(p.navigate).toHaveBeenCalledWith('/imports');
+    await userEvent.click(entrega);
+    // a porta do zero segue selecionada: o formulário de criar continua na tela
+    expect(await screen.findByRole('heading', { name: /escolha um áudio/i })).toBeTruthy();
+  });
+
+  it('a lista de áudios mostra esqueleto enquanto o bucket responde (ENG-311)', async () => {
+    const bucket = new FixtureBucketSource();
+    const real = bucket.list.bind(bucket);
+    let release: (() => void) | null = null;
+    vi.spyOn(bucket, 'list').mockImplementation(
+      () =>
+        new Promise((res) => {
+          release = () => void real().then(res);
+        }),
+    );
+    renderSetup(ports({ bucket }));
+
+    expect(document.querySelectorAll('.cds-skeleton').length).toBeGreaterThan(0);
+    expect(screen.getByRole('status')).toBeTruthy();
+
+    await act(async () => release?.());
+    expect(await screen.findByRole('radio', { name: /conto-do-boto/ })).toBeTruthy();
+    expect(document.querySelectorAll('.cds-skeleton')).toHaveLength(0);
   });
 });
 

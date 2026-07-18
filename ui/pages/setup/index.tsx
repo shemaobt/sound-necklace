@@ -7,6 +7,7 @@ import type { BucketSource } from '../../../adapters/bucket';
 import type { GranularityResolver } from '../../../adapters/granularity';
 import type { SessionStore } from '../../../adapters/sessions';
 import { type BucketAudio, type GranularityLevel, toSessionDto } from '../../../contracts';
+import { Skeleton } from '../../atoms';
 import { ShemaIcon } from '../../tokens';
 import { buildBeads, createSession, hashPCM } from '../../../domain';
 import { navigate as routerNavigate } from '../../app/router';
@@ -41,10 +42,22 @@ import './setup.css';
 type Door = 'zero' | 'entrega' | 'anchoring';
 
 /** As portas e os níveis guardam CHAVES i18n (a cópia vive no dicionário — ENG-279). */
-const DOORS: readonly { value: Door; titleKey: string; descKey: string }[] = [
+/* entrega/retorno ainda não são funcionais: visíveis porém DESABILITADAS (decisão do
+   dono, ENG-311) — presentes para anunciar o caminho, sem fingir que já andam. */
+const DOORS: readonly { value: Door; titleKey: string; descKey: string; disabled?: boolean }[] = [
   { value: 'zero', titleKey: 'setup.doorZeroTitle', descKey: 'setup.doorZeroDesc' },
-  { value: 'entrega', titleKey: 'setup.doorEntregaTitle', descKey: 'setup.doorEntregaDesc' },
-  { value: 'anchoring', titleKey: 'setup.doorRetornoTitle', descKey: 'setup.doorRetornoDesc' },
+  {
+    value: 'entrega',
+    titleKey: 'setup.doorEntregaTitle',
+    descKey: 'setup.doorEntregaDesc',
+    disabled: true,
+  },
+  {
+    value: 'anchoring',
+    titleKey: 'setup.doorRetornoTitle',
+    descKey: 'setup.doorRetornoDesc',
+    disabled: true,
+  },
 ];
 
 const LEVELS: readonly { value: GranularityLevel; titleKey: string; descKey: string }[] = [
@@ -198,7 +211,12 @@ export function Setup({
         onValueChange={(v) => setDoor(v as Door)}
       >
         {DOORS.map((d) => (
-          <RadioGroup.Item key={d.value} value={d.value} className="cds-setup-door">
+          <RadioGroup.Item
+            key={d.value}
+            value={d.value}
+            className="cds-setup-door"
+            disabled={d.disabled ?? false}
+          >
             <span className="cds-setup-door-title">{t(d.titleKey)}</span>
             <span className="cds-setup-door-desc">{t(d.descKey)}</span>
           </RadioGroup.Item>
@@ -213,9 +231,21 @@ export function Setup({
                 {t('setup.audioHeading')}
               </h2>
               {audios === null ? (
-                <p className="cds-setup-loading" role="status">
-                  {t('setup.loadingAudios')}
-                </p>
+                // esqueleto no formato da lista real (ENG-311): a tela nunca parece
+                // travada; o anúncio acessível segue por texto (role=status)
+                <>
+                  <p className="cds-setup-vh" role="status">
+                    {t('setup.loadingAudios')}
+                  </p>
+                  <div className="cds-setup-audios" aria-hidden="true">
+                    {Array.from({ length: 4 }, (_, i) => (
+                      <div key={i} className="cds-setup-audio cds-setup-audio-skeleton">
+                        <Skeleton width="55%" height={15} />
+                        <Skeleton width="35%" height={12} />
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <RadioGroup.Root
                   className="cds-setup-audios"
