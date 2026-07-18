@@ -352,13 +352,17 @@ describe('Mapeamento — a voz do guia (ENG-280)', () => {
     expect(tts.spoken).toEqual([{ text: questionText(), lang: 'pt-BR' }]);
   });
 
-  it('"Ouvir a pergunta" repete a pergunta em foco', async () => {
+  it('falando, o botão pausa; pausado, "Ouvir a pergunta" repete (ENG-317)', async () => {
     const tts = new FixtureSpeechSynthesizer();
     load(mapping());
     render(<Mapeamento speaker={tts} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ouvir a pergunta' }));
+    // chegar na pergunta já fala → o botão oferece pausar, e pausar NÃO fala de novo
+    await userEvent.click(screen.getByRole('button', { name: 'Pausar a pergunta' }));
+    expect(tts.spoken).toHaveLength(1);
 
+    // pausado, o botão volta a oferecer ouvir — e repete a pergunta em foco
+    await userEvent.click(screen.getByRole('button', { name: 'Ouvir a pergunta' }));
     expect(tts.spoken).toHaveLength(2);
     expect(tts.spoken.at(-1)!.text).toBe(questionText());
   });

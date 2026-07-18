@@ -32,6 +32,20 @@ describe('ConversationStage — marcador de papel (§8.7)', () => {
   });
 });
 
+/** O botão da pergunta segue o estado REAL da fala (ENG-317): falando ⇄ pausado. */
+describe('ConversationStage — botão da pergunta pelo estado da fala (ENG-317)', () => {
+  it('falando, oferece "Pausar a pergunta"; calado, "Ouvir a pergunta"', () => {
+    const onSpeakQuestion = vi.fn();
+    const { rerender } = render(
+      <ConversationStage {...baseProps({ onSpeakQuestion, speaking: true })} />,
+    );
+    expect(screen.getByRole('button', { name: 'Pausar a pergunta' })).toBeTruthy();
+
+    rerender(<ConversationStage {...baseProps({ onSpeakQuestion, speaking: false })} />);
+    expect(screen.getByRole('button', { name: 'Ouvir a pergunta' })).toBeTruthy();
+  });
+});
+
 /**
  * Fio de progresso (§8.7): uma conta por pergunta, respondida e atual distintas,
  * jamais um número (§9.2) — é conversa, não formulário.

@@ -288,7 +288,12 @@ function QuestionScreen({
         onPrev={onPrev}
         onNext={onNext}
         speaking={speaking}
-        onSpeakQuestion={canSpeak ? () => speaker.speak(questionText, speechLang) : undefined}
+        onSpeakQuestion={
+          // falando ⇒ pausar; calado ⇒ (re)falar — o rótulo do organismo acompanha (ENG-317)
+          canSpeak
+            ? () => (speaking ? speaker.stop() : speaker.speak(questionText, speechLang))
+            : undefined
+        }
       />
     </section>
   );

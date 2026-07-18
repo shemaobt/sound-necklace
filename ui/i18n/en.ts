@@ -313,6 +313,7 @@ export const en: Dict = {
   },
   conversationStage: {
     listen: 'Listen to the question',
+    pause: 'Pause the question',
     record: 'record the answer',
     stop: 'Stop',
     idleHint: 'Tap and speak your answer',
