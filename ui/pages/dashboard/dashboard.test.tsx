@@ -95,6 +95,29 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
   });
 });
 
+describe('Dashboard — nenhum UUID no cartão (ENG-307)', () => {
+  it('project_id cru (UUID) não aparece; um nome de projeto continua aparecendo', async () => {
+    const uuid = '7ae3eca9-2747-4b3c-ba38-4f835f1b4bbc';
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, {
+      storyName: 'Sessão real',
+      storySlug: 'sessao-real',
+      projectId: uuid,
+    });
+    await seedInProgress(store, {
+      storyName: 'Sessão nomeada',
+      storySlug: 'sessao-nomeada',
+      projectId: 'proj-fulani',
+    });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+
+    await screen.findAllByText('Sessão real');
+    expect(screen.queryByText(new RegExp(uuid))).toBeNull();
+    expect(screen.getByText(/proj-fulani/)).toBeTruthy();
+  });
+});
+
 describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
   it('mostra a marca, a usuária autenticada e o título da casa', async () => {
     const store = new FixtureSessionStore();

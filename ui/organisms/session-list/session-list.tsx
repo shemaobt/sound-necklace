@@ -89,9 +89,11 @@ function SessionCard({
 
       <div className="cds-session-card-body">
         <h3 className="cds-session-card-title">{session.storyName}</h3>
-        {/* §7.2 pede slug E projeto no cartão — o protótipo mostra só o slug. */}
+        {/* §7.2 pede slug E projeto no cartão — o protótipo mostra só o slug. O
+            projeto só entra quando há um NOME exibível (o wiring esconde ids
+            crus — nenhum UUID em cartão, ENG-307). */}
         <p className="cds-session-card-slug">
-          {session.slug} · {session.project}
+          {session.project ? `${session.slug} · ${session.project}` : session.slug}
         </p>
 
         <div className="cds-session-card-meta">

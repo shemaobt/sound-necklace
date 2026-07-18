@@ -78,6 +78,11 @@ type Translate = (key: string, opts?: Record<string, unknown>) => string;
  * O organismo não faz aritmética de datas — a página entrega o texto pronto. O locale
  * acompanha o idioma da UI (ENG-279); o default PT-BR preserva o comportamento anterior.
  */
+/** Id opaco (UUID) não é nome de projeto — cartão nunca mostra UUID (ENG-307). */
+function looksLikeOpaqueId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 export function formatWhen(iso: string, locale = 'pt-BR'): string {
   return new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' });
 }
@@ -101,7 +106,9 @@ function toCard(s: SessionSummary, t: Translate, locale: string): SessionCardDat
     id: s.id,
     storyName: s.story_name,
     slug: s.story_slug,
-    project: s.project_id,
+    // §7.2 pede o projeto no cartão, mas a API real só serve o project_id — e um
+    // UUID cru é ruído, não nome (ENG-307). Escondido até existir nome de projeto.
+    project: looksLikeOpaqueId(s.project_id) ? '' : s.project_id,
     status: STATUS[s.status],
     lastModified: formatWhen(s.last_modified, locale),
     progress,
