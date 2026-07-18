@@ -2,6 +2,15 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Header } from './header';
+import headerCss from './header.css?raw';
+
+describe('Header — fixo durante o scroll das estações (ENG-315)', () => {
+  it('a regra do header é sticky no topo (controles sempre à mão)', () => {
+    const rule = /\.cds-header\s*{[^}]*}/.exec(headerCss)?.[0] ?? '';
+    expect(rule).toContain('position: sticky');
+    expect(rule).toContain('top: 0');
+  });
+});
 
 describe('Header', () => {
   it('não tem título — a marca é só o ícone', () => {

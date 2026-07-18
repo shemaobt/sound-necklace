@@ -13,6 +13,13 @@
   padding: 0 40px;
   background: var(--cds-chrome-bg);
   color: var(--cds-chrome-fg);
+  /* fixo no scroll das estações (ENG-315): voltar/som/idioma sempre à mão; o
+     vidro fosco mantém o chrome translúcido legível sobre o conteúdo que passa */
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* o protótipo só desenha a hairline do header no Setup */
