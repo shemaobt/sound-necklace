@@ -7,6 +7,7 @@ Path: @/tests/e2e
 - **The acceptance layer (E6).** Playwright specs that drive the **real app in fixture mode** through the browser — login → Setup → the listener stations → Export/report/Dashboard — proving the end-to-end product criteria of @/docs/plano-de-acao-mvp.md §3 and @/docs/PRD-colar-de-sons-v2.md §9.
 - Distinct from @/tests/golden: the golden harness proves `domain ≡ reference` by byte-diffing artifacts against the untouchable v1 reference; these specs prove the **assembled UI + adapters** deliver those artifacts and the ear-first behavior through actual DOM interaction.
 - Runs as the CI job `e2e` (@/.github/workflows/ci.yml) via `pnpm e2e`. It is an **additional, non-required** check (CLAUDE.md quality gates) — the golden harness remains the only unrelaxable gate.
+- **Local runs on macOS: use `pnpm e2e:awake`.** With the display ASLEEP (overnight/lid dimmed), Chromium's input acks ride the frame-presentation pipeline and flush only on a ~15 s watchdog — every click stalls to the next 15 s boundary and any spec longer than ~15 s times out (ENG-330; measured: in-page `pointerdown` lands instantly, only the CDP ack waits). `caffeinate -u` wakes and holds the display for the duration of the run. CI (Linux) is unaffected.
 
 ### How it fits into the larger codebase
 
