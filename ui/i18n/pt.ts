@@ -326,6 +326,7 @@ export const pt = {
     groupPhrase: 'Frase {{n}}',
     playAnswer: '▶ ouvir a resposta',
     noAnswerYet: 'ainda sem resposta gravada',
+    voicePending: 'procurando a resposta gravada',
     writeAnswer: 'escrever a resposta',
     addNote: 'acrescentar uma observação',
   },
