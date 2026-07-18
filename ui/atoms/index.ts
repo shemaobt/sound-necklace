@@ -9,4 +9,5 @@ export { ConfidenceDisc } from './confidence-disc/confidence-disc';
 export { CordLine } from './cord/cord';
 export { Pearl, type PearlState } from './pearl/pearl';
 export { PlayGlyph } from './play-glyph/play-glyph';
+export { Skeleton } from './skeleton/skeleton';
 export { WaveformBar } from './waveform-bar/waveform-bar';

@@ -143,3 +143,27 @@
   font-size: 1rem;
   color: var(--cds-olive);
 }
+
+/* ---------- esqueleto do carregamento (ENG-308) ---------- */
+/* anúncio acessível sem pixel na tela (padrão visually-hidden da casa) */
+.cds-dashboard-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cds-dashboard-card-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cds-dashboard-skeleton-thumb {
+  width: 132px;
+  height: 30px;
+  margin-bottom: 6px;
+}

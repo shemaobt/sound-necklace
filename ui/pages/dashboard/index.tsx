@@ -10,7 +10,7 @@ import {
   type SessionStep,
   type SessionSummary,
 } from '../../../contracts';
-import { Button } from '../../atoms';
+import { Button, Skeleton } from '../../atoms';
 import { ShemaIcon } from '../../tokens';
 import {
   ArtifactCards,
@@ -241,9 +241,24 @@ export function Dashboard({
           </p>
         )}
         {sessions === null ? (
-          <p className="cds-dashboard-loading" role="status">
-            {t('dashboard.loading')}
-          </p>
+          // Esqueleto no formato da grade real (ENG-308): a casa nunca parece
+          // travada enquanto a API responde. O anúncio acessível continua sendo
+          // texto (`role=status`); os blocos são decorativos.
+          <>
+            <p className="cds-dashboard-vh" role="status">
+              {t('dashboard.loading')}
+            </p>
+            <ul className="cds-session-list" aria-hidden="true">
+              {Array.from({ length: 3 }, (_, i) => (
+                <li key={i} className="cds-session-card cds-dashboard-card-skeleton">
+                  <Skeleton className="cds-dashboard-skeleton-thumb" />
+                  <Skeleton width="70%" height={18} />
+                  <Skeleton width="45%" height={13} />
+                  <Skeleton width="60%" height={13} />
+                </li>
+              ))}
+            </ul>
+          </>
         ) : (
           <>
             <SessionList
