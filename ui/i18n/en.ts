@@ -306,6 +306,7 @@ export const en: Dict = {
     groupPhrase: 'Phrase {{n}}',
     playAnswer: '▶ listen to the answer',
     noAnswerYet: 'no answer recorded yet',
+    voicePending: 'looking for the recorded answer',
     writeAnswer: 'write the answer',
     addNote: 'add a note',
   },

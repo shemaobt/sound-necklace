@@ -213,3 +213,25 @@
   color: var(--cds-telha-deep);
   flex: none;
 }
+
+/* procurando a gravação (ENG-319): a onda segura o lugar, apagada e pulsando */
+.cds-relatorio-voice.is-pending {
+  opacity: 0.45;
+  animation: cds-relatorio-pending 1.6s ease-in-out infinite;
+}
+
+@keyframes cds-relatorio-pending {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cds-relatorio-voice.is-pending {
+    animation: none;
+  }
+}

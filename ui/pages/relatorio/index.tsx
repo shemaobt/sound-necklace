@@ -162,6 +162,8 @@ interface ReportCardProps {
   typed: string;
   note: string;
   hasVoice: boolean;
+  /** A verificação da gravação ainda voa: mostra "procurando", não o vazio (ENG-319). */
+  voicePending: boolean;
   durationSec?: number;
   onTyped: (text: string) => void;
   onNote: (text: string) => void;
@@ -174,6 +176,7 @@ function ReportCard({
   typed,
   note,
   hasVoice,
+  voicePending,
   durationSec,
   onTyped,
   onNote,
@@ -183,6 +186,7 @@ function ReportCard({
   const [showNote, setShowNote] = useState(note !== '');
   const facilitatorLed = slot.k === 'ausencia';
   const voiceOnly = hasVoice && !typed.trim();
+  const pendingRow = voicePending && !hasVoice && !typed.trim();
 
   return (
     <div className="cds-relatorio-card">
@@ -218,6 +222,19 @@ function ReportCard({
             {durationSec === undefined ? '—' : formatDuration(durationSec)}
           </span>
         </div>
+      ) : pendingRow ? (
+        // procurando a gravação: a onda apagada segura o lugar — nunca o vazio
+        <div
+          className="cds-relatorio-voice is-pending"
+          role="status"
+          aria-label={t('relatorio.voicePending')}
+        >
+          <span className="cds-relatorio-wave" aria-hidden="true">
+            {WAVE_HEIGHTS.map((h, i) => (
+              <WaveformBar key={i} height={h} />
+            ))}
+          </span>
+        </div>
       ) : null}
 
       {/* A digitação vive AQUI (decisão do dono: a entrevista é só-voz). Mas o campo
@@ -228,7 +245,9 @@ function ReportCard({
         className="cds-relatorio-typed"
         aria-label={t('relatorio.answer')}
         rows={1}
-        placeholder={voiceOnly ? t('relatorio.writeAnswer') : t('relatorio.noAnswerYet')}
+        placeholder={
+          voiceOnly || pendingRow ? t('relatorio.writeAnswer') : t('relatorio.noAnswerYet')
+        }
         value={typed}
         onChange={(e) => onTyped(e.target.value)}
       />
@@ -258,6 +277,9 @@ export function Relatorio({ recorder = null }: RelatorioProps) {
   const session = useSessionStore((s) => s.session);
   const [voiceSet, setVoiceSet] = useState<ReadonlySet<string>>(new Set());
   const [voiceDurations, setVoiceDurations] = useState<ReadonlyMap<string, number>>(new Map());
+  // Caminhos cuja verificação já RESPONDEU (com ou sem gravação): antes disso o
+  // cartão mostra "procurando", nunca o vazio — carregando ≠ sem resposta (ENG-319).
+  const [voiceChecked, setVoiceChecked] = useState<ReadonlySet<string>>(new Set());
 
   // Visão de LEITURA com o answer store garantido mesmo antes do efeito persistir.
   const mapped = useMemo(() => {
@@ -277,23 +299,29 @@ export function Relatorio({ recorder = null }: RelatorioProps) {
 
   // Descobre quais respostas TÊM gravação (define a linha de voz e alimenta o
   // `voice` do `buildMapReport` para que o .md referencie a gravação, §10.4).
+  // POR RESPOSTA, sem barreira (ENG-319): um Promise.all sobre os ~41 caminhos
+  // segurava TODAS as linhas de voz até o caminho mais lento responder — no modo
+  // real (rede + decode por blob) o relatório abria parecendo sem respostas. Cada
+  // verificação resolve e acende o próprio cartão; a duração (que baixa/decodifica
+  // o blob) chega depois, sem segurar a linha.
   useEffect(() => {
     // Sem recorder não há gravação a descobrir: o estado inicial já é vazio (sem
     // setState síncrono no efeito — react-hooks/set-state-in-effect).
     if (!recorder) return;
     let alive = true;
-    void Promise.all(
-      voicePaths.map(async (p) => {
-        if (!(await recorder.has(p))) return null;
-        const sec = await recorder.duration(p).catch(() => 0);
-        return { p, sec };
-      }),
-    ).then((res) => {
-      if (!alive) return;
-      const found = res.filter((r): r is { p: string; sec: number } => r !== null);
-      setVoiceSet(new Set(found.map((r) => r.p)));
-      setVoiceDurations(new Map(found.map((r) => [r.p, r.sec])));
-    });
+    for (const p of voicePaths) {
+      void recorder
+        .has(p)
+        .catch(() => false)
+        .then(async (h) => {
+          if (!alive) return;
+          setVoiceChecked((prev) => (prev.has(p) ? prev : new Set(prev).add(p)));
+          if (!h) return;
+          setVoiceSet((prev) => (prev.has(p) ? prev : new Set(prev).add(p)));
+          const sec = await recorder.duration(p).catch(() => 0);
+          if (alive) setVoiceDurations((prev) => new Map(prev).set(p, sec));
+        });
+    }
     return () => {
       alive = false;
     };
@@ -330,6 +358,7 @@ export function Relatorio({ recorder = null }: RelatorioProps) {
               typed={readAnswer(mapped.mapping, slot)}
               note={readAnswer(mapped.mapping, noteSlot(slot))}
               hasVoice={voiceSet.has(path)}
+              voicePending={recorder !== null && !voiceChecked.has(path)}
               durationSec={voiceDurations.get(path)}
               onTyped={(text) => writeTyped(slot, text)}
               onNote={(text) => writeNote(slot, text)}

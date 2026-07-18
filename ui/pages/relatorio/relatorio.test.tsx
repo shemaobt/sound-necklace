@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
-import { buildMapReport } from '../../../contracts';
+import type { VoiceRecorder } from '../../../adapters/voice/types';
+import { buildMapReport, type ResourcePath } from '../../../contracts';
 import {
   buildBeads,
   createSession,
@@ -108,11 +109,65 @@ function cardFor(q: string): HTMLElement {
   return card as HTMLElement;
 }
 
+/**
+ * Recorder com `has()` controlado por caminho: os listados resolvem já; os demais
+ * ficam pendurados para sempre — é o que prova que uma resposta NÃO espera as
+ * outras (a barreira do Promise.all seguraria tudo).
+ */
+function controllableRecorder(known: Record<string, boolean>): VoiceRecorder {
+  return {
+    start: () => Promise.reject(new Error('não usado neste teste')),
+    play: () => Promise.resolve(),
+    duration: () => Promise.resolve(9),
+    stopPlayback: () => {},
+    has: (p: ResourcePath) =>
+      p in known ? Promise.resolve(known[p]!) : new Promise<boolean>(() => {}),
+    delete: () => Promise.resolve(),
+  };
+}
+
 beforeEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
 });
 afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
+});
+
+describe('Relatório — a voz aparece conforme cada resposta resolve (ENG-319)', () => {
+  it('uma resposta verificada aparece mesmo com outra verificação ainda no ar', async () => {
+    const fastQ = L1_Q[0]!;
+    const fastPath = voiceAnswerPath({ level: 1, k: fastQ.k });
+    const recorder = controllableRecorder({ [fastPath]: true }); // as demais nunca resolvem
+
+    load(report());
+    render(<Relatorio recorder={recorder} />);
+
+    const card = cardFor(fastQ.q);
+    expect(await within(card).findByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+  });
+
+  it('enquanto a verificação voa, o cartão mostra "procurando", não "sem resposta"', () => {
+    const pendingQ = L1_Q[1]!;
+    const recorder = controllableRecorder({}); // nada resolve
+    load(report());
+    render(<Relatorio recorder={recorder} />);
+
+    const card = cardFor(pendingQ.q);
+    expect(within(card).getByLabelText('procurando a resposta gravada')).toBeTruthy();
+    expect(within(card).queryByPlaceholderText('ainda sem resposta gravada')).toBeNull();
+  });
+
+  it('verificada SEM gravação perde o "procurando" e volta ao vazio normal', async () => {
+    const q = L1_Q[2]!;
+    const path = voiceAnswerPath({ level: 1, k: q.k });
+    const recorder = controllableRecorder({ [path]: false });
+    load(report());
+    render(<Relatorio recorder={recorder} />);
+
+    const card = cardFor(q.q);
+    expect(await within(card).findByPlaceholderText('ainda sem resposta gravada')).toBeTruthy();
+    expect(within(card).queryByLabelText('procurando a resposta gravada')).toBeNull();
+  });
 });
 
 describe('Relatório — cabeçalho do protótipo (redesign §6.6)', () => {
