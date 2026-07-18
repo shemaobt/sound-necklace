@@ -166,17 +166,29 @@
   border-radius: var(--cds-radius-pill);
 }
 
-/* ---------- menu de downloads do cartão concluído (ENG-305) ---------- */
+/* ---------- menu de downloads do cartão concluído (ENG-305/333) ---------- */
+/* gatilho-ícone: um quadrado-pílula do tamanho do botão principal, só o glifo ⋮ */
 .cds-dashboard-dl-trigger {
-  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  flex: none;
+  align-self: stretch;
+  padding: 0;
   border: 1px solid var(--cds-hairline);
   border-radius: var(--cds-radius-pill);
   background: transparent;
   color: var(--cds-olive);
   font-family: var(--cds-font-load-bearing);
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1;
   cursor: pointer;
+}
+
+.cds-dashboard-dl-trigger:hover {
+  background: rgba(119, 125, 69, 0.08);
 }
 
 .cds-dashboard-dl-pop {

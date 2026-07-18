@@ -6,6 +6,7 @@ import { FixtureAuthProvider } from '../../../adapters/api';
 import { type CreateSessionInput, FixtureSessionStore } from '../../../adapters/sessions';
 import type { ArtifactTriple, SessionStateDto } from '../../../contracts';
 import dashboardCss from './dashboard.css?raw';
+import sessionListCss from '../../organisms/session-list/session-list.css?raw';
 import Dashboard, { formatWhen } from './index';
 
 /**
@@ -224,6 +225,28 @@ describe('Dashboard — downloads no cartão da concluída (§7.2/§10.5, ENG-30
     );
     // e os cards soltos sumiram da home
     expect(document.querySelector('.cds-dashboard-download-group')).toBeNull();
+  });
+
+  it('o gatilho é um ícone discreto — nome acessível "Baixar", sem palavra visível (ENG-333)', async () => {
+    const store = new FixtureSessionStore();
+    await seedCompleted(
+      store,
+      { anchoring: '{}', manifest: '{}', report: '#' },
+      { storyName: 'Concluída', storySlug: 'concluida-x' },
+    );
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+
+    const trigger = await screen.findByRole('button', { name: 'Baixar' });
+    // ícone, não palavra: o glifo é decorativo e o nome vem do aria-label
+    expect(trigger.getAttribute('aria-label')).toBe('Baixar');
+    expect(trigger.querySelector('[aria-hidden="true"]')).toBeTruthy();
+    expect(trigger.textContent).not.toContain('Baixar');
+  });
+
+  it('a área de ação do cartão separa o botão principal do menu (ENG-333)', () => {
+    const action = /\.cds-session-card-action\s*{[^}]*}/.exec(sessionListCss)?.[0] ?? '';
+    expect(action).toMatch(/gap:/);
   });
 
   it('uma sessão em progresso não tem o menu Baixar', async () => {
