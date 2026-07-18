@@ -23,6 +23,7 @@ import { BrowserConnectivityMonitor } from '../../adapters/connectivity/browser'
 import { sessionStore } from '../state';
 import { API_BASE_URL, API_MODE } from './api-config';
 import { appAuth, authReady } from './auth-adapter';
+import { matchRoute } from './router';
 
 /** localStorage do browser quando disponível; ausente em contextos sem Web Storage. */
 function browserStorage(): KeyValueStorage | undefined {
@@ -80,8 +81,12 @@ export function appSessionStore(): SessionStore {
             await authReady();
             return appAuth().token();
           },
-          onLockLost: (_id, holder) => {
-            sessionStore.getState().setLock({ holder });
+          onLockLost: (id, holder) => {
+            // O veredito é POR SESSÃO: um flush atrasado da sessão anterior (409 na
+            // janela da troca A→B) não pode travar a sessão recém-aberta.
+            const route = matchRoute(window.location.pathname);
+            if (route.name === 'session' && route.id === id)
+              sessionStore.getState().setLock({ holder });
           },
         })
       : new FixtureSessionStore({ backend: appSessionBackend() }));

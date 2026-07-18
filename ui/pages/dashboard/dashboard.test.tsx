@@ -216,3 +216,16 @@ describe('Dashboard — superfície creme (redesign §4.1)', () => {
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+describe('Dashboard — fronteira de IO real (ENG-247)', () => {
+  it('listagem falhada vira aviso, não um "carregando…" eterno', async () => {
+    const store = new FixtureSessionStore();
+    vi.spyOn(store, 'list').mockRejectedValue(new Error('API fora do ar'));
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Não consegui carregar as histórias');
+    expect(screen.queryByText('Carregando as histórias…')).toBeNull();
+  });
+});

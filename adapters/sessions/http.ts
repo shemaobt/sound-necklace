@@ -125,6 +125,8 @@ export class HttpSessionStore implements SessionStore {
   }
 
   async list(): Promise<SessionSummary[]> {
+    // ponytail: o servidor pagina (limit default 50) e aqui só vem a 1ª página — a
+    // 51ª sessão some do Dashboard; paginar quando um piloto real chegar perto disso.
     return SessionListResponseSchema.parse(await this.#req('GET', '/sessions')).sessions;
   }
 
@@ -144,7 +146,10 @@ export class HttpSessionStore implements SessionStore {
   }
 
   async complete(id: string, state: SessionStateDto, artifacts: ArtifactTriple): Promise<void> {
-    this.#autosaver.cancel(id); // nenhum PUT /state pendente pode chegar após o complete
+    // nenhum PUT /state velho pode chegar após o complete: descarta o pendente E
+    // espera o já despachado aterrissar (o servidor aceitaria a regressão).
+    this.#autosaver.cancel(id);
+    await this.#autosaver.settle(id);
     await this.#req('PUT', `/sessions/${id}/state`, state);
     // §10.5: o trio sobe como bytes crus em form-data — a API guarda sem re-serializar
     // e o download volta byte-idêntico (provado na ENG-267 contra o bucket real).
@@ -161,6 +166,7 @@ export class HttpSessionStore implements SessionStore {
 
   async reopen(id: string): Promise<void> {
     this.#autosaver.cancel(id);
+    await this.#autosaver.settle(id);
     await this.#req('POST', `/sessions/${id}/reopen`);
   }
 

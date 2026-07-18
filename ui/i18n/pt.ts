@@ -80,6 +80,9 @@ export const pt = {
     semFim: '{{n}} frase(s) ainda sem fim travado.',
     reopen: 'Destravar para editar',
     complete: 'Concluir e guardar os documentos',
+    saveError: 'Não consegui guardar agora. Verifique a conexão e tente de novo.',
+    reopenError: 'Não consegui destravar agora. Tente de novo.',
+    downloadError: 'Não consegui baixar o documento. Tente de novo.',
   },
   imports: {
     guidanceNoSession: 'Abra uma sessão para carregar arquivos do pipeline.',
@@ -155,6 +158,7 @@ export const pt = {
     countMany: '{{count}} histórias',
     progressLabel: 'progresso: {{station}} — passo {{step}} de {{total}}',
     loading: 'Carregando as histórias…',
+    listError: 'Não consegui carregar as histórias. Verifique a conexão e recarregue.',
   },
   sessionList: {
     statusInProgress: 'Em andamento',
@@ -291,6 +295,7 @@ export const pt = {
     listenScene: '▶ ouvir a cena',
     listenPhrase: '▶ ouvir a frase',
     instruction: 'Ouça o trecho e responda com calma, com a sua voz.',
+    recordError: 'A resposta não foi guardada. Grave de novo.',
     reportAria: 'relatório',
     reportFallback: 'A conversa terminou. O relatório abre aqui.',
     toExport: 'Guardar os documentos →',

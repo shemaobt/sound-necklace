@@ -94,6 +94,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
   const [custody, setCustody] = useState<Custody | null>(null);
   const [downloaded, setDownloaded] = useState<ArtifactDownloads>(NO_DOWNLOADS);
   const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!store || !sessionId) return;
@@ -160,32 +161,60 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       return;
     }
     if (kind === 'manifest' && !canExportManifesto(session)) return;
-    // §10.5: já concluída, o download REUSA os bytes guardados (sem rebuild); antes
-    // de concluir, baixa a prévia construída da sessão viva.
-    const bytes =
-      phase === 'saved' && store && sessionId
-        ? (await store.getArtifacts(sessionId))[kind]
-        : triple[kind];
+    // Fronteira de IO real (ENG-247): já concluída, o download busca os bytes
+    // guardados na API (§10.5 — sem rebuild); a falha vira aviso, nunca silêncio.
+    let bytes: string;
+    try {
+      bytes =
+        phase === 'saved' && store && sessionId
+          ? (await store.getArtifacts(sessionId))[kind]
+          : triple[kind];
+    } catch {
+      setNotice(t('export.downloadError'));
+      sound?.refuse();
+      return;
+    }
     setNotice(null);
     sound?.saved();
     saveBytes(filenameFor(kind, session.slug), bytes);
     setDownloaded((d) => ({ ...d, [kind]: true }));
   };
 
+  // Fronteira da AÇÃO mais importante do produto (§8.8): concluir são 3 requests
+  // reais em sequência — a falha (rede, 409 de lease trocando no meio) precisa
+  // reabilitar o botão e orientar; o segundo clique costuma resolver (§9: nunca
+  // punir). `busy` fecha o duplo-clique enquanto a sequência voa.
   const onComplete = async (): Promise<void> => {
-    if (!store || !sessionId || !triple || !canExport) return;
-    await store.complete(sessionId, toSessionDto(session, custody?.meta ?? DEFAULT_META), triple);
-    setNotice(null);
-    sound?.advance();
-    setPhase('saved');
+    if (!store || !sessionId || !triple || !canExport || busy) return;
+    setBusy(true);
+    try {
+      await store.complete(sessionId, toSessionDto(session, custody?.meta ?? DEFAULT_META), triple);
+      setNotice(null);
+      sound?.advance();
+      setPhase('saved');
+    } catch {
+      setNotice(t('export.saveError'));
+      sound?.refuse();
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onReopen = async (): Promise<void> => {
-    if (!store || !sessionId) return;
-    await store.reopen(sessionId);
-    sessionStore.getState().setReview(false);
-    setDownloaded(NO_DOWNLOADS);
-    setPhase('edit');
+    if (!store || !sessionId || busy) return;
+    setBusy(true);
+    try {
+      await store.reopen(sessionId);
+      sessionStore.getState().setReview(false);
+      setDownloaded(NO_DOWNLOADS);
+      setPhase('edit');
+      setNotice(null);
+    } catch {
+      setNotice(t('export.reopenError'));
+      sound?.refuse();
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

@@ -37,6 +37,19 @@ describe('useEditorLock', () => {
     vi.restoreAllMocks();
   });
 
+  it('estabelece a trava desta sessão do zero ao montar — a da anterior não vaza', async () => {
+    const id = await newSession();
+    // sobra da sessão anterior (troca in-SPA): sem o reset síncrono, este holder
+    // ficaria visível até o acquire responder — e para sempre se o acquire falhar
+    sessionStore.getState().setLock({ holder: 'Alice' });
+
+    const { unmount } = renderHook(() => useEditorLock(id));
+    expect(sessionStore.getState().lock).toBeNull();
+
+    await settle();
+    unmount();
+  });
+
   it('renova a trava periodicamente enquanto a sessão fica aberta', async () => {
     const id = await newSession();
     const renew = vi.spyOn(appSessionStore(), 'renewLock');

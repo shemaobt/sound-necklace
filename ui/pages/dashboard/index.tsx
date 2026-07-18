@@ -134,13 +134,24 @@ export function Dashboard({
   const { t, i18n } = useTranslation();
   const locale = i18n.language.startsWith('en') ? 'en-US' : 'pt-BR';
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
+  const [listError, setListError] = useState(false);
   const [downloaded, setDownloaded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let alive = true;
-    void store.list().then((list) => {
-      if (alive) setSessions(list);
-    });
+    void store
+      .list()
+      .then((list) => {
+        if (alive) setSessions(list);
+      })
+      .catch(() => {
+        // fronteira de IO real (ENG-247): API fora do ar não pode ser um
+        // "carregando…" eterno — lista vazia + aviso orientando recarregar
+        if (alive) {
+          setSessions([]);
+          setListError(true);
+        }
+      });
     return () => {
       alive = false;
     };
@@ -217,6 +228,11 @@ export function Dashboard({
           {count > 0 && <p className="cds-dashboard-count">{countLabel}</p>}
         </div>
 
+        {listError && (
+          <p className="cds-dashboard-loading" role="alert">
+            {t('dashboard.listError')}
+          </p>
+        )}
         {sessions === null ? (
           <p className="cds-dashboard-loading" role="status">
             {t('dashboard.loading')}

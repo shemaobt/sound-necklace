@@ -130,6 +130,71 @@ describe('HttpSessionStore', () => {
   });
 
   describe('complete — a ordem do fio real (§8.8/§10.5)', () => {
+    it('se o POST /artifacts falha, o POST /complete não sai — a ordem é invariante', async () => {
+      const calls: Call[] = [];
+      const store = storeWith(
+        recordingFetch(calls, (call) =>
+          call.url.endsWith('/artifacts')
+            ? json({ detail: 'boom' }, 500)
+            : json({ saved_at: '2026-07-17T00:00:00Z', schema_version: 1 }),
+        ),
+      );
+
+      await expect(
+        store.complete('sess-9', dto('final'), { manifest: 'm', anchoring: 'a', report: 'r' }),
+      ).rejects.toThrow();
+
+      // concluir sem os artefatos guardados deixaria a sessão "completed" vazia
+      expect(calls.some((c) => c.url.endsWith('/complete'))).toBe(false);
+    });
+
+    it('espera o autosave EM VOO aterrissar antes do PUT final — nada regride o estado', async () => {
+      vi.useFakeTimers();
+      try {
+        const calls: string[] = [];
+        let releaseAutosave!: () => void;
+        let firstStatePut = true;
+        const store = storeWith(
+          async (url, init) => {
+            const u = String(url);
+            const method = init?.method ?? 'GET';
+            if (method === 'PUT' && u.endsWith('/state') && firstStatePut) {
+              firstStatePut = false;
+              calls.push('autosave');
+              await new Promise<void>((r) => {
+                releaseAutosave = r;
+              });
+              return json({ saved_at: 't', schema_version: 1 });
+            }
+            calls.push(`${method} ${u.split('/sessions/sess-9')[1] ?? u}`);
+            if (u.endsWith('/artifacts'))
+              return json([{ kind: 'manifest', size: 1, crc32c: 'c', sha256: 's' }], 201);
+            return json({ saved_at: 't', schema_version: 1 });
+          },
+          { debounceMs: 10 },
+        );
+
+        store.autosave('sess-9', dto('velho'));
+        await vi.advanceTimersByTimeAsync(20); // o PUT do autosave despacha e fica em voo
+
+        const done = store.complete('sess-9', dto('final'), {
+          manifest: 'm',
+          anchoring: 'a',
+          report: 'r',
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        // o PUT final ainda NÃO saiu: um estado velho aterrissando depois dele
+        // regrediria o documento salvo (o servidor aceita — só o lock o guarda)
+        expect(calls).toEqual(['autosave']);
+
+        releaseAutosave();
+        await done;
+        expect(calls).toEqual(['autosave', 'PUT /state', 'POST /artifacts', 'POST /complete']);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('PUT state → POST /artifacts multipart (bytes crus) → POST /complete sem corpo', async () => {
       const calls: Call[] = [];
       const store = storeWith(

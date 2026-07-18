@@ -6,11 +6,9 @@
  * batendo o coração, o lease caduca sozinho e a sessão fica livre com o editor ainda
  * dentro dela: é isso que este hook impede.
  *
- * NÃO ESTÁ LIGADO AINDA (ENG-299 / ENG-247). O composition root monta hoje a
- * `FixtureSessionStore` direto (`session-adapter.ts`), e é `useSessionHydration`
- * (App.tsx) quem lê a trava, uma vez, ao hidratar. Quando a ENG-247 ligar o modo real
- * por ambiente, chame `useEditorLock(routeId)` no App e REMOVA de lá a leitura de
- * trava — as duas competiriam pelo mesmo `setLock`/`setReview`.
+ * É o DONO ÚNICO do `setLock` (ENG-247): o App o chama por rota de sessão, nos dois
+ * modos (a fixture também serve trava), e a hidratação não toca mais na trava — as
+ * duas competiriam pelo mesmo `setLock`/`setReview`.
  */
 
 import { useEffect } from 'react';
@@ -48,6 +46,10 @@ const JITTER_FACTOR = 0.2;
 export function useEditorLock(routeId: string | null): void {
   useEffect(() => {
     if (routeId === null) return;
+    // Estabelece a trava DESTA sessão do zero: sem isto, a trava da sessão anterior
+    // fica visível até o acquire responder (flash de "em uso") — e para sempre se o
+    // acquire falhar (rede), porque o catch abaixo não escreve nada.
+    sessionStore.getState().setLock(null);
     const store = appSessionStore();
     let alive = true;
     /** Detemos a trava e ainda estamos agindo sobre ela. */

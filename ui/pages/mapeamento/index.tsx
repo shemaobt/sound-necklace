@@ -147,6 +147,7 @@ function QuestionScreen({
   const [recorderState, setRecorderState] = useState<RecorderState>('idle');
   const [levels, setLevels] = useState<number[]>([]);
   const [speaking, setSpeaking] = useState(false);
+  const [recordError, setRecordError] = useState(false);
   const recordingRef = useRef<Recording | null>(null);
   const unsubRef = useRef<Unsubscribe | null>(null);
   const mountedRef = useRef(true);
@@ -175,9 +176,13 @@ function QuestionScreen({
     let alive = true;
     mountedRef.current = true;
     if (recorder) {
-      void recorder.has(path).then((h) => {
-        if (alive && h) setRecorderState('recorded');
-      });
+      void recorder
+        .has(path)
+        .then((h) => {
+          if (alive && h) setRecorderState('recorded');
+        })
+        // fronteira de IO real (ENG-247): consulta falhou → segue como não gravada
+        .catch(() => undefined);
     }
     // Sair da tela (trocar de pergunta remonta pela `key`) descarta a gravação em
     // curso — solta o microfone/stream do `getUserMedia` (Recording.cancel, §12).
@@ -202,6 +207,7 @@ function QuestionScreen({
       return;
     }
     recordingRef.current = rec;
+    setRecordError(false);
     sound?.recordStart();
     unsubRef.current = rec.onLevel((l) =>
       setLevels((prev) => [...prev, Math.max(2, Math.round(l * 40))].slice(-WAVE_BARS)),
@@ -213,7 +219,21 @@ function QuestionScreen({
     if (!rec) return;
     unsubRef.current?.();
     unsubRef.current = null;
-    await rec.stop();
+    try {
+      await rec.stop();
+    } catch {
+      // fronteira de IO real (ENG-247): no modo real o stop embute o PUT da resposta
+      // (rede/413 podem falhar) — a gravação se perdeu; volta ao microfone com a
+      // orientação curta, sem punir (§9), em vez de ficar presa em "gravando".
+      recordingRef.current = null;
+      if (mountedRef.current) {
+        setLevels([]);
+        setRecorderState('idle');
+        setRecordError(true);
+        sound?.refuse();
+      }
+      return;
+    }
     recordingRef.current = null;
     // desmontou durante o await (navegou depressa) → não toca estado nem registra o
     // caminho no meta.voice: `onVoiceSaved` leria a sessão/rota JÁ trocada e gravaria
@@ -225,7 +245,9 @@ function QuestionScreen({
     onVoiceSaved?.(path);
   };
   const onPlay = (): void => {
-    if (recorder) void recorder.play(path);
+    // tocar busca os bytes na API no modo real — falha vira o som de recusa, não
+    // uma rejeição solta
+    if (recorder) void recorder.play(path).catch(() => sound?.refuse());
   };
   const onRerecord = (): void => {
     setLevels([]);
@@ -237,6 +259,12 @@ function QuestionScreen({
       <p className="cds-mapeamento-instruction" data-role="instruction">
         {t('mapeamento.instruction')}
       </p>
+
+      {recordError ? (
+        <p className="cds-mapeamento-error" role="alert">
+          {t('mapeamento.recordError')}
+        </p>
+      ) : null}
 
       {listen ? (
         <div className="cds-mapeamento-listen">

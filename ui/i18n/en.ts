@@ -75,6 +75,9 @@ export const en: Dict = {
     semFim: '{{n}} phrase(s) still without a locked end.',
     reopen: 'Unlock to edit',
     complete: 'Finish and save the documents',
+    saveError: 'Could not save right now. Check the connection and try again.',
+    reopenError: 'Could not unlock right now. Try again.',
+    downloadError: 'Could not download the document. Try again.',
   },
   imports: {
     guidanceNoSession: 'Open a session to load pipeline files.',
@@ -137,6 +140,7 @@ export const en: Dict = {
     countMany: '{{count}} stories',
     progressLabel: 'progress: {{station}} — step {{step}} of {{total}}',
     loading: 'Loading the stories…',
+    listError: 'Could not load the stories. Check the connection and reload.',
   },
   sessionList: {
     statusInProgress: 'In progress',
@@ -271,6 +275,7 @@ export const en: Dict = {
     listenScene: '▶ listen to the scene',
     listenPhrase: '▶ listen to the phrase',
     instruction: 'Listen to the stretch and answer calmly, in your own voice.',
+    recordError: 'The answer was not saved. Record it again.',
     reportAria: 'report',
     reportFallback: 'The conversation is over. The report opens here.',
     toExport: 'Save the documents →',

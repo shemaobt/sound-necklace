@@ -13,6 +13,44 @@ describe('createAutosaver', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('settle aguarda a escrita em voo — cancel descarta o pendente, não aborta o PUT despachado', async () => {
+    let release!: () => void;
+    const writes: SessionStateDto[] = [];
+    const saver = createAutosaver({
+      persist: async (_id, state) => {
+        await new Promise<void>((r) => {
+          release = r;
+        });
+        writes.push(state);
+      },
+      monitor: new FixtureConnectivityMonitor(true),
+      debounceMs: 100,
+    });
+
+    saver.schedule('s1', dto('A'));
+    await vi.advanceTimersByTimeAsync(100); // despacha; a escrita fica em voo
+
+    saver.cancel('s1');
+    let settled = false;
+    const wait = saver.settle('s1').then(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(false); // ainda em voo — quem chama complete/reopen espera
+
+    release();
+    await wait;
+    expect(writes).toEqual([dto('A')]);
+  });
+
+  it('settle resolve imediatamente quando não há escrita em voo', async () => {
+    const saver = createAutosaver({
+      persist: async () => {},
+      monitor: new FixtureConnectivityMonitor(true),
+    });
+    await expect(saver.settle('s1')).resolves.toBeUndefined();
+  });
+
   it('coalesces a burst into a single write carrying the last state', async () => {
     const writes: SessionStateDto[] = [];
     const saver = createAutosaver({

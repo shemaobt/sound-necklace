@@ -2,9 +2,9 @@
  * Configuração de ambiente da API real (ENG-247). Lida UMA vez na carga pelo
  * composition root; os adapters nunca leem env — recebem baseUrl/token injetados.
  *
- * Por ora o modo `real` governa AUTH (login real por e-mail no tripod-api) e a base
- * do TTS (voz ElevenLabs da plataforma). Sessões, bucket e áudio seguem fixture até
- * o restante da ENG-247 — a troca é por adapter, atrás da mesma flag.
+ * O modo `real` governa TODAS as portas de IO: auth, TTS, bucket, sessões (estado,
+ * artefatos, recursos de voz) e o engine de áudio — a troca é por adapter, atrás
+ * desta mesma flag, nos singletons de ui/app e nas ports das páginas.
  */
 
 export const API_MODE: 'real' | 'fixture' =
