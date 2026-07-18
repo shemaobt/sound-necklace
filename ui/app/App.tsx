@@ -18,7 +18,7 @@ import { AddonsLayer } from './addons-layer';
 import { API_BASE_URL, API_MODE } from './api-config';
 import { appAuth, authReady } from './auth-adapter';
 import { shouldGateToLogin } from './auth-gate';
-import { buildSessionPlayer, type SessionAudio } from './audio-player';
+import { buildSessionPlayer, createDeferredPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
 import { buildAdapterRegistry, buildStationRegistry, type StationComponent } from './registries';
@@ -287,9 +287,15 @@ function useAutosaveFlush(routeId: string | null): void {
  * resolvível degrada para player dormente (`null`) — as estações lidam com isso.
  */
 function useSessionPlayer(routeId: string | null): AudioPlayer | null {
-  const [player, setPlayer] = useState<AudioPlayer | null>(null);
+  // Player deferido desde a montagem: no modo real, baixar+decodificar o áudio
+  // leva segundos, e com `null` a estação descartava o primeiro clique em
+  // silêncio (ENG-313). Agora o gesto vira intenção e soa assim que o áudio chega.
+  const deferred = useMemo(() => (routeId === null ? null : createDeferredPlayer()), [routeId]);
+  // instância cujo build falhou (sessão sem estado salvo ou áudio não resolvível):
+  // volta ao player dormente, como antes do deferido
+  const [dead, setDead] = useState<AudioPlayer | null>(null);
   useEffect(() => {
-    if (routeId === null) return;
+    if (routeId === null || deferred === null) return;
     let alive = true;
     let audio: SessionAudio | null = null;
     void (async () => {
@@ -300,18 +306,18 @@ function useSessionPlayer(routeId: string | null): AudioPlayer | null {
           return;
         }
         audio = built;
-        setPlayer(built.player);
+        deferred.attach(built.player);
       } catch {
-        // sessão sem estado salvo ou áudio não resolvível — player dormente
+        if (alive) setDead(deferred.player);
       }
     })();
     return () => {
       alive = false;
       audio?.stop();
-      setPlayer(null);
+      deferred.player.stop();
     };
-  }, [routeId]);
-  return player;
+  }, [routeId, deferred]);
+  return deferred !== null && deferred.player !== dead ? deferred.player : null;
 }
 
 /**

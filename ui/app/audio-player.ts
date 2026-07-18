@@ -21,7 +21,10 @@ import {
   FixtureAudioEngine,
   WebAudioEngine,
   type FixtureTransport,
+  type HeadListener,
   type Player,
+  type PlayerState,
+  type Unsubscribe,
 } from '../../adapters/audio';
 import { fromSessionDto } from '../../contracts';
 import { API_MODE } from './api-config';
@@ -32,6 +35,61 @@ export interface SessionAudio {
   player: Player;
   /** Para o player e cancela a ponte de relógio (chamado ao trocar/fechar a sessão). */
   stop: () => void;
+}
+
+const IDLE_STATE: PlayerState = { key: null, playing: false, paused: false };
+
+/**
+ * Player deferido: as estações recebem um `Player` utilizável DESDE a montagem,
+ * enquanto `buildSessionPlayer` ainda baixa e decodifica o áudio (segundos no
+ * modo real). Sem isto o primeiro clique numa conta morre em silêncio — a
+ * estação recebia `player = null` e descartava o gesto (ENG-313). Durante a
+ * espera, só a ÚLTIMA intenção fica guardada (novo clique substitui o anterior,
+ * como no player real, que troca a faixa) e é executada no `attach`; `stop()`
+ * descarta a intenção. Inscrições de `onHead` são repassadas ao player real.
+ */
+export function createDeferredPlayer(): { player: Player; attach: (real: Player) => void } {
+  let inner: Player | null = null;
+  let intent: ((p: Player) => void) | null = null;
+  const listeners = new Set<HeadListener>();
+  const unsubs = new Map<HeadListener, Unsubscribe>();
+
+  const exec = (run: (p: Player) => void): void => {
+    if (inner) run(inner);
+    else intent = run;
+  };
+
+  const player: Player = {
+    toggle: (key, s, e) => exec((p) => p.toggle(key, s, e)),
+    play: (s, e) => exec((p) => p.play(s, e)),
+    playEdge: (b) => exec((p) => p.playEdge(b)),
+    stop: () => {
+      intent = null;
+      inner?.stop();
+    },
+    get state(): PlayerState {
+      return inner ? inner.state : IDLE_STATE;
+    },
+    onHead: (cb) => {
+      listeners.add(cb);
+      if (inner) unsubs.set(cb, inner.onHead(cb));
+      return () => {
+        listeners.delete(cb);
+        unsubs.get(cb)?.();
+        unsubs.delete(cb);
+      };
+    },
+  };
+
+  const attach = (real: Player): void => {
+    inner = real;
+    listeners.forEach((cb) => unsubs.set(cb, real.onHead(cb)));
+    const run = intent;
+    intent = null;
+    run?.(real);
+  };
+
+  return { player, attach };
 }
 
 /**
