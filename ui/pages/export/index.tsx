@@ -259,8 +259,15 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
                 {t('export.reopen')}
               </Button>
             ) : (
-              <Button key="complete" variant="dark" disabled={!canExport} onClick={onComplete}>
-                {t('export.complete')}
+              // guardar leva 3 requests reais: o estado vive no botão (ENG-324) —
+              // 'Guardando…' desabilitado até o persist confirmar; cliques repetidos morrem
+              <Button
+                key="complete"
+                variant="dark"
+                disabled={!canExport || busy}
+                onClick={onComplete}
+              >
+                {busy ? t('export.saving') : t('export.complete')}
               </Button>
             )}
           </div>
