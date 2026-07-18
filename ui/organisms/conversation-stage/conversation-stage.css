@@ -368,3 +368,17 @@
     animation: cds-conversation-stage-spin 0.9s linear infinite;
   }
 }
+
+/* fio sem janela (ENG-329): roteiros longos apertam o respiro e alargam o teto,
+   para TODAS as perguntas caberem numa linha sem scroll (§9.2) */
+.cds-conversation-stage-progress[data-density] .cds-bead-row {
+  gap: 3px;
+}
+
+.cds-conversation-stage-progress[data-density='dense'] {
+  max-width: min(100%, 680px);
+}
+
+.cds-conversation-stage-progress[data-density='dense'] .cds-bead-row {
+  gap: 2px;
+}

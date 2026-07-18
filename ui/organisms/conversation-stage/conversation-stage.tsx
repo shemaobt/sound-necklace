@@ -181,38 +181,28 @@ export function ConversationStage({
 }: ConversationStageProps) {
   const { t } = useTranslation();
   // protótipo thread: respondidas/passadas 15px, a atual 22px com halo (CSS).
-  // O protótipo mostra 11 perguntas; o roteiro real chega a 41 — janela em volta
-  // da atual para o fio nunca estourar a largura (sem scroll, §9.2).
-  const THREAD_WINDOW = 23;
-  const start =
-    progress.total <= THREAD_WINDOW
-      ? 0
-      : Math.max(
-          0,
-          Math.min(
-            progress.current - Math.floor(THREAD_WINDOW / 2),
-            progress.total - THREAD_WINDOW,
-          ),
-        );
-  const beads: BeadCell[] = Array.from(
-    { length: Math.min(progress.total, THREAD_WINDOW) },
-    (_, offset) => {
-      const i = start + offset;
-      return {
-        key: i,
-        state:
-          i === progress.current
-            ? 'head'
-            : // protótipo: `i < qIndex || answers[i]` — o fio conta o caminho ANDADO,
-              // não só o que ficou gravado. Sem o `i < current` nada acendia: a
-              // entrevista é só-voz e `answered` enumera apenas respostas de texto.
-              i < progress.current || progress.answered.has(i)
-              ? 'lit'
-              : 'unplayed',
-        size: i === progress.current ? 22 : 15,
-      } satisfies BeadCell;
-    },
-  );
+  // O protótipo mostra 11 perguntas; o roteiro real passa de 40 — SEM janela
+  // (ENG-329): a janela cravava o cursor no centro e o fio parecia congelado no
+  // meio da entrevista (padrão idêntico a cada avanço). Todas as perguntas ficam
+  // no fio; roteiros longos encolhem as contas (o §9.2 pede caber sem scroll).
+  const density = progress.total > 52 ? 'dense' : progress.total > 23 ? 'compact' : null;
+  const headSize = density === 'dense' ? 10 : density === 'compact' ? 12 : 22;
+  const beadSize = density === 'dense' ? 4 : density === 'compact' ? 7 : 15;
+  const beads: BeadCell[] = Array.from({ length: progress.total }, (_, i) => {
+    return {
+      key: i,
+      state:
+        i === progress.current
+          ? 'head'
+          : // protótipo: `i < qIndex || answers[i]` — o fio conta o caminho ANDADO,
+            // não só o que ficou gravado. Sem o `i < current` nada acendia: a
+            // entrevista é só-voz e `answered` enumera apenas respostas de texto.
+            i < progress.current || progress.answered.has(i)
+            ? 'lit'
+            : 'unplayed',
+      size: i === progress.current ? headSize : beadSize,
+    } satisfies BeadCell;
+  });
 
   return (
     <div className="cds-conversation-stage">
@@ -335,6 +325,7 @@ export function ConversationStage({
         </div>
         <div
           className="cds-conversation-stage-progress"
+          data-density={density ?? undefined}
           role="group"
           aria-label={t('conversationStage.progressAria')}
         >
