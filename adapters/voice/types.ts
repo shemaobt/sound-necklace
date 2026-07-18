@@ -56,6 +56,11 @@ export interface VoiceRecorder {
   stopPlayback(): void;
   /** Há gravação para esta pergunta? */
   has(path: ResourcePath): Promise<boolean>;
+  /**
+   * Assina o que está tocando AGORA (o caminho; `null` = nada). Vem dos eventos
+   * reais de reprodução — alimenta o feedback tocando/pausado da UI (ENG-322/323).
+   */
+  onPlayback(cb: (path: ResourcePath | null) => void): Unsubscribe;
   /** Apaga a gravação desta pergunta. */
   delete(path: ResourcePath): Promise<void>;
 }

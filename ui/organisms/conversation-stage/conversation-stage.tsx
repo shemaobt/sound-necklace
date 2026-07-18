@@ -42,6 +42,10 @@ export interface ConversationStageProps {
   onStop?: () => void;
   onPlay?: () => void;
   onRerecord?: () => void;
+  /** A resposta gravada está TOCANDO agora (eventos reais da porta) — ouvir ⇄ pausar (ENG-322). */
+  answerPlaying?: boolean;
+  /** Pausa a reprodução da resposta (o clique do "pausar"). */
+  onStopPlay?: () => void;
   progress: ConversationProgress;
   onPrev?: () => void;
   onNext?: () => void;
@@ -167,6 +171,8 @@ export function ConversationStage({
   onStop,
   onPlay,
   onRerecord,
+  answerPlaying = false,
+  onStopPlay,
   progress,
   onPrev,
   onNext,
@@ -251,16 +257,19 @@ export function ConversationStage({
                       Array.from({ length: WAVE_BARS }, (_, i) => (
                         <WaveformBar key={i} height={levels[i] ?? 10 + ((i * 7) % 34)} active />
                       ))
-                    : Array.from({ length: WAVE_BARS }, (_, i) => (
-                        <WaveformBar key={i} height={10 + ((i * 7) % 34)} />
+                    : // reproduzindo a resposta, as barras acendem (ENG-322)
+                      Array.from({ length: WAVE_BARS }, (_, i) => (
+                        <WaveformBar key={i} height={10 + ((i * 7) % 34)} active={answerPlaying} />
                       ))}
                 </div>
               )}
 
               {recorderState === 'recorded' ? (
                 <div className="cds-conversation-stage-review">
-                  <Button variant="ghost" size="sm" onClick={onPlay}>
-                    {t('conversationStage.play')}
+                  <Button variant="ghost" size="sm" onClick={answerPlaying ? onStopPlay : onPlay}>
+                    {answerPlaying
+                      ? t('conversationStage.pausePlayback')
+                      : t('conversationStage.play')}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={onRerecord}>
                     {t('conversationStage.again')}

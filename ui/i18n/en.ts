@@ -317,6 +317,7 @@ export const en: Dict = {
     listen: 'Listen to the question',
     pause: 'Pause the question',
     saving: 'saving the answer',
+    pausePlayback: 'pause',
     record: 'record the answer',
     stop: 'Stop',
     idleHint: 'Tap and speak your answer',

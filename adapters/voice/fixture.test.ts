@@ -145,3 +145,23 @@ describe('FixtureVoiceRecorder', () => {
     expect(stored.byteLength).toBe(answer.blob.size);
   });
 });
+
+describe('FixtureVoiceRecorder — eventos de reprodução (ENG-322)', () => {
+  it('play emite o caminho; stopPlayback emite null; unsubscribe corta', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    const rec = await recorder.start('respostas/level1/recontar.webm');
+    rec.tick();
+    await rec.stop();
+
+    const events: (string | null)[] = [];
+    const off = recorder.onPlayback((p) => events.push(p));
+
+    await recorder.play('respostas/level1/recontar.webm');
+    recorder.stopPlayback();
+    expect(events).toEqual(['respostas/level1/recontar.webm', null]);
+
+    off();
+    await recorder.play('respostas/level1/recontar.webm');
+    expect(events).toHaveLength(2);
+  });
+});

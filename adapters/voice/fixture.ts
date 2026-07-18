@@ -84,6 +84,7 @@ export class FixtureRecording implements Recording {
 export class FixtureVoiceRecorder implements VoiceRecorder {
   #playing: ResourcePath | null = null;
   readonly #durations = new Map<string, number>();
+  readonly #playbackSubs = new Set<(path: ResourcePath | null) => void>();
 
   constructor(
     private readonly store: VoiceResourceStore = new MemoryVoiceStore(),
@@ -104,10 +105,22 @@ export class FixtureVoiceRecorder implements VoiceRecorder {
   async play(path: ResourcePath): Promise<void> {
     if (!(await this.store.has(path))) throw new Error(`sem gravação para tocar: ${path}`);
     this.#playing = path;
+    this.#emitPlayback(path);
   }
 
   stopPlayback(): void {
+    if (this.#playing === null) return;
     this.#playing = null;
+    this.#emitPlayback(null);
+  }
+
+  onPlayback(cb: (path: ResourcePath | null) => void): Unsubscribe {
+    this.#playbackSubs.add(cb);
+    return () => this.#playbackSubs.delete(cb);
+  }
+
+  #emitPlayback(path: ResourcePath | null): void {
+    for (const cb of this.#playbackSubs) cb(path);
   }
 
   /** Caminho em reprodução (hook de teste); null quando nada toca. */

@@ -192,3 +192,30 @@ describe('WebVoiceRecorder — nível via AudioContext e limpeza (fakes)', () =>
     vi.unstubAllGlobals();
   });
 });
+
+describe('WebVoiceRecorder — eventos de reprodução (ENG-322)', () => {
+  it('play emite o caminho ao começar; ended e stopPlayback emitem null', async () => {
+    const store = new MemoryVoiceStore();
+    await store.put(P1, Uint8Array.of(9, 9));
+    const listeners = new Map<string, () => void>();
+    const audio = {
+      play: vi.fn(async () => {}),
+      pause: vi.fn(),
+      addEventListener: vi.fn((type: string, cb: () => void) => listeners.set(type, cb)),
+    } as unknown as HTMLAudioElement;
+    const rec = new WebVoiceRecorder({ store, createAudio: () => audio });
+
+    const events: (string | null)[] = [];
+    rec.onPlayback((p) => events.push(p));
+
+    await rec.play(P1);
+    expect(events).toEqual([P1]);
+
+    listeners.get('ended')!();
+    expect(events).toEqual([P1, null]);
+
+    await rec.play(P1);
+    rec.stopPlayback();
+    expect(events).toEqual([P1, null, P1, null]);
+  });
+});

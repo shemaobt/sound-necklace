@@ -188,6 +188,22 @@ describe('Mapeamento — o ▶ do span de cada nível (PRD v2 §8.7)', () => {
 });
 
 describe('Mapeamento — resposta por voz, entrevista só-voz (PRD v2 §8.7, §10.4, design parity)', () => {
+  it('ouvir a resposta gravada mostra pausar enquanto toca; pausar volta a ouvir (ENG-322)', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    render(<Mapeamento recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+
+    await userEvent.click(await screen.findByRole('button', { name: /^ouvir$/ }));
+    expect(recorder.playing).not.toBeNull();
+    // tocando: o botão oferece pausar
+    await userEvent.click(screen.getByRole('button', { name: 'pausar' }));
+    expect(recorder.playing).toBeNull();
+    expect(screen.getByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+  });
+
   it('parar entra em "guardando" até a persistência confirmar (ENG-318)', async () => {
     // recorder com stop() controlável: o PUT embutido fica pendurado até liberarmos
     let release: (() => void) | null = null;
@@ -206,6 +222,7 @@ describe('Mapeamento — resposta por voz, entrevista só-voz (PRD v2 §8.7, §1
       stopPlayback: () => {},
       has: () => Promise.resolve(false),
       delete: () => Promise.resolve(),
+      onPlayback: () => () => {},
     };
     load(mapping());
     render(<Mapeamento recorder={recorder} />);
