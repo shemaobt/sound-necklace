@@ -119,6 +119,30 @@ describe('Setup — criação de sessão (§8.1)', () => {
     expect(dto.manifestId).toBe(BOTO_MEDIA_HASH);
   });
 
+  it('enquanto a criação voa, o palco vira "preparando a sessão" (ENG-334)', async () => {
+    const p = ports();
+    // pendura a criação: é a janela real (fetch+decode+create) que o dono vê
+    let release: (() => void) | null = null;
+    vi.spyOn(p.store, 'create').mockImplementation(
+      (input) =>
+        new Promise((res) => {
+          release = () => res(FixtureSessionStore.prototype.create.call(p.store, input));
+        }),
+    );
+    renderSetup(p);
+
+    await pickAudio('conto-do-boto.wav');
+    await confirmConsent();
+    await userEvent.click(screen.getByRole('button', { name: /criar a sessão/i }));
+
+    // a espera é palco, não um botão desabilitado: o fio de contas + uma linha
+    expect(document.querySelector('.cds-preparing')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /criar a sessão/i })).toBeNull();
+
+    await act(async () => release?.());
+    await waitFor(() => expect(p.navigate).toHaveBeenCalled());
+  });
+
   it('um título digitado vence o fallback do nome do arquivo', async () => {
     const p = ports();
     const createSpy = vi.spyOn(p.store, 'create');

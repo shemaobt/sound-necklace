@@ -14,3 +14,4 @@ export { Necklace, type NecklaceProps, type NecklaceSegment } from './necklace/n
 export { SIZE_EXPORT, SIZE_L, SIZE_M, SIZE_SEG, type Size } from './necklace/geometry';
 export { SeamModal, type SeamCordSide, type SeamModalProps } from './seam-modal/seam-modal';
 export { StorytellerGuide, type GuideVariantProps } from './storyteller-guide';
+export { PreparingSession } from './preparing-session/preparing-session';
