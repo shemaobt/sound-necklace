@@ -181,6 +181,7 @@ export const en: Dict = {
     reviewHeadline: 'The phrases of this scene are ready. Tap a phrase to hear it again.',
     instruction: 'Tap the necklace at the start and the end of each phrase.',
     instructionReplay: ' Tap a finished phrase to hear it again.',
+    halfSelection: 'Also tap where the phrase ends, on the necklace.',
     reopen: 'Reopen',
     flagMarked: '⚑ marked',
     flagReview: '⚑ review',

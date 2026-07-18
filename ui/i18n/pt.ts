@@ -199,6 +199,7 @@ export const pt = {
     reviewHeadline: 'As frases desta cena estão prontas. Toque numa frase para reouvir.',
     instruction: 'Toque no colar o começo e o fim de cada frase.',
     instructionReplay: ' Toque numa frase pronta para reouvir.',
+    halfSelection: 'Toque também onde a frase termina, no colar.',
     reopen: 'Reabrir',
     flagMarked: '⚑ marcada',
     flagReview: '⚑ revisar',
