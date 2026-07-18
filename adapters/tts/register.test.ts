@@ -27,6 +27,48 @@ describe('registro do adapter de TTS', () => {
     expect(() => registration.real()).not.toThrow();
   });
 
+  it('real() aceita o wiring do composition root: fala com a base configurada levando o Bearer', async () => {
+    const calls: { url: string; headers: Record<string, string> }[] = [];
+    const fakeFetch = (async (url: unknown, init?: RequestInit) => {
+      calls.push({ url: String(url), headers: (init?.headers ?? {}) as Record<string, string> });
+      return { ok: false, status: 500 } as Response; // 500 é transitório: cai no fallback sem travar
+    }) as unknown as typeof globalThis.fetch;
+
+    const registration = (await import('./register')).default;
+    const synth = registration.real({
+      baseUrl: 'https://api.prod/api',
+      token: () => 'tok-eng247',
+      fetch: fakeFetch,
+      AudioCtor: class {} as unknown as typeof Audio,
+      createObjectURL: () => 'blob:tts',
+    });
+    synth.speak('Onde essa história acontece?', 'pt-BR');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(calls[0]?.url).toBe('https://api.prod/api/platform/tts/speak');
+    expect(calls[0]?.headers['authorization']).toBe('Bearer tok-eng247');
+  });
+
+  it('um 401 no speak avisa o wiring (onUnauthorized) — a sessão caducou, o app decide', async () => {
+    const fakeFetch = (async () =>
+      ({ ok: false, status: 401 }) as Response) as unknown as typeof globalThis.fetch;
+    const expired: string[] = [];
+
+    const registration = (await import('./register')).default;
+    const synth = registration.real({
+      baseUrl: 'https://api.prod/api',
+      token: () => 'tok-caducado',
+      fetch: fakeFetch,
+      onUnauthorized: () => expired.push('401'),
+      AudioCtor: class {} as unknown as typeof Audio,
+      createObjectURL: () => 'blob:tts',
+    });
+    synth.speak('Onde essa história acontece?', 'pt-BR');
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(expired).toEqual(['401']);
+  });
+
   it('a composição REAL cai no Web Speech quando o endpoint não existe', async () => {
     // Este é o único teste que exercita o que `register.real()` de fato entrega: o
     // HttpSpeechSynthesizer com um WebSpeechSynthesizer de verdade por dentro. Os testes do

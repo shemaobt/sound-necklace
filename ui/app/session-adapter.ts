@@ -1,17 +1,29 @@
 /**
- * SessionStore app-global do composition root (ENG-270/272): UM singleton fixture
+ * SessionStore app-global do composition root (ENG-270/272): UM singleton mode-aware
  * partilhado por Setup, Dashboard e Export — a sessão criada num aparece nos outros
- * (§7.2). O backend persiste num `KeyValueStorage` (localStorage) para sobreviver ao
- * reload e alimentar a reidratação de `/session/:id` (§7.3). A seleção do modo real
- * por ambiente é ENG-247.
+ * (§7.2).
+ *
+ * Fixture (default de teste/CI): persiste num `KeyValueStorage` (localStorage) para
+ * sobreviver ao reload. Real (ENG-247): o `HttpSessionStore` contra o tripod-api,
+ * com o Bearer vivo do AuthProvider atrás de `authReady()` — TODA chamada de sessão
+ * espera a retomada do boot assentar (§12 emendado), então um reload em
+ * `/session/:id` não dispara 401 de corrida. O `onLockLost` fecha o circuito do
+ * fencing (§7.3): um autosave recusado com SESSION_LOCKED põe a sessão em revisão
+ * com o nome de quem a tomou — o autosave é fire-and-forget e esta é a única via.
  */
 
 import {
   FixtureSessionBackend,
   FixtureSessionStore,
+  HttpSessionStore,
   type KeyValueStorage,
   type SessionStore,
 } from '../../adapters/sessions';
+import { BrowserConnectivityMonitor } from '../../adapters/connectivity/browser';
+import { sessionStore } from '../state';
+import { API_BASE_URL, API_MODE } from './api-config';
+import { appAuth, authReady } from './auth-adapter';
+import { matchRoute } from './router';
 
 /** localStorage do browser quando disponível; ausente em contextos sem Web Storage. */
 function browserStorage(): KeyValueStorage | undefined {
@@ -51,19 +63,31 @@ export function appSessionBackend(): FixtureSessionBackend {
 
 let store: SessionStore | undefined;
 
-/**
- * ENG-247, ao montar aqui o `HttpSessionStore` do modo real, precisa ligar as DUAS
- * pontas da trava consultiva (§7.3) — hoje ambas dormem, porque a fixture não tem
- * lease nem fencing (ENG-299):
- *
- * 1. `onLockLost: (id) => sessionStore.getState().setLock({ holder: null })` — um
- *    autosave recusado com 409 é a única via pela qual a UI descobre que a sessão foi
- *    tomada, já que o autosave é fire-and-forget. Esta camada de wiring é quem pode
- *    fazer a ligação: `adapters/` não importa `ui/`.
- * 2. `useEditorLock(routeId)` (use-editor-lock.ts) no App — adquire, renova e solta a
- *    trava. Ao ligá-lo, REMOVA a leitura de trava de `useSessionHydration`: as duas
- *    escrevem o mesmo `setLock`/`setReview` e competiriam.
- */
 export function appSessionStore(): SessionStore {
-  return (store ??= new FixtureSessionStore({ backend: appSessionBackend() }));
+  return (store ??=
+    API_MODE === 'real'
+      ? new HttpSessionStore({
+          baseUrl: API_BASE_URL,
+          fetch: globalThis.fetch.bind(globalThis),
+          monitor: new BrowserConnectivityMonitor(),
+          // o editor só é conhecido depois do login — thunk, avaliado por acesso
+          user: () => {
+            const u = appAuth().currentUser();
+            return u
+              ? { user_id: u.id, display_name: u.username }
+              : { user_id: 'anon', display_name: '—' };
+          },
+          token: async () => {
+            await authReady();
+            return appAuth().token();
+          },
+          onLockLost: (id, holder) => {
+            // O veredito é POR SESSÃO: um flush atrasado da sessão anterior (409 na
+            // janela da troca A→B) não pode travar a sessão recém-aberta.
+            const route = matchRoute(window.location.pathname);
+            if (route.name === 'session' && route.id === id)
+              sessionStore.getState().setLock({ holder });
+          },
+        })
+      : new FixtureSessionStore({ backend: appSessionBackend() }));
 }

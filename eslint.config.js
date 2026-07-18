@@ -12,6 +12,7 @@ export default tseslint.config(
       '.worktrees/**',
       'playwright-report/**',
       'test-results/**',
+      'contracts/generated/**', // tipos gerados do OpenAPI (pnpm generate:api-types)
     ],
   },
   js.configs.recommended,

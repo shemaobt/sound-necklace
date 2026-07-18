@@ -1,0 +1,2704 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tripod Backend",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Forgot Password",
+        "operationId": "forgot_password_api_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordResetResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "operationId": "me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Delete Me",
+        "operationId": "delete_me_api_auth_me_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Delete Me Api Auth Me Delete"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Update Me",
+        "operationId": "update_me_api_auth_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/my-managed-orgs": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "My Managed Orgs",
+        "operationId": "my_managed_orgs_api_auth_my_managed_orgs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyManagedOrgsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/my-project-roles": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "My Project Roles",
+        "operationId": "my_project_roles_api_auth_my_project_roles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyProjectRolesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/my-roles": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "My Roles",
+        "operationId": "my_roles_api_auth_my_roles_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "app_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "App Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyRoleResponse"
+                  },
+                  "title": "Response My Roles Api Auth My Roles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh",
+        "operationId": "refresh_api_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Reset Password",
+        "operationId": "reset_password_api_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordResetResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signup",
+        "operationId": "signup_api_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/audios/{audio_id}/url": {
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Audio Signed Url",
+        "description": "Mint a short-lived signed GET URL for audio playback.\n\nThe bytes are never proxied and the bucket is private, so this is where the Sound\nNecklace reaches a recorded voice — and it is where ENG-266 will hook its audit log.\n\nIt is the only route in this API that serves them — but only because ENG-290 made it\nso, and that is worth writing down rather than assuming. The Oral Collector's own\nacousteme routes minted the same signed URL for the same private object behind\nnothing but ``get_current_user`` — no app role, no project scoping — while the\ncollection listing beside them handed over every id for free. For as long as those\nanswered, the gate below narrowed nothing for anyone holding a Tripod account. They\nare retired. If they ever come back, this docstring is a lie again.",
+        "operationId": "audio_signed_url_api_sound_necklace_audios__audio_id__url_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "audio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/projects/{project_id}/audios": {
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "List Project Audios",
+        "description": "List a project's story audios with their acousteme envelope and consent flag.\n\nEvery audio listed is one the URL route below can serve. The bucket does not\nadvertise a story it cannot play.",
+        "operationId": "list_project_audios_api_sound_necklace_projects__project_id__audios_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BucketAudioListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/projects/{project_id}/audit": {
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "List Audit Events",
+        "description": "One project's audit trail, newest first, within the window ``[since, until)``.\n\nAn empty list is an answer — a window in which nothing was reached — not an error.\n\nBoth bounds are normalised to UTC before they filter: a client may send an offset, and\nwithout this the SQLite bind would drop it and filter by wall-clock time under test.",
+        "operationId": "list_audit_events_api_sound_necklace_projects__project_id__audit_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only events at or after this instant",
+              "title": "Since"
+            },
+            "description": "Only events at or after this instant"
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only events strictly before this instant",
+              "title": "Until"
+            },
+            "description": "Only events strictly before this instant"
+          },
+          {
+            "name": "event",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AuditEvent"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this kind of event",
+              "title": "Event"
+            },
+            "description": "Only this kind of event"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions": {
+      "post": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Create Session",
+        "description": "Create a session from a bucket audio and grid parameters.",
+        "operationId": "create_session_api_sound_necklace_sessions_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "List Sessions",
+        "description": "List the caller's sessions with status and progress.",
+        "operationId": "list_sessions_api_sound_necklace_sessions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Get Session",
+        "description": "Fetch a single session for resume.",
+        "operationId": "get_session_api_sound_necklace_sessions__session_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/artifacts": {
+      "post": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Upload Artifacts",
+        "description": "Store the three artifacts as opaque bytes, checksummed on the way in.\n\n``await file.read()`` is the whole of what happens to a payload here, and it has to\nstay that way. A JSON body would put the artifact through a parser, and a\nparsed-then-reserialized artifact is a broken one even while it still looks like\nperfectly valid JSON.",
+        "operationId": "upload_artifacts_api_sound_necklace_sessions__session_id__artifacts_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_artifacts_api_sound_necklace_sessions__session_id__artifacts_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArtifactResponse"
+                  },
+                  "title": "Response Upload Artifacts Api Sound Necklace Sessions  Session Id  Artifacts Post"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused by the editor lock. `code` says which and what to do: SESSION_LOCKED means somebody else holds it — stop writing and open in review mode, off the holder_name and expires_at in the body. SESSION_LOCK_CHANGED means the lease refused the write and then lapsed, leaving nobody to name — just try again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SessionLockedResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionLockChangedResponse"
+                    }
+                  ],
+                  "title": "Response 409 Upload Artifacts Api Sound Necklace Sessions  Session Id  Artifacts Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/artifacts/{kind}": {
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Download Artifact",
+        "description": "Redirect to a short-lived signed URL: storage serves the bytes verbatim.\n\nThe API never proxies an artifact's bytes — that is what keeps the download\nbyte-identical to the upload.",
+        "operationId": "download_artifact_api_sound_necklace_sessions__session_id__artifacts__kind__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ArtifactKind"
+            }
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/complete": {
+      "post": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Complete Session",
+        "description": "Complete a session (its artifacts are uploaded to the artifacts route).",
+        "operationId": "complete_session_api_sound_necklace_sessions__session_id__complete_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused by the editor lock. `code` says which and what to do: SESSION_LOCKED means somebody else holds it — stop writing and open in review mode, off the holder_name and expires_at in the body. SESSION_LOCK_CHANGED means the lease refused the write and then lapsed, leaving nobody to name — just try again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SessionLockedResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionLockChangedResponse"
+                    }
+                  ],
+                  "title": "Response 409 Complete Session Api Sound Necklace Sessions  Session Id  Complete Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/consent": {
+      "post": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Record Consent",
+        "description": "Record a consent, or re-confirm one that is already held.\n\nIdempotent per (session, type): re-confirming updates the record and its timestamp\nrather than opening a second one. 201 either way — the record exists as stated.",
+        "operationId": "record_consent_api_sound_necklace_sessions__session_id__consent_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "List Consents",
+        "description": "The consents held for a session. An empty list means none were given.",
+        "operationId": "list_consents_api_sound_necklace_sessions__session_id__consent_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/lock": {
+      "put": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Acquire Lock",
+        "description": "Acquire or renew the advisory editor lock.",
+        "operationId": "acquire_lock_api_sound_necklace_sessions__session_id__lock_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LockStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Lock Status",
+        "description": "Report the current lock holder and expiry.",
+        "operationId": "lock_status_api_sound_necklace_sessions__session_id__lock_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LockStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Release Lock",
+        "description": "Release the advisory lock.",
+        "operationId": "release_lock_api_sound_necklace_sessions__session_id__lock_delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/reopen": {
+      "post": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Reopen Session",
+        "description": "Reopen a completed session.",
+        "operationId": "reopen_session_api_sound_necklace_sessions__session_id__reopen_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummary"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused by the editor lock. `code` says which and what to do: SESSION_LOCKED means somebody else holds it — stop writing and open in review mode, off the holder_name and expires_at in the body. SESSION_LOCK_CHANGED means the lease refused the write and then lapsed, leaving nobody to name — just try again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SessionLockedResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionLockChangedResponse"
+                    }
+                  ],
+                  "title": "Response 409 Reopen Session Api Sound Necklace Sessions  Session Id  Reopen Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/resources": {
+      "put": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Put Resource",
+        "description": "Upload a voice answer to a canonical path, replacing any previous take.\n\nThe recording is read as raw bytes and moved to storage unchanged — it is opaque\naudio, so nothing parses it. The size is checked from the body before the upload, so\nan oversize answer never reaches the bucket.",
+        "operationId": "put_resource_api_sound_necklace_sessions__session_id__resources_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^respostas/(level1/[a-z0-9_]{1,64}|level2/PT[1-9][0-9]{0,3}/[a-z0-9_]{1,64}|level3/P[1-9][0-9]{0,3}/[a-z0-9_]{1,64})\\.webm$",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceSummary"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The answer is over the size cap"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "List Resources",
+        "description": "List the session's recorded answers, so the screen knows which questions are done.",
+        "operationId": "list_resources_api_sound_necklace_sessions__session_id__resources_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Delete Resource",
+        "description": "Remove one answer — object and row. Deleting a path never recorded is a no-op.",
+        "operationId": "delete_resource_api_sound_necklace_sessions__session_id__resources_delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^respostas/(level1/[a-z0-9_]{1,64}|level2/PT[1-9][0-9]{0,3}/[a-z0-9_]{1,64}|level3/P[1-9][0-9]{0,3}/[a-z0-9_]{1,64})\\.webm$",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/resources/url": {
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Resource Url",
+        "description": "Mint a short-lived signed GET URL for one answer. The audit point (ENG-266).",
+        "operationId": "resource_url_api_sound_necklace_sessions__session_id__resources_url_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^respostas/(level1/[a-z0-9_]{1,64}|level2/PT[1-9][0-9]{0,3}/[a-z0-9_]{1,64}|level3/P[1-9][0-9]{0,3}/[a-z0-9_]{1,64})\\.webm$",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sound-necklace/sessions/{session_id}/state": {
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Get Session State",
+        "description": "The saved state document, served back as the exact bytes that were stored.\n\nHanded straight to the client rather than through a model, so nothing can\nre-shape a document the SPA will re-validate under a strict schema. ``ETag``\ncarries the version to pass back in ``If-Match``.",
+        "operationId": "get_session_state_api_sound_necklace_sessions__session_id__state_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionStateUpdate"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Autosave Session",
+        "description": "Autosave the session-state envelope with a version guard.\n\n``payload`` validates the envelope; the raw request body is what gets stored.\nSending ``If-Match`` makes the write conditional on that version still being\ncurrent — without it the write is unconditional, which is what a single editor\nautosaving in a loop wants.",
+        "operationId": "autosave_session_api_sound_necklace_sessions__session_id__state_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionStateUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutosaveResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused. `code` says which guard refused it and what to do: CONFLICT means a newer version of the state exists and the body carries current_version — reload and retry. SESSION_LOCKED means somebody else holds the editor lock and the body carries holder_name and expires_at — stop writing and open in review mode."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AcoustemeEnvelope": {
+        "properties": {
+          "codebook_version": {
+            "type": "string",
+            "title": "Codebook Version"
+          },
+          "hop_sec": {
+            "type": "number",
+            "title": "Hop Sec"
+          },
+          "granularity_frames": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Granularity Frames"
+          }
+        },
+        "type": "object",
+        "required": [
+          "codebook_version",
+          "hop_sec",
+          "granularity_frames"
+        ],
+        "title": "AcoustemeEnvelope",
+        "description": "The granularity grid an audio's bead duration is derived from.\n\n``beadSec = granularity_frames[level] x hop_sec`` — the two fields exist together\nor the envelope is useless, so an audio whose grid is incomplete carries no\nenvelope at all rather than half of one.\n\n``codebook_version`` is a string, not a number: it is half of the acousteme\nartifact's primary key and reads like ``terena-xlsr53-k100-v1``. An integer here\nwould be a version the pipeline never mints.",
+        "x-stability": "experimental"
+      },
+      "ArtifactKind": {
+        "type": "string",
+        "enum": [
+          "manifest",
+          "anchoring",
+          "report"
+        ],
+        "title": "ArtifactKind",
+        "description": "Which of the three artifacts. The stored FILENAMES stay Portuguese\n(``manifesto-contas.json``, ``retorno-ancoragem.json``,\n``relatorio-mapeamento.md``): PRD §10 freezes them as part of the contract shared\nwith the downstream pipeline. The kind is the handle, not the file."
+      },
+      "ArtifactResponse": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ArtifactKind"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "crc32c": {
+            "type": "string",
+            "title": "Crc32C"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "size",
+          "crc32c",
+          "sha256"
+        ],
+        "title": "ArtifactResponse",
+        "x-stability": "experimental"
+      },
+      "AudioUrlResponse": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "AudioUrlResponse",
+        "x-stability": "experimental"
+      },
+      "AuditEvent": {
+        "type": "string",
+        "enum": [
+          "audio_url_issued",
+          "artifact_uploaded",
+          "artifact_url_issued",
+          "voice_url_issued",
+          "session_completed",
+          "session_reopened",
+          "consent_recorded"
+        ],
+        "title": "AuditEvent",
+        "description": "What was recorded (§12).\n\nEvery URL name says ISSUED, and that is the whole of what this API can honestly\nclaim. The bytes are served by storage against a short-lived signed URL and never\npass through here, so a download is something it never witnesses: the URL may be used\nonce, ten times, shared, or never opened. An ``audio_downloaded`` would be a lie the\nnext reader would build a retention or a breach report on.\n\n``ARTIFACT_UPLOADED`` is the only event here that claims a transfer, and those bytes\nreally do come through the API. It is not the only upload that does — a voice answer is\nalso posted through it — but that one is the listener recording their own voice, and\n§14 forbids logging the listener working. Reaching for a voice already recorded is the\nfacilitator action §12 asks about; making one is not."
+      },
+      "AuditEventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "title": "Occurred At"
+          },
+          "event": {
+            "$ref": "#/components/schemas/AuditEvent"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "resource_ref": {
+            "type": "string",
+            "title": "Resource Ref"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "occurred_at",
+          "event",
+          "resource_ref"
+        ],
+        "title": "AuditEventResponse",
+        "description": "One recorded reach, as stored.\n\nEvery field is nullable exactly where the row is: constraints on a RESPONSE model are\nassertions the framework enforces on the way out, and one unlucky row would 500 the\nwhole listing — in the one place whose job is to still answer when things went wrong.\n\n``ip`` is on the table but not here. Nothing writes it yet (behind Cloud Run's proxy\nthere is no address this API can honestly attribute to the caller), and a response\nfield is additive — it can join the day something fills the column, without breaking\nthe SPA. Shipping it now would only generate an ``ip: string | null`` the SPA might\nbuild a screen column for, forever null.",
+        "x-stability": "experimental"
+      },
+      "AuditListResponse": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEventResponse"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "title": "AuditListResponse",
+        "x-stability": "experimental"
+      },
+      "AuthResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/TokenResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "tokens"
+        ],
+        "title": "AuthResponse"
+      },
+      "AutosaveResponse": {
+        "properties": {
+          "saved_at": {
+            "type": "string",
+            "title": "Saved At"
+          },
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "saved_at",
+          "schema_version"
+        ],
+        "title": "AutosaveResponse",
+        "x-stability": "experimental"
+      },
+      "Body_upload_artifacts_api_sound_necklace_sessions__session_id__artifacts_post": {
+        "properties": {
+          "manifest": {
+            "type": "string",
+            "format": "binary",
+            "title": "Manifest"
+          },
+          "anchoring": {
+            "type": "string",
+            "format": "binary",
+            "title": "Anchoring"
+          },
+          "report": {
+            "type": "string",
+            "format": "binary",
+            "title": "Report"
+          }
+        },
+        "type": "object",
+        "required": [
+          "manifest",
+          "anchoring",
+          "report"
+        ],
+        "title": "Body_upload_artifacts_api_sound_necklace_sessions__session_id__artifacts_post"
+      },
+      "BucketAudioListResponse": {
+        "properties": {
+          "audios": {
+            "items": {
+              "$ref": "#/components/schemas/BucketAudioResponse"
+            },
+            "type": "array",
+            "title": "Audios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audios"
+        ],
+        "title": "BucketAudioListResponse",
+        "x-stability": "experimental"
+      },
+      "BucketAudioResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "duration_sec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Sec"
+          },
+          "consent_present": {
+            "type": "boolean",
+            "title": "Consent Present"
+          },
+          "acousteme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AcoustemeEnvelope"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "filename",
+          "consent_present"
+        ],
+        "title": "BucketAudioResponse",
+        "description": "An audio the facilitator can pick from the project's bucket.\n\n``acousteme`` is null when no servable grid exists for the audio — an ingest that\nnever succeeded, or an audio that was never tokenized. That is a fallback, not an\nerror (PRD §6.1: the levels then map to fixed durations), so the audio still lists.\n\n``duration_sec`` is nullable because response models are validated on the way\nout: one un-probed audio would otherwise fail validation of the whole listing.\nThe invariant belongs at ingestion, where a violation is actionable.",
+        "x-stability": "experimental"
+      },
+      "ConsentCreate": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ConsentType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "ConsentCreate",
+        "description": "Record a consent. Which one is the whole body: who confirmed it is the caller,\nand when is now — neither is the client's to assert.",
+        "x-stability": "experimental"
+      },
+      "ConsentListResponse": {
+        "properties": {
+          "consents": {
+            "items": {
+              "$ref": "#/components/schemas/ConsentResponse"
+            },
+            "type": "array",
+            "title": "Consents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consents"
+        ],
+        "title": "ConsentListResponse",
+        "x-stability": "experimental"
+      },
+      "ConsentResponse": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ConsentType"
+          },
+          "confirmed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed By"
+          },
+          "confirmed_at": {
+            "type": "string",
+            "title": "Confirmed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "confirmed_at"
+        ],
+        "title": "ConsentResponse",
+        "description": "One consent record — the evidence, as stored.\n\n``confirmed_by`` is nullable because the record outlives the account that typed it:\na deleted user leaves the consent standing and its confirmer null. It names whoever\nOPERATED the app, which for ``voice_answers`` is the facilitator who witnessed the\nlistener — the listener never holds an account.",
+        "x-stability": "experimental"
+      },
+      "ConsentType": {
+        "type": "string",
+        "enum": [
+          "pipeline_use",
+          "voice_answers"
+        ],
+        "title": "ConsentType",
+        "description": "Which consent a record attests to.\n\nBoth values exist from the first migration, and the second one is not speculation:\n§12 requires recorded consent PER SPEAKER, and the Colar records two people. The\nstory is one of them; the listener is the other, and the app captures 21+ recordings\nof their voice (§8.7). Adding the value later would mean an ``ALTER TYPE`` on the\ndatabase six production apps share, to say something already known today."
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "app_key": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "App Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "app_key"
+        ],
+        "title": "ForgotPasswordRequest"
+      },
+      "GranularityLevel": {
+        "type": "string",
+        "enum": [
+          "small",
+          "medium",
+          "large"
+        ],
+        "title": "GranularityLevel"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LockHolder": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "display_name"
+        ],
+        "title": "LockHolder",
+        "x-stability": "experimental"
+      },
+      "LockStatusResponse": {
+        "properties": {
+          "held": {
+            "type": "boolean",
+            "title": "Held"
+          },
+          "holder": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LockHolder"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "held"
+        ],
+        "title": "LockStatusResponse",
+        "x-stability": "experimental"
+      },
+      "MyManagedOrgsResponse": {
+        "properties": {
+          "managed_org_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Managed Org Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "managed_org_ids"
+        ],
+        "title": "MyManagedOrgsResponse"
+      },
+      "MyProjectRolesResponse": {
+        "properties": {
+          "is_platform_admin": {
+            "type": "boolean",
+            "title": "Is Platform Admin"
+          },
+          "project_roles": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Project Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_platform_admin",
+          "project_roles"
+        ],
+        "title": "MyProjectRolesResponse"
+      },
+      "MyRoleResponse": {
+        "properties": {
+          "app_key": {
+            "type": "string",
+            "title": "App Key"
+          },
+          "role_key": {
+            "type": "string",
+            "title": "Role Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "app_key",
+          "role_key"
+        ],
+        "title": "MyRoleResponse"
+      },
+      "PasswordResetResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "PasswordResetResponse"
+      },
+      "ProfileUpdate": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          }
+        },
+        "type": "object",
+        "title": "ProfileUpdate"
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "ResetPasswordRequest"
+      },
+      "ResourceListResponse": {
+        "properties": {
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceSummary"
+            },
+            "type": "array",
+            "title": "Resources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resources"
+        ],
+        "title": "ResourceListResponse",
+        "x-stability": "experimental"
+      },
+      "ResourceSummary": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "size"
+        ],
+        "title": "ResourceSummary",
+        "description": "One recorded answer in the listing — the path is what the Mapeamento screen keys\non to know which questions are answered.",
+        "x-stability": "experimental"
+      },
+      "ResourceUrlResponse": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "ResourceUrlResponse",
+        "x-stability": "experimental"
+      },
+      "SessionCreate": {
+        "properties": {
+          "audio_id": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Audio Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "story_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Story Name"
+          },
+          "story_slug": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Story Slug"
+          },
+          "granularity_level": {
+            "$ref": "#/components/schemas/GranularityLevel"
+          },
+          "bead_sec": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "title": "Bead Sec"
+          },
+          "manifest_id": {
+            "type": "string",
+            "pattern": "^fnv1a32:[0-9a-f]{8}$",
+            "title": "Manifest Id"
+          },
+          "pipeline_consent": {
+            "type": "boolean",
+            "title": "Pipeline Consent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio_id",
+          "project_id",
+          "story_name",
+          "story_slug",
+          "granularity_level",
+          "bead_sec",
+          "manifest_id",
+          "pipeline_consent"
+        ],
+        "title": "SessionCreate",
+        "x-stability": "experimental"
+      },
+      "SessionListResponse": {
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SessionSummary"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sessions"
+        ],
+        "title": "SessionListResponse",
+        "x-stability": "experimental"
+      },
+      "SessionLockChangedResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "const": "SESSION_LOCK_CHANGED",
+            "title": "Code",
+            "default": "SESSION_LOCK_CHANGED"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "SessionLockChangedResponse",
+        "description": "The 409 of a write the lease refused and then lapsed on. Retry; no holder to show.",
+        "x-stability": "experimental"
+      },
+      "SessionLockedResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "const": "SESSION_LOCKED",
+            "title": "Code",
+            "default": "SESSION_LOCKED"
+          },
+          "holder_name": {
+            "type": "string",
+            "title": "Holder Name"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "holder_name",
+          "expires_at"
+        ],
+        "title": "SessionLockedResponse",
+        "description": "The 409 of a write refused while somebody else holds the editor lock.\n\n`code` is what the client branches on and the other two are what it renders, so this\nis a contract and not a debug body — hence a model the SPA can generate types from\nrather than a description in prose.",
+        "x-stability": "experimental"
+      },
+      "SessionProgress": {
+        "properties": {
+          "current_step": {
+            "$ref": "#/components/schemas/SessionStep"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_step"
+        ],
+        "title": "SessionProgress",
+        "x-stability": "experimental"
+      },
+      "SessionStateUpdate": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "title": "Schema Version"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "schema_version"
+        ],
+        "title": "SessionStateUpdate",
+        "description": "Autosave body: opaque session-state envelope; only the version is read.",
+        "x-stability": "experimental"
+      },
+      "SessionStatus": {
+        "type": "string",
+        "enum": [
+          "in_progress",
+          "completed"
+        ],
+        "title": "SessionStatus"
+      },
+      "SessionStep": {
+        "type": "string",
+        "enum": [
+          "listen",
+          "cut",
+          "triage",
+          "phrases",
+          "conversation",
+          "save"
+        ],
+        "title": "SessionStep"
+      },
+      "SessionSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "story_name": {
+            "type": "string",
+            "title": "Story Name"
+          },
+          "story_slug": {
+            "type": "string",
+            "title": "Story Slug"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "last_modified": {
+            "type": "string",
+            "title": "Last Modified"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/SessionProgress"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "story_name",
+          "story_slug",
+          "status",
+          "last_modified",
+          "progress"
+        ],
+        "title": "SessionSummary",
+        "x-stability": "experimental"
+      },
+      "TokenRefreshRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "TokenRefreshRequest"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token"
+        ],
+        "title": "TokenResponse"
+      },
+      "UserLoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserLoginRequest"
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "is_platform_admin": {
+            "type": "boolean",
+            "title": "Is Platform Admin"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "display_name",
+          "is_active",
+          "is_platform_admin"
+        ],
+        "title": "UserResponse"
+      },
+      "UserSignupRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserSignupRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/auth/login"
+          }
+        }
+      }
+    }
+  }
+}

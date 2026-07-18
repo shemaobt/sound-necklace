@@ -1,16 +1,19 @@
 /**
- * Esqueleto do SessionStore HTTP real (PRD §5, cliente do tripod-api). Mapeia os
- * métodos da porta para as superfícies de endpoint de contracts/api.ts, com `fetch`
- * INJETADO (sem rede no CI) e conectividade via ConnectivityMonitor. Custódia
- * opaca: o estado e os artefatos viajam sem re-serialização (o corpo do PUT/POST é
- * o próprio DTO; o load devolve o payload opaco tal como veio). Os endpoints exatos
- * são PROVISÓRIOS até o OpenAPI do tripod-api (ENG-211/ENG-247).
+ * SessionStore HTTP real (PRD §5, cliente do tripod-api — fio verificado na ENG-267,
+ * `http/sound-necklace.http`). Mapeia a porta para `/sound-necklace/*`, com `fetch`
+ * INJETADO (sem rede no CI) e conectividade via ConnectivityMonitor. Custódia opaca
+ * (§10.5): o estado viaja sem re-serialização; os artefatos sobem como bytes crus
+ * (multipart) e descem por URL assinada — a API nunca os re-serializa.
  */
 
 import {
+  ArtifactUploadResponseSchema,
   LockStatusSchema,
+  ResourceListResponseSchema,
+  ResourceUrlResponseSchema,
   SessionListResponseSchema,
   SessionSummarySchema,
+  type ArtifactKind,
   type ArtifactTriple,
   type CreateSessionRequest,
   type LockStatus,
@@ -28,36 +31,54 @@ import {
   type SessionStore,
 } from './types';
 
-/** Fencing do tripod-api (ENG-262): a trava é de outra pessoa e a escrita foi recusada. */
+/**
+ * Dois 409 vivem no PUT /state e o `code` é o que os separa (ENG-262): SESSION_LOCKED
+ * é veredito (outra pessoa edita — parar de escrever); SESSION_LOCK_CHANGED é
+ * transitório (o lease caducou no meio da escrita — retentar).
+ */
 const LOCK_CONFLICT = 409;
 
+/** Filenames congelados do PRD §10 — parte do contrato com o Compilador. */
+const ARTIFACT_FILES: Record<ArtifactKind, { name: string; type: string }> = {
+  manifest: { name: 'manifesto-contas.json', type: 'application/json' },
+  anchoring: { name: 'retorno-ancoragem.json', type: 'application/json' },
+  report: { name: 'relatorio-mapeamento.md', type: 'text/markdown' },
+};
+
 export interface HttpSessionStoreOptions {
+  /** Base compartilhada terminada em `/api`; as rotas daqui somam `/sound-necklace`. */
   baseUrl: string;
   fetch: typeof globalThis.fetch;
   monitor: ConnectivityMonitor;
-  user: LockHolder;
-  /** Token Bearer atual (do AuthProvider/ENG-239). */
-  token?: () => string | null;
+  /** Editor dono das travas. Thunk quando só se conhece após o login (wiring real). */
+  user: LockHolder | (() => LockHolder);
+  /**
+   * Token Bearer atual (do AuthProvider/ENG-239). Pode ser assíncrono: o wiring real
+   * espera `authReady()` dentro do thunk, o que serializa TODA chamada de sessão
+   * atrás da retomada do boot (§12 emendado) — sem 401 de corrida no reload.
+   */
+  token?: () => string | null | Promise<string | null>;
   debounceMs?: number;
   /**
    * A trava desta sessão foi tomada por outra pessoa — um autosave foi recusado com
-   * 409. O autosave é fire-and-forget (§7.3): não há promessa para o chamador aguardar,
-   * então este callback é a ÚNICA via pela qual a UI descobre. Só o autosave passa por
-   * aqui; `complete`/`reopen` são aguardados e o 409 sobe por throw para quem chamou —
-   * como `ApiError` cru, sem virar `LockLostError` (a tradução vive no `persist`).
+   * 409 SESSION_LOCKED. O autosave é fire-and-forget (§7.3): não há promessa para o
+   * chamador aguardar, então este callback é a ÚNICA via pela qual a UI descobre.
+   * `holder` é o `holder_name` do corpo do 409 (null se o corpo não o trouxe). Só o
+   * autosave passa por aqui; `complete`/`reopen` são aguardados e o 409 sobe por
+   * throw para quem chamou — como `ApiError` cru (a tradução vive no `persist`).
    */
-  onLockLost?: (id: string) => void;
+  onLockLost?: (id: string, holder: string | null) => void;
 }
 
 export class HttpSessionStore implements SessionStore {
-  readonly me: LockHolder;
+  readonly #user: LockHolder | (() => LockHolder);
   readonly #baseUrl: string;
   readonly #fetch: typeof globalThis.fetch;
-  readonly #token?: () => string | null;
+  readonly #token?: () => string | null | Promise<string | null>;
   readonly #autosaver: Autosaver;
 
   constructor(opts: HttpSessionStoreOptions) {
-    this.me = opts.user;
+    this.#user = opts.user;
     this.#baseUrl = opts.baseUrl.replace(/\/$/, '');
     this.#fetch = opts.fetch;
     this.#token = opts.token;
@@ -67,13 +88,22 @@ export class HttpSessionStore implements SessionStore {
           await this.#req('PUT', `/sessions/${id}/state`, state);
         } catch (err) {
           if (!(err instanceof ApiError) || err.status !== LOCK_CONFLICT) throw err;
-          opts.onLockLost?.(id);
-          throw new LockLostError(id);
+          const body = err.body as { code?: string; holder_name?: string } | undefined;
+          // SESSION_LOCK_CHANGED (e qualquer 409 sem code conhecido) fica transitório:
+          // o autosaver retenta com backoff. Só o SESSION_LOCKED é terminal.
+          if (body?.code !== 'SESSION_LOCKED') throw err;
+          const holder = body.holder_name ?? null;
+          opts.onLockLost?.(id, holder);
+          throw new LockLostError(id, holder);
         }
       },
       monitor: opts.monitor,
       debounceMs: opts.debounceMs ?? 800,
     });
+  }
+
+  get me(): LockHolder {
+    return typeof this.#user === 'function' ? this.#user() : this.#user;
   }
 
   async create(input: CreateSessionInput): Promise<SessionSummary> {
@@ -95,7 +125,17 @@ export class HttpSessionStore implements SessionStore {
   }
 
   async list(): Promise<SessionSummary[]> {
-    return SessionListResponseSchema.parse(await this.#req('GET', '/sessions')).sessions;
+    // o servidor pagina (limit ≤ 200); segue até a página curta — uma 201ª sessão
+    // não pode simplesmente sumir do Dashboard
+    const PAGE = 200;
+    const all: SessionSummary[] = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const page = SessionListResponseSchema.parse(
+        await this.#req('GET', `/sessions?offset=${offset}&limit=${PAGE}`),
+      ).sessions;
+      all.push(...page);
+      if (page.length < PAGE) return all;
+    }
   }
 
   async load(id: string): Promise<SessionStateDto> {
@@ -114,18 +154,49 @@ export class HttpSessionStore implements SessionStore {
   }
 
   async complete(id: string, state: SessionStateDto, artifacts: ArtifactTriple): Promise<void> {
-    this.#autosaver.cancel(id); // nenhum PUT /state pendente pode chegar após o complete
+    // nenhum PUT /state velho pode chegar após o complete: descarta o pendente E
+    // espera o já despachado aterrissar (o servidor aceitaria a regressão).
+    this.#autosaver.cancel(id);
+    await this.#autosaver.settle(id);
     await this.#req('PUT', `/sessions/${id}/state`, state);
-    await this.#req('POST', `/sessions/${id}/complete`, { artifacts });
+    // §10.5: o trio sobe como bytes crus em form-data — a API guarda sem re-serializar
+    // e o download volta byte-idêntico (provado na ENG-267 contra o bucket real).
+    const form = new FormData();
+    for (const kind of ['manifest', 'anchoring', 'report'] as const) {
+      const { name, type } = ARTIFACT_FILES[kind];
+      form.append(kind, new Blob([artifacts[kind]], { type }), name);
+    }
+    // sem content-type nosso: o runtime assina o boundary do multipart
+    const res = await this.#send('POST', `/sessions/${id}/artifacts`, { body: form });
+    const receipt = ArtifactUploadResponseSchema.parse(await res.json());
+    // o recibo tem de cobrir os TRÊS kinds antes de declarar a sessão concluída —
+    // um upload parcial aceito em silêncio deixaria o pipeline sem um dos documentos
+    const kinds = new Set(receipt.map((r) => r.kind));
+    for (const kind of ['manifest', 'anchoring', 'report'] as const)
+      if (!kinds.has(kind)) throw new Error(`recibo de artefatos sem o kind ${kind}`);
+    await this.#req('POST', `/sessions/${id}/complete`);
   }
 
   async reopen(id: string): Promise<void> {
     this.#autosaver.cancel(id);
+    await this.#autosaver.settle(id);
     await this.#req('POST', `/sessions/${id}/reopen`);
   }
 
   async getArtifacts(id: string): Promise<ArtifactTriple> {
-    return (await this.#req('GET', `/sessions/${id}/artifacts`)) as ArtifactTriple;
+    // Um GET por kind; a rota responde 307 para a URL assinada e o fetch a segue
+    // sozinho — o browser remove o header Authorization no salto cross-origin (spec
+    // do fetch), que é o que a URL assinada exige para não ser invalidada.
+    const download = async (kind: ArtifactKind): Promise<string> => {
+      const res = await this.#send('GET', `/sessions/${id}/artifacts/${kind}`);
+      return res.text();
+    };
+    const [manifest, anchoring, report] = await Promise.all([
+      download('manifest'),
+      download('anchoring'),
+      download('report'),
+    ]);
+    return { manifest, anchoring, report };
   }
 
   async acquireLock(id: string): Promise<LockStatus> {
@@ -148,26 +219,39 @@ export class HttpSessionStore implements SessionStore {
 
   async putResource(id: string, path: ResourcePath, bytes: Uint8Array): Promise<void> {
     // bytes WebM opacos — viajam fora do JSON, com o content-type do recurso
-    await this.#send('PUT', `/sessions/${id}/resources/${path}`, {
+    await this.#send('PUT', `/sessions/${id}/resources?path=${encodeURIComponent(path)}`, {
       body: bytes as BodyInit,
       headers: { 'content-type': 'audio/webm' },
     });
   }
 
   async getResource(id: string, path: ResourcePath): Promise<Uint8Array> {
-    const res = await this.#send('GET', `/sessions/${id}/resources/${path}`);
-    return new Uint8Array(await res.arrayBuffer());
+    // 2 saltos: a API assina a URL (com Bearer); o GET assinado vai SEM Bearer —
+    // um header Authorization junto da assinatura é 400 no GCS.
+    const res = await this.#send(
+      'GET',
+      `/sessions/${id}/resources/url?path=${encodeURIComponent(path)}`,
+    );
+    const { url } = ResourceUrlResponseSchema.parse(await res.json());
+    const signed = await this.#fetch(url);
+    if (!signed.ok) throw new ApiError(signed.status, `HTTP ${signed.status} no GET assinado`);
+    return new Uint8Array(await signed.arrayBuffer());
   }
 
   async listResources(id: string, prefix: string): Promise<ResourcePath[]> {
-    const q = `?prefix=${encodeURIComponent(prefix)}`;
-    const json = (await this.#req('GET', `/sessions/${id}/resources${q}`)) as { paths: string[] };
-    return json.paths as ResourcePath[];
+    // a rota lista a sessão inteira; o recorte por prefixo é do cliente
+    const res = await this.#send('GET', `/sessions/${id}/resources`);
+    const { resources } = ResourceListResponseSchema.parse(await res.json());
+    return resources.map((r) => r.path as ResourcePath).filter((p) => p.startsWith(prefix));
   }
 
-  #authHeaders(extra?: Record<string, string>): Record<string, string> {
+  async deleteResource(id: string, path: ResourcePath): Promise<void> {
+    await this.#send('DELETE', `/sessions/${id}/resources?path=${encodeURIComponent(path)}`);
+  }
+
+  async #authHeaders(extra?: Record<string, string>): Promise<Record<string, string>> {
     const headers: Record<string, string> = { ...extra };
-    const token = this.#token?.();
+    const token = await this.#token?.();
     if (token) headers['authorization'] = `Bearer ${token}`;
     return headers;
   }
@@ -177,14 +261,22 @@ export class HttpSessionStore implements SessionStore {
     path: string,
     init?: { body?: BodyInit; headers?: Record<string, string> },
   ): Promise<Response> {
-    const res = await this.#fetch(`${this.#baseUrl}${path}`, {
+    const res = await this.#fetch(`${this.#baseUrl}/sound-necklace${path}`, {
       method,
-      headers: this.#authHeaders(init?.headers),
+      headers: await this.#authHeaders(init?.headers),
       body: init?.body,
     });
-    // ApiError carrega o status — é o que separa o 409 do fencing (veredito) de um
-    // 5xx transitório, que o autosaver ainda deve retentar.
-    if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status} em ${method} ${path}`);
+    if (!res.ok) {
+      // O corpo viaja no ApiError: é onde o `code` do 409 (fencing ENG-262) vive —
+      // e o que separa um veredito de um 5xx transitório que o autosaver retenta.
+      let body: unknown;
+      try {
+        body = await res.json();
+      } catch {
+        body = undefined;
+      }
+      throw new ApiError(res.status, `HTTP ${res.status} em ${method} ${path}`, body);
+    }
     return res;
   }
 

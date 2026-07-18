@@ -17,9 +17,15 @@
  * aqui, no composition root.
  */
 
-import { FixtureAudioEngine, type FixtureTransport, type Player } from '../../adapters/audio';
-import { FixtureBucketSource } from '../../adapters/bucket';
+import {
+  FixtureAudioEngine,
+  WebAudioEngine,
+  type FixtureTransport,
+  type Player,
+} from '../../adapters/audio';
 import { fromSessionDto } from '../../contracts';
+import { API_MODE } from './api-config';
+import { appBucket } from './bucket-adapter';
 import { appSessionStore } from './session-adapter';
 
 export interface SessionAudio {
@@ -54,8 +60,31 @@ export function startClockBridge(transport: FixtureTransport): () => void {
 export async function buildSessionPlayer(sessionId: string): Promise<SessionAudio> {
   const dto = await appSessionStore().load(sessionId);
   const { state, meta } = fromSessionDto(dto);
+  const bytes = await appBucket().fetchBytes(meta.bucketAudioId);
+
+  if (API_MODE === 'real') {
+    // engine real: o relógio é o do AudioContext e o player se auto-dirige por
+    // transport.requestFrame — a ponte de rAF é uma necessidade só do fixture
+    const engine = new WebAudioEngine();
+    try {
+      const decoded = await engine.decode(bytes);
+      const player = engine.createPlayer(decoded, state.beadSec);
+      return {
+        player,
+        // fecha o AudioContext junto: cada sessão cria um, e o navegador corta o
+        // playback da aba depois de ~meia dúzia de contexts vivos
+        stop: () => {
+          player.stop();
+          engine.close();
+        },
+      };
+    } catch (err) {
+      engine.close(); // decode falhou: o context recém-aberto não pode vazar
+      throw err;
+    }
+  }
+
   const engine = new FixtureAudioEngine();
-  const bytes = await new FixtureBucketSource().fetchBytes(meta.bucketAudioId);
   const decoded = await engine.decode(bytes);
   const player = engine.createPlayer(decoded, state.beadSec);
   const stopBridge = startClockBridge(engine.transport);

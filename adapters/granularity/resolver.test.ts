@@ -19,7 +19,11 @@ const grid = (
     large: 50,
   },
   hop_sec = 0.02,
-): AcoustemeEnvelope => ({ version: 1, hop_sec, granularity_frames });
+): AcoustemeEnvelope => ({
+  codebook_version: 'terena-xlsr53-k100-v1',
+  hop_sec,
+  granularity_frames,
+});
 
 describe('AcoustemeGranularityResolver.resolve — regra O8 (frames × hop)', () => {
   it('deriva do envelope: 10/25/50 frames × 20 ms = 0.20 / 0.50 / 1.00 s', () => {

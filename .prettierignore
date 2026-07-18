@@ -9,3 +9,7 @@ pnpm-lock.yaml
 
 # goldens são BYTES CONTRATUAIS gerados da referência — nunca reformatar
 tests/golden/expected/
+
+# snapshot do OpenAPI do tripod-api + tipos gerados dele (pnpm api:snapshot / generate:api-types)
+contracts/openapi.json
+contracts/generated/

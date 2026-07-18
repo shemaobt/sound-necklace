@@ -30,6 +30,13 @@ export interface Autosaver {
   flush(id: string): Promise<void>;
   /** Descarta o pendente desta sessão (usado antes de complete/reopen). */
   cancel(id: string): void;
+  /**
+   * Aguarda a escrita EM VOO desta sessão aterrissar (resolve já se não há).
+   * `cancel` só descarta o pendente na fila — um PUT já despachado não é abortável,
+   * e um `complete`/`reopen` que não o espere pode ter o estado final sobrescrito
+   * pelo estado velho que chega depois.
+   */
+  settle(id: string): Promise<void>;
   /** Cancela o timer e para de observar a conectividade. */
   dispose(): void;
 }
@@ -41,8 +48,8 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
 
   // pendente por sessão — Map.set coalesce (o último estado vence).
   const pending = new Map<string, SessionStateDto>();
-  // sessões com uma escrita em curso — evita drains reentrantes (PUT concorrente)
-  const inFlight = new Set<string>();
+  // escrita em curso por sessão — evita drains reentrantes e dá ao `settle` o que aguardar
+  const inFlight = new Map<string, Promise<void>>();
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   const arm = (): void => {
@@ -58,13 +65,14 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
     for (const id of [...pending.keys()]) await persistOne(id);
   };
 
-  const persistOne = async (id: string): Promise<void> => {
-    if (inFlight.has(id) || !pending.has(id)) return; // já persistindo esta sessão
-    inFlight.add(id);
-    try {
+  const persistOne = (id: string): Promise<void> => {
+    const running = inFlight.get(id);
+    if (running) return running; // já persistindo esta sessão
+    if (!pending.has(id)) return Promise.resolve();
+    const run = (async (): Promise<void> => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         if (!monitor.isOnline()) return; // caiu no meio → mantém pendente
-        const state = pending.get(id); // relê o mais novo a cada tentativa
+        const state = pending.get(id); // relê o mais novo a cada tentativa (cancel esvazia)
         if (state === undefined) return;
         try {
           await persist(id, state);
@@ -83,9 +91,9 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
         }
       }
       // esgotou as tentativas: mantém pendente p/ o próximo schedule/reconnect
-    } finally {
-      inFlight.delete(id);
-    }
+    })().finally(() => inFlight.delete(id));
+    inFlight.set(id, run);
+    return run;
   };
 
   // ao voltar a conexão, esvazia o que ficou pendente
@@ -113,6 +121,9 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
         clearTimeout(timer);
         timer = undefined;
       }
+    },
+    async settle(id) {
+      await inFlight.get(id);
     },
     dispose() {
       if (timer !== undefined) clearTimeout(timer);

@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import { useTranslation } from 'react-i18next';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
+import { ApiError, AuthError } from '../../adapters/api';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
+import ttsRegistration from '../../adapters/tts/register';
 import type { SpeechSynthesizer } from '../../adapters/tts/types';
+import voiceRegistration from '../../adapters/voice/register';
 import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
 import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
@@ -12,7 +15,9 @@ import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
-import { appAuth } from './auth-adapter';
+import { API_BASE_URL, API_MODE } from './api-config';
+import { appAuth, authReady } from './auth-adapter';
+import { shouldGateToLogin } from './auth-gate';
 import { buildSessionPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
@@ -20,6 +25,8 @@ import { buildAdapterRegistry, buildStationRegistry, type StationComponent } fro
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
 import { StationHost } from './station-host';
+import { useEditorLock } from './use-editor-lock';
+import { voiceStoreFor } from './voice-adapter';
 import { Stepper } from './stepper';
 import { stepperStations } from './stepper-model';
 import { navigate, useRoute } from './router';
@@ -171,6 +178,33 @@ function useAuthExpiry(): void {
 }
 
 /**
+ * Gate de sessão do modo real (ENG-247, §12 emendado): antes de gatear, tenta a
+ * RETOMADA silenciosa — o refresh rotativo persistido vira sessão nova sem tela de
+ * login (um F5 não expulsa ninguém). Só quando não há o que retomar é que qualquer
+ * rota além do login volta ao login, em vez de o app seguir usável e
+ * silenciosamente desautenticado (voz do guia no fallback, listagens 401). Na
+ * fixture não gateia: o fluxo de teste/dev não exige login.
+ */
+function useAuthGate(routeName: string): void {
+  const [resumed, setResumed] = useState(API_MODE === 'fixture');
+  useEffect(() => {
+    if (API_MODE === 'fixture') return;
+    let alive = true;
+    void authReady().finally(() => {
+      if (alive) setResumed(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (resumed && shouldGateToLogin(API_MODE, routeName, appAuth().currentUser())) {
+      navigate('/login', { replace: true });
+    }
+  }, [resumed, routeName]);
+}
+
+/**
  * Reidratação de sessão (§7.3): num reload ou ao retomar do Dashboard, a URL é
  * `/session/:id` mas o `ui/state` em memória está vazio. Carrega o estado salvo da
  * store app-global e o injeta, de modo que a sessão retome no passo corrente em vez
@@ -204,26 +238,12 @@ function useSessionHydration(
         // própria voz) já o reflete (ENG-276).
         metaRef.current = meta;
         sessionStore.getState().load(state);
-        // Trava consultiva (§7.3): se a sessão está em uso por OUTRA pessoa, abre em
-        // revisão com o aviso de quem a detém. Este fluxo não adquire trava própria,
-        // então qualquer trava por um holder distinto de nós é alheia.
-        //
-        // ENG-247: quando o modo real ligar, troque esta leitura única por
-        // `useEditorLock(routeId)` (use-editor-lock.ts) — ele adquire a trava, renova
-        // enquanto a sessão fica aberta e a solta ao sair. As duas não convivem: ambas
-        // escrevem o mesmo `setLock`/`setReview`.
-        const store = appSessionStore();
-        const lock = await store.lockStatus(routeId);
-        if (!alive) return;
-        const foreignHolder =
-          lock.held && lock.holder && lock.holder.user_id !== store.me.user_id
-            ? lock.holder.display_name
-            : null;
-        // Trava/revisão são POR SESSÃO, mas o store é singleton e `load` não os reseta:
-        // estabeleço o estado do zero a cada (re)hidratação para a trava/revisão de uma
-        // sessão não vazar para a próxima ao TROCAR de sessão in-SPA (sem reload).
+        // Revisão é POR SESSÃO, mas o store é singleton e `load` não a reseta:
+        // estabeleço do zero a cada (re)hidratação para a revisão de uma sessão não
+        // vazar para a próxima ao TROCAR de sessão in-SPA (sem reload). A TRAVA é do
+        // `useEditorLock` (ENG-247): ele adquire, renova e escreve o `setLock` — a
+        // leitura única que vivia aqui competiria com ele.
         sessionStore.getState().setReview(false);
-        sessionStore.getState().setLock(foreignHolder ? { holder: foreignHolder } : null);
         // Liga o autosave contínuo (§7.3): a partir daqui cada mutação do domínio
         // persiste o estado INTEIRO no store app-global, sob o meta desta sessão
         // (granularidade/áudio/consentimento/voz), de modo que um reload retome no
@@ -306,6 +326,7 @@ export function App() {
   const muted = useAppStore((s) => s.muted);
   const online = useOnline();
   useAuthExpiry();
+  useAuthGate(route.name);
 
   const session = useSessionStore((s) => s.session);
   const review = useSessionStore((s) => s.review);
@@ -314,6 +335,10 @@ export function App() {
   const routeId = route.name === 'session' ? route.id : null;
   const metaRef = useRef<SessionMeta | null>(null);
   useSessionHydration(routeId, metaRef);
+  // A trava consultiva (§7.3) tem dono único: adquire ao abrir, renova a cada 15 s,
+  // solta ao sair — e abre em revisão se outra pessoa a detém. Vale nos dois modos
+  // (a fixture também serve trava), então há UM caminho de código, não dois.
+  useEditorLock(routeId);
   useAutosaveFlush(routeId);
   const player = useSessionPlayer(routeId);
 
@@ -341,20 +366,59 @@ export function App() {
   // fixture se mexe igual, ENG-298). O dublê só entra onde não existe microfone:
   // jsdom e qualquer harness que peça `VITE_VOICE=fixture`. O e2e NÃO pede — ele roda
   // com o microfone falso do Chromium, para o portão exigir áudio de verdade.
+  // O armazém de respostas é POR SESSÃO (§10.4: `respostas/…` é relativo à sessão —
+  // o namespace é de quem guarda, como o servidor faz). Reconstruir por routeId isola
+  // as gravações entre sessões; na mesma aba, voltar à sessão reencontra os bytes
+  // (voiceStoreFor). Sem isto, a mesma pergunta de DUAS sessões dividia UMA gravação.
+  // Import direto (não a registry): o wiring do armazém é tipado.
   const recorder = useMemo<VoiceRecorder | null>(() => {
-    const registration = buildAdapterRegistry().voice;
-    if (!registration) return null;
     const useFixture = import.meta.env.VITE_VOICE === 'fixture';
-    return (useFixture ? registration.fixture() : registration.real()) as VoiceRecorder;
-  }, []);
+    return useFixture
+      ? voiceRegistration.fixture()
+      : voiceRegistration.real({ store: voiceStoreFor(routeId) });
+  }, [routeId]);
   // A voz do guia é a implementação REAL, não a fixture: falar de verdade É a feature
-  // (ENG-280). Hoje ela busca o clipe ElevenLabs na API e carrega o Web Speech dentro de
-  // si como fallback (ENG-284), então a porta é registrada SEMPRE e `speaker` nunca é
-  // null — o `registration ?` abaixo é só a forma compartilhada da registry.
-  const speaker = useMemo<SpeechSynthesizer | null>(() => {
-    const registration = buildAdapterRegistry().tts;
-    return registration ? (registration.real() as SpeechSynthesizer) : null;
-  }, []);
+  // (ENG-280). Ela busca o clipe ElevenLabs na API com o Web Speech dentro de si como
+  // fallback (ENG-284). O wiring (ENG-247) injeta a base real e o Bearer vivo do
+  // AuthProvider; sem VITE_API_MODE=real, a base relativa 404a e o fallback assume —
+  // o comportamento de sempre. Import direto (não a registry): o wiring é tipado.
+  const speaker = useMemo<SpeechSynthesizer | null>(
+    () =>
+      ttsRegistration.real({
+        ...(API_MODE === 'real' ? { baseUrl: API_BASE_URL } : {}),
+        token: () => appAuth().token(),
+        // sessão caducada no meio da entrevista: recupera em vez de robotizar.
+        // O 401 pode ser só a corrida do boot (resume em voo) — decide após assentar;
+        // com usuário vivo, o token caducou antes do refresh agendado: renova JÁ (a
+        // próxima fala usa o token novo) e, se a renovação falhar, volta ao login.
+        onUnauthorized: () => {
+          void authReady().then(async () => {
+            if (!appAuth().currentUser()) {
+              navigate('/login', { replace: true });
+              return;
+            }
+            try {
+              await appAuth().refresh();
+            } catch (err) {
+              // RECUSA da API = sessão morta: derruba TUDO (token/refresh/usuário)
+              // antes de voltar — senão o gate ainda vê um usuário e deixa navegar
+              // com token defunto. Rede/429/5xx são transitórios (mesmo critério do
+              // login): ficam, e a próxima fala tenta de novo.
+              const terminal =
+                err instanceof AuthError ||
+                (err instanceof ApiError && err.status < 500 && err.status !== 429);
+              if (terminal) {
+                await appAuth()
+                  .logout()
+                  .catch(() => undefined);
+                navigate('/login', { replace: true });
+              }
+            }
+          });
+        },
+      }),
+    [],
+  );
   // O som da UI é a implementação REAL: tocar de volta É a feature num app
   // ear-first. Mudo troca a PORTA pela silenciosa — assim nenhum chamador precisa
   // saber o que é estar mudo, e o botão do cabeçalho passa a silenciar de fato

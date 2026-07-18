@@ -263,3 +263,41 @@ describe('Export — colar inteiro + tratamento creme (redesign §6.7)', () => {
     expect(outside).not.toMatch(/animation|@keyframes/);
   });
 });
+
+describe('Export — fronteiras de IO real (ENG-247)', () => {
+  it('falha ao concluir vira aviso e o botão volta — o segundo clique pode resolver', async () => {
+    const state = exportable();
+    const store = new FixtureSessionStore();
+    const id = await seedInProgress(store, state);
+    load(state);
+    vi.spyOn(store, 'complete').mockRejectedValue(new Error('rede caiu'));
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Não consegui guardar agora.');
+    // segue editável, com o botão lá para tentar de novo (§9: nunca punir)
+    expect(screen.getByRole('button', { name: 'Concluir e guardar os documentos' })).toBeTruthy();
+  });
+
+  it('falha ao baixar da API (sessão concluída) vira aviso, não silêncio', async () => {
+    const state = exportable();
+    const store = new FixtureSessionStore();
+    const id = await seedCompleted(store, state);
+    load(state);
+    const save = vi.fn();
+    vi.spyOn(store, 'getArtifacts').mockRejectedValue(new Error('rede caiu'));
+
+    render(<Export store={store} sessionId={id} saveBytes={save} />);
+    await screen.findByRole('button', { name: 'Destravar para editar' });
+
+    await userEvent.click(cardButton('retorno-ancoragem.json'));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Não consegui baixar o documento.');
+    expect(save).not.toHaveBeenCalled();
+  });
+});

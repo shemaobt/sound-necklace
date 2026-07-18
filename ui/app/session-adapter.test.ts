@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultSessionStore as dashboardStore } from '../pages/dashboard/ports';
 import { defaultSessionStore as setupStore } from '../pages/setup/ports';
@@ -29,5 +29,25 @@ describe('store de sessão unificada', () => {
     });
     const ids = (await dashboardStore().list()).map((s) => s.id);
     expect(ids).toContain(summary.id);
+  });
+});
+
+/**
+ * O singleton lê o modo do ambiente NA CARGA do módulo — o caso reseta o registry de
+ * módulos e importa de novo para observar a seleção (ENG-247).
+ */
+describe('appSessionStore — seleção fixture ↔ real por ambiente (ENG-247)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('VITE_API_MODE=real monta o HttpSessionStore contra o tripod-api', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.prod/api');
+    vi.resetModules();
+    const { appSessionStore: realStore } = await import('./session-adapter');
+    const { HttpSessionStore } = await import('../../adapters/sessions');
+    expect(realStore()).toBeInstanceOf(HttpSessionStore);
   });
 });

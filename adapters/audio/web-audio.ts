@@ -20,6 +20,15 @@ export class WebAudioEngine implements AudioEngine {
     return this.ctx;
   }
 
+  /**
+   * Encerra o AudioContext (os navegadores limitam quantos vivem por aba). O engine
+   * segue utilizável: o próximo decode/play abre um context novo.
+   */
+  close(): void {
+    void this.ctx?.close().catch(() => undefined);
+    this.ctx = null;
+  }
+
   async decode(bytes: ArrayBuffer): Promise<DecodedAudio> {
     const ctx = this.ensureCtx();
     let buffer: AudioBuffer;

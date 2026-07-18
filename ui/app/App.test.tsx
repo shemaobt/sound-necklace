@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { FixtureAuthProvider } from '../../adapters/api';
 import { FixtureSessionStore } from '../../adapters/sessions';
 import { fromSessionDto, toSessionDto } from '../../contracts';
 import { buildBeads, createSession, type SessionState } from '../../domain';
@@ -497,7 +498,9 @@ describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
     expect(screen.getAllByText('Ouvir').length).toBeGreaterThan(0);
 
     await act(async () => {
-      appAuth().simulateExpiry();
+      // o teste dirige o fluxo fixture; o narrowing é o mesmo do seam de dev (ENG-247)
+      const auth = appAuth();
+      if (auth instanceof FixtureAuthProvider) auth.simulateExpiry();
     });
 
     expect(window.location.pathname).toBe('/login');

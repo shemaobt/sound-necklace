@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Player } from '../../../adapters/audio';
 import { FixtureSpeechSynthesizer } from '../../../adapters/tts/fixture';
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
+import type { VoiceRecorder } from '../../../adapters/voice/types';
 import {
   buildBeads,
   createSession,
@@ -452,5 +453,34 @@ describe('Mapeamento — o relatório não é o fim do fluxo (protótipo toExpor
     await userEvent.click(screen.getByRole('button', { name: 'Guardar os documentos →' }));
 
     expect(onGoToExport).toHaveBeenCalled();
+  });
+});
+
+describe('Mapeamento — fronteira de IO real da resposta (ENG-247)', () => {
+  it('falha ao guardar a resposta: orienta a regravar e volta ao microfone', async () => {
+    // tipada pela PORTA: o spy devolve um Recording estrutural, não a classe fixture
+    const recorder: VoiceRecorder = new FixtureVoiceRecorder();
+    const origStart = recorder.start.bind(recorder);
+    vi.spyOn(recorder, 'start').mockImplementation(async (p) => {
+      const rec = await origStart(p);
+      return {
+        onLevel: rec.onLevel.bind(rec),
+        cancel: rec.cancel.bind(rec),
+        // no modo real o stop embute o PUT da resposta — é ele que pode falhar
+        stop: () => Promise.reject(new Error('413 payload too large')),
+      };
+    });
+    const onVoiceSaved = vi.fn();
+    load(mapping());
+    render(<Mapeamento recorder={recorder} onVoiceSaved={onVoiceSaved} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('A resposta não foi guardada.');
+    // volta ao microfone (nada preso em "gravando"), e o shell NÃO registrou o caminho
+    expect(screen.getByRole('button', { name: 'gravar a resposta' })).toBeTruthy();
+    expect(onVoiceSaved).not.toHaveBeenCalled();
   });
 });

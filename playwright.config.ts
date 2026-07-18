@@ -34,6 +34,11 @@ export default defineConfig({
   },
   webServer: {
     command: `vite --host ${HOST} --port ${PORT} --strictPort`,
+    // Escudo mecânico (ENG-247, DoD): o e2e dirige o app em modo FIXTURE mesmo numa
+    // árvore cujo `.env.local` liga o modo real — variável de processo vence o
+    // arquivo no Vite. Sem isto, o e2e local faria rede de verdade (e o de CI só
+    // escapa por não ter `.env.local`).
+    env: { VITE_API_MODE: 'fixture' },
     url: `http://${HOST}:${PORT}`,
     // NUNCA reusar um servidor já no ar. Este repo trabalha em worktrees: um Vite de
     // OUTRA árvore atende nesta mesma porta e o e2e passa a testar o código ERRADO —

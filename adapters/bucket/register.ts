@@ -6,21 +6,29 @@
  */
 
 import { FixtureBucketSource } from './fixture';
-import { HttpBucketSource } from './http';
+import { HttpBucketSource, type HttpBucketSourceOptions } from './http';
 import type { BucketSource } from './types';
+
+/** Wiring do composition root (ENG-247): baseUrl, projectId resolvido e token vivo. */
+export type RealBucketWiring = Partial<Omit<HttpBucketSourceOptions, 'projectId'>> &
+  Pick<HttpBucketSourceOptions, 'projectId'>;
 
 export interface AdapterRegistration<TPort> {
   port: string;
   fixture: () => TPort;
-  real: () => TPort;
+  real: (wiring: RealBucketWiring) => TPort;
 }
 
 const registration: AdapterRegistration<BucketSource> = {
   port: 'bucket',
   fixture: () => new FixtureBucketSource(),
-  // baseUrl/token reais são injetados pelo wiring (ENG-247); o esqueleto aponta para
-  // um baseUrl relativo e usa o fetch do browser.
-  real: () => new HttpBucketSource({ baseUrl: '/api', fetch: globalThis.fetch.bind(globalThis) }),
+  real: (wiring) =>
+    new HttpBucketSource({
+      baseUrl: wiring.baseUrl ?? '/api',
+      fetch: wiring.fetch ?? globalThis.fetch.bind(globalThis),
+      projectId: wiring.projectId,
+      token: wiring.token,
+    }),
 };
 
 export default registration;

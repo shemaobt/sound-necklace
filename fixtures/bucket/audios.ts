@@ -33,7 +33,7 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
       duration_sec: 3,
       consent_present: true,
       acousteme: {
-        version: 1,
+        codebook_version: 'terena-xlsr53-k100-v1',
         hop_sec: 0.02,
         granularity_frames: { small: 10, medium: 25, large: 50 },
       },
@@ -51,7 +51,7 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
       duration_sec: 6,
       consent_present: true,
       acousteme: {
-        version: 1,
+        codebook_version: 'terena-xlsr53-k100-v1',
         hop_sec: 0.02,
         granularity_frames: { small: 10, medium: 25, large: 50 },
       },
@@ -65,7 +65,7 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
       duration_sec: 4,
       consent_present: true,
       acousteme: {
-        version: 1,
+        codebook_version: 'terena-xlsr53-k100-v1',
         hop_sec: 0.02,
         granularity_frames: { small: 10, medium: 25, large: 50 },
       },
@@ -93,7 +93,7 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
       duration_sec: 12,
       consent_present: true,
       acousteme: {
-        version: 1,
+        codebook_version: 'terena-xlsr53-k100-v1',
         hop_sec: 0.02,
         granularity_frames: { small: 10, medium: 25, large: 50 },
       },
@@ -107,7 +107,7 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
       duration_sec: 12,
       consent_present: true,
       acousteme: {
-        version: 1,
+        codebook_version: 'terena-xlsr53-k100-v1',
         hop_sec: 0.02,
         granularity_frames: { small: 10, medium: 25, large: 50 },
       },

@@ -35,7 +35,7 @@ describe('BucketAudioSchema — válida e inválidas', () => {
     duration_sec: 12.5,
     consent_present: true,
     acousteme: {
-      version: 1,
+      codebook_version: 'terena-xlsr53-k100-v1',
       hop_sec: 0.02,
       granularity_frames: { small: 10, medium: 25, large: 50 },
     },
@@ -49,10 +49,22 @@ describe('BucketAudioSchema — válida e inválidas', () => {
     expect(BucketAudioSchema.safeParse({ ...valid, acousteme: null }).success).toBe(true);
   });
 
+  it('aceita duration_sec null/ausente (áudio não-sondado — a API valida na saída)', () => {
+    expect(BucketAudioSchema.safeParse({ ...valid, duration_sec: null }).success).toBe(true);
+    // fiel ao fio (OpenAPI aceita 0): uma linha degenerada não derruba a listagem
+    expect(BucketAudioSchema.safeParse({ ...valid, duration_sec: 0 }).success).toBe(true);
+    const semDuracao: Record<string, unknown> = { ...valid };
+    delete semDuracao.duration_sec;
+    expect(BucketAudioSchema.safeParse(semDuracao).success).toBe(true);
+    const semAcousteme: Record<string, unknown> = { ...valid };
+    delete semAcousteme.acousteme;
+    expect(BucketAudioSchema.safeParse(semAcousteme).success).toBe(true);
+  });
+
   it.each([
     ['chave faltando', (v: Record<string, unknown>) => delete v.consent_present],
     ['chave extra', (v: Record<string, unknown>) => (v.extra = 1)],
-    ['duração não positiva', (v: Record<string, unknown>) => (v.duration_sec = 0)],
+    ['duração com tipo errado', (v: Record<string, unknown>) => (v.duration_sec = '12')],
     ['consent com tipo errado', (v: Record<string, unknown>) => (v.consent_present = 'sim')],
   ])('rejeita: %s', (_label, mutate) => {
     const bad: Record<string, unknown> = { ...valid };
@@ -63,29 +75,40 @@ describe('BucketAudioSchema — válida e inválidas', () => {
 
 describe('AcoustemeEnvelopeSchema — grade de granularidade do tokenizador (§6.1/O8)', () => {
   const env = {
-    version: 1,
+    codebook_version: 'terena-xlsr53-k100-v1',
     hop_sec: 0.02,
     granularity_frames: { small: 10, medium: 25, large: 50 },
   };
 
-  it('aceita um envelope com version, hop_sec e as três presets', () => {
+  it('aceita um envelope com codebook_version (string do pipeline), hop_sec e as três presets', () => {
     expect(AcoustemeEnvelopeSchema.safeParse(env).success).toBe(true);
   });
 
-  it('exige version, hop_sec e granularity_frames', () => {
+  it('rejeita a forma antiga com version numérico', () => {
+    const antigo: Record<string, unknown> = { ...env, version: 1 };
+    delete antigo.codebook_version;
+    expect(AcoustemeEnvelopeSchema.safeParse(antigo).success).toBe(false);
+  });
+
+  it('exige codebook_version, hop_sec e granularity_frames', () => {
     expect(
       AcoustemeEnvelopeSchema.safeParse({
         hop_sec: 0.02,
         granularity_frames: { small: 10, medium: 25, large: 50 },
       }).success,
-    ).toBe(false); // sem version
+    ).toBe(false); // sem codebook_version
     expect(
       AcoustemeEnvelopeSchema.safeParse({
-        version: 1,
+        codebook_version: 'terena-xlsr53-k100-v1',
         granularity_frames: { small: 10, medium: 25, large: 50 },
       }).success,
     ).toBe(false); // sem hop_sec
-    expect(AcoustemeEnvelopeSchema.safeParse({ version: 1, hop_sec: 0.02 }).success).toBe(false); // sem frames
+    expect(
+      AcoustemeEnvelopeSchema.safeParse({
+        codebook_version: 'terena-xlsr53-k100-v1',
+        hop_sec: 0.02,
+      }).success,
+    ).toBe(false); // sem frames
   });
 
   it('rejeita hop_sec não positivo e frames não inteiros ou não positivos', () => {

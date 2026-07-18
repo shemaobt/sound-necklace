@@ -26,6 +26,8 @@ export interface HttpSpeechDeps {
   fallback: SpeechSynthesizer;
   /** Token Bearer atual (do AuthProvider/ENG-239). */
   token?: () => string | null;
+  /** 401 no speak = sessão caducada — o wiring decide (volta ao login, ENG-247). */
+  onUnauthorized?: () => void;
   AudioCtor?: typeof Audio;
   createObjectURL?: (blob: Blob) => string;
 }
@@ -46,6 +48,7 @@ export class HttpSpeechSynthesizer implements SpeechSynthesizer {
   readonly #fetch: typeof globalThis.fetch;
   readonly #fallback: SpeechSynthesizer;
   readonly #token?: () => string | null;
+  readonly #onUnauthorized?: () => void;
   readonly #AudioCtor?: typeof Audio;
   readonly #createObjectURL?: (blob: Blob) => string;
 
@@ -68,6 +71,7 @@ export class HttpSpeechSynthesizer implements SpeechSynthesizer {
     this.#fetch = deps.fetch;
     this.#fallback = deps.fallback;
     this.#token = deps.token;
+    this.#onUnauthorized = deps.onUnauthorized;
     this.#AudioCtor = deps.AudioCtor ?? (typeof Audio !== 'undefined' ? Audio : undefined);
     this.#createObjectURL =
       deps.createObjectURL ??
@@ -141,6 +145,8 @@ export class HttpSpeechSynthesizer implements SpeechSynthesizer {
         // 404/501 = o endpoint NÃO EXISTE (dev sem backend, API ainda não deployada) e não
         // vai passar a existir no meio da sessão: desiste, para não pagar 21 POSTs mortos
         // numa entrevista. Um 401/500 é transitório — a próxima pergunta tenta de novo.
+        // O 401 ainda AVISA o wiring: sessão caducada não pode degradar em silêncio.
+        if (res.status === 401) this.#onUnauthorized?.();
         if (res.status === 404 || res.status === 501) this.#apiDown = true;
         return null;
       }

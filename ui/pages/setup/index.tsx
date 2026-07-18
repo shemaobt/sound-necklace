@@ -11,7 +11,13 @@ import { ShemaIcon } from '../../tokens';
 import { buildBeads, createSession, hashPCM } from '../../../domain';
 import { navigate as routerNavigate } from '../../app/router';
 import { sessionStore } from '../../state';
-import { defaultAudioEngine, defaultBucket, defaultResolver, defaultSessionStore } from './ports';
+import {
+  defaultAudioEngine,
+  defaultBucket,
+  defaultProjectId,
+  defaultResolver,
+  defaultSessionStore,
+} from './ports';
 import './setup.css';
 
 /**
@@ -52,7 +58,7 @@ export interface SetupProps {
   resolver?: GranularityResolver;
   audioEngine?: AudioEngine;
   store?: SessionStore;
-  /** Projeto dono da sessão; em produção vem da auth (follow-up do composition root). */
+  /** Projeto dono da sessão; sem prop, resolve por `defaultProjectId()` ao criar. */
   projectId?: string;
   navigate?: (to: string) => void;
 }
@@ -62,7 +68,7 @@ export function Setup({
   resolver = defaultResolver(),
   audioEngine = defaultAudioEngine(),
   store = defaultSessionStore(),
-  projectId = 'projeto',
+  projectId,
   navigate = routerNavigate,
 }: SetupProps) {
   const { t } = useTranslation();
@@ -77,13 +83,23 @@ export function Setup({
 
   useEffect(() => {
     let alive = true;
-    void bucket.list().then((list) => {
-      if (alive) setAudios(list);
-    });
+    void bucket
+      .list()
+      .then((list) => {
+        if (alive) setAudios(list);
+      })
+      .catch(() => {
+        // fronteira de IO real (ENG-247): a listagem pode falhar — mostra o aviso
+        // em vez de deixar a promise escapar e a tela presa em "carregando"
+        if (alive) {
+          setAudios([]);
+          setError(t('setup.bucketError'));
+        }
+      });
     return () => {
       alive = false;
     };
-  }, [bucket]);
+  }, [bucket, t]);
 
   const create = async (): Promise<void> => {
     setError(null);
@@ -103,7 +119,7 @@ export function Setup({
     // trava silenciosa). Grade/hash/createSession são puros — não lançam aqui.
     setBusy(true);
     try {
-      const { beadSec } = resolver.resolve(level, audio.acousteme);
+      const { beadSec } = resolver.resolve(level, audio.acousteme ?? null);
       if (!(beadSec > 0)) {
         setError(t('setup.noBeadSec'));
         return;
@@ -117,7 +133,7 @@ export function Setup({
       const name = title.trim() || audio.filename.replace(/\.[^.]+$/, '') || 'colar';
 
       const summary = await store.create({
-        projectId,
+        projectId: projectId ?? (await defaultProjectId()),
         storyName: name,
         storySlug: name,
         audioId: audio.id,

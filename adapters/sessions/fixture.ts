@@ -168,7 +168,9 @@ export class FixtureSessionStore implements SessionStore {
   }
 
   async complete(id: string, state: SessionStateDto, artifacts: ArtifactTriple): Promise<void> {
-    this.#autosaver.cancel(id); // um autosave armado não pode aterrissar após concluir
+    // um autosave armado (ou já em voo) não pode aterrissar após concluir
+    this.#autosaver.cancel(id);
+    await this.#autosaver.settle(id);
     await this.#settle();
     const rec = this.#requireRec(id);
     rec.state = clone(state);
@@ -184,6 +186,7 @@ export class FixtureSessionStore implements SessionStore {
 
   async reopen(id: string): Promise<void> {
     this.#autosaver.cancel(id);
+    await this.#autosaver.settle(id);
     await this.#settle();
     const rec = this.#requireRec(id);
     rec.summary = {
@@ -259,6 +262,12 @@ export class FixtureSessionStore implements SessionStore {
     const map = this.#backend.resources.get(id);
     if (!map) return [];
     return [...map.keys()].filter((p) => p.startsWith(prefix)) as ResourcePath[];
+  }
+
+  async deleteResource(id: string, path: ResourcePath): Promise<void> {
+    await this.#settle();
+    this.#requireRec(id);
+    this.#backend.resources.get(id)?.delete(path);
   }
 
   #requireRec(id: string): SessionRecord {

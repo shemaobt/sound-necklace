@@ -48,7 +48,7 @@ describe('FixtureBucketSource.fetchBytes', () => {
     const bytes = await source.fetchBytes(audio!.id);
     const decoded = await new FixtureAudioEngine().decode(bytes);
 
-    expect(decoded.duration).toBeCloseTo(audio!.duration_sec, 6);
+    expect(decoded.duration).toBeCloseTo(audio!.duration_sec!, 6);
   });
 
   it('é determinístico: duas buscas do mesmo id devolvem os mesmos bytes', async () => {

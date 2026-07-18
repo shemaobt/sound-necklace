@@ -19,35 +19,75 @@ import { GranularityLevelSchema } from './bucket';
 /** Mesmo padrão do manifest_id do domínio (FNV-1a 32 bits). */
 const manifestIdSchema = z.string().regex(/^fnv1a32:[0-9a-f]{8}$/);
 
-// ── Auth (§7.1/O1: JWT Bearer do tripod-api; o SPA não introduz esquema próprio) ──
+// ── Auth (§7.1/O1: JWT Bearer compartilhado do tripod-api; formas do OpenAPI real) ──
 
-export const LoginRequestSchema = z.strictObject({
-  username: z.string(),
+/** O login da casa autentica por E-MAIL (UserLoginRequest do OpenAPI). */
+export const UserLoginRequestSchema = z.strictObject({
+  email: z.string(),
   password: z.string(),
 });
-export type LoginRequest = z.infer<typeof LoginRequestSchema>;
+export type UserLoginRequest = z.infer<typeof UserLoginRequestSchema>;
 
+/** Par de tokens com ROTAÇÃO: cada refresh devolve um refresh_token novo. */
 export const TokenResponseSchema = z.strictObject({
   access_token: z.string(),
+  refresh_token: z.string(),
   token_type: z.string(),
 });
 export type TokenResponse = z.infer<typeof TokenResponseSchema>;
 
-export const RefreshRequestSchema = z.strictObject({
+export const TokenRefreshRequestSchema = z.strictObject({
   refresh_token: z.string(),
 });
-export type RefreshRequest = z.infer<typeof RefreshRequestSchema>;
+export type TokenRefreshRequest = z.infer<typeof TokenRefreshRequestSchema>;
 
-/** §7.1/O2: dois papéis do app, mapeados nos papéis equivalentes da API. */
+/** §7.1/O2: dois papéis do app; o wire (`my-roles`) traz `role_key` cru e o adapter filtra. */
 export const RoleSchema = z.enum(['facilitator', 'project_admin']);
 export type Role = z.infer<typeof RoleSchema>;
 
-export const MeResponseSchema = z.strictObject({
+/**
+ * O `/auth/me` da casa: usuário da PLATAFORMA — sem username e sem papéis de app.
+ * `display_name` é anulável porém obrigatório; `avatar_url`/`locale` são opcionais
+ * (defaults do Pydantic). O AuthUser da porta é montado disto + my-roles.
+ */
+export const UserResponseSchema = z.strictObject({
   id: z.string(),
-  username: z.string(),
-  roles: z.array(RoleSchema),
+  email: z.string(),
+  display_name: z.string().nullable(),
+  avatar_url: z.string().nullable().optional(),
+  is_active: z.boolean(),
+  is_platform_admin: z.boolean(),
+  locale: z.string().nullable().optional(),
 });
-export type MeResponse = z.infer<typeof MeResponseSchema>;
+export type UserResponse = z.infer<typeof UserResponseSchema>;
+
+/** Login devolve o envelope usuário + par de tokens (AuthResponse do OpenAPI). */
+export const AuthResponseSchema = z.strictObject({
+  user: UserResponseSchema,
+  tokens: TokenResponseSchema,
+});
+export type AuthResponse = z.infer<typeof AuthResponseSchema>;
+
+/** Um papel concedido ao usuário num app (`GET /auth/my-roles?app_key=`). */
+export const MyRoleResponseSchema = z.strictObject({
+  app_key: z.string(),
+  role_key: z.string(),
+});
+export type MyRoleResponse = z.infer<typeof MyRoleResponseSchema>;
+
+export const MyRolesResponseSchema = z.array(MyRoleResponseSchema);
+export type MyRolesResponse = z.infer<typeof MyRolesResponseSchema>;
+
+/**
+ * `GET /auth/my-project-roles` — projetos do usuário como `{project_id: papel}`.
+ * É de onde o wiring real deriva o projeto do bucket (§7.4); um platform admin
+ * pode vir com o dicionário vazio.
+ */
+export const MyProjectRolesResponseSchema = z.strictObject({
+  is_platform_admin: z.boolean(),
+  project_roles: z.record(z.string(), z.string()),
+});
+export type MyProjectRolesResponse = z.infer<typeof MyProjectRolesResponseSchema>;
 
 // ── Sessions (§7.2/§7.3) ──
 
@@ -144,11 +184,21 @@ export const ArtifactTripleSchema = z.strictObject({
 });
 export type ArtifactTriple = z.infer<typeof ArtifactTripleSchema>;
 
-/** Conclusão (§8.8): sobe o trio de artefatos materializado no cliente. */
-export const CompleteSessionRequestSchema = z.strictObject({
-  artifacts: ArtifactTripleSchema,
+/**
+ * Recibo de UM artefato no 201 do upload multipart (POST /artifacts). O trio sobe
+ * como bytes crus em form-data (campos manifest/anchoring/report) e o servidor
+ * responde os checksums — a conclusão em si (POST /complete) não tem corpo.
+ */
+export const ArtifactResponseSchema = z.strictObject({
+  kind: ArtifactKindSchema,
+  size: z.int(),
+  crc32c: z.string(),
+  sha256: z.string(),
 });
-export type CompleteSessionRequest = z.infer<typeof CompleteSessionRequestSchema>;
+export type ArtifactResponse = z.infer<typeof ArtifactResponseSchema>;
+
+export const ArtifactUploadResponseSchema = z.array(ArtifactResponseSchema);
+export type ArtifactUploadResponse = z.infer<typeof ArtifactUploadResponseSchema>;
 
 // ── Advisory lock (§7.3/O4: editor único por sessão) ──
 
@@ -180,8 +230,24 @@ export const ResourcePathSchema = z
   );
 export type ResourcePath = z.infer<typeof ResourcePathSchema>;
 
-/** Referência/ack de um recurso de voz (os bytes WebM viajam opacos, fora do JSON). */
-export const ResourceRefSchema = z.strictObject({
+/**
+ * Uma resposta gravada na listagem (GET /resources) e no ack do PUT — o caminho é a
+ * chave pela qual o Mapeamento sabe que perguntas têm resposta; os bytes WebM viajam
+ * opacos, fora do JSON.
+ */
+export const ResourceSummarySchema = z.strictObject({
   path: ResourcePathSchema,
+  size: z.int(),
 });
-export type ResourceRef = z.infer<typeof ResourceRefSchema>;
+export type ResourceSummary = z.infer<typeof ResourceSummarySchema>;
+
+export const ResourceListResponseSchema = z.strictObject({
+  resources: z.array(ResourceSummarySchema),
+});
+export type ResourceListResponse = z.infer<typeof ResourceListResponseSchema>;
+
+/** URL GET assinada de curta duração para tocar uma resposta (2º salto, sem Bearer). */
+export const ResourceUrlResponseSchema = z.strictObject({
+  url: z.string(),
+});
+export type ResourceUrlResponse = z.infer<typeof ResourceUrlResponseSchema>;

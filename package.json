@@ -19,6 +19,8 @@
     "test:browser": "vitest run --project browser",
     "e2e": "playwright test",
     "golden": "vitest run --project unit tests/golden/golden.test.ts",
+    "api:snapshot": "node scripts/api-snapshot.mjs",
+    "generate:api-types": "openapi-typescript contracts/openapi.json -o contracts/generated/tripod.d.ts",
     "golden:generate": "node tests/golden/generate.mjs",
     "golden:verify": "node tests/golden/generate.mjs --verify",
     "voz:aquecer": "node --experimental-strip-types scripts/warm-tts.mjs"
@@ -55,6 +57,7 @@
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^29.1.1",
+    "openapi-typescript": "^7.13.0",
     "playwright": "^1.61.1",
     "prettier": "3.9.4",
     "typescript": "~5.9.3",
