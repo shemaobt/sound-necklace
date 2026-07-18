@@ -344,6 +344,7 @@ export const pt = {
     listen: 'Ouvir a pergunta',
     pause: 'Pausar a pergunta',
     saving: 'guardando a resposta',
+    openingAnswer: 'abrindo a resposta…',
     pausePlayback: 'pausar',
     record: 'gravar a resposta',
     stop: 'Parar',
