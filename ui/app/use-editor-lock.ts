@@ -72,12 +72,13 @@ export function useEditorLock(routeId: string | null): void {
     /**
      * Para de agir. `holder` nomeia quem tomou a sessão; `null` quando não sabemos
      * (o prazo estourou sem resposta) — a trava presente força a revisão e, sem nome,
-     * o aviso é de reconexão, sem oferecer "Destravar para editar".
+     * o aviso é de reconexão, sem oferecer "Destravar para editar". `otherTab` é a
+     * variante da MESMA conta noutra aba (ENG-328): cópia própria no banner.
      */
-    const demote = (holder: string | null): void => {
+    const demote = (holder: string | null, otherTab = false): void => {
       acting = false;
       stopTimers();
-      sessionStore.getState().setLock({ holder });
+      sessionStore.getState().setLock(otherTab ? { holder, otherTab: true } : { holder });
     };
 
     const armDeadline = (): void => {
@@ -110,10 +111,31 @@ export function useEditorLock(routeId: string | null): void {
       if (alive && acting) armBeat();
     };
 
+    // ENG-328: a MESMA conta numa segunda aba. A trava do backend é por conta — a
+    // outra aba adquire "a própria" trava e as duas editariam em silêncio (o 409 do
+    // ETag só chega numa escrita conflitante). Um canal por sessão detecta a colisão
+    // no mesmo browser: quem MONTA anuncia; quem recebe o anúncio se demite para
+    // revisão. A aba nova vence — é onde o usuário está agindo; recarregar a antiga
+    // (ou reentrar nela) anuncia de novo e toma de volta. O id é por montagem: não
+    // há o que persistir. Browser sem BroadcastChannel: segue como hoje (409 cobre).
+    let claimed = false;
+    const tabId = crypto.randomUUID();
+    const channel =
+      typeof BroadcastChannel === 'undefined'
+        ? null
+        : new BroadcastChannel(`cds-session-${routeId}`);
+    channel?.addEventListener('message', (ev: MessageEvent) => {
+      const claim = ev.data as { tabId?: unknown } | null | undefined;
+      if (!alive || typeof claim?.tabId !== 'string' || claim.tabId === tabId) return;
+      claimed = true;
+      demote(null, true);
+    });
+    channel?.postMessage({ tabId });
+
     void (async () => {
       try {
         const status = await store.acquireLock(routeId);
-        if (!alive) return;
+        if (!alive || claimed) return; // outra aba reivindicou no meio do acquire
         const other = otherHolder(status);
         if (other !== null) {
           sessionStore.getState().setLock({ holder: other }); // sessão em uso: revisão
@@ -127,7 +149,7 @@ export function useEditorLock(routeId: string | null): void {
         // não deu para adquirir (rede caída, sessão inexistente): sem lease não se
         // edita — revisão com aviso de reconexão (holder desconhecido), como na
         // demissão por prazo. Editar sem lease abriria a janela de dois editores.
-        if (alive) sessionStore.getState().setLock({ holder: null });
+        if (alive && !claimed) sessionStore.getState().setLock({ holder: null });
       }
     })();
 
@@ -145,6 +167,7 @@ export function useEditorLock(routeId: string | null): void {
       alive = false;
       acting = false;
       stopTimers();
+      channel?.close();
       window.removeEventListener('pagehide', release);
       release();
     };

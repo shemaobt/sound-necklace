@@ -27,9 +27,11 @@ export function ReviewBanner({
     <div className="cds-review-banner" role="status">
       {lock ? (
         <span className="cds-review-banner-text">
-          {lock.holder === null
-            ? t('shell.reviewStale')
-            : t('shell.reviewLocked', { holder: lock.holder })}
+          {lock.otherTab
+            ? t('shell.reviewOtherTab')
+            : lock.holder === null
+              ? t('shell.reviewStale')
+              : t('shell.reviewLocked', { holder: lock.holder })}
         </span>
       ) : (
         <>

@@ -22,6 +22,8 @@ import type { SessionState } from '../../domain';
  */
 export interface EditorLock {
   holder: string | null;
+  /** A trava é da MESMA conta, mas noutra aba deste browser (ENG-328): cópia própria no banner. */
+  otherTab?: boolean;
 }
 
 export interface SessionStore {
