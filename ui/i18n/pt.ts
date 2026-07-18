@@ -14,6 +14,8 @@ export const pt = {
     back: 'Histórias',
     backAria: 'Voltar às histórias',
     mute: 'Desligar o som da interface',
+    soundMenu: 'som e volume',
+    storyVolume: 'volume da história',
     unmute: 'Ligar o som da interface',
     switchLanguage: 'Mudar para inglês',
   },

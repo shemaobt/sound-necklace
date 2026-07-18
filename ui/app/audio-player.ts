@@ -33,6 +33,8 @@ import { appSessionStore } from './session-adapter';
 
 export interface SessionAudio {
   player: Player;
+  /** Volume master do playback da sessão (1 = neutro; >1 = reforço, ENG-314). */
+  setGain: (value: number) => void;
   /** Para o player e cancela a ponte de relógio (chamado ao trocar/fechar a sessão). */
   stop: () => void;
 }
@@ -129,6 +131,7 @@ export async function buildSessionPlayer(sessionId: string): Promise<SessionAudi
       const player = engine.createPlayer(decoded, state.beadSec);
       return {
         player,
+        setGain: (v) => engine.setGain(v),
         // fecha o AudioContext junto: cada sessão cria um, e o navegador corta o
         // playback da aba depois de ~meia dúzia de contexts vivos
         stop: () => {
@@ -148,6 +151,7 @@ export async function buildSessionPlayer(sessionId: string): Promise<SessionAudi
   const stopBridge = startClockBridge(engine.transport);
   return {
     player,
+    setGain: (v) => engine.setGain(v),
     stop: () => {
       stopBridge();
       player.stop();

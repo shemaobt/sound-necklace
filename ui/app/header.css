@@ -101,3 +101,50 @@
 .cds-header-sound[aria-pressed='true'] {
   color: var(--cds-telha);
 }
+
+/* popover de som e volume (ENG-314): cartão creme, o reforço num range nativo */
+.cds-header-sound-pop {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 220px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+  box-shadow: 0 10px 30px rgba(10, 7, 3, 0.22);
+  z-index: 40;
+}
+
+.cds-header-sound-mute {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--cds-hairline);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cds-header-volume {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cds-header-volume-label {
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--cds-ink-subtle);
+}
+
+.cds-header-volume input[type='range'] {
+  width: 100%;
+  accent-color: var(--cds-telha);
+}

@@ -53,6 +53,12 @@ export interface Player {
 export interface AudioEngine {
   decode(bytes: ArrayBuffer): Promise<DecodedAudio>;
   /**
+   * Volume master do playback (1 = neutro). Aceita reforço ACIMA de 1 (até ~2)
+   * para gravações de campo baixas (ENG-314) — aplicado à cadeia inteira do
+   * player, nunca por trecho.
+   */
+  setGain(value: number): void;
+  /**
    * No máximo UM player vivo por engine (o backend — AudioContext/relógio — é
    * compartilhado): chame stop() antes de descartar um player. Espelha o
    * player global único da referência e o "traveling player" do PRD §8.

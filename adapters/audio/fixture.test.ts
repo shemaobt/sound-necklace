@@ -74,3 +74,12 @@ describe('FixtureAudioEngine.decode — DecodedAudio sintetizado do spec dourado
     expect(heads[0]).toBe(0);
   });
 });
+
+describe('FixtureAudioEngine — volume master (ENG-314)', () => {
+  it('setGain guarda o reforço pedido (hook de teste do wiring)', () => {
+    const engine = new FixtureAudioEngine();
+    expect(engine.gain).toBe(1);
+    engine.setGain(1.8);
+    expect(engine.gain).toBe(1.8);
+  });
+});
