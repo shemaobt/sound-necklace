@@ -441,3 +441,27 @@ describe('Segmentação — tratamento creme (redesign §6.5, §4.5)', () => {
     expect(outside).not.toMatch(/animation|@keyframes/);
   });
 });
+
+describe('Segmentação — frase confirmada pinta as contas como as cenas (ENG-316)', () => {
+  it('as contas do span de uma frase travada carregam o tint da paleta de frases', () => {
+    load(
+      segmenting({
+        frases: [
+          { ...frase({ prop_id: 'P1' }), span: { s: 13, e: 15 }, part_link: 'PT1', locked: true },
+          frase({ prop_id: 'P2' }),
+        ],
+        current: { layer: 'frases', index: 1 },
+      }),
+    );
+    const { container } = render(<Segmentacao />);
+
+    const inside = container.querySelector(
+      '.cds-necklace-bead[data-idx="14"] .cds-pearl',
+    ) as HTMLElement;
+    const outside = container.querySelector(
+      '.cds-necklace-bead[data-idx="17"] .cds-pearl',
+    ) as HTMLElement;
+    expect(inside.style.getPropertyValue('--cds-pearl-base')).not.toBe('');
+    expect(outside.style.getPropertyValue('--cds-pearl-base')).toBe('');
+  });
+});
