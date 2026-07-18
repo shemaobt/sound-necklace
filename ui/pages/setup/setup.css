@@ -304,3 +304,24 @@
   opacity: 0.045;
   pointer-events: none;
 }
+
+/* ---------- ENG-311: portas desabilitadas + esqueleto da lista ---------- */
+/* entrega/retorno presentes, porém sem fingir ação: apagadas e sem ponteiro */
+.cds-setup-door[data-disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* anúncio acessível sem pixel na tela (visually-hidden da casa) */
+.cds-setup-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cds-setup-audio-skeleton {
+  gap: 8px;
+}
