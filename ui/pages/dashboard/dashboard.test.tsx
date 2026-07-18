@@ -96,6 +96,11 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
 });
 
 describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
+  it('a barra usa o MESMO chrome claro das estações (var do shell, ENG-306)', () => {
+    const bar = /\.cds-dashboard-bar\s*{[^}]*}/.exec(dashboardCss)?.[0] ?? '';
+    expect(bar).toContain('var(--cds-chrome-bg');
+  });
+
   it('mostra a marca, a usuária autenticada e o título da casa', async () => {
     const store = new FixtureSessionStore();
     const auth = new FixtureAuthProvider();

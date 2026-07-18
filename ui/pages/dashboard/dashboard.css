@@ -12,6 +12,8 @@
 }
 
 /* ---------- cabeçalho próprio: marca · usuária · sair ---------- */
+/* mesmo tratamento CLARO do chrome das estações (ENG-306): a mesma variável do
+   shell — meio-branco sobre o creme —, não o creme cru que destoava da sessão */
 .cds-dashboard-bar {
   display: flex;
   align-items: center;
@@ -20,6 +22,7 @@
   flex: none;
   padding: 0 clamp(1rem, 4vw, 3rem);
   min-height: 66px;
+  background: var(--cds-chrome-bg, rgba(255, 255, 255, 0.5));
   border-bottom: 1px solid var(--cds-hairline);
 }
 
