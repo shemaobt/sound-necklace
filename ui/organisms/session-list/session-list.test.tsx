@@ -5,6 +5,15 @@ import sessionListCss from './session-list.css?raw';
 import { SessionList, type SessionCardData } from './session-list';
 
 describe('SessionList — alturas iguais entre idiomas (ENG-341)', () => {
+  it('o meta empilha SEMPRE (pílula em cima, data embaixo) — a altura nunca depende do idioma', () => {
+    // Em PT "Em andamento" + a data não cabem lado a lado e o meta quebrava em
+    // duas linhas só nesse caso — cartão em andamento mais alto que o concluído.
+    // Coluna sempre = o mesmo número de linhas em qualquer idioma e status.
+    const rule = /\.cds-session-card-meta\s*{[^}]*}/.exec(sessionListCss)?.[0] ?? '';
+    expect(rule).toContain('flex-direction: column');
+    expect(rule).not.toContain('flex-wrap');
+  });
+
   it('a pílula de status nunca quebra linha ("Em andamento" PT esticava o cartão)', () => {
     const rule = /\.cds-session-card-status\s*{[^}]*}/.exec(sessionListCss)?.[0] ?? '';
     expect(rule).toContain('white-space: nowrap');
