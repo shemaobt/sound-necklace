@@ -2,14 +2,22 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { splitByGuard } from '../../atoms/testing/css';
+import type { ConversationTrecho } from '../../molecules';
 import { ConversationStage, type ConversationStageProps } from './conversation-stage';
 import stageCss from './conversation-stage.css?raw';
+
+const tint = (base: string) => ({ base, lit: base, deep: base });
+const TRECHOS: ConversationTrecho[] = [
+  { count: 11, color: tint('#a9a06a'), label: 'A história' },
+  { count: 5, color: tint('#be4a01'), label: 'Chegada' },
+];
 
 function baseProps(over: Partial<ConversationStageProps> = {}): ConversationStageProps {
   return {
     question: 'O que aconteceu nesta parte da história?',
     recorderState: 'idle',
     progress: { total: 4, answered: new Set([0]), current: 1 },
+    trechos: [{ count: 4, color: tint('#a9a06a'), label: 'A história' }],
     ...over,
   };
 }
@@ -75,69 +83,41 @@ describe('ConversationStage — botão da pergunta pelo estado da fala (ENG-317)
 });
 
 /**
- * Fio de progresso (§8.7): uma conta por pergunta, respondida e atual distintas,
- * jamais um número (§9.2) — é conversa, não formulário.
+ * Barra de progresso por trecho (§8.7, ENG-350): substitui as contas por-pergunta
+ * no rodapé — uma barra segmentada história · cenas · frases, com o marcador na
+ * posição atual e a legenda do trecho, jamais um número (§9.2).
  */
-describe('ConversationStage — fio inteiro, sem janela (ENG-329)', () => {
-  const pearls = (el: HTMLElement) =>
-    el.querySelectorAll('.cds-conversation-stage-progress .cds-pearl');
+describe('ConversationStage — barra de progresso por trecho (ENG-350)', () => {
+  const footer = (el: HTMLElement) => el.querySelector('.cds-conversation-stage-progress')!;
 
-  it('41 perguntas = 41 contas, e CADA avanço move a conta acesa (nada de cursor cravado)', () => {
-    for (const current of [0, 20, 21, 40]) {
-      const { container, unmount } = render(
-        <ConversationStage
-          {...baseProps({ progress: { total: 41, answered: new Set(), current } })}
-        />,
-      );
-      const all = pearls(container);
-      expect(all.length).toBe(41);
-      const heads = container.querySelectorAll(
-        '.cds-conversation-stage-progress .cds-pearl[data-state="head"]',
-      );
-      expect(heads).toHaveLength(1);
-      // a atual é a conta `current` da fileira: avançar 20→21 muda a posição acesa
-      expect([...all].indexOf(heads[0] as HTMLElement)).toBe(current);
-      unmount();
-    }
-  });
-
-  it('um roteiro enorme continua inteiro no fio (denso), com a atual certa', () => {
+  it('rende a barra por trecho no rodapé, com a legenda do trecho atual e sem dígitos', () => {
     const { container } = render(
       <ConversationStage
-        {...baseProps({ progress: { total: 101, answered: new Set(), current: 60 } })}
+        {...baseProps({
+          trechos: TRECHOS,
+          progress: { total: 16, answered: new Set(), current: 3 },
+        })}
       />,
     );
-    const all = pearls(container);
-    expect(all.length).toBe(101);
-    const heads = container.querySelectorAll(
-      '.cds-conversation-stage-progress .cds-pearl[data-state="head"]',
-    );
-    expect([...all].indexOf(heads[0] as HTMLElement)).toBe(60);
+    const rodape = footer(container);
+    expect(rodape.querySelector('.cds-conv-progress')).not.toBeNull();
+    expect(rodape.querySelectorAll('.cds-conv-progress-seg')).toHaveLength(2);
+    expect(rodape.querySelector('.cds-conv-progress-caption')?.textContent).toBe('A história');
+    expect(rodape.textContent ?? '').not.toMatch(/\d/);
+    // nenhuma conta do modelo antigo sobrou
+    expect(rodape.querySelectorAll('.cds-pearl')).toHaveLength(0);
   });
 
-  it('com poucas perguntas o fio mostra todas', () => {
+  it('entrar numa cena troca a legenda — o marcador de transição de trecho', () => {
     const { container } = render(
       <ConversationStage
-        {...baseProps({ progress: { total: 11, answered: new Set(), current: 5 } })}
+        {...baseProps({
+          trechos: TRECHOS,
+          progress: { total: 16, answered: new Set(), current: 13 },
+        })}
       />,
     );
-    expect(pearls(container).length).toBe(11);
-  });
-});
-
-describe('ConversationStage — fio de progresso', () => {
-  it('rende uma conta por pergunta, respondida e atual distintas, sem dígitos', () => {
-    const { container } = render(
-      <ConversationStage
-        {...baseProps({ progress: { total: 4, answered: new Set([0]), current: 1 } })}
-      />,
-    );
-    const thread = container.querySelector('.cds-conversation-stage-progress');
-    expect(thread).not.toBeNull();
-    expect(thread!.querySelectorAll('.cds-pearl')).toHaveLength(4);
-    expect(thread!.querySelectorAll('.cds-pearl[data-state="head"]')).toHaveLength(1);
-    expect(thread!.querySelectorAll('.cds-pearl[data-state="lit"]')).toHaveLength(1);
-    expect(thread!.textContent ?? '').not.toMatch(/\d/);
+    expect(container.querySelector('.cds-conv-progress-caption')?.textContent).toBe('Chegada');
   });
 });
 
@@ -192,36 +172,5 @@ describe('ConversationStage — movimento respeita prefers-reduced-motion (§4.5
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
     const { outside } = splitByGuard(stageCss, guard);
     expect(outside).not.toMatch(/animation|@keyframes/);
-  });
-});
-
-/**
- * O fio conta A CONVERSA PERCORRIDA, não só o que ficou gravado (protótipo:
- * `i < qIndex || answers[i]` acende). A entrevista é só-voz e `answered` hoje só
- * enumera respostas de TEXTO — sem contar as perguntas já passadas, nenhuma conta
- * acendia nunca e o fio virava enfeite.
- */
-describe('ConversationStage — o fio acende o caminho já andado', () => {
-  const lit = (el: HTMLElement) =>
-    el.querySelectorAll('.cds-conversation-stage-progress .cds-pearl[data-state="lit"]').length;
-
-  it('as perguntas já passadas acendem, mesmo sem nenhuma resposta de texto', () => {
-    const { container } = render(
-      <ConversationStage
-        {...baseProps({ progress: { total: 6, answered: new Set(), current: 3 } })}
-      />,
-    );
-
-    expect(lit(container)).toBe(3); // 0,1,2 andadas · 3 é a cabeça · 4,5 por vir
-  });
-
-  it('uma pergunta respondida à frente da atual também acende (voltar não apaga)', () => {
-    const { container } = render(
-      <ConversationStage
-        {...baseProps({ progress: { total: 6, answered: new Set([5]), current: 1 } })}
-      />,
-    );
-
-    expect(lit(container)).toBe(2); // a 0 (andada) + a 5 (respondida)
   });
 });

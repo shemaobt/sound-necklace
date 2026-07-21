@@ -69,6 +69,10 @@ export const scenePalette: readonly PaletteEntry[] = [
   { base: '#A85D3E', lit: '#CE8767', deep: '#7E442C' },
 ];
 
+/** A cor da história inteira (STORY do protótipo): oliva suave, distinta de
+ *  cenas e frases — o trecho "história" na barra de progresso da conversa (§4.2). */
+export const storyColor: PaletteEntry = { base: '#A9A06A', lit: '#CFC894', deep: '#82794C' };
+
 /** 6 tons deliberadamente mais claros — a frase lê como "dentro" da cena (§4.2) */
 export const phrasePalette: readonly PaletteEntry[] = [
   { base: '#D98A54', lit: '#F0B489', deep: '#B06A3A' },

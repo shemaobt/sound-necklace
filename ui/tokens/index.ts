@@ -10,6 +10,7 @@ export {
   motion,
   phrasePalette,
   scenePalette,
+  storyColor,
   typography,
   type IconColorway,
   type PaletteEntry,

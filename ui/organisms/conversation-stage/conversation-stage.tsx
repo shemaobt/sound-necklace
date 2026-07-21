@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { Button, WaveformBar } from '../../atoms';
-import { BeadRow, type BeadCell, QuestionCard } from '../../molecules';
+import { ConversationProgressBar, type ConversationTrecho, QuestionCard } from '../../molecules';
 import { StorytellerGuide } from '../storyteller-guide';
 import './conversation-stage.css';
 
@@ -49,6 +49,8 @@ export interface ConversationStageProps {
   /** Pausa a reprodução da resposta (o clique do "pausar"). */
   onStopPlay?: () => void;
   progress: ConversationProgress;
+  /** os trechos da conversa (história · cenas · frases) para a barra de progresso */
+  trechos: readonly ConversationTrecho[];
   onPrev?: () => void;
   onNext?: () => void;
   /** porta de fala (TTS): o botão "Ouvir a pergunta" só aparece quando fornecida */
@@ -158,8 +160,8 @@ function MicGlyph() {
 /**
  * O palco da conversa do Conversation (redesign §6.6): guia à esquerda, a pergunta
  * grande em Merriweather à direita, a resposta por voz (microfone → forma de onda
- * ao vivo → ouvir/de novo), o canal digitado opcional e um fio de contas de
- * progresso — uma conta por pergunta, sem números (§9.2). Apresentacional: toda
+ * ao vivo → ouvir/de novo) e, no rodapé, a barra de progresso por trecho
+ * (história · cenas · frases, ENG-350), sem números (§9.2). Apresentacional: toda
  * a máquina de estados chega por props e sai por callbacks; o MediaRecorder vive
  * no adapter, ligado pela página.
  */
@@ -177,35 +179,13 @@ export function ConversationStage({
   answerOpening = false,
   onStopPlay,
   progress,
+  trechos,
   onPrev,
   onNext,
   onSpeakQuestion,
   speaking = false,
 }: ConversationStageProps) {
   const { t } = useTranslation();
-  // protótipo thread: respondidas/passadas 15px, a atual 22px com halo (CSS).
-  // O protótipo mostra 11 perguntas; o roteiro real passa de 40 — SEM janela
-  // (ENG-329): a janela cravava o cursor no centro e o fio parecia congelado no
-  // meio da entrevista (padrão idêntico a cada avanço). Todas as perguntas ficam
-  // no fio; roteiros longos encolhem as contas (o §9.2 pede caber sem scroll).
-  const density = progress.total > 52 ? 'dense' : progress.total > 23 ? 'compact' : null;
-  const headSize = density === 'dense' ? 10 : density === 'compact' ? 12 : 22;
-  const beadSize = density === 'dense' ? 4 : density === 'compact' ? 7 : 15;
-  const beads: BeadCell[] = Array.from({ length: progress.total }, (_, i) => {
-    return {
-      key: i,
-      state:
-        i === progress.current
-          ? 'head'
-          : // protótipo: `i < qIndex || answers[i]` — o fio conta o caminho ANDADO,
-            // não só o que ficou gravado. Sem o `i < current` nada acendia: a
-            // entrevista é só-voz e `answered` enumera apenas respostas de texto.
-            i < progress.current || progress.answered.has(i)
-            ? 'lit'
-            : 'unplayed',
-      size: i === progress.current ? headSize : beadSize,
-    } satisfies BeadCell;
-  });
 
   return (
     <div className="cds-conversation-stage">
@@ -333,13 +313,13 @@ export function ConversationStage({
             </Button>
           ) : null}
         </div>
-        <div
-          className="cds-conversation-stage-progress"
-          data-density={density ?? undefined}
-          role="group"
-          aria-label={t('conversationStage.progressAria')}
-        >
-          <BeadRow beads={beads} />
+        <div className="cds-conversation-stage-progress">
+          <ConversationProgressBar
+            trechos={trechos}
+            current={progress.current}
+            total={progress.total}
+            ariaLabel={t('conversationStage.progressAria')}
+          />
         </div>
       </div>
     </div>

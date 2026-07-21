@@ -4,7 +4,8 @@ Path: @/ui/molecules
 
 ### Overview
 
-- The second presentational layer of the Shemá design system (ENG-218): reusable compositions of @/ui/atoms — a bead row over a cord, the pending selection band, the saved scene/phrase chip, the confidence-trio gesture, the scene-kind card, the Conversation question card, the Export document card, the "fio de contas" stepper station, Triage progress dots, the Setup trust chip and the autosave save-chip.
+- The second presentational layer of the Shemá design system (ENG-218): reusable compositions of @/ui/atoms — a bead row over a cord, the pending selection band, the saved scene/phrase chip, the confidence-trio gesture, the scene-kind card, the Conversation question card, the Export document card, the "fio de contas" stepper station, Triage progress dots, the Setup trust chip, the autosave save-chip and the conversation per-trecho progress bar.
+- The second presentational layer of the Shemá design system (ENG-218): reusable compositions of @/ui/atoms — a bead row over a cord, the pending selection band, the saved scene/phrase chip, the confidence-trio gesture, the scene-kind card, the Conversation question card, the Export document card, the "fio de contas" stepper station, Triage progress dots, the Setup trust chip and the conversation per-trecho progress bar.
 - Every molecule stays purely presentational: props in, events out, no domain/contracts/adapters imports. It composes atoms and adds only layout plus the ARIA structure that turns loose atoms into a coherent widget.
 - Visual/interaction source of truth is the Claude Design prototypes and @/docs/PRD-redesign.md (each molecule's doc-comment cites the exact § — e.g. selection band §4.3, confidence trio §4.4/§6.4, stepper §5.1); token values come from @/ui/tokens.
 

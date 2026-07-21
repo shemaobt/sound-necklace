@@ -1,0 +1,75 @@
+/*
+ * Barra de progresso da conversa (design "novos componentes", card "Progresso da
+ * conversa"): barra segmentada por trecho + marcador, sempre sobre o oliva da
+ * conversa (cores fixas para fundo escuro). O deslize do marcador e o fade dos
+ * segmentos só sob prefers-reduced-motion: no-preference (§9.3).
+ */
+.cds-conv-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.cds-conv-progress-bar {
+  position: relative;
+  height: 8px;
+}
+
+.cds-conv-progress-rail {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(246, 245, 235, 0.13);
+}
+
+.cds-conv-progress-seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  opacity: 0.3;
+}
+
+.cds-conv-progress-seg[data-past] {
+  opacity: 0.92;
+}
+
+.cds-conv-progress-tick {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: rgba(246, 245, 235, 0.34);
+}
+
+.cds-conv-progress-marker {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: #f6f5eb;
+}
+
+.cds-conv-progress-caption {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(246, 245, 235, 0.5);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-conv-progress-seg {
+    transition: opacity 0.3s;
+  }
+
+  .cds-conv-progress-marker {
+    transition: left 0.3s;
+  }
+}

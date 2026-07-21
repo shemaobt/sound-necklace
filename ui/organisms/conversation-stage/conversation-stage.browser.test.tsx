@@ -40,6 +40,13 @@ function base(over: Partial<ConversationStageProps> = {}): ConversationStageProp
     question: 'O que aconteceu aqui?',
     recorderState: 'idle',
     progress: { total: 3, answered: new Set(), current: 0 },
+    trechos: [
+      {
+        count: 3,
+        color: { base: '#a9a06a', lit: '#a9a06a', deep: '#a9a06a' },
+        label: 'A história',
+      },
+    ],
     ...over,
   };
 }
