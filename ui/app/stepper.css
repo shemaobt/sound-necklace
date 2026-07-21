@@ -1,6 +1,7 @@
 /*
- * Fio de contas (Protótipo.dc.html, ui.wizardStyle): faixa de 46px, nome da etapa
- * em caixa alta espaçada, bolinhas de 7/11px atravessadas por uma linha de 1.5px.
+ * Fio de contas (novos componentes.html, "Progresso geral · as etapas"): faixa de
+ * 46px, nome da etapa em caixa alta espaçada e a fila de retângulos-telha soltos —
+ * sem linha conectora (a forma da conta vive na molécula StepperStation).
  * Cores via custom properties de chrome (app.css) — a variante escura vem de lá.
  */
 .cds-stepper {
@@ -25,24 +26,10 @@
 }
 
 .cds-stepper-dots {
-  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-/* a linha contínua do fio, atravessando por trás das bolinhas */
-.cds-stepper-dots::before {
-  content: '';
-  position: absolute;
-  left: -11px;
-  right: -11px;
-  top: 50%;
-  height: 1.5px;
-  margin-top: -0.75px;
-  background: var(--cds-chrome-thread);
-  z-index: 0;
 }

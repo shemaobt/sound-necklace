@@ -5,8 +5,9 @@ import type { StepperStationView } from './stepper-model';
 import './stepper.css';
 
 /**
- * O fio de contas (Protótipo.dc.html, ui.wizardStyle): faixa de 46px centrada com
- * o NOME da etapa atual em cima e as seis bolinhas ligadas por uma linha contínua.
+ * O fio de contas (novos componentes.html, "Progresso geral · as etapas"): faixa de
+ * 46px centrada com o NOME da etapa atual em cima e as seis contas-etapa (retângulos
+ * telha) soltas, sem linha conectora.
  * Indicador de progresso, não navegação livre — uma estação só é clicável quando o
  * modo já foi legitimamente alcançado (`reachable`); clicar numa travada não faz
  * nada. O clique é delegado no `<ol>` e mapeado por posição, porque a conta em si
