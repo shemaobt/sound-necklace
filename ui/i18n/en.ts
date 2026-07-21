@@ -193,17 +193,12 @@ export const en: Dict = {
   },
   tutorial: {
     tips: {
-      listen:
-        'Listen to the whole story together, without rushing. The big button plays and pauses; confirm once the story has been heard in full.',
-      cut: 'Mark together where each scene ends and confirm one scene at a time. Tapping a scene that is already finished plays it whole.',
-      triage:
-        'Classify each scene by listening to it again. When no type fits, «none fits» is a finding too.',
-      phrases:
-        'Within each scene, mark the phrases: one tap where it begins, another where it ends. If a phrase runs past the border, the necklace offers paths.',
-      conversation:
-        'Ask the questions aloud and record the answers of the one who tells. You can write later — never for the listener.',
-      export:
-        'The whole story is in the necklace. Save the session to generate the project documents.',
+      listen: 'Listen to the whole story. The big button plays and pauses.',
+      cut: 'Mark where each scene ends, one at a time.',
+      triage: 'Classify each scene. Tap to hear it again.',
+      phrases: 'Within each scene, mark where each phrase begins and ends.',
+      conversation: 'Ask the questions aloud and record the answers.',
+      export: 'Save the session to generate the documents.',
     },
     never: 'Do not show again',
     triggerAria: 'How this step works',
@@ -244,9 +239,8 @@ export const en: Dict = {
     confAlta: 'certain',
     confMedia: 'almost',
     confBaixa: 'in doubt',
-    finding: '⌀ None fits — evidence for naming a native type when the pattern repeats.',
-    lockout:
-      '⚠ No scene fits Ruth. Segmentation and Mapping stay locked — this story yields no Ruth coverage. The marks are kept as evidence of a native type.',
+    finding: '⌀ None fits',
+    lockout: '⚠ No scene fits Ruth. Segmentation and Mapping stay locked.',
   },
   triagePicker: {
     theme: {

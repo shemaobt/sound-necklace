@@ -120,9 +120,7 @@ describe('Triage — classificar cada cena (PRD v2 §8.5)', () => {
     const s = sessionStore.getState().session!;
     expect(s.parts[0]!.tag_state).toBe('none_fit');
     expect(s.parts[0]!.scene_kind).toBeNull();
-    expect(
-      screen.getByText(/evidência para nomear um tipo nativo quando o padrão se repetir/),
-    ).toBeTruthy();
+    expect(screen.getByText('⌀ Nenhum se encaixa')).toBeTruthy();
   });
 });
 
