@@ -15,7 +15,7 @@ import {
 import { Button } from '../../atoms';
 import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
-import { lockedItemAt, playActionOn, sceneColor, sceneLabel } from './cutting';
+import { lockedItemAt, playActionOn, rankLockedScenes, sceneColor, sceneOrdinal } from './cutting';
 import { ScenePhraseChip } from '../../molecules';
 import './cut.css';
 
@@ -49,22 +49,23 @@ export interface CutProps {
 }
 
 export function Cut({ player = null, sound }: CutProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const parts = session?.parts ?? null;
+  // Cenas travadas rankeadas pela posição no colar (bead inicial), não pela ordem
+  // de criação: número, cor e ordem dos chips seguem o que o ouvinte vê da esquerda
+  // para a direita, mesmo num retorno salvo com `parts` fora de ordem (ENG-344).
+  const lockedScenes = useMemo(() => rankLockedScenes(parts ?? []), [parts]);
   const segments = useMemo<NecklaceSegment[]>(
-    () =>
-      (parts ?? []).flatMap((p, i) =>
-        p.locked && p.span ? [{ span: p.span, tint: sceneColor(i) }] : [],
-      ),
-    [parts],
+    () => lockedScenes.map((sc) => ({ span: sc.span, tint: sceneColor(sc.rank) })),
+    [lockedScenes],
   );
   const lockedEndBeads = useMemo<number[]>(
-    () => (parts ?? []).flatMap((p) => (p.locked && p.span ? [p.span.e] : [])),
-    [parts],
+    () => lockedScenes.map((sc) => sc.span.e),
+    [lockedScenes],
   );
 
   useEffect(() => {
@@ -80,8 +81,7 @@ export function Cut({ player = null, sound }: CutProps) {
   if (!session) return null;
 
   const anchor = activeAnchor(session);
-  const lockedIndexes = session.parts.flatMap((p, i) => (p.locked && p.span ? [i] : []));
-  const hasLocked = lockedIndexes.length > 0;
+  const hasLocked = lockedScenes.length > 0;
   // momento de revisão (decisão do dono): a história toda coberta por cenas
   // travadas → nada resta a cortar; a âncora residual do domínio fica oculta
   // (confirmParts a descarta, PRD §8.4) e a tela oferece UMA ação: Continuar.
@@ -95,7 +95,7 @@ export function Cut({ player = null, sound }: CutProps) {
   const tiled =
     hasLocked &&
     tilesWholeStory(
-      lockedIndexes.map((i) => session.parts[i]!.span!),
+      lockedScenes.map((sc) => sc.span),
       session.totalBeads,
     );
 
@@ -234,15 +234,15 @@ export function Cut({ player = null, sound }: CutProps) {
         <>
           <div className="cds-cut-divider" aria-hidden="true" />
           <ul className="cds-cut-chips">
-            {lockedIndexes.map((i) => {
-              const pt = session.parts[i]!;
+            {lockedScenes.map((sc) => {
+              const ordinal = sceneOrdinal(sc.rank, i18n.language);
               return (
-                <li key={pt.part_id}>
+                <li key={sc.part.part_id}>
                   <ScenePhraseChip
-                    label={sceneLabel(i)}
-                    swatch={sceneColor(i)}
+                    label={ordinal ? t('cut.sceneLabel', { ordinal }) : t('cut.sceneLabelBare')}
+                    swatch={sceneColor(sc.rank)}
                     actions={
-                      <Button variant="ghost" size="sm" onClick={() => reopen(i)}>
+                      <Button variant="ghost" size="sm" onClick={() => reopen(sc.arrayIndex)}>
                         {t('cut.reopen')}
                       </Button>
                     }
