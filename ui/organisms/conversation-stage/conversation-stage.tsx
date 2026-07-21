@@ -23,8 +23,6 @@ export const WAVE_BARS = 46;
 export interface ConversationProgress {
   /** total de perguntas do roteiro para esta estrutura */
   total: number;
-  /** índices já respondidos */
-  answered: ReadonlySet<number>;
   /** pergunta em foco */
   current: number;
 }

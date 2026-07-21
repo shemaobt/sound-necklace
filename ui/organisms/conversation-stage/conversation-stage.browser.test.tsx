@@ -39,7 +39,7 @@ function base(over: Partial<ConversationStageProps> = {}): ConversationStageProp
   return {
     question: 'O que aconteceu aqui?',
     recorderState: 'idle',
-    progress: { total: 3, answered: new Set(), current: 0 },
+    progress: { total: 3, current: 0 },
     trechos: [
       {
         count: 3,

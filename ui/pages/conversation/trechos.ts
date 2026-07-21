@@ -4,11 +4,12 @@ import {
   L3_Q,
   lockedParts,
   productiveFrases,
+  type QuestionSlot,
   type SessionState,
 } from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import type { ConversationTrecho } from '../../molecules';
-import { phrasePalette, scenePalette, storyColor } from '../../tokens';
+import { type PaletteEntry, phrasePalette, scenePalette, storyColor } from '../../tokens';
 
 export interface TrechoLabels {
   /** "a história inteira" — o trecho das perguntas de nível 1 */
@@ -52,4 +53,36 @@ export function buildTrechos(
     });
   });
   return out;
+}
+
+/**
+ * O trecho da pergunta ATUAL (cor + rótulo) para o indicador de trecho: a
+ * história (N1), a cena (N2) ou a frase (N3, herdando o tipo da cena-mãe). Usa a
+ * MESMA cor/rótulo que o segmento correspondente da barra (buildTrechos) — o
+ * índice da cena/frase é a posição em lockedParts/productiveFrases.
+ */
+export function currentTrecho(
+  state: SessionState,
+  slot: QuestionSlot,
+  lang: string,
+  labels: TrechoLabels,
+): { color: PaletteEntry; label: string } {
+  const kindLabel = (kind: string | null): string =>
+    kind ? sceneKindLabel(kind, lang) : labels.sceneUntyped;
+
+  if (slot.level === 1) return { color: storyColor, label: labels.story };
+  if (slot.level === 2) {
+    const parts = lockedParts(state);
+    const i = parts.findIndex((p) => p.part_id === slot.partId);
+    return {
+      color: scenePalette[Math.max(0, i) % scenePalette.length]!,
+      label: kindLabel(parts[i]?.scene_kind ?? null),
+    };
+  }
+  const frases = productiveFrases(state);
+  const j = frases.findIndex((f) => f.fr.prop_id === slot.propId);
+  return {
+    color: phrasePalette[Math.max(0, j) % phrasePalette.length]!,
+    label: kindLabel(frases[j]?.scene.scene_kind ?? null),
+  };
 }

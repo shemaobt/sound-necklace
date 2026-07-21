@@ -10,7 +10,7 @@ import {
   type Span,
 } from '../../../domain';
 import { phrasePalette, scenePalette, storyColor } from '../../tokens';
-import { buildTrechos } from './trechos';
+import { buildTrechos, currentTrecho } from './trechos';
 
 const LABELS = { story: 'a história inteira', sceneUntyped: 'uma cena' };
 
@@ -80,5 +80,33 @@ describe('buildTrechos', () => {
     const st = sess();
     const soma = buildTrechos(st, 'pt', LABELS).reduce((n, tr) => n + tr.count, 0);
     expect(soma).toBe(questionSequence(st).length);
+  });
+});
+
+describe('currentTrecho — o trecho da pergunta atual (cor + rótulo do indicador)', () => {
+  const seq = questionSequence(sess());
+  const l1 = seq.find((s) => s.level === 1)!;
+  const l2 = seq.find((s) => s.level === 2 && s.partId === 'PT1')!;
+  const l3 = seq.find((s) => s.level === 3 && s.propId === 'P1')!;
+
+  it('história → a cor e o rótulo da história', () => {
+    expect(currentTrecho(sess(), l1, 'pt', LABELS)).toEqual({
+      color: storyColor,
+      label: 'a história inteira',
+    });
+  });
+
+  it('cena → scenePalette + o tipo da cena', () => {
+    expect(currentTrecho(sess(), l2, 'pt', LABELS)).toEqual({
+      color: scenePalette[0],
+      label: 'Respiga',
+    });
+  });
+
+  it('frase → phrasePalette + o tipo da cena-mãe (Q2), a MESMA cor/rótulo do segmento da barra', () => {
+    expect(currentTrecho(sess(), l3, 'pt', LABELS)).toEqual({
+      color: phrasePalette[0],
+      label: 'Respiga',
+    });
   });
 });

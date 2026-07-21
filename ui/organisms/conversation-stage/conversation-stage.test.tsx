@@ -16,7 +16,7 @@ function baseProps(over: Partial<ConversationStageProps> = {}): ConversationStag
   return {
     question: 'O que aconteceu nesta parte da história?',
     recorderState: 'idle',
-    progress: { total: 4, answered: new Set([0]), current: 1 },
+    progress: { total: 4, current: 1 },
     trechos: [{ count: 4, color: tint('#a9a06a'), label: 'A história' }],
     ...over,
   };
@@ -95,7 +95,7 @@ describe('ConversationStage — barra de progresso por trecho (ENG-350)', () => 
       <ConversationStage
         {...baseProps({
           trechos: TRECHOS,
-          progress: { total: 16, answered: new Set(), current: 3 },
+          progress: { total: 16, current: 3 },
         })}
       />,
     );
@@ -113,7 +113,7 @@ describe('ConversationStage — barra de progresso por trecho (ENG-350)', () => 
       <ConversationStage
         {...baseProps({
           trechos: TRECHOS,
-          progress: { total: 16, answered: new Set(), current: 13 },
+          progress: { total: 16, current: 13 },
         })}
       />,
     );

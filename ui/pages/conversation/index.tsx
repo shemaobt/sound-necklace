@@ -16,14 +16,15 @@ import {
 } from '../../../domain';
 import { questionNoteFor, questionTextFor } from '../../i18n/conversation-questions';
 import { Button } from '../../atoms';
-import type { ConversationTrecho } from '../../molecules';
+import { type ConversationTrecho, TrechoIndicator } from '../../molecules';
 import {
   ConversationStage,
   type ConversationProgress,
   type RecorderState,
   WAVE_BARS,
 } from '../../organisms/conversation-stage/conversation-stage';
-import { buildTrechos } from './trechos';
+import type { PaletteEntry } from '../../tokens';
+import { buildTrechos, currentTrecho } from './trechos';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { sessionStore, useAppStore, useSessionStore } from '../../state';
 import './conversation.css';
@@ -131,6 +132,8 @@ interface QuestionScreenProps {
   slot: QuestionSlot;
   path: string;
   listen: ListenTarget | null;
+  /** o trecho da pergunta atual (cor + nome) para o indicador ao lado do ▶ */
+  trecho: { color: PaletteEntry; label: string };
   progress: ConversationProgress;
   trechos: readonly ConversationTrecho[];
   onPrev: () => void;
@@ -154,6 +157,7 @@ function QuestionScreen({
   slot,
   path,
   listen,
+  trecho,
   progress,
   trechos,
   onPrev,
@@ -314,9 +318,11 @@ function QuestionScreen({
 
       {listen ? (
         <div className="cds-conversation-listen">
-          <Button variant="ghost" size="sm" onClick={playSpan}>
-            {listen.label}
-          </Button>
+          <TrechoIndicator color={trecho.color} label={trecho.label}>
+            <Button variant="ghost" size="sm" onClick={playSpan}>
+              {listen.label}
+            </Button>
+          </TrechoIndicator>
         </div>
       ) : null}
 
@@ -508,22 +514,15 @@ export function Conversation({
       void prepareReview();
     }
   };
-  // Fio de progresso (indicador, não gate): as perguntas com resposta de TEXTO.
-  // O caminho já andado o organismo acende sozinho (`i < current`, protótipo), que
-  // é o que faz o fio significar algo numa entrevista só-voz — este conjunto só
-  // acrescenta as respondidas ADIANTE da atual (quem voltou não apaga o que fez).
-  // ponytail: teto conhecido — uma resposta só-de-voz à frente da atual não acende,
-  // pois `recorder.has()` é assíncrono; enumerar a voz vale um passo síncrono só
-  // quando o progresso virar informação carregada (não é o caso hoje).
-  const answered = new Set(
-    sequence.flatMap((s2, i) => (readAnswer(mapped.mapping, s2).trim() ? [i] : [])),
-  );
-  // Os trechos (história · cenas · frases) para a barra de progresso — a mesma
-  // ordem da sequência, então o marcador (current/total) cai no trecho certo.
-  const trechos = buildTrechos(mapped, i18n.language, {
+  // Os trechos (história · cenas · frases): a barra usa a lista inteira (na ordem
+  // da sequência, então o marcador cai no trecho certo); o indicador ao lado do ▶
+  // usa o trecho da pergunta atual — mesma cor/rótulo do segmento correspondente.
+  const trechoLabels = {
     story: t('conversation.trechoStory'),
     sceneUntyped: t('conversation.trechoScene'),
-  });
+  };
+  const trechos = buildTrechos(mapped, i18n.language, trechoLabels);
+  const trecho = currentTrecho(mapped, slot, i18n.language, trechoLabels);
 
   return (
     <QuestionScreen
@@ -531,7 +530,8 @@ export function Conversation({
       slot={slot}
       path={path}
       listen={listenFor(mapped, slot, t)}
-      progress={{ total, answered, current: idx }}
+      trecho={trecho}
+      progress={{ total, current: idx }}
       trechos={trechos}
       onPrev={goPrev}
       onNext={goNext}
