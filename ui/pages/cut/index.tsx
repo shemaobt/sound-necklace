@@ -113,7 +113,10 @@ export function Cut({ player = null, sound }: CutProps) {
     const s = sessionStore.getState().session;
     const locked = s ? lockedItemAt(s.parts, bead) : null;
     if (!locked?.span) return false;
-    player?.toggle(locked.part_id, locked.span.s, locked.span.e);
+    // Toca da conta TOCADA até o fim da cena, com a chave por conta (ENG-347):
+    // tocar OUTRA conta é chave nova → pula na hora (nada de esperar acabar);
+    // tocar a MESMA é a mesma chave → pausa/retoma no lugar.
+    player?.toggle(`${locked.part_id}:${bead}`, bead, locked.span.e);
     return true;
   };
 
@@ -136,11 +139,17 @@ export function Cut({ player = null, sound }: CutProps) {
    */
   const onHeadTap = (): void => {
     if (!player) return;
-    if (player.state.key === null) {
+    const activeKey = player.state.key;
+    if (activeKey === null) {
       player.stop();
       return;
     }
-    if (head !== null) playLockedSceneAt(head);
+    // A conta acesa pausa/retoma no lugar a cena que já toca (mesma chave → o
+    // adapter suspende/retoma; s/e ignorados). NÃO re-derivamos a chave do
+    // playhead móvel: como agora a chave carrega a conta de partida (ENG-347),
+    // usar `head` viraria uma chave nova e RECOMEÇARIA a cena para quem tocou
+    // querendo parar.
+    player.toggle(activeKey, head ?? 0, head ?? 0);
   };
 
   const onEdgeHover = (edge: number): void => {
