@@ -6,6 +6,10 @@
  */
 export { BeadRow, type BeadCell } from './bead-row/bead-row';
 export { ConfidenceTrio, type ConfidenceChoice } from './confidence-trio/confidence-trio';
+export {
+  ConversationProgressBar,
+  type ConversationTrecho,
+} from './conversation-progress-bar/conversation-progress-bar';
 export { DocumentCard } from './document-card/document-card';
 export { KindCard } from './kind-card/kind-card';
 export { ProgressDots } from './progress-dots/progress-dots';

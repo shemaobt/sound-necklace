@@ -16,12 +16,14 @@ import {
 } from '../../../domain';
 import { questionNoteFor, questionTextFor } from '../../i18n/conversation-questions';
 import { Button } from '../../atoms';
+import type { ConversationTrecho } from '../../molecules';
 import {
   ConversationStage,
   type ConversationProgress,
   type RecorderState,
   WAVE_BARS,
 } from '../../organisms/conversation-stage/conversation-stage';
+import { buildTrechos } from './trechos';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { sessionStore, useAppStore, useSessionStore } from '../../state';
 import './conversation.css';
@@ -130,6 +132,7 @@ interface QuestionScreenProps {
   path: string;
   listen: ListenTarget | null;
   progress: ConversationProgress;
+  trechos: readonly ConversationTrecho[];
   onPrev: () => void;
   onNext: () => void;
   player: Player | null;
@@ -152,6 +155,7 @@ function QuestionScreen({
   path,
   listen,
   progress,
+  trechos,
   onPrev,
   onNext,
   player,
@@ -330,6 +334,7 @@ function QuestionScreen({
         answerOpening={answerOpening}
         onStopPlay={() => recorder?.stopPlayback()}
         progress={progress}
+        trechos={trechos}
         onPrev={onPrev}
         onNext={onNext}
         speaking={speaking}
@@ -353,7 +358,7 @@ export function Conversation({
   onGoToExport,
   voicePaths = () => [],
 }: ConversationProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const muted = useAppStore((s) => s.muted);
   const session = useSessionStore((s) => s.session);
 
@@ -513,6 +518,12 @@ export function Conversation({
   const answered = new Set(
     sequence.flatMap((s2, i) => (readAnswer(mapped.mapping, s2).trim() ? [i] : [])),
   );
+  // Os trechos (história · cenas · frases) para a barra de progresso — a mesma
+  // ordem da sequência, então o marcador (current/total) cai no trecho certo.
+  const trechos = buildTrechos(mapped, i18n.language, {
+    story: t('conversation.trechoStory'),
+    sceneUntyped: t('conversation.trechoScene'),
+  });
 
   return (
     <QuestionScreen
@@ -521,6 +532,7 @@ export function Conversation({
       path={path}
       listen={listenFor(mapped, slot, t)}
       progress={{ total, answered, current: idx }}
+      trechos={trechos}
       onPrev={goPrev}
       onNext={goNext}
       player={player}

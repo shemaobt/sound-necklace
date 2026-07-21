@@ -280,6 +280,8 @@ export const en: Dict = {
     listenStory: '▶ listen to the story',
     listenScene: '▶ listen to the scene',
     listenPhrase: '▶ listen to the phrase',
+    trechoStory: 'the whole story',
+    trechoScene: 'a scene',
     instruction: 'Listen to the stretch and answer calmly, in your own voice.',
     recordError: 'The answer was not saved. Record it again.',
     reportAria: 'report',

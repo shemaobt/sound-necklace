@@ -299,6 +299,8 @@ export const pt = {
     listenStory: '▶ ouvir a história',
     listenScene: '▶ ouvir a cena',
     listenPhrase: '▶ ouvir a frase',
+    trechoStory: 'a história inteira',
+    trechoScene: 'uma cena',
     instruction: 'Ouça o trecho e responda com calma, com a sua voz.',
     recordError: 'A resposta não foi guardada. Grave de novo.',
     reportAria: 'relatório',
