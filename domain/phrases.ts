@@ -194,6 +194,65 @@ export function removeFrase(state: SessionState, i: number): SessionState {
   return addFrase({ ...base, current: { layer: 'frases', index: -1 } });
 }
 
+/**
+ * Arrastar uma borda ('start'/'end') de uma frase travada (ENG-342). Cresce/
+ * encolhe a frase dentro da SUA cena; cobertura esparsa é legal, então em vão a
+ * borda só cresce e a vizinha imediata só encolhe quando de fato se tocam —
+ * Pac-Man, sem ripple. Clampa dentro da cena e mantém ambas com ≥1 conta.
+ * Sem mudança → no-op (identidade). Vizinhas são só frases travadas da MESMA cena.
+ */
+export function dragPhraseBoundary(
+  state: SessionState,
+  fraseIndex: number,
+  edge: 'start' | 'end',
+  toBead: number,
+): SessionState {
+  const f = state.frases[fraseIndex];
+  if (!f || !f.locked || !f.span || f.part_link === null) return state;
+  const scene = state.parts.find((p) => p.part_id === f.part_link);
+  if (!scene || !scene.span) return state;
+  const fSpan = f.span;
+  type Nb = { s: number; e: number; k: number };
+  const sameScene = (fr: Frase, k: number): fr is Frase & { span: Span } =>
+    k !== fraseIndex && fr.locked && fr.span !== null && fr.part_link === f.part_link;
+
+  if (edge === 'end') {
+    // vizinha à direita: a frase travada da cena com o MENOR início depois desta
+    const neighbor = state.frases.reduce<Nb | null>((acc, fr, k) => {
+      if (!sameScene(fr, k) || fr.span.s <= fSpan.s) return acc;
+      return !acc || fr.span.s < acc.s ? { s: fr.span.s, e: fr.span.e, k } : acc;
+    }, null);
+    const hardHi = neighbor ? neighbor.e - 1 : scene.span.e;
+    const newE = Math.max(fSpan.s, Math.min(hardHi, toBead));
+    const touches = neighbor !== null && newE >= neighbor.s;
+    if (newE === fSpan.e && !touches) return state;
+    const frases = state.frases.map((fr, k) => {
+      if (k === fraseIndex) return { ...fr, span: { s: fSpan.s, e: newE } };
+      if (neighbor && touches && k === neighbor.k)
+        return { ...fr, span: { s: newE + 1, e: neighbor.e } };
+      return fr;
+    });
+    return { ...state, frases };
+  }
+
+  // vizinha à esquerda: a frase travada da cena com o MAIOR fim antes desta
+  const neighbor = state.frases.reduce<Nb | null>((acc, fr, k) => {
+    if (!sameScene(fr, k) || fr.span.e >= fSpan.e) return acc;
+    return !acc || fr.span.e > acc.e ? { s: fr.span.s, e: fr.span.e, k } : acc;
+  }, null);
+  const hardLo = neighbor ? neighbor.s + 1 : scene.span.s;
+  const newS = Math.min(fSpan.e, Math.max(hardLo, toBead));
+  const touches = neighbor !== null && newS <= neighbor.e;
+  if (newS === fSpan.s && !touches) return state;
+  const frases = state.frases.map((fr, k) => {
+    if (k === fraseIndex) return { ...fr, span: { s: newS, e: fSpan.e } };
+    if (neighbor && touches && k === neighbor.k)
+      return { ...fr, span: { s: neighbor.s, e: newS - 1 } };
+    return fr;
+  });
+  return { ...state, frases };
+}
+
 /** "⚑ revisar"/"⚑ marcada" (L883): alterna a marca de revisão. */
 export function toggleFlag(state: SessionState, i: number): SessionState {
   return {

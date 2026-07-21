@@ -197,6 +197,31 @@ export function slideSeam(
   return { ...state, parts };
 }
 
+/**
+ * Arrastar a fronteira INTERNA entre `leftPartId` e a vizinha travada seguinte
+ * (ENG-342): a fronteira passa a terminar a cena esquerda em `newEnd`, e a
+ * direita começa em `newEnd+1` — Pac-Man, só a vizinha imediata muda de tamanho.
+ * Clampa em `[left.span.s, right.span.e-1]` (nenhuma das duas fica vazia). É só
+ * um caso dirigido por gesto do `slideSeam` já existente: crescer para a direita
+ * estica a esquerda; para a esquerda, estica a direita. Sem vizinha à frente
+ * (última cena) ou sem mudança → no-op (identidade).
+ */
+export function dragSceneBoundary(
+  state: SessionState,
+  leftPartId: string,
+  newEnd: number,
+): SessionState {
+  const left = state.parts.find((p) => p.part_id === leftPartId);
+  if (!left || !left.locked || !left.span) return state;
+  const right = nextNeighbor(state, left);
+  if (!right) return state;
+  const clamped = Math.max(left.span.s, Math.min(right.span.e - 1, newEnd));
+  if (clamped === left.span.e) return state;
+  return clamped > left.span.e
+    ? slideSeam(state, leftPartId, null, clamped)
+    : slideSeam(state, right.part_id, clamped + 1, null);
+}
+
 /** Margem da janela da segmentação: max(3, round(2/beadSec)) (L509). */
 export function windowMargin(beadSec: number): number {
   return Math.max(3, Math.round(2 / beadSec));
