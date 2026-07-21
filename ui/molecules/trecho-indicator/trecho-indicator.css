@@ -1,0 +1,26 @@
+/*
+ * Indicador + reprodutor do trecho (design "novos componentes"): ponto de cor +
+ * nome do trecho (na cor viva, versalete) ao lado do ▶. Cores por prop; nada
+ * hardcoded. Sem movimento próprio.
+ */
+.cds-trecho-indicator {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cds-trecho-indicator-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cds-trecho-indicator-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}

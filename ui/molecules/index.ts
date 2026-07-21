@@ -18,4 +18,5 @@ export { SaveChip, type SaveStatus } from './save-chip/save-chip';
 export { ScenePhraseChip } from './scene-phrase-chip/scene-phrase-chip';
 export { SelectionBand, type SelectionBandRow } from './selection-band/selection-band';
 export { StepperStation, type StationState } from './stepper-station/stepper-station';
+export { TrechoIndicator } from './trecho-indicator/trecho-indicator';
 export { TrustChip } from './trust-chip/trust-chip';
