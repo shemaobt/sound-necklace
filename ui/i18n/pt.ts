@@ -190,6 +190,8 @@ export const pt = {
     instructionEmph: 'esta cena termina',
     instructionPost: '. O começo já está costurado.',
     instructionReplay: '. Toque numa cena pronta para reouvir.',
+    sceneLabel: 'Cena {{ordinal}}',
+    sceneLabelBare: 'Cena',
     reopen: 'Reabrir',
     back: '← Voltar',
     confirmScene: '✓ Confirmar esta cena',

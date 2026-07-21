@@ -2,13 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { PlayAction, ScenePart } from '../../../domain';
 import { scenePalette } from '../../tokens';
-import { lockedItemAt, playActionOn, sceneColor, sceneLabel } from './cutting';
+import { lockedItemAt, playActionOn, rankLockedScenes, sceneColor, sceneOrdinal } from './cutting';
 
 /**
  * Helpers puros da estação de corte (Escuta 2): o intérprete efeito→player que
  * traduz a `PlayAction` do redutor de seleção em chamadas do `Player` (áudio
- * instantâneo por clique, §8.2), o rótulo de cena SEM dígitos (§9.2) e a cor de
- * cena por índice (paleta terrosa §4.2). Blackbox: entradas → chamadas/valores.
+ * instantâneo por clique, §8.2), o número de cena por extenso e por idioma SEM
+ * dígitos (§9.2), o ranqueamento das cenas travadas por posição no colar e a cor
+ * de cena por índice (paleta terrosa §4.2). Blackbox: entradas → chamadas/valores.
  */
 
 function spyPlayer() {
@@ -51,23 +52,70 @@ describe('playActionOn — efeito-como-valor → player (PRD v2 §8.2)', () => {
   });
 });
 
-describe('sceneLabel — rótulo de cena sem dígitos (PRD v2 §9.2)', () => {
-  it('numera por extenso a partir do índice 0-based', () => {
-    expect(sceneLabel(0)).toBe('Cena um');
-    expect(sceneLabel(1)).toBe('Cena dois');
-    expect(sceneLabel(9)).toBe('Cena dez');
-    expect(sceneLabel(19)).toBe('Cena vinte');
-    expect(sceneLabel(20)).toBe('Cena vinte e um');
+describe('sceneOrdinal — número de cena por extenso, por idioma, sem dígitos (PRD v2 §9.2)', () => {
+  it('numera por extenso em PT a partir do índice 0-based', () => {
+    expect(sceneOrdinal(0, 'pt')).toBe('um');
+    expect(sceneOrdinal(1, 'pt')).toBe('dois');
+    expect(sceneOrdinal(9, 'pt')).toBe('dez');
+    expect(sceneOrdinal(19, 'pt')).toBe('vinte');
+    expect(sceneOrdinal(20, 'pt')).toBe('vinte e um');
   });
 
-  it('nunca contém um dígito', () => {
+  it('numera por extenso em EN (respeita o toggle de idioma)', () => {
+    expect(sceneOrdinal(0, 'en')).toBe('one');
+    expect(sceneOrdinal(1, 'en')).toBe('two');
+    expect(sceneOrdinal(9, 'en')).toBe('ten');
+    expect(sceneOrdinal(19, 'en')).toBe('twenty');
+    expect(sceneOrdinal(20, 'en')).toBe('twenty-one');
+  });
+
+  it('nunca contém um dígito em nenhum idioma', () => {
     for (let i = 0; i < 120; i++) {
-      expect(sceneLabel(i)).not.toMatch(/\d/);
+      expect(sceneOrdinal(i, 'pt')).not.toMatch(/\d/);
+      expect(sceneOrdinal(i, 'en')).not.toMatch(/\d/);
     }
   });
 
-  it('além do intervalo nomeável cai em "Cena" sem número', () => {
-    expect(sceneLabel(999)).toBe('Cena');
+  it('além do intervalo nomeável devolve vazio (o chamador omite o número)', () => {
+    expect(sceneOrdinal(999, 'pt')).toBe('');
+    expect(sceneOrdinal(999, 'en')).toBe('');
+  });
+});
+
+describe('rankLockedScenes — numera pela posição no colar, não pela ordem do array', () => {
+  const cena = (part_id: string, span: ScenePart['span'], locked = true): ScenePart => ({
+    part_id,
+    span,
+    locked,
+    scene_kind: null,
+    scene_kind_confidence: null,
+    tag_state: 'pending',
+  });
+
+  it('ordena as cenas travadas por bead inicial e atribui rank 0..N-1', () => {
+    // retorno salvo: parts em ordem de CRIAÇÃO ≠ ordem de bead (contracts/imports.ts)
+    const parts = [cena('PT3', { s: 5, e: 9 }), cena('PT1', { s: 0, e: 4 })];
+    const ranked = rankLockedScenes(parts);
+
+    expect(ranked.map((r) => r.rank)).toEqual([0, 1]);
+    // a cena que começa na conta 0 é a primeira do colar (rank 0), mesmo estando em parts[1]
+    expect(ranked[0]!.span.s).toBe(0);
+    expect(ranked[0]!.rank).toBe(0);
+    expect(ranked[0]!.arrayIndex).toBe(1);
+    // e a que começa na conta 5 é a segunda (rank 1), embora seja parts[0]
+    expect(ranked[1]!.span.s).toBe(5);
+    expect(ranked[1]!.arrayIndex).toBe(0);
+  });
+
+  it('ignora cenas destravadas ou sem span (só as travadas contam)', () => {
+    const parts = [
+      cena('PT1', { s: 0, e: 4 }),
+      cena('PT2', null),
+      cena('PT3', { s: 5, e: 9 }, false),
+    ];
+    const ranked = rankLockedScenes(parts);
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0]!.part.part_id).toBe('PT1');
   });
 });
 

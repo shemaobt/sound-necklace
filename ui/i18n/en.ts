@@ -172,6 +172,8 @@ export const en: Dict = {
     instructionEmph: 'this scene ends',
     instructionPost: '. The beginning is already stitched.',
     instructionReplay: '. Tap a finished scene to hear it again.',
+    sceneLabel: 'Scene {{ordinal}}',
+    sceneLabelBare: 'Scene',
     reopen: 'Reopen',
     back: '← Back',
     confirmScene: '✓ Confirm this scene',

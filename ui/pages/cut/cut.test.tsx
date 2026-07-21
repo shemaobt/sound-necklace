@@ -176,6 +176,31 @@ describe('Escuta 2 — chips das cenas confirmadas (redesign §6.3)', () => {
     expect(chips[0]!.getAttribute('aria-label')).toBe('Cena um');
     expect(sessionStore.getState().session!.current.index).toBe(1);
   });
+
+  it('num retorno salvo com parts fora de ordem, numera e reabre pela posição no colar (ENG-344)', async () => {
+    // PT3 criada por último ocupa parts[0]; PT1 (a primeira do colar) fica em parts[1].
+    load(
+      cutting({
+        parts: [lockedPart('PT3', { s: 5, e: 9 }), lockedPart('PT1', { s: 0, e: 4 })],
+        current: { layer: 'parts', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Cut />);
+
+    // os chips seguem o colar (bead-first primeiro), não a ordem do array
+    const chips = screen.getAllByRole('group');
+    expect(chips.map((c) => c.getAttribute('aria-label'))).toEqual(['Cena um', 'Cena dois']);
+
+    // reabrir a PRIMEIRA cena do colar (bead 0-4 = PT1, em parts[1]) destrava só ela.
+    // Se número/ordem seguissem o array, o 1º chip seria PT3 (parts[0]) e reabrir
+    // cascatearia as duas (reopenPart destrava i e tudo depois) → 0 chips restariam.
+    await userEvent.click(within(chips[0]!).getByRole('button', { name: 'Reabrir' }));
+    const restantes = screen.getAllByRole('group');
+    expect(restantes).toHaveLength(1);
+    expect(restantes[0]!.getAttribute('aria-label')).toBe('Cena um');
+  });
 });
 
 describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {

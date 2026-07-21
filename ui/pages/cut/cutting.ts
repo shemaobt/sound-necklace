@@ -41,7 +41,7 @@ export function playActionOn(player: Player, action: PlayAction): void {
   }
 }
 
-const UNIDADES = [
+const UNIDADES_PT = [
   '',
   'um',
   'dois',
@@ -63,7 +63,7 @@ const UNIDADES = [
   'dezoito',
   'dezenove',
 ];
-const DEZENAS = [
+const DEZENAS_PT = [
   '',
   '',
   'vinte',
@@ -75,24 +75,104 @@ const DEZENAS = [
   'oitenta',
   'noventa',
 ];
+const UNIDADES_EN = [
+  '',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
+  'thirteen',
+  'fourteen',
+  'fifteen',
+  'sixteen',
+  'seventeen',
+  'eighteen',
+  'nineteen',
+];
+const DEZENAS_EN = [
+  '',
+  '',
+  'twenty',
+  'thirty',
+  'forty',
+  'fifty',
+  'sixty',
+  'seventy',
+  'eighty',
+  'ninety',
+];
 
-/** Cardinal PT-BR de 1..99; fora do intervalo → '' (o chamador omite o número). */
-function cardinal(n: number): string {
+/**
+ * Cardinal por extenso de 1..99 no idioma da UI; fora do intervalo → '' (o
+ * chamador omite o número). EN une dezena+unidade com hífen ("twenty-one"),
+ * PT-BR com " e " ("vinte e um").
+ */
+function cardinal(n: number, lang: string): string {
   if (n < 1 || n > 99) return '';
-  if (n < 20) return UNIDADES[n]!;
-  const dez = DEZENAS[Math.floor(n / 10)]!;
+  const en = lang.startsWith('en');
+  const unidades = en ? UNIDADES_EN : UNIDADES_PT;
+  const dezenas = en ? DEZENAS_EN : DEZENAS_PT;
+  if (n < 20) return unidades[n]!;
+  const dez = dezenas[Math.floor(n / 10)]!;
   const uni = n % 10;
-  return uni === 0 ? dez : `${dez} e ${UNIDADES[uni]!}`;
+  if (uni === 0) return dez;
+  return en ? `${dez}-${unidades[uni]!}` : `${dez} e ${unidades[uni]!}`;
 }
 
 /**
- * Rótulo de uma cena travada a partir do índice 0-based (redesign §6.3 "Cena N"),
- * mas por extenso: a tela do ouvinte não mostra dígitos (§9.2). Além de 99 cenas
- * — nunca real — cai em "Cena" (a cor do swatch ainda distingue).
+ * Número de uma cena travada por extenso (redesign §6.3 "Cena N"), a partir do
+ * índice 0-based e no idioma da UI: a tela do ouvinte não mostra dígitos (§9.2).
+ * Além de 99 cenas — nunca real — devolve '' e o chamador omite o número (a cor
+ * do swatch ainda distingue). O prefixo "Cena"/"Scene" vem do i18n, não daqui.
+ */
+export function sceneOrdinal(index: number, lang: string): string {
+  return cardinal(index + 1, lang);
+}
+
+/**
+ * Rótulo PT-BR "Cena N" por extenso — reusado só pela estação de frases
+ * (`phraseLabel` e o cabeçalho da cena-pai). A Escuta 2 monta o rótulo pelo
+ * i18n (`sceneOrdinal` + chave `cut.sceneLabel`); migrar as frases para o mesmo
+ * caminho (i18n + rank por bead) fica para ENG-343, que refaz aquela estação.
  */
 export function sceneLabel(index: number): string {
-  const palavra = cardinal(index + 1);
+  const palavra = cardinal(index + 1, 'pt');
   return palavra ? `Cena ${palavra}` : 'Cena';
+}
+
+export interface RankedScene<T> {
+  part: T;
+  /** índice na array `parts` original — o domínio reabre a cena por este índice. */
+  arrayIndex: number;
+  span: Span;
+  /** posição no colar, 0-based (ordenada por bead inicial): a base do número e da cor. */
+  rank: number;
+}
+
+/**
+ * As cenas travadas ordenadas pela posição no colar (bead inicial), não pela
+ * ordem de criação da array. Um retorno salvo traz `parts` com spans quaisquer
+ * do JSON (contracts/imports.ts); numerar/colorir pela ordem da array faria a
+ * primeira cena do colar exibir o número (e a cor) de outra. `arrayIndex`
+ * preserva o índice que o domínio usa para reabrir.
+ */
+export function rankLockedScenes<T extends { locked: boolean; span: Span | null }>(
+  parts: readonly T[],
+): RankedScene<T>[] {
+  return parts
+    .flatMap((part, arrayIndex) =>
+      part.locked && part.span ? [{ part, arrayIndex, span: part.span }] : [],
+    )
+    .sort((a, b) => a.span.s - b.span.s)
+    .map((e, rank) => ({ ...e, rank }));
 }
 
 /** Cor da cena por índice, cíclica na paleta de cenas (§4.2). */
