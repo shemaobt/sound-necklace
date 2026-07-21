@@ -1,8 +1,11 @@
 /*
- * Estação do fio de contas (Protótipo.dc.html, steps): a bolinha É a estação —
- * feitas/atual em pérola telha (PAL[0]), futuras ocas; a atual ganha o halo
- * --cds-chrome-halo. O rótulo fica no DOM só para leitores de tela e para os
- * seletores de teste; o nome visível da etapa atual vive no organismo.
+ * Estação do fio de contas (design "novos componentes", card "Progresso geral ·
+ * as etapas"): um retângulo arredondado de 7px — feitas/atual em telha accent
+ * (#E8813E), futuras ocas; a atual é mais larga (30 vs 18) e ganha o halo
+ * --cds-chrome-halo. As cores vêm das variáveis de chrome (claro/escuro) do
+ * app.css, não das cores fixas do mockup (desenhado só sobre fundo escuro). O
+ * rótulo fica no DOM só para leitores de tela e para os seletores de teste; o
+ * nome visível da etapa atual vive no organismo.
  */
 .cds-stepper-station {
   display: inline-flex;
@@ -12,20 +15,38 @@
   z-index: 1;
 }
 
-/* pérola telha do protótipo (scenePalette[0]): lit #E8813E sobre base telha */
-.cds-stepper-station:not([data-state='future']) .cds-pearl {
-  --cds-pearl-lit: #e8813e;
-  --cds-pearl-base: var(--cds-telha);
+.cds-stepper-station-bar {
+  height: 7px;
+  width: 18px;
+  border-radius: 4px;
+  flex: none;
 }
 
-.cds-stepper-station[data-state='current'] .cds-pearl {
+/* feita e atual: retângulo telha cheio (accent #E8813E do design) */
+.cds-stepper-station:not([data-state='future']) .cds-stepper-station-bar {
+  background: #e8813e;
+}
+
+/* atual: mais larga + halo */
+.cds-stepper-station[data-state='current'] .cds-stepper-station-bar {
+  width: 30px;
   box-shadow: 0 0 0 3px var(--cds-chrome-halo);
 }
 
-/* futura: bolinha oca chapada, sem gradiente de pérola */
-.cds-stepper-station[data-state='future'] .cds-pearl {
+/* futura: retângulo oco. A borda (que o mockup escuro dispensa) mantém a barra
+   visível também no chrome CLARO, onde o fundo --cds-frame é quase creme. */
+.cds-stepper-station[data-state='future'] .cds-stepper-station-bar {
   background: var(--cds-chrome-dot-future-bg);
-  border: 1.5px solid var(--cds-chrome-dot-future-border);
+  border: 1px solid var(--cds-chrome-dot-future-border);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-stepper-station-bar {
+    transition:
+      width 0.22s,
+      box-shadow 0.22s,
+      background 0.22s;
+  }
 }
 
 /* rótulo e estado: escondidos do olho, lidos por leitores de tela */
