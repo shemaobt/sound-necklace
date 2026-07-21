@@ -1,7 +1,9 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { splitByGuard } from '../../atoms/testing/css';
 import { StepperStation } from './stepper-station';
+import stepperCss from './stepper-station.css?raw';
 
 function station(props: Parameters<typeof StepperStation>[0]) {
   // uma estação é um <li>; envolve num <ol> para HTML válido
@@ -42,5 +44,16 @@ describe('StepperStation — conta-etapa do fio de contas (redesign §5.1)', () 
     const station_ = container.querySelector('.cds-stepper-station');
     expect(station_?.textContent).toContain('Conversa');
     expect(station_?.textContent ?? '').not.toMatch(/\d/);
+  });
+
+  it('o retângulo é a marca visível de cada etapa', () => {
+    const { container } = station({ label: 'Ouvir', state: 'current' });
+    expect(container.querySelector('.cds-stepper-station-bar')).not.toBeNull();
+  });
+
+  it('a transição de largura/halo só existe sob prefers-reduced-motion (§9.3)', () => {
+    const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
+    const { outside } = splitByGuard(stepperCss, guard);
+    expect(outside).not.toMatch(/transition|animation|@keyframes/);
   });
 });
