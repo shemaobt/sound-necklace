@@ -62,6 +62,7 @@ export {
 export {
   BORDER_COPY,
   classifyBorderMove,
+  dragSceneBoundary,
   nextNeighbor,
   prevNeighbor,
   sceneHasFrases,
@@ -77,6 +78,7 @@ export {
   addFrase,
   confirmFrase,
   confirmFrasesDone,
+  dragPhraseBoundary,
   enterFrasesLayer,
   enterScene,
   enterSegmentacao,

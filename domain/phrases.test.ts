@@ -7,6 +7,7 @@ import {
   addFrase,
   confirmFrase,
   confirmFrasesDone,
+  dragPhraseBoundary,
   enterFrasesLayer,
   enterScene,
   enterSegmentacao,
@@ -397,6 +398,58 @@ describe('toggleFlag — marca/desmarca para revisão', () => {
     expect(marcada.frases[0]!.flagged).toBe(true);
     expect(marcada.frases[1]!.flagged).toBe(false);
     expect(toggleFlag(marcada, 0).frases[0]!.flagged).toBe(false);
+  });
+});
+
+describe('dragPhraseBoundary — arrastar a borda de uma frase (ENG-342)', () => {
+  // PT2 = {10,29}; F1 e F2 travadas nela, com um vão entre elas (16–19, 26–29)
+  const F1 = mkFrase('P1', { span: { s: 12, e: 15 }, part_link: 'PT2', locked: true });
+  const F2 = mkFrase('P2', { span: { s: 20, e: 25 }, part_link: 'PT2', locked: true });
+  const base = () => sess({ parts: [PT1, PT2, PT3], frases: [F1, F2] });
+
+  it('crescer o fim para dentro do vão: cresce sozinha, a vizinha fica intacta', () => {
+    const next = dragPhraseBoundary(base(), 0, 'end', 18);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 18 });
+    expect(next.frases[1]!.span).toEqual({ s: 20, e: 25 });
+  });
+
+  it('crescer o fim até tocar a vizinha: empurra o início dela (encolhe)', () => {
+    const next = dragPhraseBoundary(base(), 0, 'end', 22);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 22 });
+    expect(next.frases[1]!.span).toEqual({ s: 23, e: 25 });
+  });
+
+  it('clampa: a vizinha nunca fica vazia', () => {
+    const next = dragPhraseBoundary(base(), 0, 'end', 40);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 24 });
+    expect(next.frases[1]!.span).toEqual({ s: 25, e: 25 });
+  });
+
+  it('crescer o começo para dentro do vão: só cresce', () => {
+    const next = dragPhraseBoundary(base(), 1, 'start', 17);
+    expect(next.frases[1]!.span).toEqual({ s: 17, e: 25 });
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 15 });
+  });
+
+  it('crescer o começo até tocar a vizinha anterior: encolhe o fim dela', () => {
+    const next = dragPhraseBoundary(base(), 1, 'start', 14);
+    expect(next.frases[1]!.span).toEqual({ s: 14, e: 25 });
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 13 });
+  });
+
+  it('sem vizinha à frente: cresce livre até o fim da cena, clampado nele', () => {
+    const next = dragPhraseBoundary(base(), 1, 'end', 40);
+    expect(next.frases[1]!.span).toEqual({ s: 20, e: 29 });
+  });
+
+  it('arrastar para a posição atual não muda nada', () => {
+    const s = base();
+    expect(dragPhraseBoundary(s, 0, 'end', 15)).toBe(s);
+  });
+
+  it('frase destravada ou sem span: no-op', () => {
+    const s = sess({ parts: [PT1, PT2, PT3], frases: [mkFrase('P1', { part_link: 'PT2' })] });
+    expect(dragPhraseBoundary(s, 0, 'end', 20)).toBe(s);
   });
 });
 
