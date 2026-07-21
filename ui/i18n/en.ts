@@ -16,6 +16,10 @@ export const en: Dict = {
     unmute: 'Turn interface sound on',
     switchLanguage: 'Switch to Portuguese',
   },
+  autosave: {
+    saving: 'Saving…',
+    saved: 'All saved — you can leave and come back',
+  },
   login: {
     verse: 'On earth as it is in heaven.',
     tagline:

@@ -23,6 +23,13 @@ import type {
 
 export type Unsubscribe = () => void;
 
+/**
+ * Estado do autosave para o selo de "salvar e continuar depois" (§7.3): `saving`
+ * enquanto há algo pendente ou em voo (inclui offline e retry — nunca minta
+ * "salvo" com escrita em aberto), `saved` quando tudo aterrissou.
+ */
+export type AutosaveStatus = 'saving' | 'saved';
+
 /** Erro tipado — `load`/`get` de uma sessão inexistente (a UI mostra a cópia). */
 export class SessionNotFoundError extends Error {
   override readonly name = 'SessionNotFoundError';
@@ -89,6 +96,12 @@ export interface SessionStore {
   autosave(id: string, state: SessionStateDto): void;
   /** Força o autosave pendente agora (navegação/testes). No-op se offline. */
   flush(id: string): Promise<void>;
+  /**
+   * Observa o estado do autosave (saving/saved) para o selo do chrome. Chama o
+   * callback já com o estado corrente ao assinar. Global à store — reflete
+   * qualquer pendência, não uma sessão só (a UI edita uma por vez).
+   */
+  onAutosaveStatus(cb: (status: AutosaveStatus) => void): Unsubscribe;
 
   /** Conclui (§8.8): status concluída + guarda o trio de artefatos opaco. */
   complete(id: string, state: SessionStateDto, artifacts: ArtifactTriple): Promise<void>;

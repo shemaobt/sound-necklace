@@ -19,6 +19,10 @@ export const pt = {
     unmute: 'Ligar o som da interface',
     switchLanguage: 'Mudar para inglês',
   },
+  autosave: {
+    saving: 'Salvando…',
+    saved: 'Tudo salvo — pode sair e voltar',
+  },
   /** Abertura em dois painéis do protótipo Shemá v2 (ENG-278): herói cerimonial + formulário. */
   login: {
     verse: 'Assim na terra como no céu.',

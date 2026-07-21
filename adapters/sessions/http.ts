@@ -26,9 +26,11 @@ import type { ConnectivityMonitor } from '../connectivity/types';
 import { createAutosaver, type Autosaver } from './autosave';
 import {
   LockLostError,
+  type AutosaveStatus,
   type CreateSessionInput,
   type LockHolder,
   type SessionStore,
+  type Unsubscribe,
 } from './types';
 
 /**
@@ -141,6 +143,10 @@ export class HttpSessionStore implements SessionStore {
   async load(id: string): Promise<SessionStateDto> {
     // payload opaco (§10.5): validado a fundo pela camada de estado, não aqui
     return (await this.#req('GET', `/sessions/${id}/state`)) as SessionStateDto;
+  }
+
+  onAutosaveStatus(cb: (status: AutosaveStatus) => void): Unsubscribe {
+    return this.#autosaver.onStatus(cb);
   }
 
   autosave(id: string, state: SessionStateDto): void {

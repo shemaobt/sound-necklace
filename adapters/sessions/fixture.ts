@@ -19,7 +19,13 @@ import type {
 import { FixtureConnectivityMonitor } from '../connectivity/fixture';
 import type { ConnectivityMonitor } from '../connectivity/types';
 import { createAutosaver, type Autosaver } from './autosave';
-import type { CreateSessionInput, LockHolder, SessionStore } from './types';
+import type {
+  AutosaveStatus,
+  CreateSessionInput,
+  LockHolder,
+  SessionStore,
+  Unsubscribe,
+} from './types';
 import { SessionNotFoundError } from './types';
 
 /** Subconjunto da Web Storage API usado para persistir entre reloads. */
@@ -161,6 +167,10 @@ export class FixtureSessionStore implements SessionStore {
 
   autosave(id: string, state: SessionStateDto): void {
     this.#autosaver.schedule(id, clone(state));
+  }
+
+  onAutosaveStatus(cb: (status: AutosaveStatus) => void): Unsubscribe {
+    return this.#autosaver.onStatus(cb);
   }
 
   async flush(id: string): Promise<void> {
