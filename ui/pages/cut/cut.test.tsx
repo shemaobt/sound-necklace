@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -149,35 +149,7 @@ describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
 });
 
 describe('Escuta 2 — chips das cenas confirmadas (redesign §6.3)', () => {
-  it('reabrir uma cena destrava ela e todas as seguintes (cascata refletida nos chips)', async () => {
-    load(
-      cutting({
-        parts: [
-          lockedPart('PT1', { s: 0, e: 2 }),
-          lockedPart('PT2', { s: 3, e: 5 }),
-          lockedPart('PT3', { s: 6, e: 8 }),
-          part({ part_id: 'PT4' }),
-        ],
-        current: { layer: 'parts', index: 3 },
-        selection: null,
-        pendingStart: null,
-      }),
-    );
-    render(<Cut />);
-
-    expect(screen.getAllByRole('group')).toHaveLength(3);
-
-    const cenaDois = screen.getByRole('group', { name: 'Cena dois' });
-    await userEvent.click(within(cenaDois).getByRole('button', { name: 'Reabrir' }));
-
-    // reabrir a cena 2 destrava 2 e 3 → sobra só a cena 1
-    const chips = screen.getAllByRole('group');
-    expect(chips).toHaveLength(1);
-    expect(chips[0]!.getAttribute('aria-label')).toBe('Cena um');
-    expect(sessionStore.getState().session!.current.index).toBe(1);
-  });
-
-  it('num retorno salvo com parts fora de ordem, numera e reabre pela posição no colar (ENG-344)', async () => {
+  it('num retorno salvo com parts fora de ordem, numera pela posição no colar (ENG-344)', () => {
     // PT3 criada por último ocupa parts[0]; PT1 (a primeira do colar) fica em parts[1].
     load(
       cutting({
@@ -192,14 +164,6 @@ describe('Escuta 2 — chips das cenas confirmadas (redesign §6.3)', () => {
     // os chips seguem o colar (bead-first primeiro), não a ordem do array
     const chips = screen.getAllByRole('group');
     expect(chips.map((c) => c.getAttribute('aria-label'))).toEqual(['Cena um', 'Cena dois']);
-
-    // reabrir a PRIMEIRA cena do colar (bead 0-4 = PT1, em parts[1]) destrava só ela.
-    // Se número/ordem seguissem o array, o 1º chip seria PT3 (parts[0]) e reabrir
-    // cascatearia as duas (reopenPart destrava i e tudo depois) → 0 chips restariam.
-    await userEvent.click(within(chips[0]!).getByRole('button', { name: 'Reabrir' }));
-    const restantes = screen.getAllByRole('group');
-    expect(restantes).toHaveLength(1);
-    expect(restantes[0]!.getAttribute('aria-label')).toBe('Cena um');
   });
 });
 

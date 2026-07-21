@@ -271,3 +271,60 @@ describe('Necklace — desempenho e delegação', () => {
     root.unmount();
   });
 });
+
+describe('Necklace — arrastar fronteira (ENG-342)', () => {
+  it('arrastar um punho reporta (id, conta-alvo) e não dispara o toque', () => {
+    const onDragBoundary = vi.fn();
+    const onBeadPointerDown = vi.fn();
+    const { root, el } = mount({
+      totalBeads: 60,
+      beadSec: 0.25,
+      dragHandles: [{ at: 10, id: 'PT1' }],
+      onDragBoundary,
+      onBeadPointerDown,
+    });
+    const down = beadClient(el, 10, 0);
+    const to = beadClient(el, 14, 0);
+    firePointer(el, 'pointerdown', down.x, down.y);
+    firePointer(el, 'pointermove', to.x, to.y);
+    firePointer(el, 'pointerup', to.x, to.y);
+    expect(onDragBoundary).toHaveBeenCalledWith('PT1', 14);
+    expect(onBeadPointerDown).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  it('tocar um punho sem arrastar preserva o toque da conta (ENG-347)', () => {
+    const onDragBoundary = vi.fn();
+    const onBeadPointerDown = vi.fn();
+    const { root, el } = mount({
+      totalBeads: 60,
+      beadSec: 0.25,
+      dragHandles: [{ at: 10, id: 'PT1' }],
+      onDragBoundary,
+      onBeadPointerDown,
+    });
+    const at = beadClient(el, 10, 0);
+    firePointer(el, 'pointerdown', at.x, at.y);
+    firePointer(el, 'pointerup', at.x, at.y);
+    expect(onDragBoundary).not.toHaveBeenCalled();
+    expect(onBeadPointerDown).toHaveBeenCalledWith(10);
+    root.unmount();
+  });
+
+  it('sem punho por perto, a conta se comporta como toque normal', () => {
+    const onDragBoundary = vi.fn();
+    const onBeadPointerDown = vi.fn();
+    const { root, el } = mount({
+      totalBeads: 60,
+      beadSec: 0.25,
+      dragHandles: [{ at: 10, id: 'PT1' }],
+      onDragBoundary,
+      onBeadPointerDown,
+    });
+    const far = beadClient(el, 3, 0);
+    firePointer(el, 'pointerdown', far.x, far.y);
+    expect(onBeadPointerDown).toHaveBeenCalledWith(3);
+    expect(onDragBoundary).not.toHaveBeenCalled();
+    root.unmount();
+  });
+});

@@ -25,6 +25,12 @@
   pointer-events: none;
 }
 
+/* punho de arrasto de fronteira (ENG-342): a conta convida a arrastar */
+.cds-necklace-bead[data-drag-handle] {
+  cursor: ew-resize;
+  z-index: 2;
+}
+
 /* contas de borda da seleção: anel telha (§9.3 — "toque aqui para ouvir a costura") */
 .cds-necklace-bead[data-sel-edge='true'] {
   z-index: 2;
