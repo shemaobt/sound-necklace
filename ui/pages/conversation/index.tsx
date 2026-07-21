@@ -514,16 +514,6 @@ export function Conversation({
       void prepareReview();
     }
   };
-  // Fio de progresso (indicador, não gate): as perguntas com resposta de TEXTO.
-  // O caminho já andado o organismo acende sozinho (`i < current`, protótipo), que
-  // é o que faz o fio significar algo numa entrevista só-voz — este conjunto só
-  // acrescenta as respondidas ADIANTE da atual (quem voltou não apaga o que fez).
-  // ponytail: teto conhecido — uma resposta só-de-voz à frente da atual não acende,
-  // pois `recorder.has()` é assíncrono; enumerar a voz vale um passo síncrono só
-  // quando o progresso virar informação carregada (não é o caso hoje).
-  const answered = new Set(
-    sequence.flatMap((s2, i) => (readAnswer(mapped.mapping, s2).trim() ? [i] : [])),
-  );
   // Os trechos (história · cenas · frases): a barra usa a lista inteira (na ordem
   // da sequência, então o marcador cai no trecho certo); o indicador ao lado do ▶
   // usa o trecho da pergunta atual — mesma cor/rótulo do segmento correspondente.
@@ -541,7 +531,7 @@ export function Conversation({
       path={path}
       listen={listenFor(mapped, slot, t)}
       trecho={trecho}
-      progress={{ total, answered, current: idx }}
+      progress={{ total, current: idx }}
       trechos={trechos}
       onPrev={goPrev}
       onNext={goNext}
