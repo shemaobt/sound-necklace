@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SCENE_KINDS, SK_PT, type Confidence } from '../../../domain';
+import { SCENE_KINDS, type Confidence } from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button, Pearl } from '../../atoms';
 import { ConfidenceTrio, KindCard, type ConfidenceChoice } from '../../molecules';
@@ -11,11 +11,11 @@ import './triage-picker.css';
 /**
  * O picker da Triage (PRD v2 §8.5; protótipo "Colar de Sons - Protótipo",
  * estação Triage): grade "Mais comuns" (os tipos do tier comum), disclosure
- * "Ver todos os tipos por tema" com os 6 temas decididos no planejamento,
- * cartão tracejado "Nenhum se encaixa" sempre presente e filtro de texto
- * (conveniência da facilitadora). Escolher um tipo troca a grade pelo passo
- * de confiança; confirmar emite os valores contratuais (inglês intocado,
- * alta/média/baixa). Presentacional: nenhuma mutação de domínio acontece aqui.
+ * "Ver todos os tipos por tema" com os 6 temas decididos no planejamento e
+ * cartão tracejado "Nenhum se encaixa" sempre presente. Escolher um tipo troca
+ * a grade pelo passo de confiança; confirmar emite os valores contratuais
+ * (inglês intocado, alta/média/baixa). Presentacional: nenhuma mutação de
+ * domínio acontece aqui.
  *
  * A pertinência de tema é display-only e vive NESTE organismo (não em
  * domain/scene-kinds.ts). Um radiogroup único com headings visuais de tema:
@@ -105,14 +105,6 @@ function tintOf(value: string): PaletteEntry {
   return THEMES.find((t) => t.kinds.includes(value))?.tint ?? scenePalette[5]!;
 }
 
-/** Busca sem acentos, em minúsculas — "bencao" encontra "Bênção". */
-function fold(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-}
-
 interface CardModel {
   value: string;
   tint: PaletteEntry;
@@ -136,7 +128,6 @@ export interface TriagePickerProps {
 export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
   const { t, i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const [filter, setFilter] = useState('');
   const [picked, setPicked] = useState<string | null>(null);
   const [choice, setChoice] = useState<ConfidenceChoice | null>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
@@ -211,30 +202,13 @@ export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
     );
   }
 
-  const query = fold(filter.trim());
-  // Casa com o rótulo EXIBIDO (PT ou EN), com o rótulo PT-BR e com o valor de contrato:
-  // filtrar nunca fica pior por trocar de idioma.
-  const matches = (value: string) =>
-    fold(SK_PT[value] ?? '').includes(query) ||
-    fold(sceneKindLabel(value, i18n.language)).includes(query) ||
-    fold(value).includes(query);
-
   const commonCards: CardModel[] = SCENE_KINDS.filter((k) => k.tier === 'comum').map((k) => ({
     value: k.value,
     tint: tintOf(k.value),
   }));
-  const filteredCards: CardModel[] | null = query
-    ? SCENE_KINDS.filter((k) => matches(k.value)).map((k) => ({
-        value: k.value,
-        tint: tintOf(k.value),
-      }))
-    : null;
-  const themeSections = !query && expanded ? THEMES : [];
+  const themeSections = expanded ? THEMES : [];
 
-  const radioCount =
-    (filteredCards ? filteredCards.length : commonCards.length) +
-    themeSections.reduce((n, t) => n + t.kinds.length, 0) +
-    1; // + "Nenhum se encaixa"
+  const radioCount = commonCards.length + themeSections.reduce((n, t) => n + t.kinds.length, 0) + 1; // + "Nenhum se encaixa"
   const tabIdx = Math.min(focusedIdx, radioCount - 1);
 
   const onGroupKeyDown = (e: ReactKeyboardEvent) => {
@@ -272,7 +246,7 @@ export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
       />
     ));
 
-  const gridCards = filteredCards ?? commonCards;
+  const gridCards = commonCards;
   const themeStart = (i: number) =>
     gridCards.length + themeSections.slice(0, i).reduce((n, t) => n + t.kinds.length, 0);
   const noneFitIdx = radioCount - 1;
@@ -299,17 +273,6 @@ export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
 
   return (
     <div className="cds-triage-picker" data-stage="tipos" ref={rootRef}>
-      <input
-        className="cds-triage-picker-filter"
-        type="search"
-        aria-label={t('triagePicker.filterAria')}
-        placeholder={t('triagePicker.filterPlaceholder')}
-        value={filter}
-        onChange={(e) => {
-          setFilter(e.target.value);
-          setFocusedIdx(0); // a lista muda de identidade; roving recomeça previsível
-        }}
-      />
       <div
         ref={groupRef}
         role="radiogroup"
@@ -317,41 +280,35 @@ export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
         className="cds-triage-picker-group"
         onKeyDown={onGroupKeyDown}
       >
-        {filteredCards ? (
-          <div className="cds-triage-picker-grid">{grid}</div>
-        ) : (
+        <div className="cds-triage-picker-section">{t('triagePicker.common')}</div>
+        <div className="cds-triage-picker-grid">{grid}</div>
+        {expanded ? (
           <>
-            <div className="cds-triage-picker-section">{t('triagePicker.common')}</div>
-            <div className="cds-triage-picker-grid">{grid}</div>
-            {expanded ? (
-              <>
-                {themeBlocks}
-                <button
-                  type="button"
-                  className="cds-triage-picker-collapse"
-                  aria-expanded="true"
-                  onClick={() => {
-                    setExpanded(false);
-                    setFocusedIdx(0);
-                  }}
-                >
-                  {t('triagePicker.collapse')}
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="cds-triage-picker-disclosure"
-                aria-expanded="false"
-                onClick={() => {
-                  setExpanded(true);
-                  setFocusedIdx(0);
-                }}
-              >
-                {t('triagePicker.seeAll')}
-              </button>
-            )}
+            {themeBlocks}
+            <button
+              type="button"
+              className="cds-triage-picker-collapse"
+              aria-expanded="true"
+              onClick={() => {
+                setExpanded(false);
+                setFocusedIdx(0);
+              }}
+            >
+              {t('triagePicker.collapse')}
+            </button>
           </>
+        ) : (
+          <button
+            type="button"
+            className="cds-triage-picker-disclosure"
+            aria-expanded="false"
+            onClick={() => {
+              setExpanded(true);
+              setFocusedIdx(0);
+            }}
+          >
+            {t('triagePicker.seeAll')}
+          </button>
         )}
         <KindCard
           noneFit

@@ -284,8 +284,6 @@ export const pt = {
     seeAll: 'Ver todos os tipos por tema',
     collapse: 'recolher',
     noneFit: 'Nenhum se encaixa',
-    filterAria: 'filtrar tipos',
-    filterPlaceholder: 'filtrar…',
     groupAria: 'Tipos de cena',
   },
   coverageDrawer: {

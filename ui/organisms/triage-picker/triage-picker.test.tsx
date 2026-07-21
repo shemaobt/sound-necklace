@@ -126,60 +126,17 @@ describe('TriagePicker — grade "Mais comuns" e disclosure por tema', () => {
     expect(visibleKindValues(container)).toHaveLength(8);
   });
 
-  it('o cartão "Nenhum se encaixa" permanece visível recolhido, expandido e filtrando', () => {
-    const { container, getByText, getByLabelText } = render(<TriagePicker />);
+  it('o cartão "Nenhum se encaixa" permanece visível recolhido e expandido', () => {
+    const { container, getByText } = render(<TriagePicker />);
     expect(getByText('Nenhum se encaixa')).toBeTruthy();
     expand(container);
     expect(getByText('Nenhum se encaixa')).toBeTruthy();
-    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'respiga' } });
-    expect(getByText('Nenhum se encaixa')).toBeTruthy();
-  });
-});
-
-describe('TriagePicker — filtro (conveniência da facilitadora)', () => {
-  it('estreita pelo rótulo PT-BR', () => {
-    const { container, getByLabelText } = render(<TriagePicker />);
-    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'Respiga' } });
-    expect(visibleKindValues(container)).toEqual(['GLEANING_SCENE']);
   });
 
-  it('estreita pelo valor inglês', () => {
-    const { container, getByLabelText } = render(<TriagePicker />);
-    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'GLEANING' } });
-    expect(visibleKindValues(container)).toEqual(['GLEANING_SCENE']);
-  });
-
-  it('ignora acentos (bencao encontra Bênção)', () => {
-    const { container, getByLabelText } = render(<TriagePicker />);
-    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'bencao' } });
-    expect(visibleKindValues(container)).toEqual(['BLESSING_SCENE']);
-  });
-
-  it('limpar o filtro volta aos comuns', () => {
-    const { container, getByLabelText } = render(<TriagePicker />);
-    const input = getByLabelText('filtrar tipos');
-    fireEvent.change(input, { target: { value: 'voto' } });
-    expect(visibleKindValues(container)).toEqual(['VOW_SCENE']);
-    fireEvent.change(input, { target: { value: '' } });
-    expect(visibleKindValues(container)).toHaveLength(8);
-  });
-
-  it('sem resultado algum, "Nenhum se encaixa" segue visível e clicável', () => {
-    const onNoneFit = vi.fn();
-    const { container, getByText, getByLabelText } = render(<TriagePicker onNoneFit={onNoneFit} />);
-    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'xyz' } });
-    expect(visibleKindValues(container)).toHaveLength(0);
-    fireEvent.click(getByText('Nenhum se encaixa'));
-    expect(onNoneFit).toHaveBeenCalledOnce();
-  });
-
-  it('digitar com temas expandidos troca para a grade filtrada (temas somem)', () => {
-    const { container, getByLabelText } = render(<TriagePicker />);
-    expand(container);
-    expect(container.querySelector('[data-theme]')).not.toBeNull();
-    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'voto' } });
-    expect(container.querySelector('[data-theme]')).toBeNull();
-    expect(visibleKindValues(container)).toEqual(['VOW_SCENE']);
+  it('não há campo de busca — a classificação é operada só pela grade e pelos temas', () => {
+    const { container, queryByRole } = render(<TriagePicker />);
+    expect(container.querySelector('input')).toBeNull();
+    expect(queryByRole('searchbox')).toBeNull();
   });
 });
 
@@ -191,13 +148,10 @@ describe('TriagePicker — cartão mostra PT, inglês só no title (hover)', () 
   });
 
   it('nenhum valor EN aparece como texto visível em estado algum', () => {
-    const { container, getByLabelText } = render(<TriagePicker />);
+    const { container } = render(<TriagePicker />);
     expect(container.textContent).not.toMatch(/_SCENE/);
     expand(container);
     expect(container.textContent).not.toMatch(/_SCENE/);
-    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: 'respiga' } });
-    expect(container.textContent).not.toMatch(/_SCENE/);
-    fireEvent.change(getByLabelText('filtrar tipos'), { target: { value: '' } });
     fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
     expect(container.textContent).not.toMatch(/_SCENE/);
   });

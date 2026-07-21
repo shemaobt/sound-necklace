@@ -264,8 +264,6 @@ export const en: Dict = {
     seeAll: 'See all types by theme',
     collapse: 'collapse',
     noneFit: 'None fits',
-    filterAria: 'filter types',
-    filterPlaceholder: 'filter…',
     groupAria: 'Scene types',
   },
   coverageDrawer: {
