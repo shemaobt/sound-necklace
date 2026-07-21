@@ -24,6 +24,9 @@
   --cds-chrome-halo: var(--cds-accent-soft);
   --cds-chrome-dot-future-bg: var(--cds-frame);
   --cds-chrome-dot-future-border: rgba(63, 62, 32, 0.24);
+  --cds-chrome-save-bg: rgba(119, 125, 69, 0.14);
+  --cds-chrome-save-fg: #585d31;
+  --cds-chrome-save-dot: #c58a1e;
 }
 
 .cds-app:has(.cds-listen),
@@ -41,6 +44,9 @@
   --cds-chrome-halo: rgba(246, 245, 235, 0.16);
   --cds-chrome-dot-future-bg: rgba(246, 245, 235, 0.1);
   --cds-chrome-dot-future-border: rgba(246, 245, 235, 0.3);
+  --cds-chrome-save-bg: rgba(119, 125, 69, 0.24);
+  --cds-chrome-save-fg: #cfd6a6;
+  --cds-chrome-save-dot: #d9a441;
 }
 
 .cds-app-main {

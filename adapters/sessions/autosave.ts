@@ -9,7 +9,7 @@
 
 import type { SessionStateDto } from '../../contracts';
 import type { ConnectivityMonitor } from '../connectivity/types';
-import { LockLostError } from './types';
+import { type AutosaveStatus, LockLostError, type Unsubscribe } from './types';
 
 export interface AutosaverOptions {
   /** Escreve o estado no armazenamento (fixture ou PUT real). Pode falhar (retry). */
@@ -37,6 +37,8 @@ export interface Autosaver {
    * pelo estado velho que chega depois.
    */
   settle(id: string): Promise<void>;
+  /** Observa saving/saved; chama já com o estado corrente ao assinar. */
+  onStatus(cb: (status: AutosaveStatus) => void): Unsubscribe;
   /** Cancela o timer e para de observar a conectividade. */
   dispose(): void;
 }
@@ -51,6 +53,16 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
   // escrita em curso por sessão — evita drains reentrantes e dá ao `settle` o que aguardar
   const inFlight = new Map<string, Promise<void>>();
   let timer: ReturnType<typeof setTimeout> | undefined;
+
+  // Estado agregado para o selo: há algo por salvar (pendente ou em voo) → saving.
+  const statusListeners = new Set<(s: AutosaveStatus) => void>();
+  let status: AutosaveStatus = 'saved';
+  const notify = (): void => {
+    const next: AutosaveStatus = pending.size > 0 || inFlight.size > 0 ? 'saving' : 'saved';
+    if (next === status) return;
+    status = next;
+    for (const cb of statusListeners) cb(status);
+  };
 
   const arm = (): void => {
     if (timer !== undefined) clearTimeout(timer);
@@ -91,7 +103,10 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
         }
       }
       // esgotou as tentativas: mantém pendente p/ o próximo schedule/reconnect
-    })().finally(() => inFlight.delete(id));
+    })().finally(() => {
+      inFlight.delete(id);
+      notify();
+    });
     inFlight.set(id, run);
     return run;
   };
@@ -104,6 +119,7 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
   return {
     schedule(id, state) {
       pending.set(id, state);
+      notify();
       if (monitor.isOnline()) arm();
     },
     async flush(id) {
@@ -121,6 +137,12 @@ export function createAutosaver(opts: AutosaverOptions): Autosaver {
         clearTimeout(timer);
         timer = undefined;
       }
+      notify();
+    },
+    onStatus(cb) {
+      statusListeners.add(cb);
+      cb(status);
+      return () => statusListeners.delete(cb);
     },
     async settle(id) {
       await inFlight.get(id);

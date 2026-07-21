@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import * as Popover from '@radix-ui/react-popover';
 
+import { SaveChip, type SaveStatus } from '../molecules';
 import { ShemaIcon } from '../tokens';
 import { setLang, type Lang } from '../i18n';
 import './header.css';
@@ -18,10 +19,13 @@ export function Header({
   onBack,
   volume = 1,
   onVolume,
+  autosave,
 }: {
   muted: boolean;
   onToggleMuted: () => void;
   onBack: () => void;
+  /** Estado do autosave; presente numa sessão aberta, mostra o selo de salvamento. */
+  autosave?: SaveStatus;
   /** Volume da história (0–2; 1 = neutro) — só faz sentido com sessão aberta. */
   volume?: number;
   /**
@@ -64,6 +68,13 @@ export function Header({
         </span>
       </div>
       <div className="cds-header-actions">
+        {autosave ? (
+          <SaveChip
+            status={autosave}
+            savingLabel={t('autosave.saving')}
+            savedLabel={t('autosave.saved')}
+          />
+        ) : null}
         <button
           type="button"
           className="cds-header-lang"

@@ -10,6 +10,7 @@ import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
 import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
 import { setMode, type Mode, type SessionState } from '../../domain';
+import type { SaveStatus } from '../molecules';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
@@ -28,6 +29,13 @@ import { StationHost } from './station-host';
 import { useEditorLock } from './use-editor-lock';
 import { voiceStoreFor } from './voice-adapter';
 import { Stepper } from './stepper';
+
+/** Assina o estado do autosave da store (saving/saved) para o selo do header. */
+function useAutosaveStatus(): SaveStatus {
+  const [status, setStatus] = useState<SaveStatus>('saved');
+  useEffect(() => appSessionStore().onAutosaveStatus(setStatus), []);
+  return status;
+}
 import { stepperStations } from './stepper-model';
 import { navigate, useRoute } from './router';
 import './app.css';
@@ -380,6 +388,7 @@ export function App() {
   // (a fixture também serve trava), então há UM caminho de código, não dois.
   useEditorLock(routeId);
   useAutosaveFlush(routeId);
+  const autosave = useAutosaveStatus();
   const { player, setGain: setStoryGain } = useSessionPlayer(routeId);
   // Booster de volume da história (ENG-314): estado do shell; >1 reforça gravações
   // baixas. Vive entre sessões da mesma visita — quem precisa de reforço, precisa nelas todas.
@@ -496,6 +505,8 @@ export function App() {
       // o booster só faz sentido com uma sessão tocável aberta (ENG-314)
       volume={storyVolume}
       onVolume={route.name === 'session' ? onStoryVolume : undefined}
+      // o selo de salvamento acompanha a edição de uma sessão aberta (§7.3)
+      autosave={route.name === 'session' ? autosave : undefined}
     />
   );
 

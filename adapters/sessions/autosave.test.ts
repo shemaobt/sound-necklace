@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionStateDto } from '../../contracts';
 import { FixtureConnectivityMonitor } from '../connectivity/fixture';
 import { createAutosaver } from './autosave';
-import { LockLostError } from './types';
+import { type AutosaveStatus, LockLostError } from './types';
 
 /** Estado opaco distinguível — a store/autosaver não olham a forma interna. */
 const dto = (tag: string): SessionStateDto =>
@@ -191,6 +191,38 @@ describe('createAutosaver', () => {
     // que já perdemos o direito de fazer.
     await saver.flush('s1');
     expect(attempts).toBe(1);
+  });
+
+  it('onStatus: saving enquanto há pendência, saved quando tudo aterrissa (e o corrente ao assinar)', async () => {
+    const seen: AutosaveStatus[] = [];
+    const saver = createAutosaver({
+      persist: async () => {},
+      monitor: new FixtureConnectivityMonitor(true),
+      debounceMs: 100,
+    });
+    saver.onStatus((s) => seen.push(s));
+    expect(seen).toEqual(['saved']); // chama já com o estado corrente ao assinar
+
+    saver.schedule('s1', dto('A'));
+    expect(seen.at(-1)).toBe('saving'); // há algo por salvar
+
+    await vi.advanceTimersByTimeAsync(100); // debounce → persist → aterrissa
+    expect(seen.at(-1)).toBe('saved');
+  });
+
+  it('onStatus nunca diz "saved" com escrita pendente offline — só ao reconectar e persistir', async () => {
+    const seen: AutosaveStatus[] = [];
+    const monitor = new FixtureConnectivityMonitor(false);
+    const saver = createAutosaver({ persist: async () => {}, monitor, debounceMs: 100 });
+    saver.onStatus((s) => seen.push(s));
+
+    saver.schedule('s1', dto('A'));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(seen.at(-1)).toBe('saving'); // offline: pendente, nunca "saved"
+
+    monitor.setOnline(true);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(seen.at(-1)).toBe('saved');
   });
 
   it('cancel discards a pending autosave so it never persists', async () => {
