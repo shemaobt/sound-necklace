@@ -10,6 +10,7 @@ import {
   clickBead,
   confirmFrase,
   confirmFrasesDone,
+  dragPhraseBoundary,
   enterScene,
   moveBorder,
   nextNeighbor,
@@ -17,7 +18,6 @@ import {
   productiveScenes,
   reanchorFrase,
   removeFrase,
-  reopenFrase,
   sceneIndexOf,
   setMode,
   toggleFlag,
@@ -83,7 +83,14 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
       tint: phraseColor(pos),
     }));
     const lockedEndBeads = scenePhrases.map(({ f }) => f.span!.e);
-    return { sc, scSpan: sc.span, scenePhrases, segments, lockedEndBeads };
+    // Punhos de arrasto (ENG-342): as duas bordas de cada frase travada. `id` =
+    // `<índiceGlobal>:<start|end>`; o domínio cresce/encolhe e só toca a vizinha
+    // quando encostam (cobertura esparsa é legal).
+    const dragHandles = scenePhrases.flatMap(({ f, index }) => [
+      { at: f.span!.s, id: `${index}:start` },
+      { at: f.span!.e, id: `${index}:end` },
+    ]);
+    return { sc, scSpan: sc.span, scenePhrases, segments, lockedEndBeads, dragHandles };
   }, [session]);
 
   useEffect(() => {
@@ -96,7 +103,7 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   }, [player]);
 
   if (!session || !derived) return null;
-  const { sc, scSpan, scenePhrases, segments, lockedEndBeads } = derived;
+  const { sc, scSpan, scenePhrases, segments, lockedEndBeads, dragHandles } = derived;
 
   const ps = productiveScenes(session);
   const sceneIdx = Math.max(0, sceneIndexOf(session, sc.part_id));
@@ -207,13 +214,18 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     sessionStore.getState().apply((s) => setMode(s, 'triagem'));
   };
 
-  const reopen = (i: number): void => {
-    setError(null);
-    // a frase que estava tocando deixa de existir aqui: o áudio dela não sobrevive
-    player?.stop();
-    sessionStore.getState().apply((s) => reopenFrase(s, i));
+  // Arrastar a borda de uma frase (ENG-342, substitui o reabrir/⚑): `id` =
+  // `<índiceGlobal>:<start|end>`. Cada move aplica o ajuste puro do domínio.
+  const onDragBoundary = (id: string, toBead: number): void => {
+    const sep = id.lastIndexOf(':');
+    const index = Number(id.slice(0, sep));
+    const edge = id.slice(sep + 1) as 'start' | 'end';
+    sessionStore.getState().apply((s) => dragPhraseBoundary(s, index, edge, toBead));
   };
 
+  // ⚑ marcar para revisão fica até o PR-3 (ENG-342), onde flag sai de domínio,
+  // harness, golden e e2e de uma vez — removê-lo isolado aqui deixaria o e2e
+  // contract-identity (que o usa e compara com um golden que ainda tem flags) vermelho.
   const flag = (i: number): void => {
     sessionStore.getState().apply((s) => toggleFlag(s, i));
   };
@@ -300,9 +312,11 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
           size={SIZE_SEG}
           window={scSpan}
           playbackHead={head}
+          dragHandles={dragHandles}
           onBeadPointerDown={onBead}
           onHeadTap={onHeadTap}
           onEdgeHover={onEdgeHover}
+          onDragBoundary={onDragBoundary}
         />
       </div>
 
@@ -317,9 +331,6 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
                   swatch={phraseColor(pos)}
                   actions={
                     <>
-                      <Button variant="ghost" size="sm" onClick={() => reopen(index)}>
-                        {t('phrases.reopen')}
-                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => flag(index)}>
                         {f.flagged ? t('phrases.flagMarked') : t('phrases.flagReview')}
                       </Button>

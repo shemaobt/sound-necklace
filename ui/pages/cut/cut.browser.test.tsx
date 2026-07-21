@@ -210,22 +210,6 @@ describe('Escuta 2 — a conta acesa pausa, venha o playback de onde vier (ENG-2
     root.unmount();
   });
 
-  it('reabrir a cena cala o áudio dela — nada de tocar o que deixou de existir', () => {
-    const { player, transport } = realPlayer();
-    sessionStore.getState().load(withLockedScene());
-    const { host, root, el } = mount(player);
-
-    firePointer(el, 1); // toca a cena travada
-    advanceBy(transport, 0.2);
-    expect(player.state.playing).toBe(true);
-
-    const reabrir = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Reabrir');
-    flushSync(() => reabrir!.click());
-
-    expect(player.state.playing).toBe(false);
-    root.unmount();
-  });
-
   it('a cena tocando por chave própria pausa na conta acesa, e não para', () => {
     const { player, transport } = realPlayer();
     sessionStore.getState().load(withLockedScene());
