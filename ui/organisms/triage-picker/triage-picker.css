@@ -9,30 +9,6 @@
   max-width: 640px;
 }
 
-.cds-triage-picker-filter {
-  /* conveniência da facilitadora (não existe no protótipo): vestida como os
-     inputs do sistema — branco, radius 14, borda quase invisível, largura cheia */
-  width: 100%;
-  border: 1px solid rgba(63, 62, 32, 0.18);
-  border-radius: var(--cds-radius-tile, 14px);
-  padding: 12px 16px;
-  font-family: var(--cds-font-load-bearing, 'Montserrat', system-ui, sans-serif);
-  font-size: 14px;
-  color: var(--cds-ink, #0a0703);
-  background: #ffffff;
-  transition:
-    border-color 0.18s,
-    box-shadow 0.18s;
-}
-
-.cds-triage-picker-filter:focus-visible {
-  border-color: var(--cds-telha);
-}
-
-.cds-triage-picker-filter::placeholder {
-  color: #6d6c56;
-}
-
 .cds-triage-picker-group {
   display: flex;
   flex-direction: column;
