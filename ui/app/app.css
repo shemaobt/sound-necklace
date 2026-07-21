@@ -20,7 +20,6 @@
   --cds-chrome-pill-bg: var(--cds-surface-muted);
   --cds-chrome-mark: var(--cds-telha);
   --cds-chrome-hairline: var(--cds-hairline);
-  --cds-chrome-thread: rgba(63, 62, 32, 0.16);
   --cds-chrome-halo: var(--cds-accent-soft);
   --cds-chrome-dot-future-bg: var(--cds-frame);
   --cds-chrome-dot-future-border: rgba(63, 62, 32, 0.24);
@@ -40,7 +39,6 @@
   --cds-chrome-pill-bg: rgba(246, 245, 235, 0.1);
   --cds-chrome-mark: var(--cds-cream);
   --cds-chrome-hairline: rgba(246, 245, 235, 0.2);
-  --cds-chrome-thread: rgba(246, 245, 235, 0.22);
   --cds-chrome-halo: rgba(246, 245, 235, 0.16);
   --cds-chrome-dot-future-bg: rgba(246, 245, 235, 0.1);
   --cds-chrome-dot-future-border: rgba(246, 245, 235, 0.3);
