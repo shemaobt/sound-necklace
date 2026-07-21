@@ -28,7 +28,7 @@
 .cds-stepper-dots {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 7px;
   margin: 0;
   padding: 0;
   list-style: none;

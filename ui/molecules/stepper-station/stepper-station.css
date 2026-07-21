@@ -1,9 +1,9 @@
 /*
  * Estação do fio de contas (design "novos componentes", card "Progresso geral ·
  * as etapas"): um retângulo arredondado de 7px — feitas/atual em telha accent
- * (#E8813E), futuras ocas; a atual é mais larga (30 vs 18) e ganha o halo
- * --cds-chrome-halo. As cores vêm das variáveis de chrome (claro/escuro) do
- * app.css, não das cores fixas do mockup (desenhado só sobre fundo escuro). O
+ * (#E8813E), futuras ocas; a atual é mais larga (30 vs 18) e ganha um halo
+ * telha fixo (o accent do mockup). As barras FUTURAS usam as variáveis de chrome
+ * (claro/escuro) do app.css para ficarem visíveis nos dois fundos. O
  * rótulo fica no DOM só para leitores de tela e para os seletores de teste; o
  * nome visível da etapa atual vive no organismo.
  */
@@ -27,10 +27,11 @@
   background: #e8813e;
 }
 
-/* atual: mais larga + halo */
+/* atual: mais larga + halo telha (o accent #E8813E do mockup, fixo — não a
+   variável de chrome, que dava um brilho cinza-claro sobre o oliva) */
 .cds-stepper-station[data-state='current'] .cds-stepper-station-bar {
   width: 30px;
-  box-shadow: 0 0 0 3px var(--cds-chrome-halo);
+  box-shadow: 0 0 0 3px rgba(232, 129, 62, 0.22);
 }
 
 /* futura: retângulo oco. A borda (que o mockup escuro dispensa) mantém a barra
