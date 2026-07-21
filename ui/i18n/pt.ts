@@ -211,17 +211,12 @@ export const pt = {
   },
   tutorial: {
     tips: {
-      listen:
-        'Ouçam a história inteira, sem pressa. O botão grande toca e pausa; confirme quando a história tiver sido ouvida por completo.',
-      cut: 'Marquem juntos onde cada cena termina e confirme uma cena de cada vez. Tocar numa cena já pronta a reproduz inteira.',
-      triage:
-        'Classifiquem cada cena ouvindo-a de novo. Quando nenhum tipo se encaixa, «nenhum se encaixa» também é um achado.',
-      phrases:
-        'Dentro de cada cena, marquem as frases: um toque onde começa, outro onde termina. Se a frase passar da borda, o colar oferece caminhos.',
-      conversation:
-        'Faça as perguntas em voz alta e grave as respostas de quem conta. Você pode escrever depois — nunca pelo ouvinte.',
-      export:
-        'A história está inteira no colar. Guarde a sessão para gerar os documentos do projeto.',
+      listen: 'Ouçam a história inteira. O botão grande toca e pausa.',
+      cut: 'Marquem onde cada cena termina, uma de cada vez.',
+      triage: 'Classifiquem cada cena. Toquem para ouvi-la de novo.',
+      phrases: 'Dentro de cada cena, marquem onde cada frase começa e termina.',
+      conversation: 'Façam as perguntas em voz alta e gravem as respostas.',
+      export: 'Guardem a sessão para gerar os documentos.',
     },
     never: 'Não mostrar de novo',
     triggerAria: 'Como funciona esta etapa',
@@ -260,10 +255,8 @@ export const pt = {
     confAlta: 'certeza',
     confMedia: 'quase',
     confBaixa: 'na dúvida',
-    finding:
-      '⌀ Nenhum se encaixa — evidência para nomear um tipo nativo quando o padrão se repetir.',
-    lockout:
-      '⚠ Nenhuma cena se encaixa em Rute. Segmentação e Mapeamento ficam travadas — esta história não rende cobertura de Rute. As marcas ficam salvas como evidência de tipo nativo.',
+    finding: '⌀ Nenhum se encaixa',
+    lockout: '⚠ Nenhuma cena se encaixa em Rute. Segmentação e Mapeamento ficam travadas.',
   },
   triagePicker: {
     // Aninhado de verdade: chaves planas com ponto só resolviam por um FALLBACK do
