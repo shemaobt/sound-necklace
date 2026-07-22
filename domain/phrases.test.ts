@@ -149,14 +149,15 @@ describe('phraseFrontier — fronteira com back-reach (§6.4)', () => {
 });
 
 describe('addFrase — slot com menor P# livre', () => {
-  it('cria o slot, vira corrente e limpa a seleção', () => {
+  it('cria o slot, vira corrente e prima o início na fronteira da cena (um-toque)', () => {
     const s = sess({ selection: { s: 1, e: 2 }, pendingStart: 1 });
     const next = addFrase(s);
     expect(next.frases).toHaveLength(1);
     expect(next.frases[0]).toMatchObject({ prop_id: 'P1', locked: false, span: null });
     expect(next.current).toEqual({ layer: 'frases', index: 0 });
-    expect(next.selection).toBeNull();
-    expect(next.pendingStart).toBeNull();
+    // primeFrase: início da 1ª frase = início da cena (PT1 = 0)
+    expect(next.selection).toEqual({ s: 0, e: 0 });
+    expect(next.pendingStart).toBe(0);
   });
 
   it('com âncora ativa é no-op (o slot aberto já espera)', () => {
@@ -301,11 +302,12 @@ describe('moveBorder / reanchorFrase — as saídas da oferta', () => {
     expect(moveBorder(semProdutiva, r.offer)).toBe(semProdutiva);
   });
 
-  it('reancorar só limpa seleção e pendingStart', () => {
+  it('reancorar re-ancora o início na fronteira da cena (um-toque)', () => {
     const s = anchoring({ selection: { s: 12, e: 32 }, pendingStart: 12 });
     const next = reanchorFrase(s);
-    expect(next.selection).toBeNull();
-    expect(next.pendingStart).toBeNull();
+    // primeFrase: início da 1ª frase da PT2 = início da cena (10)
+    expect(next.selection).toEqual({ s: 10, e: 10 });
+    expect(next.pendingStart).toBe(10);
     expect(next.frases).toBe(s.frases);
   });
 });
@@ -395,7 +397,7 @@ describe('dragPhraseBoundary — arrastar a borda de uma frase (ENG-342)', () =>
 });
 
 describe('enterScene — foco numa cena produtiva', () => {
-  it('assume o PRIMEIRO slot destravado e limpa a seleção', () => {
+  it('assume o PRIMEIRO slot destravado e prima o início na fronteira da cena', () => {
     const s = sess({
       frases: [mkFrase('P1'), mkFrase('P2')],
       selection: { s: 1, e: 2 },
@@ -405,8 +407,9 @@ describe('enterScene — foco numa cena produtiva', () => {
     const next = enterScene(s, 'PT2');
     expect(next.activeSceneId).toBe('PT2');
     expect(next.current).toEqual({ layer: 'frases', index: 0 });
-    expect(next.selection).toBeNull();
-    expect(next.pendingStart).toBeNull();
+    // primeFrase: início da 1ª frase da PT2 = início da cena (10)
+    expect(next.selection).toEqual({ s: 10, e: 10 });
+    expect(next.pendingStart).toBe(10);
   });
 
   it('sem slot destravado: auto-add (slot dangling por cena visitada)', () => {
@@ -422,15 +425,16 @@ describe('enterScene — foco numa cena produtiva', () => {
 });
 
 describe('enterFrasesLayer / enterSegmentacao — entrada na camada', () => {
-  it('enterFrasesLayer assume o ÚLTIMO destravado (sem prime)', () => {
+  it('enterFrasesLayer assume o ÚLTIMO destravado e prima o início na fronteira', () => {
     const s = sess({
       frases: [mkFrase('P1'), mkFrase('P2')],
       selection: { s: 1, e: 2 },
     });
     const next = enterFrasesLayer(s);
     expect(next.current).toEqual({ layer: 'frases', index: 1 });
-    expect(next.selection).toBeNull();
-    expect(next.pendingStart).toBeNull();
+    // primeFrase: sem cena travada antes, a fronteira é o início da 1ª cena (0)
+    expect(next.selection).toEqual({ s: 0, e: 0 });
+    expect(next.pendingStart).toBe(0);
   });
 
   it('enterFrasesLayer sem destravado: auto-add', () => {
