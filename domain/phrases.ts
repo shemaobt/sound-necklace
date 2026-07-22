@@ -94,7 +94,7 @@ export type FraseErrorCode =
 /** Cópia contratual PT-BR (referência L782–788). */
 export const FRASE_ERROR_COPY = {
   PARTS_NOT_CONFIRMED: 'Confirme as cenas primeiro.',
-  SELECTION_INCOMPLETE: 'Clique o início e o fim da frase no colar.',
+  SELECTION_INCOMPLETE: 'Clique onde a frase termina, no colar.',
   NO_PRODUCTIVE_SCENE: 'Nenhuma cena produtiva para frasear.',
   FRASE_BEFORE_FRONTIER: (frontierBead: number) =>
     `A frase não pode começar antes da conta ${frontierBead}.`,
