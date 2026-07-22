@@ -86,10 +86,10 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     }));
     const lockedEndBeads = scenePhrases.map(({ f }) => f.span!.e);
     // Punhos de arrasto (ENG-342): só o FIM de cada frase travada — estritamente
-    // como as cenas (decisão do dono, simetria cena↔frase). O começo é a
-    // emenda/fronteira e NÃO arrasta; para mover o começo de uma frase, arrasta-se
-    // o fim da anterior (Pac-Man), igual à cena. `id` = `<índiceGlobal>:end`.
-    const dragHandles = scenePhrases.map(({ f, index }) => ({ at: f.span!.e, id: `${index}:end` }));
+    // como as cenas (decisão do dono, simetria cena↔frase). O começo é a emenda e
+    // NÃO arrasta; ao arrastar o fim, a frase SEGUINTE segue (Pac-Man, sem vão),
+    // igual à cena. `id` = o índice global da frase.
+    const dragHandles = scenePhrases.map(({ f, index }) => ({ at: f.span!.e, id: `${index}` }));
     return { sc, scSpan: sc.span, scenePhrases, segments, lockedEndBeads, dragHandles };
   }, [session]);
 
@@ -213,16 +213,13 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     sessionStore.getState().apply((s) => setMode(s, 'triagem'));
   };
 
-  // Arrastar a borda de uma frase (ENG-342, substitui o reabrir/⚑): `id` =
-  // `<índiceGlobal>:<start|end>`. `primeFrase` reancora a frase pendente na nova
-  // fronteira depois do ajuste — senão, com a frase antes cobrindo o fim do colar
-  // (fronteira fora da grade), o clique seguinte fecharia além do colar e o
-  // confirm cospe "A frase precisa terminar dentro do colar" (#3).
+  // Arrastar o FIM de uma frase (ENG-342, substitui o reabrir/⚑): `id` = o índice
+  // global da frase. `primeFrase` reancora a frase pendente na nova fronteira
+  // depois do ajuste — senão, com a frase antes cobrindo o fim do colar (fronteira
+  // fora da grade), o clique seguinte fecharia além do colar e o confirm cospe
+  // "A frase precisa terminar dentro do colar" (#3).
   const onDragBoundary = (id: string, toBead: number): void => {
-    const sep = id.lastIndexOf(':');
-    const index = Number(id.slice(0, sep));
-    const edge = id.slice(sep + 1) as 'start' | 'end';
-    sessionStore.getState().apply((s) => primeFrase(dragPhraseBoundary(s, index, edge, toBead)));
+    sessionStore.getState().apply((s) => primeFrase(dragPhraseBoundary(s, Number(id), toBead)));
   };
 
   // Remover a frase + a SEGUINTE da mesma cena absorve o espaço (#3): removeFrase

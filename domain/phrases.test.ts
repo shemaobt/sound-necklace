@@ -374,55 +374,55 @@ describe('removeFrase — libera o P# e escolhe o ÚLTIMO destravado', () => {
   });
 });
 
-describe('dragPhraseBoundary — arrastar a borda de uma frase (ENG-342)', () => {
-  // PT2 = {10,29}; F1 e F2 travadas nela, com um vão entre elas (16–19, 26–29)
+describe('dragPhraseBoundary — arrastar o FIM, Pac-Man/ladrilhado (ENG-342, #2/#4)', () => {
+  // PT2={10,29}; F1{12,15} e F2{20,25} travadas nela
   const F1 = mkFrase('P1', { span: { s: 12, e: 15 }, part_link: 'PT2', locked: true });
   const F2 = mkFrase('P2', { span: { s: 20, e: 25 }, part_link: 'PT2', locked: true });
   const base = () => sess({ parts: [PT1, PT2, PT3], frases: [F1, F2] });
 
-  it('crescer o fim para dentro do vão: cresce sozinha, a vizinha fica intacta', () => {
-    const next = dragPhraseBoundary(base(), 0, 'end', 18);
+  it('crescer o fim: a seguinte segue (empurra o início dela)', () => {
+    const next = dragPhraseBoundary(base(), 0, 18);
     expect(next.frases[0]!.span).toEqual({ s: 12, e: 18 });
-    expect(next.frases[1]!.span).toEqual({ s: 20, e: 25 });
+    expect(next.frases[1]!.span).toEqual({ s: 19, e: 25 }); // F2 seguiu para 19
   });
 
-  it('crescer o fim até tocar a vizinha: empurra o início dela (encolhe)', () => {
-    const next = dragPhraseBoundary(base(), 0, 'end', 22);
-    expect(next.frases[0]!.span).toEqual({ s: 12, e: 22 });
-    expect(next.frases[1]!.span).toEqual({ s: 23, e: 25 });
+  it('encolher o fim: a seguinte segue (cresce para preencher), SEM vão', () => {
+    const next = dragPhraseBoundary(base(), 0, 13);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 13 });
+    expect(next.frases[1]!.span).toEqual({ s: 14, e: 25 }); // F2 acompanhou até 14
   });
 
-  it('clampa: a vizinha nunca fica vazia', () => {
-    const next = dragPhraseBoundary(base(), 0, 'end', 40);
+  it('clampa: a seguinte nunca fica vazia (para no fim dela − 1)', () => {
+    const next = dragPhraseBoundary(base(), 0, 40);
     expect(next.frases[0]!.span).toEqual({ s: 12, e: 24 });
     expect(next.frases[1]!.span).toEqual({ s: 25, e: 25 });
   });
 
-  it('crescer o começo para dentro do vão: só cresce', () => {
-    const next = dragPhraseBoundary(base(), 1, 'start', 17);
-    expect(next.frases[1]!.span).toEqual({ s: 17, e: 25 });
-    expect(next.frases[0]!.span).toEqual({ s: 12, e: 15 });
+  it('clampa: a própria frase nunca fica vazia; a seguinte segue', () => {
+    const next = dragPhraseBoundary(base(), 0, 5);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 12 });
+    expect(next.frases[1]!.span).toEqual({ s: 13, e: 25 });
   });
 
-  it('crescer o começo até tocar a vizinha anterior: encolhe o fim dela', () => {
-    const next = dragPhraseBoundary(base(), 1, 'start', 14);
-    expect(next.frases[1]!.span).toEqual({ s: 14, e: 25 });
-    expect(next.frases[0]!.span).toEqual({ s: 12, e: 13 });
-  });
-
-  it('sem vizinha à frente: cresce livre até o fim da cena, clampado nele', () => {
-    const next = dragPhraseBoundary(base(), 1, 'end', 40);
+  it('última frase (sem seguinte): cresce livre até o fim da cena', () => {
+    const next = dragPhraseBoundary(base(), 1, 40);
     expect(next.frases[1]!.span).toEqual({ s: 20, e: 29 });
+  });
+
+  it('última frase (sem seguinte): encolhe o fim, a cauda fica por frasear', () => {
+    const next = dragPhraseBoundary(base(), 1, 22);
+    expect(next.frases[1]!.span).toEqual({ s: 20, e: 22 });
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 15 });
   });
 
   it('arrastar para a posição atual não muda nada', () => {
     const s = base();
-    expect(dragPhraseBoundary(s, 0, 'end', 15)).toBe(s);
+    expect(dragPhraseBoundary(s, 0, 15)).toBe(s);
   });
 
   it('frase destravada ou sem span: no-op', () => {
     const s = sess({ parts: [PT1, PT2, PT3], frases: [mkFrase('P1', { part_link: 'PT2' })] });
-    expect(dragPhraseBoundary(s, 0, 'end', 20)).toBe(s);
+    expect(dragPhraseBoundary(s, 0, 20)).toBe(s);
   });
 
   // O bug do print (#3): uma frase cobrindo o FIM do colar deixa a fronteira FORA
@@ -443,7 +443,7 @@ describe('dragPhraseBoundary — arrastar a borda de uma frase (ENG-342)', () =>
     });
     expect(phraseFrontier(s)).toBe(40); // sanity: quirk deixa a fronteira fora da grade
 
-    const reprimed = primeFrase(dragPhraseBoundary(s, 0, 'end', 19));
+    const reprimed = primeFrase(dragPhraseBoundary(s, 0, 19));
     expect(reprimed.frases[0]!.span).toEqual({ s: 0, e: 19 });
     expect(reprimed.pendingStart).toBe(20);
     expect(reprimed.selection).toEqual({ s: 20, e: 20 });

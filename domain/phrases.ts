@@ -233,16 +233,17 @@ export function absorbNextFrase(
 }
 
 /**
- * Arrastar uma borda ('start'/'end') de uma frase travada (ENG-342). Cresce/
- * encolhe a frase dentro da SUA cena; cobertura esparsa é legal, então em vão a
- * borda só cresce e a vizinha imediata só encolhe quando de fato se tocam —
- * Pac-Man, sem ripple. Clampa dentro da cena e mantém ambas com ≥1 conta.
- * Sem mudança → no-op (identidade). Vizinhas são só frases travadas da MESMA cena.
+ * Arrastar o FIM de uma frase travada (ENG-342) — Pac-Man/ladrilhado, idêntico ao
+ * `dragSceneBoundary` (decisão do dono, #2/#4): a frase SEGUINTE da mesma cena
+ * SEGUE a fronteira (seu início vira `newE+1`), nas duas direções — encolher NÃO
+ * abre vão, a seguinte cresce para preencher; crescer empurra a seguinte. Só o
+ * FIM arrasta; o começo é a emenda. Sem seguinte (última frase da cena), cresce/
+ * encolhe livre até o fim da cena. Clampa em `[fSpan.s, neighbor.e-1]` (ou o fim
+ * da cena) — nenhuma fica vazia. Sem mudança → no-op.
  */
 export function dragPhraseBoundary(
   state: SessionState,
   fraseIndex: number,
-  edge: 'start' | 'end',
   toBead: number,
 ): SessionState {
   const f = state.frases[fraseIndex];
@@ -251,41 +252,18 @@ export function dragPhraseBoundary(
   if (!scene || !scene.span) return state;
   const fSpan = f.span;
   type Nb = { s: number; e: number; k: number };
-  const sameScene = (fr: Frase, k: number): fr is Frase & { span: Span } =>
-    k !== fraseIndex && fr.locked && fr.span !== null && fr.part_link === f.part_link;
-
-  if (edge === 'end') {
-    // vizinha à direita: a frase travada da cena com o MENOR início depois desta
-    const neighbor = state.frases.reduce<Nb | null>((acc, fr, k) => {
-      if (!sameScene(fr, k) || fr.span.s <= fSpan.s) return acc;
-      return !acc || fr.span.s < acc.s ? { s: fr.span.s, e: fr.span.e, k } : acc;
-    }, null);
-    const hardHi = neighbor ? neighbor.e - 1 : scene.span.e;
-    const newE = Math.max(fSpan.s, Math.min(hardHi, toBead));
-    const touches = neighbor !== null && newE >= neighbor.s;
-    if (newE === fSpan.e && !touches) return state;
-    const frases = state.frases.map((fr, k) => {
-      if (k === fraseIndex) return { ...fr, span: { s: fSpan.s, e: newE } };
-      if (neighbor && touches && k === neighbor.k)
-        return { ...fr, span: { s: newE + 1, e: neighbor.e } };
-      return fr;
-    });
-    return { ...state, frases };
-  }
-
-  // vizinha à esquerda: a frase travada da cena com o MAIOR fim antes desta
+  // vizinha à direita da MESMA cena (menor início > esta): SEGUE a fronteira
   const neighbor = state.frases.reduce<Nb | null>((acc, fr, k) => {
-    if (!sameScene(fr, k) || fr.span.e >= fSpan.e) return acc;
-    return !acc || fr.span.e > acc.e ? { s: fr.span.s, e: fr.span.e, k } : acc;
+    if (k === fraseIndex || !fr.locked || !fr.span || fr.part_link !== f.part_link) return acc;
+    if (fr.span.s <= fSpan.s) return acc;
+    return !acc || fr.span.s < acc.s ? { s: fr.span.s, e: fr.span.e, k } : acc;
   }, null);
-  const hardLo = neighbor ? neighbor.s + 1 : scene.span.s;
-  const newS = Math.min(fSpan.e, Math.max(hardLo, toBead));
-  const touches = neighbor !== null && newS <= neighbor.e;
-  if (newS === fSpan.s && !touches) return state;
+  const hardHi = neighbor ? neighbor.e - 1 : scene.span.e;
+  const newE = Math.max(fSpan.s, Math.min(hardHi, toBead));
+  if (newE === fSpan.e) return state;
   const frases = state.frases.map((fr, k) => {
-    if (k === fraseIndex) return { ...fr, span: { s: newS, e: fSpan.e } };
-    if (neighbor && touches && k === neighbor.k)
-      return { ...fr, span: { s: neighbor.s, e: newS - 1 } };
+    if (k === fraseIndex) return { ...fr, span: { s: fSpan.s, e: newE } };
+    if (neighbor && k === neighbor.k) return { ...fr, span: { s: newE + 1, e: neighbor.e } };
     return fr;
   });
   return { ...state, frases };

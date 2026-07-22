@@ -198,15 +198,15 @@ export function slideSeam(
 }
 
 /**
- * Arrastar o FIM de uma cena travada (ENG-342) — ESPARSO, idêntico ao
- * `dragPhraseBoundary` (decisão do dono, simetria cena↔frase, #2): cresce/encolhe
- * só a própria cena e toca a vizinha imediata SÓ quando de fato encostam
- * (cobertura esparsa é legal — encolher abre um vão, a vizinha não se mexe; o
- * início da vizinha nunca desliza por arrasto, só o FIM da cena arrastada). Sem
- * vizinha à frente (última cena), cresce livre até o fim do colar. Clampa dentro
- * de `[span.s, neighbor.e-1]` (ou `totalBeads-1`) — nenhuma das duas fica vazia.
- * Sem mudança → no-op. O reancorar da pendente na nova fronteira é composto na
- * página (primePart) — seam.ts não pode importar scenes/frontier (ciclo).
+ * Arrastar o FIM de uma cena travada (ENG-342) — Pac-Man/ladrilhado, idêntico ao
+ * `dragPhraseBoundary` (decisão do dono, simetria cena↔frase, #2/#4): a cena
+ * SEGUINTE SEGUE a fronteira (seu início vira `newE+1`), nas duas direções —
+ * encolher NÃO abre vão, a seguinte cresce para preencher; crescer empurra a
+ * seguinte. Só o FIM arrasta; o começo é a emenda. Sem vizinha à frente (última
+ * cena), cresce/encolhe livre até o fim do colar. Clampa em `[span.s,
+ * neighbor.e-1]` (ou `totalBeads-1`) — nenhuma fica vazia. Sem mudança → no-op. O
+ * reancorar da pendente na nova fronteira é composto na página (primePart) —
+ * seam.ts não pode importar scenes/frontier (ciclo).
  */
 export function dragSceneBoundary(
   state: SessionState,
@@ -225,12 +225,10 @@ export function dragSceneBoundary(
   }, null);
   const hardHi = neighbor ? neighbor.e - 1 : state.totalBeads - 1;
   const newE = Math.max(pSpan.s, Math.min(hardHi, toBead));
-  const touches = neighbor !== null && newE >= neighbor.s;
-  if (newE === pSpan.e && !touches) return state;
+  if (newE === pSpan.e) return state;
   const parts = state.parts.map((q, k) => {
     if (k === idx) return { ...q, span: { s: pSpan.s, e: newE } };
-    if (neighbor && touches && k === neighbor.k)
-      return { ...q, span: { s: newE + 1, e: neighbor.e } };
+    if (neighbor && k === neighbor.k) return { ...q, span: { s: newE + 1, e: neighbor.e } };
     return q;
   });
   return { ...state, parts };
