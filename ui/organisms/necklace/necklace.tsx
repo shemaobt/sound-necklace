@@ -51,9 +51,20 @@ export interface NecklaceProps {
   /** modo transporte (Escuta/review): toca ao tocar, sem afordâncias de seleção */
   transportOnly?: boolean;
   size?: Size;
+  /** fronteiras arrastáveis (ENG-342): `at` = conta onde o punho fica; `id` =
+   *  identidade opaca que a página interpreta (o colar não sabe de cena/frase) */
+  dragHandles?: DragHandle[];
   onBeadPointerDown?: (bead: number) => void;
   onEdgeHover?: (edge: number) => void;
   onHeadTap?: () => void;
+  /** arrastar um punho até `toBead`; a página aplica o ajuste no domínio */
+  onDragBoundary?: (id: string, toBead: number) => void;
+}
+
+/** Um punho arrastável ancorado numa conta (ENG-342). */
+export interface DragHandle {
+  at: number;
+  id: string;
 }
 
 interface BeadDescriptor {
@@ -139,9 +150,11 @@ interface Interaction {
   selection: Span | null;
   transportOnly: boolean;
   playbackHead: number | null;
+  dragHandles: DragHandle[];
   onBeadPointerDown?: (bead: number) => void;
   onEdgeHover?: (edge: number) => void;
   onHeadTap?: () => void;
+  onDragBoundary?: (id: string, toBead: number) => void;
 }
 
 const BeadField = memo(function BeadField({ field, size }: { field: Field; size: Size }) {
@@ -218,6 +231,7 @@ export function Necklace(props: NecklaceProps) {
     playbackHead = null,
     transportOnly = false,
     size = SIZE_M,
+    dragHandles,
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -271,9 +285,11 @@ export function Necklace(props: NecklaceProps) {
       selection: effectiveSelection,
       transportOnly,
       playbackHead,
+      dragHandles: dragHandles ?? [],
       onBeadPointerDown: props.onBeadPointerDown,
       onEdgeHover: props.onEdgeHover,
       onHeadTap: props.onHeadTap,
+      onDragBoundary: props.onDragBoundary,
     };
   });
 
@@ -319,13 +335,53 @@ export function Necklace(props: NecklaceProps) {
       );
     }
 
+    // punho na conta EXATA da fronteira (sem tolerância: ±1 engoliria contas
+    // internas de frases curtas, roubando o toque-para-ouvir delas)
+    function handleAt(bead: number): string | null {
+      return ixRef.current.dragHandles.find((h) => h.at === bead)?.id ?? null;
+    }
+
+    // Arrastar fronteira (ENG-342): pointerdown perto de um punho ARMA o drag mas
+    // não o inicia — só vira arrasto ao mover ≥1 conta. Sem esse limiar, um TAP
+    // numa conta de fim de cena (que é um punho) deixaria de tocar a cena
+    // (ENG-347). Solto sem arrastar → o tap normal dispara no pointerup.
+    let pending: { id: string; startBead: number } | null = null;
+    let dragging: string | null = null;
+
     function onPointerDown(ev: PointerEvent): void {
       const ix = ixRef.current;
       if (!ix.total) return;
       const bead = beadFromEvent(ev);
+      const handle = ix.onDragBoundary ? handleAt(bead) : null;
+      if (handle !== null) {
+        pending = { id: handle, startBead: bead };
+        // boundary do DOM: um PointerEvent sintético (teste) não tem pointer
+        // capturável e lança — o drag segue pelos listeners no próprio nó.
+        try {
+          node!.setPointerCapture(ev.pointerId);
+        } catch {
+          /* sem captura (evento sintético) */
+        }
+        ev.preventDefault();
+        return;
+      }
       if (ix.playbackHead !== null && bead === ix.playbackHead) ix.onHeadTap?.();
       else ix.onBeadPointerDown?.(bead);
       ev.preventDefault();
+    }
+
+    function endDrag(ev: PointerEvent): void {
+      const ix = ixRef.current;
+      if (dragging === null && pending !== null) {
+        // não chegou a arrastar: foi um tap na conta de fronteira → toca a cena
+        const bead = pending.startBead;
+        if (ix.playbackHead !== null && bead === ix.playbackHead) ix.onHeadTap?.();
+        else ix.onBeadPointerDown?.(bead);
+      }
+      if (pending !== null && node!.hasPointerCapture(ev.pointerId))
+        node!.releasePointerCapture(ev.pointerId);
+      pending = null;
+      dragging = null;
     }
 
     let hoverEdge: number | null = null;
@@ -338,6 +394,13 @@ export function Necklace(props: NecklaceProps) {
 
     function onPointerMove(ev: PointerEvent): void {
       const ix = ixRef.current;
+      // arrasto de fronteira em curso (ou armado): domina o move
+      if (pending !== null) {
+        const bead = beadFromEvent(ev);
+        if (dragging === null && Math.abs(bead - pending.startBead) >= 1) dragging = pending.id;
+        if (dragging !== null) ix.onDragBoundary?.(dragging, bead);
+        return;
+      }
       if (ev.pointerType === 'touch') return; // hover só no mouse
       const sel = ix.selection;
       if (!ix.total || ix.transportOnly || !sel) return clearHover();
@@ -356,10 +419,14 @@ export function Necklace(props: NecklaceProps) {
 
     node.addEventListener('pointerdown', onPointerDown);
     node.addEventListener('pointermove', onPointerMove);
+    node.addEventListener('pointerup', endDrag);
+    node.addEventListener('pointercancel', endDrag);
     node.addEventListener('pointerleave', clearHover);
     return () => {
       node.removeEventListener('pointerdown', onPointerDown);
       node.removeEventListener('pointermove', onPointerMove);
+      node.removeEventListener('pointerup', endDrag);
+      node.removeEventListener('pointercancel', endDrag);
       node.removeEventListener('pointerleave', clearHover);
       if (hoverTimer) clearTimeout(hoverTimer);
     };
@@ -377,6 +444,18 @@ export function Necklace(props: NecklaceProps) {
       else bead.dataset.play = idx === head ? 'head' : 'played';
     }
   }, [playbackHead, field]);
+
+  // punhos de arrasto (ENG-342): marca as contas-fronteira para o cursor. Escrita
+  // imperativa como o playback — não recomputa o campo memoizado.
+  useLayoutEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const ats = new Set((dragHandles ?? []).map((h) => h.at));
+    for (const bead of node.querySelectorAll<HTMLElement>('.cds-necklace-bead')) {
+      if (ats.has(Number(bead.dataset.idx))) bead.dataset.dragHandle = 'true';
+      else delete bead.dataset.dragHandle;
+    }
+  }, [dragHandles, field]);
 
   return (
     <div ref={containerRef} className="cds-necklace" style={{ height: `${field.height}px` }}>

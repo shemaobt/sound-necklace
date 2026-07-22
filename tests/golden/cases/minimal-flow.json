@@ -1,6 +1,6 @@
 {
   "name": "minimal-flow",
-  "description": "Fluxo mínimo completo: 2 cenas (1 GLEANING alta + 1 none_fit), 1 frase, 1 flag NEEDS_REVIEW, respostas com e sem texto → os três artefatos.",
+  "description": "Fluxo mínimo completo: 2 cenas (1 GLEANING alta + 1 none_fit), 1 frase, respostas com e sem texto → os três artefatos.",
   "steps": [
     {
       "type": "segment",
@@ -18,7 +18,6 @@
     { "type": "triagemDone" },
     { "type": "phraseSelect", "s": 0, "e": 4 },
     { "type": "confirmPhrase" },
-    { "type": "toggleFlag", "index": 0 },
     { "type": "sceneDone" },
     {
       "type": "answer",

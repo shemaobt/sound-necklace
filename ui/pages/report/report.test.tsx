@@ -63,7 +63,6 @@ function frase(overrides: Partial<Frase>): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...overrides,
   };
 }

@@ -1,6 +1,6 @@
 {
   "name": "import-return-roundtrip",
-  "description": "Semeia uma sessão fresca pela via de retorno (spans travados, flag reaplicada) e re-exporta → retorno byte-idêntico ao que a via de retorno produz (fidelidade import→export).",
+  "description": "Semeia uma sessão fresca pela via de retorno (spans travados) e re-exporta → retorno byte-idêntico ao que a via de retorno produz (fidelidade import→export).",
   "steps": [
     {
       "type": "segment",
@@ -38,8 +38,7 @@
               }
             ]
           }
-        ],
-        "flags": [{ "kind": "NEEDS_REVIEW", "prop_id": "P1", "note_pt": "" }]
+        ]
       }
     },
     { "type": "export", "artifacts": ["manifesto", "retorno"] }

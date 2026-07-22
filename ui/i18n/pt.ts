@@ -187,7 +187,6 @@ export const pt = {
   },
   listen: {
     tagline: 'Ouça a história.',
-    reopen: 'Reabrir',
     confirm: 'Já ouvi a história completa',
   },
   cut: {
@@ -199,7 +198,6 @@ export const pt = {
     instructionReplay: '. Toque numa cena pronta para reouvir.',
     sceneLabel: 'Cena {{ordinal}}',
     sceneLabelBare: 'Cena',
-    reopen: 'Reabrir',
     back: '← Voltar',
     confirmScene: '✓ Confirmar esta cena',
     confirmAll: 'Confirmar as cenas →',
@@ -209,9 +207,6 @@ export const pt = {
     instruction: 'Toque no colar o começo e o fim de cada frase.',
     instructionReplay: ' Toque numa frase pronta para reouvir.',
     halfSelection: 'Toque também onde a frase termina, no colar.',
-    reopen: 'Reabrir',
-    flagMarked: '⚑ marcada',
-    flagReview: '⚑ revisar',
     remove: 'Remover',
     back: '← Voltar',
     confirmPhrase: '✓ Confirmar esta frase',

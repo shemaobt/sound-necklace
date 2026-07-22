@@ -6,13 +6,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildBeads,
-  confirmPart,
-  confirmWhole,
   createSession,
-  frontier,
-  reopenPart,
   type Frase,
-  type SceneResult,
   type ScenePart,
   type SessionState,
 } from '../domain';
@@ -53,20 +48,8 @@ function frase(overrides: Partial<Frase> & { prop_id: string }): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...overrides,
   };
-}
-
-function unwrap(r: SceneResult): SessionState {
-  if (!r.ok) throw new Error(`${r.error.code}: ${r.error.message}`);
-  return r.state;
-}
-
-/** Driver de corte igual ao do golden registry: seleção {fronteira, endBead} + confirma. */
-function cut(st: SessionState, endBead: number): SessionState {
-  const sel = { ...st, selection: { s: frontier(st, 'parts'), e: endBead }, pendingStart: null };
-  return unwrap(confirmPart(sel, sel.current.index));
 }
 
 describe('RetornoSchema — fixtures válida e inválidas', () => {
@@ -87,27 +70,6 @@ describe('RetornoSchema — fixtures válida e inválidas', () => {
 });
 
 describe('buildRetorno — espelho de buildReturn (referência L1318–1329)', () => {
-  it('S# renumera sequencial após reopen+relock; part_id estável; destravada não exporta', () => {
-    // fluxo real pelos reducers: 2 cenas travadas → reabre a 1ª (cascata) → retrava só ela
-    let st = unwrap(confirmWhole(session()));
-    st = cut(st, 9); // PT1 {0..9}
-    st = cut(st, 23); // PT2 {10..23}
-    st = reopenPart(st, 0); // cascata: PT1 e PT2 destravam
-    st = cut(st, 15); // retrava só a primeira, com span NOVO {0..15}
-
-    const parts = buildRetorno(st).scenes[0]!.parts;
-    expect(parts).toEqual([
-      {
-        part_id: 'PT1',
-        scene_id: 'S1',
-        scene_kind: null,
-        scene_kind_confidence: null,
-        tag_state: 'pending',
-        confirmed_span: { start_bead: 0, end_bead: 15 },
-      },
-    ]);
-  });
-
   it('pula partes não travadas no meio e renumera S# pela ordem da lista', () => {
     const st = session({
       parts: [
@@ -150,13 +112,11 @@ describe('buildRetorno — espelho de buildReturn (referência L1318–1329)', (
     });
   });
 
-  it('flag exporta INDEPENDENTE de locked: frase reaberta flagged emite flag sem proposition', () => {
+  it('flags sai sempre vazio (o ⚑ foi removido na ENG-342)', () => {
     const st = session({
-      frases: [frase({ prop_id: 'P1', span: { s: 0, e: 4 }, locked: false, flagged: true })],
+      frases: [frase({ prop_id: 'P1', span: { s: 0, e: 4 }, locked: true, part_link: 'PT1' })],
     });
-    const ret = buildRetorno(st);
-    expect(ret.scenes[0]!.propositions).toEqual([]);
-    expect(ret.flags).toEqual([{ kind: 'NEEDS_REVIEW', prop_id: 'P1', note_pt: '' }]);
+    expect(buildRetorno(st).flags).toEqual([]);
   });
 
   it('propositions saem na ordem de CRIAÇÃO global, não agrupadas por cena', () => {

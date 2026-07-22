@@ -10,6 +10,7 @@ import {
   clickBead,
   confirmFrase,
   confirmFrasesDone,
+  dragPhraseBoundary,
   enterScene,
   moveBorder,
   nextNeighbor,
@@ -17,10 +18,8 @@ import {
   productiveScenes,
   reanchorFrase,
   removeFrase,
-  reopenFrase,
   sceneIndexOf,
   setMode,
-  toggleFlag,
 } from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button } from '../../atoms';
@@ -45,13 +44,14 @@ import './phrases.css';
  * da 1ª frase). Cada clique dá áudio na hora (§8.2); "▶ ouvir a cena" toca só a
  * cena. A travessia de borda abre o seam-modal com a oferta que o domínio
  * classificou (mover desliza a costura e trava; reancorar limpa; escalada volta à
- * Triage). Chips das frases travadas: ▶ · Reabrir · ⚑ revisar · Remover.
+ * Triage). Chips das frases travadas: Remover; ajuste pós-fato é arrastar a borda
+ * no colar (dragPhraseBoundary, ENG-342 — reabrir/⚑ removidos).
  *
  * Camada de wiring: o modelo de clique delega ao redutor `clickBead`; confirmar
- * (`confirmFrase`), mover (`moveBorder`), reancorar (`reanchorFrase`), sinalizar
- * (`toggleFlag`), remover (`removeFrase`), avançar (`confirmFrasesDone`) e voltar
- * (`enterScene`/`setMode`) são decisões puras do domínio aplicadas pelo
- * `sessionStore`. O áudio chega por prop; nada de shell/organismo/domínio muda.
+ * (`confirmFrase`), mover (`moveBorder`), reancorar (`reanchorFrase`), arrastar a
+ * borda (`dragPhraseBoundary`), remover (`removeFrase`), avançar
+ * (`confirmFrasesDone`) e voltar (`enterScene`/`setMode`) são decisões puras do
+ * domínio aplicadas pelo `sessionStore`. O áudio chega por prop.
  */
 export interface PhrasesProps {
   player?: Player | null;
@@ -83,7 +83,14 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
       tint: phraseColor(pos),
     }));
     const lockedEndBeads = scenePhrases.map(({ f }) => f.span!.e);
-    return { sc, scSpan: sc.span, scenePhrases, segments, lockedEndBeads };
+    // Punhos de arrasto (ENG-342): as duas bordas de cada frase travada. `id` =
+    // `<índiceGlobal>:<start|end>`; o domínio cresce/encolhe e só toca a vizinha
+    // quando encostam (cobertura esparsa é legal).
+    const dragHandles = scenePhrases.flatMap(({ f, index }) => [
+      { at: f.span!.s, id: `${index}:start` },
+      { at: f.span!.e, id: `${index}:end` },
+    ]);
+    return { sc, scSpan: sc.span, scenePhrases, segments, lockedEndBeads, dragHandles };
   }, [session]);
 
   useEffect(() => {
@@ -96,7 +103,7 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   }, [player]);
 
   if (!session || !derived) return null;
-  const { sc, scSpan, scenePhrases, segments, lockedEndBeads } = derived;
+  const { sc, scSpan, scenePhrases, segments, lockedEndBeads, dragHandles } = derived;
 
   const ps = productiveScenes(session);
   const sceneIdx = Math.max(0, sceneIndexOf(session, sc.part_id));
@@ -207,15 +214,13 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     sessionStore.getState().apply((s) => setMode(s, 'triagem'));
   };
 
-  const reopen = (i: number): void => {
-    setError(null);
-    // a frase que estava tocando deixa de existir aqui: o áudio dela não sobrevive
-    player?.stop();
-    sessionStore.getState().apply((s) => reopenFrase(s, i));
-  };
-
-  const flag = (i: number): void => {
-    sessionStore.getState().apply((s) => toggleFlag(s, i));
+  // Arrastar a borda de uma frase (ENG-342, substitui o reabrir/⚑): `id` =
+  // `<índiceGlobal>:<start|end>`. Cada move aplica o ajuste puro do domínio.
+  const onDragBoundary = (id: string, toBead: number): void => {
+    const sep = id.lastIndexOf(':');
+    const index = Number(id.slice(0, sep));
+    const edge = id.slice(sep + 1) as 'start' | 'end';
+    sessionStore.getState().apply((s) => dragPhraseBoundary(s, index, edge, toBead));
   };
 
   const remove = (i: number): void => {
@@ -300,9 +305,11 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
           size={SIZE_SEG}
           window={scSpan}
           playbackHead={head}
+          dragHandles={dragHandles}
           onBeadPointerDown={onBead}
           onHeadTap={onHeadTap}
           onEdgeHover={onEdgeHover}
+          onDragBoundary={onDragBoundary}
         />
       </div>
 
@@ -316,17 +323,9 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
                   label={phraseLabel(pos)}
                   swatch={phraseColor(pos)}
                   actions={
-                    <>
-                      <Button variant="ghost" size="sm" onClick={() => reopen(index)}>
-                        {t('phrases.reopen')}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => flag(index)}>
-                        {f.flagged ? t('phrases.flagMarked') : t('phrases.flagReview')}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => remove(index)}>
-                        {t('phrases.remove')}
-                      </Button>
-                    </>
+                    <Button variant="ghost" size="sm" onClick={() => remove(index)}>
+                      {t('phrases.remove')}
+                    </Button>
                   }
                 />
               </li>

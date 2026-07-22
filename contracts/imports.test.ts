@@ -57,7 +57,6 @@ function frase(overrides: Partial<Frase> & { prop_id: string }): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...overrides,
   };
 }
@@ -212,7 +211,7 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
     expect(r.state.partsConfirmed).toBe(true);
     expect(r.state.frases).toEqual([
       frase({ prop_id: 'P1', span: { s: 0, e: 4 }, part_link: 'PT1', locked: true }),
-      frase({ prop_id: 'P2', span: { s: 5, e: 9 }, part_link: 'PT1', locked: true, flagged: true }),
+      frase({ prop_id: 'P2', span: { s: 5, e: 9 }, part_link: 'PT1', locked: true }),
     ]);
     expect(r.state.current).toEqual({ layer: 'frases', index: -1 });
     expect(r.state.selection).toBeNull();
@@ -240,9 +239,9 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
     if (r.ok) expect(r.state.partsConfirmed).toBe(true);
   });
 
-  it('sem cena confirmada: pula o bloco mas reaplica flags e move o cursor (ref L1368/L1378)', () => {
-    // frases já no estado; retorno só com flags, sem cena → o bloco da cena é
-    // pulado, mas as flags pousam e o cursor vai a frases
+  it('sem cena confirmada: pula o bloco mas move o cursor a frases; ignora flags legadas (ENG-342)', () => {
+    // frases já no estado; retorno sem cena → o bloco da cena é pulado, o cursor
+    // vai a frases, e `flags` (de um retorno antigo) é IGNORADO — o ⚑ foi removido
     const soFlags: ReturnImport = { flags: [{ kind: 'NEEDS_REVIEW', prop_id: 'P1', note_pt: '' }] };
     const seeded = session({
       frases: [frase({ prop_id: 'P1', span: { s: 0, e: 4 }, part_link: 'PT1', locked: true })],
@@ -252,7 +251,6 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
     const r = applyReturn(seeded, soFlags);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.frases[0]?.flagged).toBe(true); // flag reaplicada sem cena
     expect(r.state.frases[0]?.span).toEqual({ s: 0, e: 4 }); // frase preservada
     expect(r.state.current).toEqual({ layer: 'frases', index: -1 });
     expect(r.state.selection).toBeNull();
@@ -308,7 +306,6 @@ describe('fidelidade import→export: retorno → import → export é byte-idê
           span: { s: 0, e: 4 },
           part_link: 'PT1',
           locked: true,
-          flagged: true,
         }),
         frase({ prop_id: 'P2', span: { s: 5, e: 9 }, part_link: 'PT1', locked: true }),
       ],

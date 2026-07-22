@@ -38,7 +38,7 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
 
     // status documentado: cenas + triagem + frases + respostas consumidos;
     // export pendente
-    expect(r.pendingAt).toEqual({ index: 17, type: 'export' });
+    expect(r.pendingAt).toEqual({ index: 16, type: 'export' });
 
     // 96000 amostras / 8000 Hz = 12 s a 0.5 s/conta → 24 contas
     expect(r.state.totalBeads).toBe(24);
@@ -61,13 +61,12 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
       scene_kind_confidence: null,
     });
 
-    // frases: P1 travada {0..4} em PT1, marcada para revisão; slot P2 dangling
+    // frases: P1 travada {0..4} em PT1; slot P2 dangling
     expect(r.state.frases[0]).toMatchObject({
       prop_id: 'P1',
       locked: true,
       span: { s: 0, e: 4 },
       part_link: 'PT1',
-      flagged: true,
     });
     expect(r.state.frases[1]).toMatchObject({ prop_id: 'P2', locked: false, span: null });
 
@@ -87,30 +86,6 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
     expect(r.state.mapping?.level3['P1']?.['oque']).toBe(
       'A chegada ao campo — com acentos: coração, você, média.',
     );
-  });
-
-  it('reopenScene destrava em cascata e o re-corte preserva os PT#s', () => {
-    const { steps } = minimalFlow();
-    const segment = steps[0] as GoldenStep;
-    const replayed = replaySessionSteps([
-      segment,
-      { type: 'confirmWhole' },
-      { type: 'cutScene', endBead: 9 },
-      { type: 'cutScene', endBead: 23 },
-      { type: 'reopenScene', index: 0 },
-      { type: 'cutScene', endBead: 5 },
-      { type: 'cutScene', endBead: 23 },
-      { type: 'confirmParts' },
-    ]);
-
-    expect(replayed.pendingAt).toBeNull();
-    expect(
-      replayed.state.parts.map((p) => ({ id: p.part_id, span: p.span, locked: p.locked })),
-    ).toEqual([
-      { id: 'PT1', span: { s: 0, e: 5 }, locked: true },
-      { id: 'PT2', span: { s: 6, e: 23 }, locked: true },
-    ]);
-    expect(replayed.state.partsConfirmed).toBe(true);
   });
 
   it('confirmPhrase com borderDecision=move desliza a costura (doMove)', () => {
@@ -144,13 +119,12 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
     expect(replayed.state.parts[0]!.span).toEqual({ s: 0, e: 9 }); // costura intacta
   });
 
-  it('reopenPhrase + removePhrase reusam o P# e mantêm o replay íntegro', () => {
+  it('removePhrase reusa o P# e mantém o replay íntegro', () => {
     const { steps } = minimalFlow();
     const replayed = replaySessionSteps([
       ...toSegmentacao(steps[0] as GoldenStep),
       { type: 'phraseSelect', s: 0, e: 4 },
       { type: 'confirmPhrase' }, // P1 travada; P2 auto-add
-      { type: 'reopenPhrase', index: 0 }, // cascata global: P1 e P2 destravam
       { type: 'removePhrase', index: 0 }, // P1 some; P# volta ao pool
       { type: 'phraseSelect', s: 0, e: 3 },
       { type: 'confirmPhrase' },
@@ -182,7 +156,7 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
     // contracts/
     const { steps } = minimalFlow();
     const r = replaySessionSteps(steps);
-    expect(r.pendingAt).toEqual({ index: 17, type: 'export' });
+    expect(r.pendingAt).toEqual({ index: 16, type: 'export' });
 
     const golden = (file: string): Buffer =>
       readFileSync(join(__dirname, 'expected', 'minimal-flow', file));
@@ -236,7 +210,6 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
           span: { s: 0, e: 4 },
           part_link: 'PT1',
           locked: true,
-          flagged: true,
         },
       ],
     };

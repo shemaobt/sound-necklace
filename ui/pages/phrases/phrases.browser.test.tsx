@@ -71,7 +71,6 @@ function segmenting(): SessionState {
         span: null,
         part_link: null,
         locked: false,
-        flagged: false,
       },
     ],
     current: { layer: 'frases', index: 0 },
@@ -96,18 +95,25 @@ function firePointer(el: HTMLElement, index: number): void {
   const bead = el.querySelector(`.cds-necklace-bead[data-idx="${index}"]`);
   if (!bead) throw new Error(`conta ${index} não renderizada`);
   const r = bead.getBoundingClientRect();
-  el.dispatchEvent(
-    new PointerEvent('pointerdown', {
-      pointerId: 1,
-      pointerType: 'mouse',
-      isPrimary: true,
-      bubbles: true,
-      cancelable: true,
-      clientX: r.left + r.width / 2,
-      clientY: r.top + r.height / 2,
-      buttons: 1,
-    }),
-  );
+  const x = r.left + r.width / 2;
+  const y = r.top + r.height / 2;
+  // um TAP real: down + up no mesmo ponto. O up só importa quando a conta é um
+  // punho de arrasto (ENG-342), onde o toque só se confirma sem movimento.
+  const at = (type: string) =>
+    el.dispatchEvent(
+      new PointerEvent(type, {
+        pointerId: 1,
+        pointerType: 'mouse',
+        isPrimary: true,
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y,
+        buttons: type === 'pointerdown' ? 1 : 0,
+      }),
+    );
+  at('pointerdown');
+  at('pointerup');
 }
 
 beforeEach(() => {
@@ -125,7 +131,6 @@ function frase(over: Partial<Frase>): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...over,
   };
 }
@@ -215,22 +220,6 @@ describe('Segmentação — uma frase travada pode ser ouvida (ENG-296)', () => 
     const acesa = el.querySelector('.cds-necklace-bead[data-play="head"]');
 
     firePointer(el, Number(acesa!.getAttribute('data-idx')));
-
-    expect(player.state.playing).toBe(false);
-    root.unmount();
-  });
-
-  it('reabrir a frase cala o áudio dela', () => {
-    const { player, transport } = realPlayer();
-    sessionStore.getState().load(withLockedPhrase());
-    const { host, root, el } = mount(player);
-
-    firePointer(el, 2);
-    advanceBy(transport, 0.2);
-    expect(player.state.playing).toBe(true);
-
-    const reabrir = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Reabrir');
-    flushSync(() => reabrir!.click());
 
     expect(player.state.playing).toBe(false);
     root.unmount();

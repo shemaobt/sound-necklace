@@ -169,7 +169,6 @@ export const en: Dict = {
   },
   listen: {
     tagline: 'Listen to the story.',
-    reopen: 'Reopen',
     confirm: 'I have heard the whole story',
   },
   cut: {
@@ -181,7 +180,6 @@ export const en: Dict = {
     instructionReplay: '. Tap a finished scene to hear it again.',
     sceneLabel: 'Scene {{ordinal}}',
     sceneLabelBare: 'Scene',
-    reopen: 'Reopen',
     back: '← Back',
     confirmScene: '✓ Confirm this scene',
     confirmAll: 'Confirm the scenes →',
@@ -191,9 +189,6 @@ export const en: Dict = {
     instruction: 'Tap the necklace at the start and the end of each phrase.',
     instructionReplay: ' Tap a finished phrase to hear it again.',
     halfSelection: 'Also tap where the phrase ends, on the necklace.',
-    reopen: 'Reopen',
-    flagMarked: '⚑ marked',
-    flagReview: '⚑ review',
     remove: 'Remove',
     back: '← Back',
     confirmPhrase: '✓ Confirm this phrase',

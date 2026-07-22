@@ -8,7 +8,7 @@ import {
   clickBead,
   confirmPart,
   confirmParts,
-  reopenPart,
+  dragSceneBoundary,
   setMode,
   type Span,
 } from '../../../domain';
@@ -27,9 +27,10 @@ import './cut.css';
  * (§8.2): a conta, o intervalo ou só a janela da fronteira ajustada.
  *
  * Camada de wiring: o modelo de clique delega ao redutor `clickBead`; travar
- * (`confirmPart`), reabrir em cascata (`reopenPart`), confirmar tudo
- * (`confirmParts` → Triage) e voltar (história reaberta, cenas preservadas) são
- * decisões puras do domínio aplicadas pelo `sessionStore`. O áudio chega por prop.
+ * (`confirmPart`), arrastar a fronteira entre cenas (`dragSceneBoundary`, ENG-342 —
+ * substitui o reabrir), confirmar tudo (`confirmParts` → Triage) e voltar (história
+ * reaberta, cenas preservadas) são decisões puras do domínio aplicadas pelo
+ * `sessionStore`. O áudio chega por prop.
  */
 /** As cenas cobrem 0…N-1 sem buraco? (ladrilham a história inteira) */
 function tilesWholeStory(spans: Span[], totalBeads: number): boolean {
@@ -65,6 +66,13 @@ export function Cut({ player = null, sound }: CutProps) {
   );
   const lockedEndBeads = useMemo<number[]>(
     () => lockedScenes.map((sc) => sc.span.e),
+    [lockedScenes],
+  );
+  // Punhos de arrasto (ENG-342): a fronteira à DIREITA de cada cena, exceto a
+  // última (cujo fim é o fim da história, fixo). `id` = a cena esquerda; o
+  // domínio (`dragSceneBoundary`) empurra a vizinha por span.
+  const dragHandles = useMemo(
+    () => lockedScenes.slice(0, -1).map((sc) => ({ at: sc.span.e, id: sc.part.part_id })),
     [lockedScenes],
   );
 
@@ -199,11 +207,11 @@ export function Cut({ player = null, sound }: CutProps) {
       );
   };
 
-  const reopen = (i: number): void => {
-    setError(null);
-    // a cena que estava tocando deixa de existir aqui: o áudio dela não sobrevive
-    player?.stop();
-    sessionStore.getState().apply((s) => reopenPart(s, i));
+  // Arrastar a fronteira entre duas cenas (ENG-342, substitui o reabrir): a cena
+  // `id` cresce/encolhe até `toBead`, a vizinha absorve o resto (Pac-Man). Cada
+  // move do ponteiro aplica o ajuste puro do domínio.
+  const onDragBoundary = (id: string, toBead: number): void => {
+    sessionStore.getState().apply((s) => dragSceneBoundary(s, id, toBead));
   };
 
   return (
@@ -233,9 +241,11 @@ export function Cut({ player = null, sound }: CutProps) {
           pendingStart={session.pendingStart}
           size={SIZE_L}
           playbackHead={head}
+          dragHandles={dragHandles}
           onBeadPointerDown={onBead}
           onHeadTap={onHeadTap}
           onEdgeHover={onEdgeHover}
+          onDragBoundary={onDragBoundary}
         />
       </div>
 
@@ -250,11 +260,6 @@ export function Cut({ player = null, sound }: CutProps) {
                   <ScenePhraseChip
                     label={ordinal ? t('cut.sceneLabel', { ordinal }) : t('cut.sceneLabelBare')}
                     swatch={sceneColor(sc.rank)}
-                    actions={
-                      <Button variant="ghost" size="sm" onClick={() => reopen(sc.arrayIndex)}>
-                        {t('cut.reopen')}
-                      </Button>
-                    }
                   />
                 </li>
               );

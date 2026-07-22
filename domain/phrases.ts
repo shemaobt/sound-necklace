@@ -3,16 +3,16 @@
  * L396; activeScene L395 vive em seam.ts, o ramo de fronteira com back-reach
  * L400–410 em frontier.ts — ENG-269), addFrase
  * (L772–777), confirmFrase (L779–792), lockFrase (L793–798), doMove (L814),
- * reopenFrase (L843–848), removeFrase (L850–855), flag toggle (L883),
- * enterScene (L837–842), enterLayer("frases") (L930–935), do bloco de entrada
- * em segmentação do setMode (L1003–1008) e confirmFrasesDone (L916–929).
- * PRD v2 §6.4, §8.6, §11.
+ * removeFrase (L850–855), enterScene (L837–842), enterLayer("frases")
+ * (L930–935), do bloco de entrada em segmentação do setMode (L1003–1008) e
+ * confirmFrasesDone (L916–929). O reabrir/⚑ (reference L843–848, L883) foi
+ * removido na ENG-342 — ajuste pós-fato agora é arrastar fronteira
+ * (dragPhraseBoundary). PRD v2 §6.4, §8.6, §11.
  *
  * Quirks espelhados de propósito: confirmFrase NÃO checa pendingStart (meia-
  * seleção {b,b} passa); a fronteira com cena ativa NÃO clampa em totalBeads−1;
- * a cascata do reopen é sobre o array GLOBAL (frases de outras cenas destravam
- * juntas) e `flagged` sobrevive; slots dangling ocupam seu P#; lockFrase pula
- * para o PRIMEIRO destravado, removeFrase/enterLayer assumem o ÚLTIMO.
+ * slots dangling ocupam seu P#; lockFrase pula para o PRIMEIRO destravado,
+ * removeFrase/enterLayer assumem o ÚLTIMO.
  *
  * `warnedEmptyScene` é variável de módulo na referência (L916) — aqui vira
  * parâmetro/retorno explícito de confirmFrasesDone (estado efêmero de UI; não
@@ -55,7 +55,6 @@ export function addFrase(state: SessionState): SessionState {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
   };
   const frases = [...state.frases, nova];
   return {
@@ -165,21 +164,6 @@ export function reanchorFrase(state: SessionState): SessionState {
   return { ...state, selection: null, pendingStart: null };
 }
 
-/** Cascata GLOBAL (L843–848): destrava i e tudo depois — mesmo de outras
- *  cenas; flagged sobrevive. Índice inválido é no-op (padrão reopenPart). */
-export function reopenFrase(state: SessionState, i: number): SessionState {
-  const alvo = state.frases[i];
-  if (!alvo) return state;
-  const frases = state.frases.map((f, k) => (k >= i ? { ...f, locked: false } : f));
-  return {
-    ...state,
-    frases,
-    current: { layer: 'frases', index: i },
-    selection: alvo.span ? { s: alvo.span.s, e: alvo.span.e } : null,
-    pendingStart: null,
-  };
-}
-
 /** Remove e libera o P#; assume o ÚLTIMO destravado ou auto-add (L850–855).
  *  Desvio deliberado: índice fora do intervalo não remove nada (o splice(-1)
  *  da referência removeria a última — inalcançável por chamador bem-formado). */
@@ -194,12 +178,63 @@ export function removeFrase(state: SessionState, i: number): SessionState {
   return addFrase({ ...base, current: { layer: 'frases', index: -1 } });
 }
 
-/** "⚑ revisar"/"⚑ marcada" (L883): alterna a marca de revisão. */
-export function toggleFlag(state: SessionState, i: number): SessionState {
-  return {
-    ...state,
-    frases: state.frases.map((f, k) => (k === i ? { ...f, flagged: !f.flagged } : f)),
-  };
+/**
+ * Arrastar uma borda ('start'/'end') de uma frase travada (ENG-342). Cresce/
+ * encolhe a frase dentro da SUA cena; cobertura esparsa é legal, então em vão a
+ * borda só cresce e a vizinha imediata só encolhe quando de fato se tocam —
+ * Pac-Man, sem ripple. Clampa dentro da cena e mantém ambas com ≥1 conta.
+ * Sem mudança → no-op (identidade). Vizinhas são só frases travadas da MESMA cena.
+ */
+export function dragPhraseBoundary(
+  state: SessionState,
+  fraseIndex: number,
+  edge: 'start' | 'end',
+  toBead: number,
+): SessionState {
+  const f = state.frases[fraseIndex];
+  if (!f || !f.locked || !f.span || f.part_link === null) return state;
+  const scene = state.parts.find((p) => p.part_id === f.part_link);
+  if (!scene || !scene.span) return state;
+  const fSpan = f.span;
+  type Nb = { s: number; e: number; k: number };
+  const sameScene = (fr: Frase, k: number): fr is Frase & { span: Span } =>
+    k !== fraseIndex && fr.locked && fr.span !== null && fr.part_link === f.part_link;
+
+  if (edge === 'end') {
+    // vizinha à direita: a frase travada da cena com o MENOR início depois desta
+    const neighbor = state.frases.reduce<Nb | null>((acc, fr, k) => {
+      if (!sameScene(fr, k) || fr.span.s <= fSpan.s) return acc;
+      return !acc || fr.span.s < acc.s ? { s: fr.span.s, e: fr.span.e, k } : acc;
+    }, null);
+    const hardHi = neighbor ? neighbor.e - 1 : scene.span.e;
+    const newE = Math.max(fSpan.s, Math.min(hardHi, toBead));
+    const touches = neighbor !== null && newE >= neighbor.s;
+    if (newE === fSpan.e && !touches) return state;
+    const frases = state.frases.map((fr, k) => {
+      if (k === fraseIndex) return { ...fr, span: { s: fSpan.s, e: newE } };
+      if (neighbor && touches && k === neighbor.k)
+        return { ...fr, span: { s: newE + 1, e: neighbor.e } };
+      return fr;
+    });
+    return { ...state, frases };
+  }
+
+  // vizinha à esquerda: a frase travada da cena com o MAIOR fim antes desta
+  const neighbor = state.frases.reduce<Nb | null>((acc, fr, k) => {
+    if (!sameScene(fr, k) || fr.span.e >= fSpan.e) return acc;
+    return !acc || fr.span.e > acc.e ? { s: fr.span.s, e: fr.span.e, k } : acc;
+  }, null);
+  const hardLo = neighbor ? neighbor.s + 1 : scene.span.s;
+  const newS = Math.min(fSpan.e, Math.max(hardLo, toBead));
+  const touches = neighbor !== null && newS <= neighbor.e;
+  if (newS === fSpan.s && !touches) return state;
+  const frases = state.frases.map((fr, k) => {
+    if (k === fraseIndex) return { ...fr, span: { s: newS, e: fSpan.e } };
+    if (neighbor && touches && k === neighbor.k)
+      return { ...fr, span: { s: neighbor.s, e: newS - 1 } };
+    return fr;
+  });
+  return { ...state, frases };
 }
 
 /** Foca uma cena produtiva: 1º slot destravado ou auto-add dangling (L837–842). */

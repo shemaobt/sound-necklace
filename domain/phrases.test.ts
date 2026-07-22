@@ -7,6 +7,7 @@ import {
   addFrase,
   confirmFrase,
   confirmFrasesDone,
+  dragPhraseBoundary,
   enterFrasesLayer,
   enterScene,
   enterSegmentacao,
@@ -14,9 +15,7 @@ import {
   phraseFrontier,
   reanchorFrase,
   removeFrase,
-  reopenFrase,
   sceneIndexOf,
-  toggleFlag,
   type ConfirmFraseResult,
 } from './phrases';
 
@@ -40,7 +39,6 @@ function mkFrase(prop_id: string, over: Partial<Frase> = {}): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...over,
   };
 }
@@ -312,47 +310,6 @@ describe('moveBorder / reanchorFrase — as saídas da oferta', () => {
   });
 });
 
-describe('reopenFrase — cascata GLOBAL', () => {
-  it('destrava i e TODAS as posteriores, mesmo de outras cenas', () => {
-    const s = sess({
-      frases: [
-        mkFrase('P1', { locked: true, span: { s: 0, e: 4 }, part_link: 'PT1' }),
-        mkFrase('P2', { locked: true, span: { s: 10, e: 14 }, part_link: 'PT2' }),
-        mkFrase('P3', { locked: true, span: { s: 15, e: 20 }, part_link: 'PT2' }),
-      ],
-      activeSceneId: 'PT2',
-    });
-    const next = reopenFrase(s, 1);
-    expect(next.frases.map((f) => f.locked)).toEqual([true, false, false]);
-    expect(next.current).toEqual({ layer: 'frases', index: 1 });
-    expect(next.selection).toEqual({ s: 10, e: 14 });
-    expect(next.pendingStart).toBeNull();
-  });
-
-  it('flagged SOBREVIVE ao reopen (a flag exporta sem proposition)', () => {
-    const s = sess({
-      frases: [
-        mkFrase('P1', { locked: true, span: { s: 0, e: 4 }, part_link: 'PT1', flagged: true }),
-      ],
-      activeSceneId: 'PT1',
-    });
-    const next = reopenFrase(s, 0);
-    expect(next.frases[0]!.flagged).toBe(true);
-    expect(next.frases[0]!.locked).toBe(false);
-  });
-
-  it('frase sem span reabre com seleção nula', () => {
-    const s = sess({ frases: [mkFrase('P1')], activeSceneId: 'PT1' });
-    const next = reopenFrase(s, 0);
-    expect(next.selection).toBeNull();
-  });
-
-  it('índice inválido é no-op (desvio deliberado do TypeError da referência)', () => {
-    const s = sess({ frases: [mkFrase('P1')] });
-    expect(reopenFrase(s, 9)).toBe(s);
-  });
-});
-
 describe('removeFrase — libera o P# e escolhe o ÚLTIMO destravado', () => {
   it('remove e aponta para o último slot destravado remanescente', () => {
     const s = sess({
@@ -385,18 +342,55 @@ describe('removeFrase — libera o P# e escolhe o ÚLTIMO destravado', () => {
   });
 });
 
-describe('toggleFlag — marca/desmarca para revisão', () => {
-  it('alterna a flag da frase alvo sem tocar as outras', () => {
-    const s = sess({
-      frases: [
-        mkFrase('P1', { locked: true, span: { s: 0, e: 4 }, part_link: 'PT1' }),
-        mkFrase('P2', { locked: true, span: { s: 10, e: 14 }, part_link: 'PT2' }),
-      ],
-    });
-    const marcada = toggleFlag(s, 0);
-    expect(marcada.frases[0]!.flagged).toBe(true);
-    expect(marcada.frases[1]!.flagged).toBe(false);
-    expect(toggleFlag(marcada, 0).frases[0]!.flagged).toBe(false);
+describe('dragPhraseBoundary — arrastar a borda de uma frase (ENG-342)', () => {
+  // PT2 = {10,29}; F1 e F2 travadas nela, com um vão entre elas (16–19, 26–29)
+  const F1 = mkFrase('P1', { span: { s: 12, e: 15 }, part_link: 'PT2', locked: true });
+  const F2 = mkFrase('P2', { span: { s: 20, e: 25 }, part_link: 'PT2', locked: true });
+  const base = () => sess({ parts: [PT1, PT2, PT3], frases: [F1, F2] });
+
+  it('crescer o fim para dentro do vão: cresce sozinha, a vizinha fica intacta', () => {
+    const next = dragPhraseBoundary(base(), 0, 'end', 18);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 18 });
+    expect(next.frases[1]!.span).toEqual({ s: 20, e: 25 });
+  });
+
+  it('crescer o fim até tocar a vizinha: empurra o início dela (encolhe)', () => {
+    const next = dragPhraseBoundary(base(), 0, 'end', 22);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 22 });
+    expect(next.frases[1]!.span).toEqual({ s: 23, e: 25 });
+  });
+
+  it('clampa: a vizinha nunca fica vazia', () => {
+    const next = dragPhraseBoundary(base(), 0, 'end', 40);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 24 });
+    expect(next.frases[1]!.span).toEqual({ s: 25, e: 25 });
+  });
+
+  it('crescer o começo para dentro do vão: só cresce', () => {
+    const next = dragPhraseBoundary(base(), 1, 'start', 17);
+    expect(next.frases[1]!.span).toEqual({ s: 17, e: 25 });
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 15 });
+  });
+
+  it('crescer o começo até tocar a vizinha anterior: encolhe o fim dela', () => {
+    const next = dragPhraseBoundary(base(), 1, 'start', 14);
+    expect(next.frases[1]!.span).toEqual({ s: 14, e: 25 });
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 13 });
+  });
+
+  it('sem vizinha à frente: cresce livre até o fim da cena, clampado nele', () => {
+    const next = dragPhraseBoundary(base(), 1, 'end', 40);
+    expect(next.frases[1]!.span).toEqual({ s: 20, e: 29 });
+  });
+
+  it('arrastar para a posição atual não muda nada', () => {
+    const s = base();
+    expect(dragPhraseBoundary(s, 0, 'end', 15)).toBe(s);
+  });
+
+  it('frase destravada ou sem span: no-op', () => {
+    const s = sess({ parts: [PT1, PT2, PT3], frases: [mkFrase('P1', { part_link: 'PT2' })] });
+    expect(dragPhraseBoundary(s, 0, 'end', 20)).toBe(s);
   });
 });
 

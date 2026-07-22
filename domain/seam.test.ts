@@ -4,6 +4,7 @@ import { buildBeads } from './grid';
 import { createSession, type Frase, type ScenePart, type SessionState, type Span } from './state';
 import {
   classifyBorderMove,
+  dragSceneBoundary,
   nextNeighbor,
   prevNeighbor,
   sceneHasFrases,
@@ -32,7 +33,6 @@ function mkFrase(prop_id: string, over: Partial<Frase> = {}): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...over,
   };
 }
@@ -266,6 +266,47 @@ describe('slideSeam — a cena cresce, a vizinha imediata encolhe', () => {
   it('newStart/newEnd que não ultrapassam o span atual não mexem em nada', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
     expect(slideSeam(s, 'PT2', 12, 25)).toBe(s);
+  });
+});
+
+describe('dragSceneBoundary — arrastar a fronteira interna (Pac-Man, ENG-342)', () => {
+  it('arrastar para a direita: a cena esquerda cresce, a direita encolhe o mesmo', () => {
+    const s = sess({ parts: [PT1, PT2, PT3] });
+    const next = dragSceneBoundary(s, 'PT1', 15);
+    expect(next.parts[0]!.span).toEqual({ s: 0, e: 15 });
+    expect(next.parts[1]!.span).toEqual({ s: 16, e: 29 });
+    expect(next.parts[2]).toBe(s.parts[2]); // nada rippla para frente
+  });
+
+  it('arrastar para a esquerda: a esquerda encolhe, a direita cresce', () => {
+    const s = sess({ parts: [PT1, PT2, PT3] });
+    const next = dragSceneBoundary(s, 'PT1', 5);
+    expect(next.parts[0]!.span).toEqual({ s: 0, e: 5 });
+    expect(next.parts[1]!.span).toEqual({ s: 6, e: 29 });
+  });
+
+  it('clampa: a cena esquerda nunca fica vazia (≥ 1 conta)', () => {
+    const s = sess({ parts: [PT1, PT2, PT3] });
+    const next = dragSceneBoundary(s, 'PT1', -4);
+    expect(next.parts[0]!.span).toEqual({ s: 0, e: 0 });
+    expect(next.parts[1]!.span).toEqual({ s: 1, e: 29 });
+  });
+
+  it('clampa: a cena direita nunca fica vazia (≥ 1 conta)', () => {
+    const s = sess({ parts: [PT1, PT2, PT3] });
+    const next = dragSceneBoundary(s, 'PT1', 99);
+    expect(next.parts[0]!.span).toEqual({ s: 0, e: 28 });
+    expect(next.parts[1]!.span).toEqual({ s: 29, e: 29 });
+  });
+
+  it('última cena não tem fronteira à direita: no-op', () => {
+    const s = sess({ parts: [PT1, PT2, PT3] });
+    expect(dragSceneBoundary(s, 'PT3', 35)).toBe(s);
+  });
+
+  it('arrastar para a posição atual não muda nada', () => {
+    const s = sess({ parts: [PT1, PT2, PT3] });
+    expect(dragSceneBoundary(s, 'PT1', 9)).toBe(s);
   });
 });
 
