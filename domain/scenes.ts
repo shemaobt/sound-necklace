@@ -145,9 +145,9 @@ export function confirmParts(state: SessionState): SceneResult {
  * Remove a cena e libera o PT#; reancora no ÚLTIMO destravado ou auto-add —
  * espelho de removeFrase (domain/phrases.ts) e de enterPartsLayer. A cena não
  * tinha "remover" no reference (só reabrir, apagado na ENG-342); adicionado para
- * dar às cenas a mesma remoção pós-fato das frases. Remover uma cena do MEIO
- * deixa um vão (as cenas ladrilham em sequência) — recobre-se arrastando a
- * fronteira da cena anterior. Índice fora do intervalo não remove nada.
+ * dar às cenas a mesma remoção pós-fato das frases. Puro: a absorção pós-remoção
+ * é um passo composto na UI (`absorbNextScene`, #3), fora daqui — simetria com
+ * removeFrase. Índice fora do intervalo é no-op.
  */
 export function removePart(state: SessionState, i: number): SessionState {
   const parts = state.parts.filter((_, k) => k !== i);
@@ -158,6 +158,29 @@ export function removePart(state: SessionState, i: number): SessionState {
   });
   if (lu >= 0) return primePart({ ...base, current: { layer: 'parts', index: lu } });
   return addPart({ ...base, current: { layer: 'parts', index: -1 } });
+}
+
+/**
+ * Absorção pós-remoção (#3, decisão do dono; composto na UI após `removePart`,
+ * como o reprime pós-drag): a cena SEGUINTE (a travada de menor início depois de
+ * `gapStart`) estica seu início para trás até `gapStart`, engolindo o vão que a
+ * removida deixou. Sem seguinte (removeu a última), no-op. Espelho de
+ * `absorbNextFrase`.
+ */
+export function absorbNextScene(state: SessionState, gapStart: number): SessionState {
+  let nbK = -1;
+  let nbStart = Infinity;
+  state.parts.forEach((p, k) => {
+    if (p.locked && p.span && p.span.s > gapStart && p.span.s < nbStart) {
+      nbStart = p.span.s;
+      nbK = k;
+    }
+  });
+  if (nbK < 0) return state;
+  const parts = state.parts.map((p, k) =>
+    k === nbK ? { ...p, span: { s: gapStart, e: p.span!.e } } : p,
+  );
+  return { ...state, parts };
 }
 
 /** Port de enterLayer("parts") (L930–935): assume o ÚLTIMO slot destravado

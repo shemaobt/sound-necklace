@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { Player } from '../../../adapters/audio';
 import type { UiSound } from '../../../adapters/ui-sound';
 import {
+  absorbNextScene,
   activeAnchor,
   clickBead,
   confirmPart,
@@ -17,7 +18,13 @@ import {
 import { Button } from '../../atoms';
 import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
-import { lockedItemAt, playActionOn, rankLockedScenes, sceneColor, sceneOrdinal } from './cutting';
+import {
+  lockedItemAt,
+  playSelectionOrAction,
+  rankLockedScenes,
+  sceneColor,
+  sceneOrdinal,
+} from './cutting';
 import { ScenePhraseChip } from '../../molecules';
 import './cut.css';
 
@@ -111,23 +118,18 @@ export function Cut({ player = null, sound }: CutProps) {
     );
 
   /**
-   * Tocar numa cena já travada a reproduz inteira — o `clickCut`/`_sceneOf` de
-   * "Ouvir no colar" (o estudo `pure` escolhido, redesign §11; o arquivo chamado
-   * "Protótipo" é o estudo VELHO e traz o oposto: play no chip e nenhum ramo de
-   * cena travada). A Triage faz o mesmo pelo colar da cena em foco. Vem ANTES do
-   * `clickBead` porque o redutor é port 1:1 da referência v1: ele clampa o clique
-   * até a emenda e, ao fazer isso, consome a pré-ancoragem da próxima cena. Levar
-   * a regra para o domínio muda camada congelada — o golden é o juiz, não esta
-   * estação. Devolve true quando a conta era de cena travada (o corte não corre).
+   * Tocar numa cena já travada a reproduz INTEIRA (início→fim), idêntico à frase
+   * (playLockedPhraseAt) — decisão do dono, simetria cena↔frase (#1). A chave é
+   * por cena (part_id): tocar qualquer conta da cena toca-a do começo; tocar a
+   * MESMA cena de novo pausa/retoma no lugar. Vem ANTES do `clickBead` porque o
+   * redutor clampa o clique até a emenda e consumiria a pré-ancoragem da próxima
+   * cena. Devolve true quando a conta era de cena travada (o corte não corre).
    */
   const playLockedSceneAt = (bead: number): boolean => {
     const s = sessionStore.getState().session;
     const locked = s ? lockedItemAt(s.parts, bead) : null;
     if (!locked?.span) return false;
-    // Toca da conta TOCADA até o fim da cena, com a chave por conta (ENG-347):
-    // tocar OUTRA conta é chave nova → pula na hora (nada de esperar acabar);
-    // tocar a MESMA é a mesma chave → pausa/retoma no lugar.
-    player?.toggle(`${locked.part_id}:${bead}`, bead, locked.span.e);
+    player?.toggle(locked.part_id, locked.span.s, locked.span.e);
     return true;
   };
 
@@ -137,30 +139,22 @@ export function Cut({ player = null, sound }: CutProps) {
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
-    if (play && player) playActionOn(player, play);
+    if (play && player) playSelectionOrAction(player, play, state.selection);
   };
 
   /**
-   * A conta que brilha pausa — o `_headTapPause` de "Ouvir no colar" (:697), que
-   * também vem antes de decidir o que tocar. `play`/`playEdge` não têm chave (o
-   * `playRange` a limpa), e só o `toggle` da MESMA chave pausa: sem o corte seco
-   * abaixo, a cabeça acesa durante uma prévia de borda — cuja janela invade a cena
-   * travada — cairia num `toggle` de chave alheia e RECOMEÇARIA a cena para quem
-   * tocou querendo parar. Sem chave não há o que retomar, então é `stop`.
+   * A conta que brilha pausa — idêntico à frase (#1). Sem chave ativa (nada
+   * tocando, ou uma prévia de borda que limpa a chave) não há o que retomar →
+   * `stop`. Com chave, re-tocar a cena da conta acesa cai na MESMA chave (por
+   * cena) → o adapter pausa/retoma no lugar.
    */
   const onHeadTap = (): void => {
     if (!player) return;
-    const activeKey = player.state.key;
-    if (activeKey === null) {
+    if (player.state.key === null) {
       player.stop();
       return;
     }
-    // A conta acesa pausa/retoma no lugar a cena que já toca (mesma chave → o
-    // adapter suspende/retoma; s/e ignorados). NÃO re-derivamos a chave do
-    // playhead móvel: como agora a chave carrega a conta de partida (ENG-347),
-    // usar `head` viraria uma chave nova e RECOMEÇARIA a cena para quem tocou
-    // querendo parar.
-    player.toggle(activeKey, head ?? 0, head ?? 0);
+    if (head !== null) playLockedSceneAt(head);
   };
 
   const onEdgeHover = (edge: number): void => {
@@ -218,14 +212,18 @@ export function Cut({ player = null, sound }: CutProps) {
     sessionStore.getState().apply((s) => primePart(dragSceneBoundary(s, id, toBead)));
   };
 
+  // Remover a cena + a SEGUINTE absorve o espaço liberado (#3): removePart é puro
+  // (fiel ao reference, golden), a absorção é composta aqui — como o reprime.
   const removeScene = (partId: string): void => {
     setError(null);
-    sessionStore.getState().apply((s) =>
-      removePart(
+    sessionStore.getState().apply((s) => {
+      const removed = s.parts.find((p) => p.part_id === partId);
+      const after = removePart(
         s,
         s.parts.findIndex((p) => p.part_id === partId),
-      ),
-    );
+      );
+      return removed?.locked && removed.span ? absorbNextScene(after, removed.span.s) : after;
+    });
   };
 
   return (

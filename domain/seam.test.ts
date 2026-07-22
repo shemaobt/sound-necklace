@@ -270,8 +270,9 @@ describe('slideSeam — a cena cresce, a vizinha imediata encolhe', () => {
   });
 });
 
-describe('dragSceneBoundary — arrastar a fronteira interna (Pac-Man, ENG-342)', () => {
-  it('arrastar para a direita: a cena esquerda cresce, a direita encolhe o mesmo', () => {
+describe('dragSceneBoundary — arrastar o FIM, esparso como a frase (ENG-342, #2)', () => {
+  // cenas ADJACENTES PT1{0,9} PT2{10,29} PT3{30,39}; totalBeads 40
+  it('crescer o fim até tocar a vizinha empurra o início dela (encolhe)', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
     const next = dragSceneBoundary(s, 'PT1', 15);
     expect(next.parts[0]!.span).toEqual({ s: 0, e: 15 });
@@ -279,57 +280,52 @@ describe('dragSceneBoundary — arrastar a fronteira interna (Pac-Man, ENG-342)'
     expect(next.parts[2]).toBe(s.parts[2]); // nada rippla para frente
   });
 
-  it('arrastar para a esquerda: a esquerda encolhe, a direita cresce', () => {
+  it('encolher o fim (arrastar p/ esquerda) abre um vão; o INÍCIO da vizinha não desliza', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
     const next = dragSceneBoundary(s, 'PT1', 5);
     expect(next.parts[0]!.span).toEqual({ s: 0, e: 5 });
-    expect(next.parts[1]!.span).toEqual({ s: 6, e: 29 });
+    expect(next.parts[1]).toBe(s.parts[1]); // vão [6,9]; vizinha INTACTA
   });
 
-  it('clampa: a cena esquerda nunca fica vazia (≥ 1 conta)', () => {
-    const s = sess({ parts: [PT1, PT2, PT3] });
-    const next = dragSceneBoundary(s, 'PT1', -4);
-    expect(next.parts[0]!.span).toEqual({ s: 0, e: 0 });
-    expect(next.parts[1]!.span).toEqual({ s: 1, e: 29 });
+  it('crescer para dentro de um vão: só cresce, a vizinha fica intacta', () => {
+    const P1 = mkPart('PT1', { s: 0, e: 5 }, { tag_state: 'tagged', scene_kind: 'GLEANING_SCENE' });
+    const s = sess({ parts: [P1, PT2] }); // vão [6,9] entre PT1 e PT2{10,29}
+    const next = dragSceneBoundary(s, 'PT1', 8);
+    expect(next.parts[0]!.span).toEqual({ s: 0, e: 8 });
+    expect(next.parts[1]).toBe(s.parts[1]);
   });
 
-  it('clampa: a cena direita nunca fica vazia (≥ 1 conta)', () => {
+  it('clampa: a vizinha nunca fica vazia (para no fim dela − 1)', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
     const next = dragSceneBoundary(s, 'PT1', 99);
     expect(next.parts[0]!.span).toEqual({ s: 0, e: 28 });
     expect(next.parts[1]!.span).toEqual({ s: 29, e: 29 });
   });
 
-  it('arrastar para a posição atual não muda nada', () => {
+  it('clampa: a própria cena nunca fica vazia (≥ 1 conta)', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
-    expect(dragSceneBoundary(s, 'PT1', 9)).toBe(s);
+    const next = dragSceneBoundary(s, 'PT1', -4);
+    expect(next.parts[0]!.span).toEqual({ s: 0, e: 0 });
+    expect(next.parts[1]).toBe(s.parts[1]); // vão [1,9]
   });
-});
 
-describe('dragSceneBoundary — última cena arrasta o fim livre (simetria com frases, #2)', () => {
-  it('encolhe o fim para a esquerda: cobertura fica esparsa, vizinhas intactas', () => {
-    const s = sess({ parts: [PT1, PT2, PT3] }); // PT3 = {30,39}, fim do colar em 39
+  it('última cena (sem vizinha à frente): cresce livre até o fim do colar', () => {
+    const shortLast = mkPart('PT3', { s: 30, e: 34 }, { tag_state: 'none_fit' });
+    const s = sess({ parts: [PT1, PT2, shortLast] });
+    expect(dragSceneBoundary(s, 'PT3', 99).parts[2]!.span).toEqual({ s: 30, e: 39 });
+  });
+
+  it('última cena: encolhe o fim, deixando cobertura esparsa', () => {
+    const s = sess({ parts: [PT1, PT2, PT3] });
     const next = dragSceneBoundary(s, 'PT3', 35);
     expect(next.parts[2]!.span).toEqual({ s: 30, e: 35 });
     expect(next.parts[0]).toBe(s.parts[0]);
     expect(next.parts[1]).toBe(s.parts[1]);
   });
 
-  it('cresce o fim até o fim do colar, clampado em totalBeads−1', () => {
-    const shortLast = mkPart('PT3', { s: 30, e: 34 }, { tag_state: 'none_fit' });
-    const s = sess({ parts: [PT1, PT2, shortLast] });
-    const next = dragSceneBoundary(s, 'PT3', 99);
-    expect(next.parts[2]!.span).toEqual({ s: 30, e: 39 });
-  });
-
-  it('clampa: a última cena nunca fica vazia (≥ 1 conta)', () => {
-    const s = sess({ parts: [PT1, PT2, PT3] });
-    const next = dragSceneBoundary(s, 'PT3', 10); // abaixo do início 30
-    expect(next.parts[2]!.span).toEqual({ s: 30, e: 30 });
-  });
-
   it('arrastar para a posição atual não muda nada', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
+    expect(dragSceneBoundary(s, 'PT1', 9)).toBe(s);
     expect(dragSceneBoundary(s, 'PT3', 39)).toBe(s);
   });
 

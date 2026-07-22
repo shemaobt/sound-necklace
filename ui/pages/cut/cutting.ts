@@ -41,6 +41,26 @@ export function playActionOn(player: Player, action: PlayAction): void {
   }
 }
 
+/**
+ * Reprodução ao DEFINIR uma cena/frase (decisão do dono): o toque reproduz a
+ * SELEÇÃO INTEIRA (início→fim), não só a janela da borda. O `clickBead` classifica
+ * um toque que aproxima a borda como `edge` (janela curta do fim); aqui, enquanto
+ * se define o corte, isso vira o intervalo todo — a prévia curta do fim fica
+ * reservada ao AJUSTE da fronteira (arrastar o punho / `onEdgeHover` → `playEdge`).
+ * Conta única, intervalo e transporte seguem 1:1 (`playActionOn`).
+ */
+export function playSelectionOrAction(
+  player: Player,
+  action: PlayAction,
+  selection: Span | null,
+): void {
+  if (action.type === 'edge' && selection) {
+    player.play(selection.s, selection.e);
+    return;
+  }
+  playActionOn(player, action);
+}
+
 const UNIDADES_PT = [
   '',
   'um',

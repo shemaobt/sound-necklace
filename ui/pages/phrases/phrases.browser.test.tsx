@@ -192,6 +192,21 @@ describe('Segmentação — uma frase travada pode ser ouvida (ENG-296)', () => 
     root.unmount();
   });
 
+  it('ao definir a frase, o toque que aproxima a borda reproduz a seleção INTEIRA', () => {
+    const { player, calls } = spyPlayer();
+    sessionStore.getState().load(segmenting()); // cena PT1 0…6, frase aberta
+    const { root, el } = mount(player);
+
+    firePointer(el, 2); // 1º: início
+    firePointer(el, 5); // 2º: fecha o intervalo
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [2, 5] });
+
+    firePointer(el, 4); // 3º: aproxima a borda → toca [2,4] inteiro, não só a janela
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [2, 4] });
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 2, e: 4 });
+    root.unmount();
+  });
+
   it('a conta acesa pausa a frase pela chave própria — e não é clique morto', () => {
     const { player, transport } = realPlayer();
     sessionStore.getState().load(withLockedPhrase());

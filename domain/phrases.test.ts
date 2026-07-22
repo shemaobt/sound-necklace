@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildBeads } from './grid';
 import { createSession, type Frase, type ScenePart, type SessionState, type Span } from './state';
 import {
+  absorbNextFrase,
   activeScene,
   addFrase,
   confirmFrase,
@@ -342,6 +343,34 @@ describe('removeFrase — libera o P# e escolhe o ÚLTIMO destravado', () => {
     expect(next.frases).toHaveLength(2);
     expect(next.frases[1]).toMatchObject({ prop_id: 'P2', locked: false, span: null });
     expect(next.current).toEqual({ layer: 'frases', index: 1 });
+  });
+
+  it('remover a do MEIO + absorbNextFrase: a próxima da MESMA cena absorve — #3', () => {
+    const s = sess({
+      frases: [
+        mkFrase('P1', { locked: true, span: { s: 10, e: 14 }, part_link: 'PT2' }),
+        mkFrase('P2', { locked: true, span: { s: 15, e: 19 }, part_link: 'PT2' }),
+        mkFrase('P3', { locked: true, span: { s: 20, e: 24 }, part_link: 'PT2' }),
+      ],
+      current: { layer: 'frases', index: -1 },
+      activeSceneId: 'PT2',
+    });
+    const removed = s.frases[1]!; // P2 {15,19}
+    const next = absorbNextFrase(removeFrase(s, 1), removed.part_link!, removed.span!.s);
+    const locked = next.frases.filter((f) => f.locked);
+    expect(locked.map((f) => f.prop_id)).toEqual(['P1', 'P3']);
+    expect(locked[1]!.span).toEqual({ s: 15, e: 24 }); // P3 absorveu [15,19]
+  });
+
+  it('absorbNextFrase só absorve na MESMA cena; sem seguinte é no-op', () => {
+    const s = sess({
+      frases: [
+        mkFrase('P1', { locked: true, span: { s: 10, e: 14 }, part_link: 'PT2' }),
+        mkFrase('P2', { locked: true, span: { s: 20, e: 24 }, part_link: 'PT1' }), // outra cena
+      ],
+      activeSceneId: 'PT2',
+    });
+    expect(absorbNextFrase(s, 'PT2', 15)).toBe(s); // P2 é de PT1 → não absorve
   });
 });
 

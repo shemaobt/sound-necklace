@@ -183,8 +183,10 @@ export function reanchorFrase(state: SessionState): SessionState {
 }
 
 /** Remove e libera o P#; assume o ÚLTIMO destravado ou auto-add (L850–855).
- *  Desvio deliberado: índice fora do intervalo não remove nada (o splice(-1)
- *  da referência removeria a última — inalcançável por chamador bem-formado). */
+ *  Port 1:1 do reference (fiel — o golden depende disto): a próxima frase NÃO
+ *  absorve o espaço aqui; a absorção pós-remoção é um passo composto na UI
+ *  (`absorbNextFrase`, #3), fora do escopo byte-idêntico do golden.
+ *  Desvio preservado: índice fora do intervalo não remove nada. */
 export function removeFrase(state: SessionState, i: number): SessionState {
   const frases = state.frases.filter((_, k) => k !== i);
   const base = { ...state, frases, selection: null, pendingStart: null };
@@ -194,6 +196,40 @@ export function removeFrase(state: SessionState, i: number): SessionState {
   });
   if (lu >= 0) return primeFrase({ ...base, current: { layer: 'frases' as const, index: lu } });
   return addFrase({ ...base, current: { layer: 'frases', index: -1 } });
+}
+
+/**
+ * Absorção pós-remoção (#3, decisão do dono; composto na UI após `removeFrase`,
+ * como o reprime pós-drag): a frase SEGUINTE da MESMA cena (a travada de menor
+ * início depois de `gapStart`) estica seu início para trás até `gapStart`,
+ * engolindo o vão que a removida deixou. Sem seguinte, no-op. Fica FORA do
+ * `removeFrase` de propósito — o golden testa aquele contra o reference, que não
+ * absorve; esta é feature nova pós-reference, como o `dragPhraseBoundary`.
+ */
+export function absorbNextFrase(
+  state: SessionState,
+  sceneId: string,
+  gapStart: number,
+): SessionState {
+  let nbK = -1;
+  let nbStart = Infinity;
+  state.frases.forEach((f, k) => {
+    if (
+      f.locked &&
+      f.span &&
+      f.part_link === sceneId &&
+      f.span.s > gapStart &&
+      f.span.s < nbStart
+    ) {
+      nbStart = f.span.s;
+      nbK = k;
+    }
+  });
+  if (nbK < 0) return state;
+  const frases = state.frases.map((f, k) =>
+    k === nbK ? { ...f, span: { s: gapStart, e: f.span!.e } } : f,
+  );
+  return { ...state, frases };
 }
 
 /**

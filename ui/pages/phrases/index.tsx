@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { Player } from '../../../adapters/audio';
 import type { UiSound } from '../../../adapters/ui-sound';
 import {
+  absorbNextFrase,
   activeAnchor,
   activeScene,
   type BorderOffer,
@@ -34,7 +35,7 @@ import {
 } from '../../organisms';
 import { resolveWindow } from '../../organisms/necklace/geometry';
 import { sessionStore, useSessionStore } from '../../state';
-import { lockedItemAt, playActionOn, sceneColor, sceneLabel } from '../cut/cutting';
+import { lockedItemAt, playSelectionOrAction, sceneColor, sceneLabel } from '../cut/cutting';
 import { phraseColor, phraseLabel } from './wiring';
 import './phrases.css';
 
@@ -84,13 +85,11 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
       tint: phraseColor(pos),
     }));
     const lockedEndBeads = scenePhrases.map(({ f }) => f.span!.e);
-    // Punhos de arrasto (ENG-342): as duas bordas de cada frase travada. `id` =
-    // `<índiceGlobal>:<start|end>`; o domínio cresce/encolhe e só toca a vizinha
-    // quando encostam (cobertura esparsa é legal).
-    const dragHandles = scenePhrases.flatMap(({ f, index }) => [
-      { at: f.span!.s, id: `${index}:start` },
-      { at: f.span!.e, id: `${index}:end` },
-    ]);
+    // Punhos de arrasto (ENG-342): só o FIM de cada frase travada — estritamente
+    // como as cenas (decisão do dono, simetria cena↔frase). O começo é a
+    // emenda/fronteira e NÃO arrasta; para mover o começo de uma frase, arrasta-se
+    // o fim da anterior (Pac-Man), igual à cena. `id` = `<índiceGlobal>:end`.
+    const dragHandles = scenePhrases.map(({ f, index }) => ({ at: f.span!.e, id: `${index}:end` }));
     return { sc, scSpan: sc.span, scenePhrases, segments, lockedEndBeads, dragHandles };
   }, [session]);
 
@@ -145,7 +144,7 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
-    if (play && player) playActionOn(player, play);
+    if (play && player) playSelectionOrAction(player, play, state.selection);
   };
 
   /** A conta acesa pausa — chave alheia reiniciaria a frase (ENG-297). */
@@ -226,9 +225,17 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     sessionStore.getState().apply((s) => primeFrase(dragPhraseBoundary(s, index, edge, toBead)));
   };
 
+  // Remover a frase + a SEGUINTE da mesma cena absorve o espaço (#3): removeFrase
+  // é puro (fiel ao reference, golden), a absorção é composta aqui — como o reprime.
   const remove = (i: number): void => {
     setError(null);
-    sessionStore.getState().apply((s) => removeFrase(s, i));
+    sessionStore.getState().apply((s) => {
+      const removed = s.frases[i];
+      const after = removeFrase(s, i);
+      return removed?.locked && removed.span && removed.part_link
+        ? absorbNextFrase(after, removed.part_link, removed.span.s)
+        : after;
+    });
   };
 
   const done = (): void => {

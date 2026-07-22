@@ -283,6 +283,27 @@ describe('Segmentação — chips das frases travadas (redesign §6.5)', () => {
 
     expect(sessionStore.getState().session!.frases.some((f) => f.prop_id === 'P1')).toBe(false);
   });
+
+  it('remover a frase do meio faz a SEGUINTE absorver o espaço (#3)', async () => {
+    load(
+      segmenting({
+        frases: [
+          frase({ prop_id: 'P1', span: { s: 12, e: 13 }, part_link: 'PT1', locked: true }),
+          frase({ prop_id: 'P2', span: { s: 14, e: 15 }, part_link: 'PT1', locked: true }),
+          frase({ prop_id: 'P3', span: { s: 16, e: 18 }, part_link: 'PT1', locked: true }),
+        ],
+        current: { layer: 'frases', index: -1 },
+      }),
+    );
+    render(<Phrases />);
+
+    const chip = screen.getByRole('group', { name: 'Frase dois' });
+    await userEvent.click(within(chip).getByRole('button', { name: 'Remover' }));
+
+    const locked = sessionStore.getState().session!.frases.filter((f) => f.locked);
+    expect(locked.map((f) => f.prop_id)).toEqual(['P1', 'P3']);
+    expect(locked.find((f) => f.prop_id === 'P3')!.span).toEqual({ s: 14, e: 18 }); // absorveu [14,15]
+  });
 });
 
 describe('Segmentação — cena vazia e navegação (PRD v2 §8.6)', () => {
