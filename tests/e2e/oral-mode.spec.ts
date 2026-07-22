@@ -231,7 +231,7 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   await app.finishPhrases();
 
   // ——— Conversation → relatório: pergunta tocada + gravação por voz, avanço in-station ———
-  await expect(page.locator('.cds-conversation-listen button')).toBeVisible(); // ▶ ouvir o trecho
+  await expect(page.locator('.cds-conversation-stage-panel-header button')).toBeVisible(); // ▶ ouvir o trecho
   await app.recordVoiceAnswer(); // o microfone é sinal não-textual (forma de onda)
   for (let i = 0; i < 80; i++) {
     if (await page.getByRole('region', { name: 'relatório' }).count()) break;

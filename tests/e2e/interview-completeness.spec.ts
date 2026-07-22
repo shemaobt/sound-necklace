@@ -104,12 +104,17 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
     await next.click(); // a última navega para a prévia do relatório
   }
 
-  // a prévia do relatório abre com a estrutura certa (3 seções, 3 cenas, 3 frases)
+  // a prévia do relatório abre com a estrutura certa: um cabeçalho colorido POR BLOCO
+  // (a história · cada cena · cada frase), no lugar das seções antigas
   await expect(page.locator('.cds-report-card')).toHaveCount(EXPECTED_WORDINGS.length);
-  await expect(page.locator('.cds-report-section')).toHaveText([
-    'A história',
-    'As cenas',
-    'As frases',
+  await expect(page.locator('.cds-report-blockhead-eyebrow')).toHaveText([
+    'A história inteira',
+    'Cena 1 · Apelo',
+    'Cena 2 · Chegada',
+    'Cena 3',
+    'Cena 1 · Frase 1',
+    'Cena 1 · Frase 2',
+    'Cena 2 · Frase 1',
   ]);
 
   // a digitação acontece AQUI, no relatório editável (§8.7 "a facilitadora pode

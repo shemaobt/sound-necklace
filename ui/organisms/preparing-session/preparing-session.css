@@ -1,46 +1,125 @@
-/* A espera da sessão (ENG-312): fio de contas acendendo em onda + uma linha. */
+/* A tela de espera (protótipo): fundo oliva, um cometa de contas correndo por um
+   cordão contínuo, eyebrow + linha em Merriweather itálico. O cometa só corre sob
+   prefers-reduced-motion: no-preference (§4.5); parado, o cordão fica quieto. */
 .cds-preparing {
+  position: relative;
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 22px;
-  min-height: 55vh;
+  gap: 40px;
+  /* preenche a área útil (viewport menos cabeçalho 64 + fio de contas 46 = 110) para
+     centrar vertical em TODO contexto: filho direto do shell (abertura de sessão) OU
+     dentro de `.cds-app-main` de uma estação (guardar documentos), onde o flex não
+     propaga altura. */
+  min-height: calc(100vh - 110px);
+  overflow: hidden;
+  background: var(--cds-olive);
+  color: var(--cds-cream);
 }
 
+/* a marca Shemá esmaecida ao fundo (protótipo: imagem opacity .05) */
+.cds-preparing-watermark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* o cordão: contas sobre uma linha contínua (protótipo) */
 .cds-preparing-beads {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 15px;
+  padding: 14px 0;
+  width: min(680px, 72vw);
 }
 
+.cds-preparing-beads::before {
+  content: '';
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: rgba(246, 245, 235, 0.16);
+  border-radius: 2px;
+}
+
+/* conta perolada (protótipo _wPearl): quieta e esmaecida, o cometa a acende */
 .cds-preparing-bead {
-  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex: none;
+  background: radial-gradient(circle at 34% 28%, #fff3e2, #e07c2e);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  opacity: 0.28;
+}
+
+.cds-preparing-text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 13px;
+}
+
+.cds-preparing-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(246, 245, 235, 0.5);
 }
 
 .cds-preparing-line {
   margin: 0;
+  max-width: 32ch;
   font-family: var(--cds-font-quiet-voice);
   font-style: italic;
-  font-size: 17px;
-  color: var(--cds-ink-subtle);
+  font-size: 24px;
+  line-height: 1.35;
+  color: #f1ebdb;
+  text-align: center;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  @keyframes cds-preparing-wave {
-    0%,
-    60%,
-    100% {
-      opacity: 0.35;
-      transform: translateY(0);
-    }
-    30% {
+  /* o cometa: cabeça acesa + halo, rastro de ~3 contas esmaecendo (protótipo) */
+  @keyframes cds-preparing-comet {
+    0% {
       opacity: 1;
-      transform: translateY(-4px);
+      transform: scale(1.25);
+      box-shadow:
+        0 0 0 6px rgba(213, 138, 84, 0.22),
+        0 3px 10px rgba(0, 0, 0, 0.3);
+    }
+    12% {
+      opacity: 0.82;
+      transform: scale(1.1);
+    }
+    25% {
+      opacity: 0.34;
+      transform: scale(1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+    100% {
+      opacity: 0.28;
+      transform: scale(1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }
   }
 
   .cds-preparing-bead {
-    animation: cds-preparing-wave 1.6s ease-in-out infinite;
+    animation: cds-preparing-comet 2s linear infinite;
   }
 }

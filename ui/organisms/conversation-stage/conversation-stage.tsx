@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, WaveformBar } from '../../atoms';
@@ -29,8 +30,12 @@ export interface ConversationProgress {
 
 export interface ConversationStageProps {
   question: string;
-  /** observação da pergunta (nota da facilitadora, quando houver) */
-  note?: string;
+  /**
+   * Cabeçalho do painel, acima da pergunta (protótipo): o indicador de trecho
+   * (bolinha + eyebrow do bloco) + o ▶ que toca o áudio do trecho. Ligado ao
+   * player pela página; o organismo só reserva o lugar.
+   */
+  header?: ReactNode;
   /** pergunta conduzida pela facilitadora — mostra o marcador de papel */
   facilitatorLed?: boolean;
   recorderState: RecorderState;
@@ -165,7 +170,7 @@ function MicGlyph() {
  */
 export function ConversationStage({
   question,
-  note,
+  header,
   facilitatorLed = false,
   recorderState,
   levels = [],
@@ -204,13 +209,13 @@ export function ConversationStage({
         </div>
 
         <div className="cds-conversation-stage-panel">
+          {header ? <div className="cds-conversation-stage-panel-header">{header}</div> : null}
+
           <QuestionCard
             question={question}
             facilitatorLed={facilitatorLed}
             roleTitle={t('questionCard.roleTitle')}
           >
-            {note ? <p className="cds-conversation-stage-note">{note}</p> : null}
-
             <div className="cds-conversation-stage-divider" aria-hidden="true" />
 
             <div className="cds-conversation-stage-wave-row">

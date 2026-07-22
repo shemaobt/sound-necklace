@@ -46,17 +46,33 @@
   color: var(--cds-ink);
 }
 
-.cds-report-section {
-  margin: 1.5rem 0 0.25rem;
-  font-family: var(--cds-font-quiet-voice);
-  font-size: 1.15rem;
+/* cabeçalho de bloco (protótipo `showHeader`): bolinha colorida + eyebrow versalete
+   + fio até a margem, na cor viva do bloco — a separação dos grupos da conversa */
+.cds-report-blockhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 12px;
 }
 
-.cds-report-group {
-  margin: 0.75rem 0 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--cds-olive-soft);
+.cds-report-blockhead-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cds-report-blockhead-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cds-report-blockhead-rule {
+  flex: 1;
+  height: 1px;
+  background: rgba(63, 62, 32, 0.12);
 }
 
 /* cartão branco do protótipo: radius 18, sombra baixa, respiro generoso */

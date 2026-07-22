@@ -14,7 +14,7 @@ import {
   type SessionState,
   voiceAnswerPath,
 } from '../../../domain';
-import { questionNoteFor, questionTextFor } from '../../i18n/conversation-questions';
+import { questionTextFor } from '../../i18n/conversation-questions';
 import { Button } from '../../atoms';
 import { type ConversationTrecho, TrechoIndicator } from '../../molecules';
 import {
@@ -24,7 +24,8 @@ import {
   WAVE_BARS,
 } from '../../organisms/conversation-stage/conversation-stage';
 import type { PaletteEntry } from '../../tokens';
-import { buildTrechos, currentTrecho } from './trechos';
+import { sceneOrdinal } from '../cut/cutting';
+import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { sessionStore, useAppStore, useSessionStore } from '../../state';
 import './conversation.css';
@@ -106,7 +107,10 @@ interface ListenTarget {
   key: string;
   s: number;
   e: number;
+  /** rótulo quando parado (▶ ouvir …) */
   label: string;
+  /** rótulo enquanto o trecho toca (⏸ pausar …) — o botão alterna com o playback */
+  pauseLabel: string;
 }
 
 type Translate = (key: string) => string;
@@ -114,17 +118,35 @@ type Translate = (key: string) => string;
 /** O ▶ da pergunta atual: a história inteira (N1), a cena (N2) ou a frase (N3). */
 function listenFor(state: SessionState, slot: QuestionSlot, t: Translate): ListenTarget | null {
   if (slot.level === 1) {
-    return { key: 'historia', s: 0, e: state.totalBeads - 1, label: t('conversation.listenStory') };
+    return {
+      key: 'historia',
+      s: 0,
+      e: state.totalBeads - 1,
+      label: t('conversation.listenStory'),
+      pauseLabel: t('conversation.pauseStory'),
+    };
   }
   if (slot.level === 2) {
     const p = state.parts.find((x) => x.part_id === slot.partId);
     return p?.span
-      ? { key: p.part_id, s: p.span.s, e: p.span.e, label: t('conversation.listenScene') }
+      ? {
+          key: p.part_id,
+          s: p.span.s,
+          e: p.span.e,
+          label: t('conversation.listenScene'),
+          pauseLabel: t('conversation.pauseScene'),
+        }
       : null;
   }
   const fr = state.frases.find((x) => x.prop_id === slot.propId);
   return fr?.span
-    ? { key: fr.prop_id, s: fr.span.s, e: fr.span.e, label: t('conversation.listenPhrase') }
+    ? {
+        key: fr.prop_id,
+        s: fr.span.s,
+        e: fr.span.e,
+        label: t('conversation.listenPhrase'),
+        pauseLabel: t('conversation.pausePhrase'),
+      }
     : null;
 }
 
@@ -132,8 +154,8 @@ interface QuestionScreenProps {
   slot: QuestionSlot;
   path: string;
   listen: ListenTarget | null;
-  /** o trecho da pergunta atual (cor + nome) para o indicador ao lado do ▶ */
-  trecho: { color: PaletteEntry; label: string };
+  /** o eyebrow do bloco atual (cor + rótulo "Cena um · tipo") para o indicador ao lado do ▶ */
+  trecho: { color: PaletteEntry; eyebrow: string };
   progress: ConversationProgress;
   trechos: readonly ConversationTrecho[];
   onPrev: () => void;
@@ -179,6 +201,9 @@ function QuestionScreen({
   // Entre o toque e o som há fetch+decode no modo real (ENG-336): o botão diz
   // que está abrindo; qualquer emissão da porta encerra a espera.
   const [answerOpening, setAnswerOpening] = useState(false);
+  // O TRECHO (história/cena/frase) está tocando agora — para o botão alternar
+  // "▶ ouvir" ⇄ "⏸ pausar" (protótipo playBlock/blockPlaying).
+  const [spanPlaying, setSpanPlaying] = useState(false);
   const recordingRef = useRef<Recording | null>(null);
   const unsubRef = useRef<Unsubscribe | null>(null);
   const mountedRef = useRef(true);
@@ -235,8 +260,21 @@ function QuestionScreen({
     };
   }, [recorder, path]);
 
+  // O playhead do trecho: para no fim/stop → `null` (volta a "ouvir"); tocando →
+  // acende se for ESTE trecho. O pause NÃO emite (o player só congela), então o
+  // clique atualiza otimista pelo `state` pós-toggle (playSpan).
+  useEffect(() => {
+    if (!player) return;
+    return player.onHead((bead) => {
+      setSpanPlaying(bead !== null && player.state.key === listen?.key);
+    });
+  }, [player, listen?.key]);
+
   const playSpan = (): void => {
-    if (player && listen) player.toggle(listen.key, listen.s, listen.e);
+    if (!player || !listen) return;
+    player.toggle(listen.key, listen.s, listen.e);
+    const st = player.state;
+    setSpanPlaying(st.key === listen.key && st.playing && !st.paused);
   };
 
   const onRecord = async (): Promise<void> => {
@@ -306,29 +344,23 @@ function QuestionScreen({
 
   return (
     <section className="cds-conversation">
-      <p className="cds-conversation-instruction" data-role="instruction">
-        {t('conversation.instruction')}
-      </p>
-
       {recordError ? (
         <p className="cds-conversation-error" role="alert">
           {t('conversation.recordError')}
         </p>
       ) : null}
 
-      {listen ? (
-        <div className="cds-conversation-listen">
-          <TrechoIndicator color={trecho.color} label={trecho.label}>
-            <Button variant="ghost" size="sm" onClick={playSpan}>
-              {listen.label}
-            </Button>
-          </TrechoIndicator>
-        </div>
-      ) : null}
-
       <ConversationStage
         question={questionText}
-        note={questionNoteFor(slot, i18n.language)}
+        header={
+          <TrechoIndicator color={trecho.color} label={trecho.eyebrow}>
+            {listen ? (
+              <Button variant="ghost" size="sm" onClick={playSpan}>
+                {spanPlaying ? listen.pauseLabel : listen.label}
+              </Button>
+            ) : null}
+          </TrechoIndicator>
+        }
         facilitatorLed={slot.k === 'ausencia'}
         recorderState={recorderState}
         levels={levels}
@@ -426,7 +458,10 @@ export function Conversation({
       // ainda não é o relatório: a região se anuncia como o preparo (role=status dentro)
       return (
         <section className="cds-conversation" aria-label={t('conversation.preparingReview')}>
-          <PreparingSession line={t('conversation.preparingReview')} />
+          <PreparingSession
+            eyebrow={t('conversation.preparingReviewEyebrow')}
+            line={t('conversation.preparingReview')}
+          />
         </section>
       );
     }
@@ -522,7 +557,14 @@ export function Conversation({
     sceneUntyped: t('conversation.trechoScene'),
   };
   const trechos = buildTrechos(mapped, i18n.language, trechoLabels);
-  const trecho = currentTrecho(mapped, slot, i18n.language, trechoLabels);
+  // eyebrow do bloco no topo do painel — número por extenso (§9.2: a tela do
+  // ouvinte soletra "Cena um", nunca dígito); o tipo da cena vem de sceneKindLabel.
+  const blockLabels: BlockLabels = {
+    story: t('conversation.trechoStory'),
+    scene: (n) => t('conversation.blockScene', { ordinal: sceneOrdinal(n - 1, i18n.language) }),
+    phrase: (n) => t('conversation.blockPhrase', { ordinal: sceneOrdinal(n - 1, i18n.language) }),
+  };
+  const trecho = blockEyebrow(mapped, slot, i18n.language, blockLabels);
 
   return (
     <QuestionScreen

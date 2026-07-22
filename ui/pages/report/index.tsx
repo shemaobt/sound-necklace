@@ -8,11 +8,14 @@ import {
   type Mapping,
   type QuestionSlot,
   questionSequence,
+  type SessionState,
   setAnswer,
   voiceAnswerPath,
 } from '../../../domain';
 import { questionTextFor } from '../../i18n/conversation-questions';
 import { Button, WaveformBar } from '../../atoms';
+import type { PaletteEntry } from '../../tokens';
+import { type BlockLabels, blockEyebrow } from '../conversation/trechos';
 import { sessionStore, useSessionStore } from '../../state';
 import './report.css';
 
@@ -51,14 +54,6 @@ export interface ReportProps {
   preloaded?: PreloadedVoice;
 }
 
-type Translate = (key: string, opts?: Record<string, unknown>) => string;
-
-const SECTION_KEY: Record<1 | 2 | 3, string> = {
-  1: 'report.sectionStory',
-  2: 'report.sectionScenes',
-  3: 'report.sectionPhrases',
-};
-
 /** Prefixo da chave reservada da nota — fora do vocabulário de perguntas. */
 const NOTE_PREFIX = 'nota__';
 
@@ -93,33 +88,38 @@ function readAnswer(m: Mapping | null, slot: AnswerSlot): string {
 
 interface Row {
   slot: QuestionSlot;
-  section: string | null;
-  group: string | null;
+  /** cabeçalho do bloco (protótipo `showHeader`): cor + eyebrow "Cena 1 · tipo"; null no meio do bloco */
+  header: { eyebrow: string; color: PaletteEntry } | null;
+  /** posição da pergunta DENTRO do bloco (protótipo `Q`+(bq+1)), 1-based */
+  num: number;
 }
 
-/** Insere os cabeçalhos de seção (nível) e de grupo (cena/frase) na sequência. */
-function toRows(sequence: QuestionSlot[], t: Translate): Row[] {
+/** id do bloco: a história, cada cena, cada frase (protótipo `blockId`). */
+function blockIdOf(slot: QuestionSlot): string {
+  return slot.level === 1 ? 'story' : slot.level === 2 ? slot.partId : slot.propId;
+}
+
+/**
+ * Agrupa a sequência por BLOCO (protótipo `reportRows`): a cada troca de bloco um
+ * cabeçalho colorido (bolinha + eyebrow), e o numeral do cartão reinicia dentro do
+ * bloco. Sem as seções "A história/As cenas/As frases" — o próprio cabeçalho de
+ * bloco é a separação.
+ */
+function toRows(
+  state: SessionState,
+  sequence: QuestionSlot[],
+  lang: string,
+  labels: BlockLabels,
+): Row[] {
   const rows: Row[] = [];
-  let level = 0;
-  let group = '';
-  let sceneN = 0;
-  let fraseN = 0;
+  let last = '';
+  let num = 0;
   for (const slot of sequence) {
-    const section = slot.level !== level ? t(SECTION_KEY[slot.level]) : null;
-    if (section) {
-      level = slot.level;
-      group = '';
-    }
-    const gid = slot.level === 2 ? slot.partId : slot.level === 3 ? slot.propId : '';
-    let groupLabel: string | null = null;
-    if (gid && gid !== group) {
-      group = gid;
-      groupLabel =
-        slot.level === 2
-          ? t('report.groupScene', { n: (sceneN += 1) })
-          : t('report.groupPhrase', { n: (fraseN += 1) });
-    }
-    rows.push({ slot, section, group: groupLabel });
+    const id = blockIdOf(slot);
+    const start = id !== last;
+    num = start ? 1 : num + 1;
+    last = id;
+    rows.push({ slot, header: start ? blockEyebrow(state, slot, lang, labels) : null, num });
   }
   return rows;
 }
@@ -297,7 +297,7 @@ function ReportCard({
 }
 
 export function Report({ recorder = null, preloaded }: ReportProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   // O preload (ENG-337) semeia os dois conjuntos: linha conhecida nasce resolvida,
   // sem passar pelo "procurando"; o efeito abaixo só completa o que faltou.
@@ -370,7 +370,13 @@ export function Report({ recorder = null, preloaded }: ReportProps) {
 
   if (!session || !mapped || !sequence.length) return null;
 
-  const rows = toRows(sequence, t);
+  // eyebrow de bloco COM dígito — o relatório é superfície da facilitadora (§7.2)
+  const blockLabels: BlockLabels = {
+    story: t('report.groupStory'),
+    scene: (n) => t('report.groupScene', { n }),
+    phrase: (n) => t('report.groupPhrase', { n }),
+  };
+  const rows = toRows(mapped, sequence, i18n.language, blockLabels);
 
   const writeTyped = (slot: QuestionSlot, text: string): void => {
     sessionStore.getState().apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), slot, text));
@@ -387,15 +393,28 @@ export function Report({ recorder = null, preloaded }: ReportProps) {
         <p className="cds-report-eyebrow">{t('report.eyebrow')}</p>
         <p className="cds-report-headline">{t('report.headline')}</p>
       </header>
-      {rows.map(({ slot, section, group }, i) => {
+      {rows.map(({ slot, header, num }) => {
         const path = voiceAnswerPath(slot);
         return (
           <div key={path}>
-            {section ? <h2 className="cds-report-section">{section}</h2> : null}
-            {group ? <p className="cds-report-group">{group}</p> : null}
+            {header ? (
+              <div className="cds-report-blockhead">
+                <span
+                  className="cds-report-blockhead-dot"
+                  aria-hidden="true"
+                  style={{
+                    background: `radial-gradient(circle at 34% 30%, ${header.color.lit} 0%, ${header.color.base} 70%)`,
+                  }}
+                />
+                <span className="cds-report-blockhead-eyebrow" style={{ color: header.color.deep }}>
+                  {header.eyebrow}
+                </span>
+                <span className="cds-report-blockhead-rule" aria-hidden="true" />
+              </div>
+            ) : null}
             <ReportCard
               slot={slot}
-              num={i + 1}
+              num={num}
               typed={readAnswer(mapped.mapping, slot)}
               note={readAnswer(mapped.mapping, noteSlot(slot))}
               hasVoice={voiceSet.has(path)}

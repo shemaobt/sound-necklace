@@ -10,9 +10,14 @@ import {
   type Span,
 } from '../../../domain';
 import { phrasePalette, scenePalette, storyColor } from '../../tokens';
-import { buildTrechos, currentTrecho } from './trechos';
+import { blockEyebrow, buildTrechos } from './trechos';
 
 const LABELS = { story: 'a história inteira', sceneUntyped: 'uma cena' };
+const BLOCK = {
+  story: 'a história inteira',
+  scene: (n: number) => `Cena ${n}`,
+  phrase: (n: number) => `Frase ${n}`,
+};
 
 function mkPart(part_id: string, span: Span, over: Partial<ScenePart> = {}): ScenePart {
   return {
@@ -82,30 +87,30 @@ describe('buildTrechos', () => {
   });
 });
 
-describe('currentTrecho — o trecho da pergunta atual (cor + rótulo do indicador)', () => {
+describe('blockEyebrow — o eyebrow do bloco da pergunta atual (cor + rótulo do indicador)', () => {
   const seq = questionSequence(sess());
   const l1 = seq.find((s) => s.level === 1)!;
   const l2 = seq.find((s) => s.level === 2 && s.partId === 'PT1')!;
   const l3 = seq.find((s) => s.level === 3 && s.propId === 'P1')!;
 
-  it('história → a cor e o rótulo da história', () => {
-    expect(currentTrecho(sess(), l1, 'pt', LABELS)).toEqual({
+  it('história → a cor e o rótulo da história, sem número', () => {
+    expect(blockEyebrow(sess(), l1, 'pt', BLOCK)).toEqual({
       color: storyColor,
-      label: 'a história inteira',
+      eyebrow: 'a história inteira',
     });
   });
 
-  it('cena → scenePalette + o tipo da cena', () => {
-    expect(currentTrecho(sess(), l2, 'pt', LABELS)).toEqual({
+  it('cena → scenePalette + "Cena N · tipo"', () => {
+    expect(blockEyebrow(sess(), l2, 'pt', BLOCK)).toEqual({
       color: scenePalette[0],
-      label: 'Respiga',
+      eyebrow: 'Cena 1 · Respiga',
     });
   });
 
-  it('frase → phrasePalette + o tipo da cena-mãe (Q2), a MESMA cor/rótulo do segmento da barra', () => {
-    expect(currentTrecho(sess(), l3, 'pt', LABELS)).toEqual({
+  it('frase → phrasePalette + "Cena N · Frase M" (M dentro da cena-mãe)', () => {
+    expect(blockEyebrow(sess(), l3, 'pt', BLOCK)).toEqual({
       color: phrasePalette[0],
-      label: 'Respiga',
+      eyebrow: 'Cena 1 · Frase 1',
     });
   });
 });

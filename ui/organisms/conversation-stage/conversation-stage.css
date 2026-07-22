@@ -75,6 +75,13 @@
   max-width: 640px;
   display: flex;
   flex-direction: column;
+  /* o header do bloco (indicador de trecho + ▶) respira acima da pergunta (protótipo: gap 20) */
+  gap: 20px;
+}
+
+/* indicador de trecho + ▶, alinhado à esquerda acima da pergunta (protótipo mapBlock) */
+.cds-conversation-stage-panel-header {
+  display: flex;
 }
 
 /* o painel respira como o protótipo (gap 22). O slot da resposta é quem empilha
@@ -92,14 +99,6 @@
   font-style: normal;
   font-size: clamp(24px, 3.4vh, 34px);
   line-height: 1.35;
-}
-
-.cds-conversation-stage-note {
-  margin: 0;
-  font-family: var(--cds-font-load-bearing);
-  font-size: 14px;
-  line-height: 1.5;
-  opacity: 0.78;
 }
 
 .cds-conversation-stage-divider {
@@ -256,42 +255,14 @@
   background: var(--cds-surface-muted);
 }
 
+/* a barra de progresso por trecho ocupa o meio do rodapé, centrada e limitada
+   (protótipo: flex:1; max-width:560px; margin:0 auto) */
 .cds-conversation-stage-progress {
   order: 2;
-}
-
-/* o fio de perguntas: contas sobre uma linha contínua (protótipo thread) */
-.cds-conversation-stage-progress {
-  width: fit-content;
-  max-width: min(100%, 520px);
-  padding: 0 6px;
-  background: linear-gradient(
-    rgba(246, 245, 235, 0) 10px,
-    rgba(246, 245, 235, 0.2) 10px,
-    rgba(246, 245, 235, 0.2) 12px,
-    rgba(246, 245, 235, 0) 12px
-  );
-}
-
-/* contas do fio em pérola telha; futuras translúcidas (protótipo unDark) */
-.cds-conversation-stage-progress .cds-pearl[data-state='lit'],
-.cds-conversation-stage-progress .cds-pearl[data-state='head'] {
-  --cds-pearl-lit: #e8813e;
-  --cds-pearl-base: var(--cds-telha);
-}
-
-.cds-conversation-stage-progress .cds-pearl[data-state='head'] {
-  transform: none;
-  box-shadow: 0 0 0 4px rgba(246, 245, 235, 0.18);
-}
-
-.cds-conversation-stage-progress .cds-pearl[data-state='unplayed'] {
-  background: radial-gradient(
-    circle at 34% 30%,
-    rgba(246, 245, 235, 0.22),
-    rgba(246, 245, 235, 0.09) 70%
-  );
-  border: 1px solid rgba(246, 245, 235, 0.18);
+  flex: 1;
+  min-width: 0;
+  max-width: 560px;
+  margin: 0 auto;
 }
 
 /* convite discreto do microfone — movimento decorativo é opt-in (§4.5) */
@@ -310,11 +281,6 @@
     50% {
       transform: scaleY(0.45);
     }
-  }
-
-  /* a conta atual do fio de perguntas fica quieta (o halo do protótipo é estático) */
-  .cds-conversation-stage-progress .cds-pearl[data-state='head'] {
-    animation: none;
   }
 
   .cds-conversation-stage-guide::before {
@@ -367,18 +333,4 @@
   .cds-conversation-stage-saving-glyph {
     animation: cds-conversation-stage-spin 0.9s linear infinite;
   }
-}
-
-/* fio sem janela (ENG-329): roteiros longos apertam o respiro e alargam o teto,
-   para TODAS as perguntas caberem numa linha sem scroll (§9.2) */
-.cds-conversation-stage-progress[data-density] .cds-bead-row {
-  gap: 3px;
-}
-
-.cds-conversation-stage-progress[data-density='dense'] {
-  max-width: min(100%, 680px);
-}
-
-.cds-conversation-stage-progress[data-density='dense'] .cds-bead-row {
-  gap: 2px;
 }
