@@ -186,9 +186,9 @@ export const en: Dict = {
   },
   phrases: {
     reviewHeadline: 'The phrases of this scene are ready. Tap a phrase to hear it again.',
-    instruction: 'Tap the necklace at the start and the end of each phrase.',
+    instruction: 'Tap the necklace where each phrase ends. The beginning is already stitched.',
     instructionReplay: ' Tap a finished phrase to hear it again.',
-    halfSelection: 'Also tap where the phrase ends, on the necklace.',
+    halfSelection: 'Tap the necklace where this phrase ends.',
     remove: 'Remove',
     back: '← Back',
     confirmPhrase: '✓ Confirm this phrase',

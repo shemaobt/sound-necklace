@@ -45,6 +45,24 @@ export function phraseFrontier(state: SessionState): number {
   return frontier(state, 'frases');
 }
 
+/**
+ * Pré-ancora o início da frase corrente no começo natural DENTRO da cena — início
+ * da cena (1ª frase) ou fim da última travada + 1 — espelhando `primePart` das
+ * cenas: a tela do ouvinte toca só o FIM (§8.6/§11, protótipo "toque onde cada
+ * frase termina"). Clampa o back-reach da fronteira ao início da cena (a 1ª frase
+ * ladrilha a partir da cena; recuar à vizinha é gesto que o um-toque não faz).
+ * Sem cena ativa (contexto sem foco), no-op.
+ */
+export function primeFrase(state: SessionState): SessionState {
+  if (state.current.layer !== 'frases' || state.current.index < 0) return state;
+  const fr = state.frases[state.current.index];
+  if (!fr || fr.locked) return state;
+  const sc = activeScene(state);
+  if (!sc || !sc.span) return state;
+  const f = Math.max(sc.span.s, phraseFrontier(state));
+  return { ...state, pendingStart: f, selection: { s: f, e: f } };
+}
+
 /** Novo slot com o menor P# livre; no-op com âncora ativa (L772–777). */
 export function addFrase(state: SessionState): SessionState {
   if (activeAnchor(state)) return state;
@@ -57,13 +75,13 @@ export function addFrase(state: SessionState): SessionState {
     locked: false,
   };
   const frases = [...state.frases, nova];
-  return {
+  return primeFrase({
     ...state,
     frases,
     current: { layer: 'frases', index: frases.length - 1 },
     selection: null,
     pendingStart: null,
-  };
+  });
 }
 
 export type FraseErrorCode =
@@ -139,7 +157,7 @@ function lockFrase(state: SessionState, i: number, sel: Span, sceneId: string): 
   );
   const base = { ...state, frases, selection: null, pendingStart: null };
   const next = frases.findIndex((f) => !f.locked);
-  if (next >= 0) return { ...base, current: { layer: 'frases' as const, index: next } };
+  if (next >= 0) return primeFrase({ ...base, current: { layer: 'frases' as const, index: next } });
   return addFrase({ ...base, current: { layer: 'frases', index: -1 } });
 }
 
@@ -159,9 +177,9 @@ export function moveBorder(state: SessionState, offer: BorderOffer): SessionStat
   return lockFrase(slid, offer.fraseIndex, offer.sel, sc.part_id);
 }
 
-/** "Reancorar dentro da cena" (L812): descarta a seleção e recomeça. */
+/** "Reancorar dentro da cena" (L812): descarta a seleção e re-ancora na fronteira. */
 export function reanchorFrase(state: SessionState): SessionState {
-  return { ...state, selection: null, pendingStart: null };
+  return primeFrase({ ...state, selection: null, pendingStart: null });
 }
 
 /** Remove e libera o P#; assume o ÚLTIMO destravado ou auto-add (L850–855).
@@ -174,7 +192,7 @@ export function removeFrase(state: SessionState, i: number): SessionState {
   frases.forEach((f, k) => {
     if (!f.locked) lu = k;
   });
-  if (lu >= 0) return { ...base, current: { layer: 'frases' as const, index: lu } };
+  if (lu >= 0) return primeFrase({ ...base, current: { layer: 'frases' as const, index: lu } });
   return addFrase({ ...base, current: { layer: 'frases', index: -1 } });
 }
 
@@ -241,7 +259,7 @@ export function dragPhraseBoundary(
 export function enterScene(state: SessionState, sceneId: string): SessionState {
   const base = { ...state, activeSceneId: sceneId, selection: null, pendingStart: null };
   const lu = base.frases.findIndex((f) => !f.locked);
-  if (lu >= 0) return { ...base, current: { layer: 'frases' as const, index: lu } };
+  if (lu >= 0) return primeFrase({ ...base, current: { layer: 'frases' as const, index: lu } });
   return addFrase({ ...base, current: { layer: 'frases', index: -1 } });
 }
 
@@ -252,7 +270,7 @@ export function enterFrasesLayer(state: SessionState): SessionState {
     if (!f.locked) lu = k;
   });
   const limpo = { ...state, selection: null, pendingStart: null };
-  if (lu >= 0) return { ...limpo, current: { layer: 'frases' as const, index: lu } };
+  if (lu >= 0) return primeFrase({ ...limpo, current: { layer: 'frases' as const, index: lu } });
   return addFrase({ ...limpo, current: { layer: 'frases', index: -1 } });
 }
 

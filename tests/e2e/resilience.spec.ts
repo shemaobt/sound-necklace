@@ -60,18 +60,19 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     // colar toca o INTERVALO. Apontar a frase aqui deixa a seleção assentar no
     // autosave (que é debounced) ANTES da régua, senão ela nasce velha e a queda
     // levaria a culpa por uma mudança que foi nossa.
-    const { s: phraseS, e: phraseE } = SCENARIO.containedPhrase;
-    await app.clickBead(phraseS);
+    // um-toque (primeFrase): o início da frase é a fronteira automática (0, início
+    // da 1ª cena produtiva); só o fim é tocado, e a seleção nasce {0, fim}.
+    const { e: phraseE } = SCENARIO.containedPhrase;
+    const phraseStart = 0;
     await app.clickBead(phraseE);
     await expect
       .poll(async () => (await readPersistedState(page, id))?.selection)
-      .toEqual({ s: phraseS, e: phraseE });
+      .toEqual({ s: phraseStart, e: phraseE });
     const before = await readPersistedState(page, id);
     expect(before?.parts).toHaveLength(SCENARIO.sceneEndBeads.length);
 
-    // reapontar as MESMAS contas retoca o intervalo e recai no mesmo estado da régua
-    // (reabrir a seleção e refechá-la nas mesmas bordas) — som tocando na hora da queda.
-    await app.clickBead(phraseS);
+    // reapontar o MESMO fim retoca o intervalo e recai no mesmo estado da régua
+    // (reabrir a seleção e refechá-la na mesma borda) — som tocando na hora da queda.
     await app.clickBead(phraseE);
     await expect(headBead).toBeVisible();
     const startHead = await headIndex();

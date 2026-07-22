@@ -197,8 +197,10 @@ export class ColarApp {
   // ——— Segmentação ———
 
   /** Seleciona uma frase (clique no começo, clique no fim) e confirma. */
+  // um-toque como as cenas (primeFrase): o início já é a fronteira automática;
+  // `s` documenta o início esperado (= fronteira), só o fim `e` é tocado.
   async cutPhrase(s: number, e: number): Promise<void> {
-    await this.clickBead(s);
+    void s;
     await this.clickBead(e);
     await this.page.getByRole('button', { name: '✓ Confirmar esta frase' }).click();
   }

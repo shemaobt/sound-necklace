@@ -164,10 +164,9 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   const confirmPhrase = (): void => {
     const s = sessionStore.getState().session;
     if (!s || s.current.layer !== 'frases' || s.current.index < 0) return;
-    // Meia-seleção (um toque só): o domínio aceitaria (quirk 1:1 da referência) e
-    // travaria uma frase de UMA conta em silêncio — o modelo mental das cenas
-    // ("toque onde termina") produzia exatamente isso (ENG-335). A UI guia o gesto
-    // completo; a frase de 1 conta segue possível tocando a mesma conta duas vezes.
+    // Um-toque como as cenas: o início já vem pré-ancorado na fronteira (primeFrase),
+    // então confirmar SEM tocar o fim (pendingStart ainda semeado) travaria uma frase
+    // de UMA conta — o guarda pede o toque do fim, espelhando confirmPart das cenas.
     if (s.pendingStart !== null) {
       setError(t('phrases.halfSelection'));
       sound?.refuse();

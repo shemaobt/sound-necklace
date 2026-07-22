@@ -37,7 +37,7 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
   await page.reload();
 
   // retoma EXATAMENTE na Segmentação (o hidratador lê o modo persistido).
-  await expect(page.getByText('Toque no colar o começo e o fim de cada frase.')).toBeVisible();
+  await expect(page.getByText(/Toque no colar onde cada frase termina/)).toBeVisible();
 
   // zero-perda: todo estado pré-reload continua presente e idêntico.
   const after = await readPersistedState(page, sessionId);

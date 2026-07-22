@@ -97,7 +97,7 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await page.getByRole('button', { name: 'Continuar →' }).click();
 
   // ——— Segmentação: ancoragem (primeira cena produtiva, sem frases) ———
-  await expect(page.getByText('Toque no colar o começo e o fim de cada frase.')).toBeVisible();
+  await expect(page.getByText(/Toque no colar onde cada frase termina/)).toBeVisible();
   await scan('Segmentação — ancoragem');
 
   // ——— Segmentação: aviso de cena vazia ———

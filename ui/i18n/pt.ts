@@ -204,9 +204,9 @@ export const pt = {
   },
   phrases: {
     reviewHeadline: 'As frases desta cena estão prontas. Toque numa frase para reouvir.',
-    instruction: 'Toque no colar o começo e o fim de cada frase.',
+    instruction: 'Toque no colar onde cada frase termina. O começo já está costurado.',
     instructionReplay: ' Toque numa frase pronta para reouvir.',
-    halfSelection: 'Toque também onde a frase termina, no colar.',
+    halfSelection: 'Toque no colar onde esta frase termina.',
     remove: 'Remover',
     back: '← Voltar',
     confirmPhrase: '✓ Confirmar esta frase',

@@ -142,15 +142,15 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
     expect(screen.getByRole('group', { name: 'Frase um' })).toBeTruthy();
   });
 
-  it('meia-seleção (um toque só) guia o gesto completo em vez de travar 1 conta (ENG-335)', async () => {
-    // o dono tocava só "onde a frase termina" (modelo das cenas) e o quirk da
-    // referência travava uma frase de UMA conta em silêncio — só o quadrado pintava
+  it('um-toque: confirmar sem tocar o fim (início pré-ancorado) pede o fim, não trava 1 conta', async () => {
+    // primeFrase deixa pendingStart semeado na fronteira; confirmar antes de tocar
+    // o fim travaria uma frase de UMA conta — o guarda pede o toque do fim
     load(segmenting({ selection: { s: 14, e: 14 }, pendingStart: 14 }));
     render(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
 
-    expect(screen.getByText('Toque também onde a frase termina, no colar.')).toBeTruthy();
+    expect(screen.getByText('Toque no colar onde esta frase termina.')).toBeTruthy();
     expect(sessionStore.getState().session!.frases[0]!.locked).toBe(false);
   });
 
@@ -221,7 +221,7 @@ describe('Segmentação — travessia de borda (seam modal, PRD v2 §8.6)', () =
     expect(locked.span).toEqual({ s: 14, e: 20 });
   });
 
-  it('“Reancorar dentro da cena” limpa a seleção e não trava', async () => {
+  it('“Reancorar dentro da cena” re-ancora na fronteira e não trava', async () => {
     load(segmenting({ selection: { s: 14, e: 20 }, pendingStart: null }));
     render(<Phrases />);
 
@@ -229,7 +229,9 @@ describe('Segmentação — travessia de borda (seam modal, PRD v2 §8.6)', () =
     await userEvent.click(screen.getByRole('button', { name: 'Reancorar dentro da cena' }));
 
     const s = sessionStore.getState().session!;
-    expect(s.selection).toBeNull();
+    // um-toque (primeFrase): reancorar re-semeia o início na fronteira da cena (12)
+    expect(s.selection).toEqual({ s: 12, e: 12 });
+    expect(s.pendingStart).toBe(12);
     expect(s.frases[0]!.locked).toBe(false);
     expect(screen.queryByText('A frase passou da borda da cena.')).toBeNull();
   });
@@ -415,7 +417,7 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
     );
     render(<Phrases />);
 
-    expect(screen.getByText(/Toque no colar o começo e o fim de cada frase/)).toBeTruthy();
+    expect(screen.getByText(/Toque no colar onde cada frase termina/)).toBeTruthy();
     expect(screen.queryByText(/para reouvir/)).toBeNull();
   });
 });
