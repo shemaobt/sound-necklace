@@ -44,11 +44,5 @@
       ]
     }
   ],
-  "flags": [
-    {
-      "kind": "NEEDS_REVIEW",
-      "prop_id": "P1",
-      "note_pt": ""
-    }
-  ]
+  "flags": []
 }

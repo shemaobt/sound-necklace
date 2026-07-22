@@ -28,12 +28,9 @@ import {
   moveBorder,
   reanchorFrase,
   removeFrase,
-  reopenFrase,
-  reopenPart,
   setAnswer,
   setMode,
   tagScene,
-  toggleFlag,
   triagemDone,
   type AnswerSlot,
   type Confidence,
@@ -129,9 +126,9 @@ const manifestReplayer: Replayer = (steps) => {
 
 /**
  * ENG-216/219/223: replay dos passos de sessão (segment → confirmWhole →
- * cutScene → reopenScene → confirmParts → triage → triagemDone → enterScene →
- * phraseSelect → confirmPhrase → reopenPhrase → removePhrase → toggleFlag →
- * sceneDone) através dos reducers de domain/. Passos de issues posteriores
+ * cutScene → confirmParts → triage → triagemDone → enterScene → phraseSelect →
+ * confirmPhrase → removePhrase → sceneDone) através dos reducers de domain/. O
+ * reabrir cena/frase e o ⚑ saíram na ENG-342. Passos de issues posteriores
  * (answer, export…) param o replay e são reportados em `pendingAt` — o caso
  * minimal-flow segue PENDENTE no harness até a ENG-226 registrar as respostas
  * e a ENG-227/233 o export real.
@@ -144,10 +141,6 @@ export interface SessionReplay {
 
 interface CutSceneStep extends GoldenStep {
   endBead: number;
-}
-
-interface ReopenSceneStep extends GoldenStep {
-  index: number;
 }
 
 interface TriageStep extends GoldenStep {
@@ -248,9 +241,6 @@ export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
         state = unwrap(confirmPart(sel, sel.current.index));
         break;
       }
-      case 'reopenScene':
-        state = reopenPart(must(), (step as ReopenSceneStep).index);
-        break;
       case 'confirmParts':
         state = unwrap(confirmParts(must()));
         break;
@@ -304,22 +294,9 @@ export function replaySessionSteps(steps: GoldenStep[]): SessionReplay {
         }
         break;
       }
-      case 'reopenPhrase':
-        state = reopenFrase(must(), (step as PhraseIndexStep).index);
-        break;
       case 'removePhrase':
         state = removeFrase(must(), (step as PhraseIndexStep).index);
         break;
-      case 'toggleFlag': {
-        // driver (generate.mjs L164–168): o índice é sobre as frases TRAVADAS
-        const st = must();
-        const { index } = step as PhraseIndexStep;
-        let seen = -1;
-        const pos = st.frases.findIndex((f) => f.locked && ++seen === index);
-        if (pos < 0) throw new Error(`toggleFlag: índice ${index} fora das frases travadas`);
-        state = toggleFlag(st, pos);
-        break;
-      }
       case 'sceneDone': {
         // botão "Pronto com esta cena →" (L917–929); forceEmpty = 2º clique
         // que atravessa o aviso de cena vazia (generate.mjs L172–175)

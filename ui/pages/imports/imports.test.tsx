@@ -137,7 +137,7 @@ describe('estação imports — entrega', () => {
 });
 
 describe('estação imports — retorno', () => {
-  it('carrega estado TRAVADO com partsConfirmed e flags, sem aviso de mismatch', async () => {
+  it('carrega estado TRAVADO com partsConfirmed, sem aviso de mismatch', async () => {
     sessionStore.getState().load(fresh());
     render(<Imports />);
 
@@ -149,7 +149,6 @@ describe('estação imports — retorno', () => {
     expect(s.partsConfirmed).toBe(true);
     expect(s.parts[0]!.locked).toBe(true);
     expect(s.frases[0]!.locked).toBe(true);
-    expect(s.frases[0]!.flagged).toBe(true);
     expect(s.current).toEqual({ layer: 'frases', index: -1 });
     expect(screen.queryByText(MISMATCH_MSG)).toBeNull();
   });

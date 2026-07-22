@@ -93,7 +93,6 @@ test('minimal-flow: os três artefatos exportados pela UI são byte-idênticos a
   await triageGleaningThenNoneFit(page); // PT1 GLEANING/alta, PT2 none_fit
 
   await app.cutPhrase(0, 4); // frase contida em PT1 (0–9) → trava direto
-  await page.getByRole('button', { name: '⚑ revisar' }).click(); // flag NEEDS_REVIEW em P1
   await app.finishPhrases(); // 1 cena produtiva → finaliza a segmentação
 
   // Respostas digitadas nas posições exatas: L1 recontar(0), L2 PT1 quem(12),
@@ -170,7 +169,6 @@ test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate co
   await app.cutScenes([9, 23]);
   await triageGleaningThenNoneFit(page);
   await app.cutPhrase(0, 4);
-  await page.getByRole('button', { name: '⚑ revisar' }).click();
   await app.finishPhrases();
   await typeAnswersAt(app, page, [
     [0, 'Uma história sobre respiga e retorno ao lar.'],

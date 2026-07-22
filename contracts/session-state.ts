@@ -62,7 +62,6 @@ const FraseSchema = z.strictObject({
   span: SpanSchema.nullable(),
   part_link: z.string().nullable(),
   locked: z.boolean(),
-  flagged: z.boolean(),
 });
 
 const MappingSchema = z.strictObject({
@@ -142,7 +141,6 @@ export function toSessionDto(state: SessionState, meta: SessionMeta): SessionSta
       span: f.span ? { ...f.span } : null,
       part_link: f.part_link,
       locked: f.locked,
-      flagged: f.flagged,
     })),
     current: { layer: state.current.layer, index: state.current.index },
     activeSceneId: state.activeSceneId,
@@ -189,7 +187,6 @@ export function fromSessionDto(dto: SessionStateDto): { state: SessionState; met
       span: f.span ? { ...f.span } : null,
       part_link: f.part_link,
       locked: f.locked,
-      flagged: f.flagged,
     })),
     current: { layer: dto.current.layer, index: dto.current.index },
     activeSceneId: dto.activeSceneId,

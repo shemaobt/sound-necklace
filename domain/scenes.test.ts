@@ -7,7 +7,6 @@ import {
   confirmParts,
   confirmWhole,
   primePart,
-  reopenPart,
   reopenWhole,
   type SceneResult,
 } from './scenes';
@@ -267,46 +266,6 @@ describe('confirmPart (referência L713–724)', () => {
   });
 });
 
-describe('reopenPart (referência L726–731)', () => {
-  const tres = () =>
-    sess({
-      parts: [
-        part({
-          part_id: 'PT1',
-          span: { s: 0, e: 4 },
-          locked: true,
-          scene_kind: 'GLEANING_SCENE',
-          scene_kind_confidence: 'alta',
-          tag_state: 'tagged',
-        }),
-        part({ part_id: 'PT2', span: { s: 5, e: 9 }, locked: true, tag_state: 'none_fit' }),
-        part({ part_id: 'PT3', span: { s: 10, e: 23 }, locked: true }),
-      ],
-    });
-
-  it('destrava i e tudo depois, preservando IDs e dados de triagem', () => {
-    const s = reopenPart(tres(), 1);
-    expect(s.parts.map((p) => p.locked)).toEqual([true, false, false]);
-    expect(s.parts.map((p) => p.part_id)).toEqual(['PT1', 'PT2', 'PT3']);
-    expect(s.parts[1]?.tag_state).toBe('none_fit'); // triagem preservada
-    expect(s.parts[0]?.scene_kind).toBe('GLEANING_SCENE');
-    expect(s.current).toEqual({ layer: 'parts', index: 1 });
-    expect(s.selection).toEqual({ s: 5, e: 9 }); // seleção = span reaberto
-    expect(s.pendingStart).toBeNull();
-  });
-
-  it('alvo sem span deixa a seleção nula', () => {
-    const base = tres();
-    const comSlot = { ...base, parts: [...base.parts, part({ part_id: 'PT4' })] };
-    expect(reopenPart(comSlot, 3).selection).toBeNull();
-  });
-
-  it('índice fora do intervalo é no-op (a referência quebraria; desvio documentado)', () => {
-    const s = tres();
-    expect(reopenPart(s, 9)).toBe(s);
-  });
-});
-
 describe('confirmParts (referência L757–767)', () => {
   it('exige a história confirmada primeiro', () => {
     const err = errOf(confirmParts(sess()));
@@ -358,11 +317,9 @@ describe('pureza dos reducers', () => {
     const pronto = withSelection(primado, { s: 0, e: 9 });
     const before = JSON.stringify(pronto);
     confirmPart(pronto, 0);
-    reopenWhole(pronto);
     confirmParts(pronto);
     addPart(pronto);
     primePart(pronto);
-    reopenPart(pronto, 0);
     expect(JSON.stringify(pronto)).toBe(before);
   });
 });

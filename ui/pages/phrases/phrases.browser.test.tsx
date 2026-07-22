@@ -71,7 +71,6 @@ function segmenting(): SessionState {
         span: null,
         part_link: null,
         locked: false,
-        flagged: false,
       },
     ],
     current: { layer: 'frases', index: 0 },
@@ -132,7 +131,6 @@ function frase(over: Partial<Frase>): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...over,
   };
 }

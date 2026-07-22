@@ -6,8 +6,8 @@
  * Regras espelhadas: só locked && span exporta (partes e frases);
  * parts[].scene_id é "S"+n sequencial pela ordem da lista (reatribuído no
  * export, distinto do part_id estável); propositions saem na ordem de CRIAÇÃO
- * global do array frases (não agrupadas por cena); flags saem INDEPENDENTE de
- * locked (frase reaberta flagged emite flag sem proposition correspondente);
+ * global do array frases (não agrupadas por cena); `flags` permanece no schema
+ * mas sai sempre vazio (o "⚑ marcar para revisão" foi removido na ENG-342);
  * o envelope tem exatamente UMA cena externa (whole.id + span do colar) e
  * story_slug CRU (o fallback "colar" é só de nome de arquivo, serialize.ts).
  */
@@ -93,6 +93,8 @@ export function buildRetorno(state: SessionState): Retorno {
   }
 
   const propositions: Retorno['scenes'][number]['propositions'] = [];
+  // O "⚑ marcar para revisão" saiu na ENG-342 — nada mais popula `flags`. O campo
+  // permanece no schema/DTO (o Compilador o espera), sempre vazio.
   const flags: Retorno['flags'] = [];
   for (const p of state.frases) {
     if (p.locked && p.span) {
@@ -102,7 +104,6 @@ export function buildRetorno(state: SessionState): Retorno {
         confirmed_span: { start_bead: p.span.s, end_bead: p.span.e },
       });
     }
-    if (p.flagged) flags.push({ kind: 'NEEDS_REVIEW', prop_id: p.prop_id, note_pt: '' });
   }
 
   return {

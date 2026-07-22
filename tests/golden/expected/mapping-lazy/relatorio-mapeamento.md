@@ -41,14 +41,14 @@
 ### Cena 1 (S1) — GLEANING_SCENE
 
 **Frase 1 (P1) — contas 0–9:**
-- O que aconteceu nesta frase? Resposta antiga da P1 — deve sobreviver.
+- O que aconteceu nesta frase? Resposta da P1.
 - Quem? _(sem resposta)_
 - Onde? _(sem resposta)_
 - Como? Por quê? _(sem resposta)_
 - O que mais tem nessa frase? _(sem resposta)_
 
 **Frase 2 (P2) — contas 10–15:**
-- O que aconteceu nesta frase? Resposta nova da P2.
+- O que aconteceu nesta frase? Resposta da P2.
 - Quem? _(sem resposta)_
 - Onde? _(sem resposta)_
 - Como? Por quê? _(sem resposta)_

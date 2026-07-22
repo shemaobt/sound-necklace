@@ -41,7 +41,6 @@ export interface Frase {
   span: Span | null;
   part_link: string | null;
   locked: boolean;
-  flagged: boolean;
 }
 
 export interface Current {

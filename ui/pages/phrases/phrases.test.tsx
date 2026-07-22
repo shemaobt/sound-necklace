@@ -58,7 +58,6 @@ function frase(overrides: Partial<Frase>): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...overrides,
   };
 }
@@ -272,17 +271,6 @@ describe('Segmentação — chips das frases travadas (redesign §6.5)', () => {
       }),
     );
   }
-
-  it('“⚑ revisar” alterna a marca de revisão', async () => {
-    withLockedPhrase();
-    render(<Phrases />);
-
-    const chip = screen.getByRole('group', { name: 'Frase um' });
-    await userEvent.click(within(chip).getByRole('button', { name: '⚑ revisar' }));
-
-    expect(sessionStore.getState().session!.frases[0]!.flagged).toBe(true);
-    expect(screen.getByRole('button', { name: '⚑ marcada' })).toBeTruthy();
-  });
 
   it('“Remover” apaga a frase travada', async () => {
     withLockedPhrase();

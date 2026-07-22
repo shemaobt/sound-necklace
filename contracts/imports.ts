@@ -146,7 +146,6 @@ export function applyDelivery(session: SessionState, dto: Delivery): ImportOutco
     span: p.proposed_span ? { s: p.proposed_span.start_bead, e: p.proposed_span.end_bead } : null,
     part_link: p.part_link || null,
     locked: false,
-    flagged: false,
   }));
 
   // referência L1349: `if(sc.scene_id) whole.id=sc.scene_id` — só sobrescreve
@@ -179,7 +178,6 @@ export function applyReturn(session: SessionState, dto: ReturnImport): ImportOut
       span: { s: p.confirmed_span.start_bead, e: p.confirmed_span.end_bead },
       part_link: p.part_link || null,
       locked: true,
-      flagged: false,
     }));
     next = {
       ...next,
@@ -195,11 +193,10 @@ export function applyReturn(session: SessionState, dto: ReturnImport): ImportOut
     };
   }
 
-  // flags reaplicadas por prop_id (mesmo sem cena), depois o cursor vai a frases
-  const flagged = new Set((dto.flags ?? []).map((f) => f.prop_id));
+  // o "⚑ marcar para revisão" saiu na ENG-342: `dto.flags` (de um retorno antigo)
+  // é ignorado — resta só normalizar o cursor/seleção para a camada de frases
   next = {
     ...next,
-    frases: next.frases.map((f) => (flagged.has(f.prop_id) ? { ...f, flagged: true } : f)),
     current: { layer: 'frases', index: -1 },
     selection: null,
   };

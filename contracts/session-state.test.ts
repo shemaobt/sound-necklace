@@ -56,7 +56,6 @@ function frase(overrides: Partial<Frase> & { prop_id: string }): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...overrides,
   };
 }
@@ -125,7 +124,6 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
           span: { s: 0, e: 4 },
           part_link: 'PT1',
           locked: true,
-          flagged: true,
           statement_pt: 'A chegada.',
           qa: ['Quem chega?'],
         }),

@@ -187,8 +187,6 @@ export const en: Dict = {
     instruction: 'Tap the necklace at the start and the end of each phrase.',
     instructionReplay: ' Tap a finished phrase to hear it again.',
     halfSelection: 'Also tap where the phrase ends, on the necklace.',
-    flagMarked: '⚑ marked',
-    flagReview: '⚑ review',
     remove: 'Remove',
     back: '← Back',
     confirmPhrase: '✓ Confirm this phrase',
