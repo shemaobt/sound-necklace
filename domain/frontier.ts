@@ -49,7 +49,15 @@ export function activeAnchor(state: SessionState): ActiveAnchor | null {
   const { layer, index } = state.current;
   if ((layer === 'parts' || layer === 'frases') && index >= 0) {
     const it = (layer === 'parts' ? state.parts : state.frases)[index];
-    if (it && !it.locked) return { layer, index, start: frontier(state, layer) };
+    if (it && !it.locked) {
+      // O um-toque ancora a 1ª frase no início da CENA, não na back-reach à
+      // vizinha que `frontier` mantém (quirk fiel à referência) — espelha o
+      // clamp de `primeFrase`. Sem ele, tocar o fim puxaria o começo da frase
+      // para a cena anterior (o "início da linha", ENG-343).
+      const raw = frontier(state, layer);
+      const sc = layer === 'frases' ? activeScene(state) : null;
+      return { layer, index, start: sc?.span ? Math.max(sc.span.s, raw) : raw };
+    }
   }
   return null;
 }

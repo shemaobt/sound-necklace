@@ -171,7 +171,7 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
 
-    expect(screen.getByText('Clique o início e o fim da frase no colar.')).toBeTruthy();
+    expect(screen.getByText('Clique onde a frase termina, no colar.')).toBeTruthy();
     expect(sessionStore.getState().session!.frases[0]!.locked).toBe(false);
   });
 

@@ -200,11 +200,11 @@ describe('confirmFrase — guardas na ordem da referência', () => {
     });
   });
 
-  it('sem seleção: "Clique o início e o fim da frase no colar."', () => {
+  it('sem seleção: "Clique onde a frase termina, no colar."', () => {
     const s = anchoring({ selection: null });
     expect(errOf(confirmFrase(s, 0))).toEqual({
       code: 'SELECTION_INCOMPLETE',
-      message: 'Clique o início e o fim da frase no colar.',
+      message: 'Clique onde a frase termina, no colar.',
     });
   });
 

@@ -271,7 +271,7 @@ The full necklace renders; the whole audio plays with beads lighting progressive
 
 - Work happens **one productive scene at a time**. Title: "Cena N · <PT-BR kind label>". Primary button: "Pronto com esta cena →" / on the last scene "Já segmentei todas as cenas →".
 - **Windowing:** the necklace shows only the active scene plus a margin of `max(3, round(2/beadSec))` beads (~2 s) each side; outside beads are dimmed/asleep; a dashed band marks the awake scene; "▶ ouvir a cena" plays the scene only.
-- **Phrase anchoring** follows the frontier logic (§6.4), including the first-phrase back-reach. Validation copy: "Clique o início e o fim da frase no colar." / "A frase não pode começar antes da conta X." / "A frase precisa terminar dentro do colar."
+- **Phrase anchoring** follows the frontier logic (§6.4), including the first-phrase back-reach. Validation copy: "Clique onde a frase termina, no colar." / "A frase não pode começar antes da conta X." / "A frase precisa terminar dentro do colar."
 - **Border-crossing flow — logic verbatim.** If the selection crosses the scene border, the app *guides instead of blocking* (presented as the redesign's visual seam modal). With `delta` = overshoot in beads, `thr = max(3, round(0.25 × scene length))`, `consumed` = the neighbor would be fully swallowed, `twoProd` = the neighbor is productive **and already has locked phrases**:
   - **Escalation (`twoProd`):** moving the border would touch two productive scenes — options: **Voltar à Triagem** / **Reancorar dentro da cena** only.
   - **Large overshoot (`consumed` or `delta > thr`):** looks like a scene re-cut, not a border adjustment — options: **Voltar à Triagem**; **Mover mesmo assim** (only when not consumed); **Reancorar dentro da cena**.

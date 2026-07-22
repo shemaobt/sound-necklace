@@ -93,7 +93,7 @@ describe('clickBead — só o FIM se define; o começo é a fronteira (§8.2, no
   });
 });
 
-describe('clickBead — a fronteira na camada de frases é o começo de OUVIR (back-reach §6.4)', () => {
+describe('clickBead — o começo da frase é a fronteira DENTRO da cena (um-toque, §8.6)', () => {
   function frase(over: Partial<Frase>): Frase {
     return {
       prop_id: 'P1',
@@ -135,9 +135,14 @@ describe('clickBead — a fronteira na camada de frases é o começo de OUVIR (b
     };
   }
 
-  it('1ª frase: a fronteira recua ao início da vizinha (4); clicar antes é OUVIR de lá', () => {
-    const r = clickBead(fraseando([frase({})], 0), 1);
-    expect(r.play).toEqual({ type: 'listen', from: 4 });
+  it('1ª frase: o começo é o início da CENA (10), sem back-reach à vizinha (§8.6, um-toque)', () => {
+    const s = fraseando([frase({})], 0); // PT2 {10,19} ativa, 1ª frase
+    // clicar antes do início da cena é OUVIR de lá — nunca recua à cena anterior
+    expect(clickBead(s, 1).play).toEqual({ type: 'listen', from: 10 });
+    // tocar o FIM ancora o começo na cena, não no início do colar
+    const r = clickBead(s, 12);
+    expect(r.state.selection).toEqual({ s: 10, e: 12 });
+    expect(r.play).toEqual({ type: 'set-end', end: 12 });
   });
 
   it('o piso da cena (fim da última frase DELA +1) é o começo; além dele define o fim', () => {
