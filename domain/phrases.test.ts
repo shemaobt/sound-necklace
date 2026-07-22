@@ -15,9 +15,7 @@ import {
   phraseFrontier,
   reanchorFrase,
   removeFrase,
-  reopenFrase,
   sceneIndexOf,
-  toggleFlag,
   type ConfirmFraseResult,
 } from './phrases';
 
@@ -41,7 +39,6 @@ function mkFrase(prop_id: string, over: Partial<Frase> = {}): Frase {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
     ...over,
   };
 }
@@ -313,47 +310,6 @@ describe('moveBorder / reanchorFrase — as saídas da oferta', () => {
   });
 });
 
-describe('reopenFrase — cascata GLOBAL', () => {
-  it('destrava i e TODAS as posteriores, mesmo de outras cenas', () => {
-    const s = sess({
-      frases: [
-        mkFrase('P1', { locked: true, span: { s: 0, e: 4 }, part_link: 'PT1' }),
-        mkFrase('P2', { locked: true, span: { s: 10, e: 14 }, part_link: 'PT2' }),
-        mkFrase('P3', { locked: true, span: { s: 15, e: 20 }, part_link: 'PT2' }),
-      ],
-      activeSceneId: 'PT2',
-    });
-    const next = reopenFrase(s, 1);
-    expect(next.frases.map((f) => f.locked)).toEqual([true, false, false]);
-    expect(next.current).toEqual({ layer: 'frases', index: 1 });
-    expect(next.selection).toEqual({ s: 10, e: 14 });
-    expect(next.pendingStart).toBeNull();
-  });
-
-  it('flagged SOBREVIVE ao reopen (a flag exporta sem proposition)', () => {
-    const s = sess({
-      frases: [
-        mkFrase('P1', { locked: true, span: { s: 0, e: 4 }, part_link: 'PT1', flagged: true }),
-      ],
-      activeSceneId: 'PT1',
-    });
-    const next = reopenFrase(s, 0);
-    expect(next.frases[0]!.flagged).toBe(true);
-    expect(next.frases[0]!.locked).toBe(false);
-  });
-
-  it('frase sem span reabre com seleção nula', () => {
-    const s = sess({ frases: [mkFrase('P1')], activeSceneId: 'PT1' });
-    const next = reopenFrase(s, 0);
-    expect(next.selection).toBeNull();
-  });
-
-  it('índice inválido é no-op (desvio deliberado do TypeError da referência)', () => {
-    const s = sess({ frases: [mkFrase('P1')] });
-    expect(reopenFrase(s, 9)).toBe(s);
-  });
-});
-
 describe('removeFrase — libera o P# e escolhe o ÚLTIMO destravado', () => {
   it('remove e aponta para o último slot destravado remanescente', () => {
     const s = sess({
@@ -383,21 +339,6 @@ describe('removeFrase — libera o P# e escolhe o ÚLTIMO destravado', () => {
     expect(next.frases).toHaveLength(2);
     expect(next.frases[1]).toMatchObject({ prop_id: 'P2', locked: false, span: null });
     expect(next.current).toEqual({ layer: 'frases', index: 1 });
-  });
-});
-
-describe('toggleFlag — marca/desmarca para revisão', () => {
-  it('alterna a flag da frase alvo sem tocar as outras', () => {
-    const s = sess({
-      frases: [
-        mkFrase('P1', { locked: true, span: { s: 0, e: 4 }, part_link: 'PT1' }),
-        mkFrase('P2', { locked: true, span: { s: 10, e: 14 }, part_link: 'PT2' }),
-      ],
-    });
-    const marcada = toggleFlag(s, 0);
-    expect(marcada.frases[0]!.flagged).toBe(true);
-    expect(marcada.frases[1]!.flagged).toBe(false);
-    expect(toggleFlag(marcada, 0).frases[0]!.flagged).toBe(false);
   });
 });
 

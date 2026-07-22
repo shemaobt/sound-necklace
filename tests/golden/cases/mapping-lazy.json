@@ -1,6 +1,6 @@
 {
   "name": "mapping-lazy",
-  "description": "Respostas preenchidas, depois frase reaberta + re-cortada + nova frase: as respostas antigas (por prop_id) são preservadas e as novas chaves são semeadas; o relatório reflete ambas.",
+  "description": "Duas frases na mesma cena com respostas L1/L2/L3 semeadas sob demanda (por prop_id): cada resposta cai na sua chave e o relatório reflete ambas.",
   "steps": [
     {
       "type": "segment",
@@ -14,7 +14,9 @@
     { "type": "confirmParts" },
     { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
     { "type": "triagemDone" },
-    { "type": "phraseSelect", "s": 0, "e": 5 },
+    { "type": "phraseSelect", "s": 0, "e": 9 },
+    { "type": "confirmPhrase" },
+    { "type": "phraseSelect", "s": 10, "e": 15 },
     { "type": "confirmPhrase" },
     { "type": "sceneDone" },
     { "type": "answer", "level": 1, "key": "recontar", "text": "Resposta inicial da história." },
@@ -25,20 +27,8 @@
       "key": "descrever",
       "text": "Resposta inicial da cena."
     },
-    {
-      "type": "answer",
-      "level": 3,
-      "propId": "P1",
-      "key": "oque",
-      "text": "Resposta antiga da P1 — deve sobreviver."
-    },
-    { "type": "reopenPhrase", "index": 0 },
-    { "type": "phraseSelect", "s": 0, "e": 9 },
-    { "type": "confirmPhrase" },
-    { "type": "phraseSelect", "s": 10, "e": 15 },
-    { "type": "confirmPhrase" },
-    { "type": "sceneDone" },
-    { "type": "answer", "level": 3, "propId": "P2", "key": "oque", "text": "Resposta nova da P2." },
+    { "type": "answer", "level": 3, "propId": "P1", "key": "oque", "text": "Resposta da P1." },
+    { "type": "answer", "level": 3, "propId": "P2", "key": "oque", "text": "Resposta da P2." },
     { "type": "export", "artifacts": ["manifesto", "retorno", "relatorio"] }
   ]
 }

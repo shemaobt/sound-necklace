@@ -84,7 +84,6 @@ describe('stepperStations — estados derivados dos gates do domínio', () => {
           span: { s: 0, e: 1 },
           part_link: 'PT1',
           locked: true,
-          flagged: false,
         },
       ],
     };
@@ -124,7 +123,6 @@ describe('stepperStations — estados derivados dos gates do domínio', () => {
           span: { s: 0, e: 1 },
           part_link: 'PT1',
           locked: true,
-          flagged: false,
         },
       ],
     };

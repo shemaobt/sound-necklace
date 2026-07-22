@@ -1,9 +1,11 @@
 /**
  * História inteira + corte sequencial de cenas — port 1:1 de confirmWhole
- * (docs/reference/index.html L685–694), reabrir história (L677–680), primePart
- * (L698–703), addPart (L705–711), confirmPart (L713–724), reopenPart
- * (L726–731), confirmParts (L757–767) e enterLayer('parts') (L930–935).
- * PRD v2 §8.3–§8.4, §11.
+ * (docs/reference/index.html L685–694), primePart (L698–703), addPart
+ * (L705–711), confirmPart (L713–724), confirmParts (L757–767) e
+ * enterLayer('parts') (L930–935). Todo o reabrir (história L677–680 e cena
+ * L726–731) foi removido na ENG-342 — ajuste pós-fato é arrastar fronteira
+ * (dragSceneBoundary, domain/seam.ts) e desconfirmar a história é o "← Voltar"
+ * do Cortar (setMode('escuta') + whole.confirmed=false). PRD v2 §8.3–§8.4, §11.
  *
  * Erros de validação são códigos tipados com a cópia PT-BR contratual como
  * constante (a UI reusa a mensagem; o significado é contrato). Sem throw no
@@ -62,17 +64,6 @@ export function confirmWhole(state: SessionState): SceneResult {
   return { ok: true, state: enterPartsLayer(confirmed) };
 }
 
-/** Reabrir a história (handler do Reabrir, L677–680): a referência NÃO limpa
- *  selection/pendingStart aqui — quirk espelhado de propósito. */
-export function reopenWhole(state: SessionState): SessionState {
-  return {
-    ...state,
-    whole: { ...state.whole, confirmed: false },
-    partsConfirmed: false,
-    current: { layer: 'whole', index: -1 },
-  };
-}
-
 export function addPart(state: SessionState): SessionState {
   if (activeAnchor(state)) return state;
   const novo: ScenePart = {
@@ -122,21 +113,6 @@ export function confirmPart(state: SessionState, i: number): SceneResult {
     return { ok: true, state: primePart({ ...base, current: { layer: 'parts', index: next } }) };
   }
   return { ok: true, state: addPart({ ...base, current: { layer: 'parts', index: -1 } }) };
-}
-
-export function reopenPart(state: SessionState, i: number): SessionState {
-  const alvo = state.parts[i];
-  // desvio DELIBERADO: a referência quebraria com TypeError em índice inválido
-  // (L729); aqui é no-op — a UI nunca chama fora do intervalo
-  if (!alvo) return state;
-  const parts = state.parts.map((p, k) => (k >= i ? { ...p, locked: false } : p));
-  return {
-    ...state,
-    parts,
-    current: { layer: 'parts', index: i },
-    selection: alvo.span ? { s: alvo.span.s, e: alvo.span.e } : null,
-    pendingStart: null,
-  };
 }
 
 export function confirmParts(state: SessionState): SceneResult {

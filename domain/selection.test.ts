@@ -93,7 +93,6 @@ describe('clickBead — clamp na camada de frases: fronteira com back-reach (ref
       span: null,
       part_link: null,
       locked: false,
-      flagged: false,
       ...over,
     };
   }

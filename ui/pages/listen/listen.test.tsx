@@ -55,26 +55,17 @@ afterEach(() => {
 });
 
 describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () => {
-  it('confirmar avança o fluxo guiado (história confirmada, camada de cenas)', async () => {
+  it('confirmar avança o fluxo guiado e não deixa ação de reabrir (ENG-342)', async () => {
     sessionStore.getState().load(makeSession());
     render(<Listen />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Já ouvi a história completa' }));
 
     expect(sessionStore.getState().session?.whole.confirmed).toBe(true);
+    // história confirmada → nenhuma ação na Escuta (a Escuta 2 assume; reabrir vive
+    // no "← Voltar" do Cortar). Sem botão "Reabrir".
     expect(screen.queryByRole('button', { name: 'Já ouvi a história completa' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Reabrir' })).toBeTruthy();
-  });
-
-  it('"Reabrir" reverte a confirmação', async () => {
-    sessionStore.getState().load(makeSession());
-    render(<Listen />);
-
-    await userEvent.click(screen.getByRole('button', { name: 'Já ouvi a história completa' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Reabrir' }));
-
-    expect(sessionStore.getState().session?.whole.confirmed).toBe(false);
-    expect(screen.getByRole('button', { name: 'Já ouvi a história completa' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reabrir' })).toBeNull();
   });
 
   it('confirmar com span incompleto mostra a cópia PT-BR exata e não avança', async () => {

@@ -32,7 +32,6 @@ function mkFrase(prop_id: string, over: Partial<Frase> = {}): Frase {
     span: { s: 0, e: 1 },
     part_link: 'PT1',
     locked: true,
-    flagged: false,
     ...over,
   };
 }

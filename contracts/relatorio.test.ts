@@ -51,7 +51,6 @@ function frase(over: Partial<Frase>): Frase {
     span: { s: 0, e: 4 },
     part_link: 'PT1',
     locked: true,
-    flagged: false,
     ...over,
   };
 }

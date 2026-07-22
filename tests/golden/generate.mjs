@@ -108,9 +108,6 @@ function runStepsInPage(steps) {
         confirmPart(i);
         break;
       }
-      case 'reopenScene':
-        reopenPart(step.index);
-        break;
       case 'confirmParts':
         confirmParts(); // setMode('triagem')
         break;
@@ -160,18 +157,9 @@ function runStepsInPage(steps) {
         }
         break;
       }
-      case 'reopenPhrase':
-        reopenFrase(step.index);
-        break;
       case 'removePhrase':
         removeFrase(step.index);
         break;
-      case 'toggleFlag': {
-        const locked = state.frases.filter((f) => f.locked);
-        const fr = locked[step.index];
-        fr.flagged = !fr.flagged;
-        break;
-      }
       case 'sceneDone':
         confirmFrasesDone();
         if (step.forceEmpty) confirmFrasesDone(); // aviso de cena vazia: 2º clique segue
@@ -217,13 +205,9 @@ function runStepsInPage(steps) {
             part_link: p.part_link || null,
             color: PALETTE_PT[idx % PALETTE_PT.length],
             locked: true,
-            flagged: false,
           }));
         }
-        (data.flags || []).forEach((fl) => {
-          const p = state.frases.filter((x) => x.prop_id === fl.prop_id)[0];
-          if (p) p.flagged = true;
-        });
+        // o ⚑ saiu na ENG-342: `data.flags` de um retorno antigo é ignorado
         state.current = { layer: 'frases', index: -1 };
         state.selection = null;
         renderWhole();

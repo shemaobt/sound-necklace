@@ -3,16 +3,16 @@
  * L396; activeScene L395 vive em seam.ts, o ramo de fronteira com back-reach
  * L400–410 em frontier.ts — ENG-269), addFrase
  * (L772–777), confirmFrase (L779–792), lockFrase (L793–798), doMove (L814),
- * reopenFrase (L843–848), removeFrase (L850–855), flag toggle (L883),
- * enterScene (L837–842), enterLayer("frases") (L930–935), do bloco de entrada
- * em segmentação do setMode (L1003–1008) e confirmFrasesDone (L916–929).
- * PRD v2 §6.4, §8.6, §11.
+ * removeFrase (L850–855), enterScene (L837–842), enterLayer("frases")
+ * (L930–935), do bloco de entrada em segmentação do setMode (L1003–1008) e
+ * confirmFrasesDone (L916–929). O reabrir/⚑ (reference L843–848, L883) foi
+ * removido na ENG-342 — ajuste pós-fato agora é arrastar fronteira
+ * (dragPhraseBoundary). PRD v2 §6.4, §8.6, §11.
  *
  * Quirks espelhados de propósito: confirmFrase NÃO checa pendingStart (meia-
  * seleção {b,b} passa); a fronteira com cena ativa NÃO clampa em totalBeads−1;
- * a cascata do reopen é sobre o array GLOBAL (frases de outras cenas destravam
- * juntas) e `flagged` sobrevive; slots dangling ocupam seu P#; lockFrase pula
- * para o PRIMEIRO destravado, removeFrase/enterLayer assumem o ÚLTIMO.
+ * slots dangling ocupam seu P#; lockFrase pula para o PRIMEIRO destravado,
+ * removeFrase/enterLayer assumem o ÚLTIMO.
  *
  * `warnedEmptyScene` é variável de módulo na referência (L916) — aqui vira
  * parâmetro/retorno explícito de confirmFrasesDone (estado efêmero de UI; não
@@ -55,7 +55,6 @@ export function addFrase(state: SessionState): SessionState {
     span: null,
     part_link: null,
     locked: false,
-    flagged: false,
   };
   const frases = [...state.frases, nova];
   return {
@@ -165,21 +164,6 @@ export function reanchorFrase(state: SessionState): SessionState {
   return { ...state, selection: null, pendingStart: null };
 }
 
-/** Cascata GLOBAL (L843–848): destrava i e tudo depois — mesmo de outras
- *  cenas; flagged sobrevive. Índice inválido é no-op (padrão reopenPart). */
-export function reopenFrase(state: SessionState, i: number): SessionState {
-  const alvo = state.frases[i];
-  if (!alvo) return state;
-  const frases = state.frases.map((f, k) => (k >= i ? { ...f, locked: false } : f));
-  return {
-    ...state,
-    frases,
-    current: { layer: 'frases', index: i },
-    selection: alvo.span ? { s: alvo.span.s, e: alvo.span.e } : null,
-    pendingStart: null,
-  };
-}
-
 /** Remove e libera o P#; assume o ÚLTIMO destravado ou auto-add (L850–855).
  *  Desvio deliberado: índice fora do intervalo não remove nada (o splice(-1)
  *  da referência removeria a última — inalcançável por chamador bem-formado). */
@@ -251,14 +235,6 @@ export function dragPhraseBoundary(
     return fr;
   });
   return { ...state, frases };
-}
-
-/** "⚑ revisar"/"⚑ marcada" (L883): alterna a marca de revisão. */
-export function toggleFlag(state: SessionState, i: number): SessionState {
-  return {
-    ...state,
-    frases: state.frases.map((f, k) => (k === i ? { ...f, flagged: !f.flagged } : f)),
-  };
 }
 
 /** Foca uma cena produtiva: 1º slot destravado ou auto-add dangling (L837–842). */
