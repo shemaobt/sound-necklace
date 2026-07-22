@@ -198,6 +198,7 @@ export const pt = {
     instructionReplay: '. Toque numa cena pronta para reouvir.',
     sceneLabel: 'Cena {{ordinal}}',
     sceneLabelBare: 'Cena',
+    remove: 'Remover',
     back: '← Voltar',
     confirmScene: '✓ Confirmar esta cena',
     confirmAll: 'Confirmar as cenas →',

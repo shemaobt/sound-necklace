@@ -15,6 +15,7 @@ import {
   moveBorder,
   nextNeighbor,
   prevNeighbor,
+  primeFrase,
   productiveScenes,
   reanchorFrase,
   removeFrase,
@@ -214,12 +215,15 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   };
 
   // Arrastar a borda de uma frase (ENG-342, substitui o reabrir/⚑): `id` =
-  // `<índiceGlobal>:<start|end>`. Cada move aplica o ajuste puro do domínio.
+  // `<índiceGlobal>:<start|end>`. `primeFrase` reancora a frase pendente na nova
+  // fronteira depois do ajuste — senão, com a frase antes cobrindo o fim do colar
+  // (fronteira fora da grade), o clique seguinte fecharia além do colar e o
+  // confirm cospe "A frase precisa terminar dentro do colar" (#3).
   const onDragBoundary = (id: string, toBead: number): void => {
     const sep = id.lastIndexOf(':');
     const index = Number(id.slice(0, sep));
     const edge = id.slice(sep + 1) as 'start' | 'end';
-    sessionStore.getState().apply((s) => dragPhraseBoundary(s, index, edge, toBead));
+    sessionStore.getState().apply((s) => primeFrase(dragPhraseBoundary(s, index, edge, toBead)));
   };
 
   const remove = (i: number): void => {

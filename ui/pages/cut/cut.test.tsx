@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -422,5 +422,24 @@ describe('Escuta 2 — a revisão exige cobertura de VERDADE', () => {
     render(<Cut />);
 
     expect(screen.getByText(/A história está toda em cenas/)).toBeTruthy();
+  });
+});
+
+describe('Escuta 2 — chips das cenas travadas: Remover (simetria com frases)', () => {
+  it('“Remover” apaga a cena travada', async () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), part({ part_id: 'PT2' })],
+        current: { layer: 'parts', index: 1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    render(<Cut />);
+
+    const chip = screen.getByRole('group', { name: 'Cena um' });
+    await userEvent.click(within(chip).getByRole('button', { name: 'Remover' }));
+
+    expect(sessionStore.getState().session!.parts.some((p) => p.part_id === 'PT1')).toBe(false);
   });
 });

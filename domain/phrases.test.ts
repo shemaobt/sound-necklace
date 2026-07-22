@@ -13,6 +13,7 @@ import {
   enterSegmentacao,
   moveBorder,
   phraseFrontier,
+  primeFrase,
   reanchorFrase,
   removeFrase,
   sceneIndexOf,
@@ -393,6 +394,34 @@ describe('dragPhraseBoundary — arrastar a borda de uma frase (ENG-342)', () =>
   it('frase destravada ou sem span: no-op', () => {
     const s = sess({ parts: [PT1, PT2, PT3], frases: [mkFrase('P1', { part_link: 'PT2' })] });
     expect(dragPhraseBoundary(s, 0, 'end', 20)).toBe(s);
+  });
+
+  // O bug do print (#3): uma frase cobrindo o FIM do colar deixa a fronteira FORA
+  // da grade (quirk de phraseFrontier). Arrastá-la de volta e reancorar tem de
+  // trazer a âncora pendente para dentro do colar — senão o próximo clique fecha
+  // uma seleção com fim = totalBeads e o confirm cospe "A frase precisa terminar
+  // dentro do colar." A página compõe primeFrase(dragPhraseBoundary(...)).
+  it('frase cobrindo o fim do colar, arrastada de volta + primeFrase, reancora na grade', () => {
+    const solo = mkPart('PT1', { s: 0, e: 39 }, { tag_state: 'tagged', scene_kind: 'MEAL_SCENE' });
+    const s = sess({
+      parts: [solo],
+      frases: [
+        mkFrase('P1', { span: { s: 0, e: 39 }, part_link: 'PT1', locked: true }),
+        mkFrase('P2'), // pendente
+      ],
+      current: { layer: 'frases', index: 1 },
+      activeSceneId: 'PT1',
+    });
+    expect(phraseFrontier(s)).toBe(40); // sanity: quirk deixa a fronteira fora da grade
+
+    const reprimed = primeFrase(dragPhraseBoundary(s, 0, 'end', 19));
+    expect(reprimed.frases[0]!.span).toEqual({ s: 0, e: 19 });
+    expect(reprimed.pendingStart).toBe(20);
+    expect(reprimed.selection).toEqual({ s: 20, e: 20 });
+
+    // e agora dá pra fechar uma nova frase até o fim, sem FRASE_BEYOND_STORY
+    const clicked = { ...reprimed, selection: { s: 20, e: 39 }, pendingStart: null };
+    expect(confirmFrase(clicked, 1).kind).toBe('locked');
   });
 });
 

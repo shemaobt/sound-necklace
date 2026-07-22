@@ -198,13 +198,15 @@ export function slideSeam(
 }
 
 /**
- * Arrastar a fronteira INTERNA entre `leftPartId` e a vizinha travada seguinte
- * (ENG-342): a fronteira passa a terminar a cena esquerda em `newEnd`, e a
- * direita começa em `newEnd+1` — Pac-Man, só a vizinha imediata muda de tamanho.
- * Clampa em `[left.span.s, right.span.e-1]` (nenhuma das duas fica vazia). É só
- * um caso dirigido por gesto do `slideSeam` já existente: crescer para a direita
- * estica a esquerda; para a esquerda, estica a direita. Sem vizinha à frente
- * (última cena) ou sem mudança → no-op (identidade).
+ * Arrastar o FIM de uma cena travada `leftPartId` (ENG-342). Com vizinha travada
+ * à frente é a fronteira INTERNA: a esquerda termina em `newEnd`, a direita começa
+ * em `newEnd+1` — Pac-Man, só a vizinha imediata muda (caso dirigido por gesto do
+ * `slideSeam`). SEM vizinha à frente (última cena travada), o fim arrasta livre
+ * até o fim do colar, com cobertura esparsa legal — a mesma liberdade que a frase
+ * já tem (#2). Clampa em `[left.span.s, right.span.e-1]` (com vizinha) ou
+ * `[left.span.s, totalBeads-1]` (última). Sem mudança → no-op (identidade). O
+ * reancorar da cena pendente na nova fronteira é composto na página (primePart) —
+ * seam.ts não pode importar scenes/frontier (ciclo).
  */
 export function dragSceneBoundary(
   state: SessionState,
@@ -214,9 +216,12 @@ export function dragSceneBoundary(
   const left = state.parts.find((p) => p.part_id === leftPartId);
   if (!left || !left.locked || !left.span) return state;
   const right = nextNeighbor(state, left);
-  if (!right) return state;
-  const clamped = Math.max(left.span.s, Math.min(right.span.e - 1, newEnd));
+  const hardHi = right ? right.span.e - 1 : state.totalBeads - 1;
+  const clamped = Math.max(left.span.s, Math.min(hardHi, newEnd));
   if (clamped === left.span.e) return state;
+  if (!right) {
+    return { ...state, parts: withSpan(state.parts, leftPartId, { s: left.span.s, e: clamped }) };
+  }
   return clamped > left.span.e
     ? slideSeam(state, leftPartId, null, clamped)
     : slideSeam(state, right.part_id, clamped + 1, null);

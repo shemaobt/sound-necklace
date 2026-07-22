@@ -9,6 +9,8 @@ import {
   confirmPart,
   confirmParts,
   dragSceneBoundary,
+  primePart,
+  removePart,
   setMode,
   type Span,
 } from '../../../domain';
@@ -68,11 +70,12 @@ export function Cut({ player = null, sound }: CutProps) {
     () => lockedScenes.map((sc) => sc.span.e),
     [lockedScenes],
   );
-  // Punhos de arrasto (ENG-342): a fronteira à DIREITA de cada cena, exceto a
-  // última (cujo fim é o fim da história, fixo). `id` = a cena esquerda; o
-  // domínio (`dragSceneBoundary`) empurra a vizinha por span.
+  // Punhos de arrasto (ENG-342): o FIM de cada cena travada, inclusive a última
+  // (#2 — como a frase, o fim arrasta livre até o fim do colar). `id` = a cena
+  // cujo fim se move; o domínio (`dragSceneBoundary`) empurra a vizinha por span
+  // ou, na última, deixa a cobertura ficar esparsa.
   const dragHandles = useMemo(
-    () => lockedScenes.slice(0, -1).map((sc) => ({ at: sc.span.e, id: sc.part.part_id })),
+    () => lockedScenes.map((sc) => ({ at: sc.span.e, id: sc.part.part_id })),
     [lockedScenes],
   );
 
@@ -207,11 +210,22 @@ export function Cut({ player = null, sound }: CutProps) {
       );
   };
 
-  // Arrastar a fronteira entre duas cenas (ENG-342, substitui o reabrir): a cena
-  // `id` cresce/encolhe até `toBead`, a vizinha absorve o resto (Pac-Man). Cada
-  // move do ponteiro aplica o ajuste puro do domínio.
+  // Arrastar o fim de uma cena (ENG-342, substitui o reabrir): a cena `id`
+  // cresce/encolhe até `toBead`; a vizinha absorve o resto (Pac-Man) ou, na
+  // última, a cobertura fica esparsa. `primePart` reancora a cena pendente na
+  // nova fronteira — senão um clique seguinte fecharia no lugar antigo (#3).
   const onDragBoundary = (id: string, toBead: number): void => {
-    sessionStore.getState().apply((s) => dragSceneBoundary(s, id, toBead));
+    sessionStore.getState().apply((s) => primePart(dragSceneBoundary(s, id, toBead)));
+  };
+
+  const removeScene = (partId: string): void => {
+    setError(null);
+    sessionStore.getState().apply((s) =>
+      removePart(
+        s,
+        s.parts.findIndex((p) => p.part_id === partId),
+      ),
+    );
   };
 
   return (
@@ -260,6 +274,15 @@ export function Cut({ player = null, sound }: CutProps) {
                   <ScenePhraseChip
                     label={ordinal ? t('cut.sceneLabel', { ordinal }) : t('cut.sceneLabelBare')}
                     swatch={sceneColor(sc.rank)}
+                    actions={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeScene(sc.part.part_id)}
+                      >
+                        {t('cut.remove')}
+                      </Button>
+                    }
                   />
                 </li>
               );

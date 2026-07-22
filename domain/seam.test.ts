@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildBeads } from './grid';
+import { primePart } from './scenes';
 import { createSession, type Frase, type ScenePart, type SessionState, type Span } from './state';
 import {
   classifyBorderMove,
@@ -299,14 +300,55 @@ describe('dragSceneBoundary — arrastar a fronteira interna (Pac-Man, ENG-342)'
     expect(next.parts[1]!.span).toEqual({ s: 29, e: 29 });
   });
 
-  it('última cena não tem fronteira à direita: no-op', () => {
+  it('arrastar para a posição atual não muda nada', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
-    expect(dragSceneBoundary(s, 'PT3', 35)).toBe(s);
+    expect(dragSceneBoundary(s, 'PT1', 9)).toBe(s);
+  });
+});
+
+describe('dragSceneBoundary — última cena arrasta o fim livre (simetria com frases, #2)', () => {
+  it('encolhe o fim para a esquerda: cobertura fica esparsa, vizinhas intactas', () => {
+    const s = sess({ parts: [PT1, PT2, PT3] }); // PT3 = {30,39}, fim do colar em 39
+    const next = dragSceneBoundary(s, 'PT3', 35);
+    expect(next.parts[2]!.span).toEqual({ s: 30, e: 35 });
+    expect(next.parts[0]).toBe(s.parts[0]);
+    expect(next.parts[1]).toBe(s.parts[1]);
+  });
+
+  it('cresce o fim até o fim do colar, clampado em totalBeads−1', () => {
+    const shortLast = mkPart('PT3', { s: 30, e: 34 }, { tag_state: 'none_fit' });
+    const s = sess({ parts: [PT1, PT2, shortLast] });
+    const next = dragSceneBoundary(s, 'PT3', 99);
+    expect(next.parts[2]!.span).toEqual({ s: 30, e: 39 });
+  });
+
+  it('clampa: a última cena nunca fica vazia (≥ 1 conta)', () => {
+    const s = sess({ parts: [PT1, PT2, PT3] });
+    const next = dragSceneBoundary(s, 'PT3', 10); // abaixo do início 30
+    expect(next.parts[2]!.span).toEqual({ s: 30, e: 30 });
   });
 
   it('arrastar para a posição atual não muda nada', () => {
     const s = sess({ parts: [PT1, PT2, PT3] });
-    expect(dragSceneBoundary(s, 'PT1', 9)).toBe(s);
+    expect(dragSceneBoundary(s, 'PT3', 39)).toBe(s);
+  });
+
+  it('cena única cobrindo o colar: arrastar de volta + primePart reancora a pendente na grade', () => {
+    // uma cena só cobre 0…39; a próxima está primada na emenda (clampada em 39)
+    const solo = mkPart('PT1', { s: 0, e: 39 }, { tag_state: 'tagged', scene_kind: 'MEAL_SCENE' });
+    const pending: ScenePart = {
+      part_id: 'PT2',
+      span: null,
+      locked: false,
+      scene_kind: null,
+      scene_kind_confidence: null,
+      tag_state: 'pending',
+    };
+    const s = sess({ parts: [solo, pending], current: { layer: 'parts', index: 1 } });
+    const reprimed = primePart(dragSceneBoundary(s, 'PT1', 19)); // encolhe para metade
+    expect(reprimed.parts[0]!.span).toEqual({ s: 0, e: 19 });
+    expect(reprimed.pendingStart).toBe(20); // nova fronteira, dentro da grade
+    expect(reprimed.selection).toEqual({ s: 20, e: 20 });
   });
 });
 

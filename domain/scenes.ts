@@ -141,6 +141,25 @@ export function confirmParts(state: SessionState): SceneResult {
   };
 }
 
+/**
+ * Remove a cena e libera o PT#; reancora no ÚLTIMO destravado ou auto-add —
+ * espelho de removeFrase (domain/phrases.ts) e de enterPartsLayer. A cena não
+ * tinha "remover" no reference (só reabrir, apagado na ENG-342); adicionado para
+ * dar às cenas a mesma remoção pós-fato das frases. Remover uma cena do MEIO
+ * deixa um vão (as cenas ladrilham em sequência) — recobre-se arrastando a
+ * fronteira da cena anterior. Índice fora do intervalo não remove nada.
+ */
+export function removePart(state: SessionState, i: number): SessionState {
+  const parts = state.parts.filter((_, k) => k !== i);
+  const base = { ...state, parts, selection: null, pendingStart: null };
+  let lu = -1;
+  parts.forEach((p, k) => {
+    if (!p.locked) lu = k;
+  });
+  if (lu >= 0) return primePart({ ...base, current: { layer: 'parts', index: lu } });
+  return addPart({ ...base, current: { layer: 'parts', index: -1 } });
+}
+
 /** Port de enterLayer("parts") (L930–935): assume o ÚLTIMO slot destravado
  *  (quirk do laço da referência), senão entra vazio ou auto-adiciona. */
 function enterPartsLayer(state: SessionState): SessionState {
