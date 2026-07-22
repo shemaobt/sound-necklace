@@ -33,7 +33,6 @@ export {
   confirmParts,
   confirmWhole,
   primePart,
-  reopenWhole,
   SCENE_ERROR_COPY,
   type SceneError,
   type SceneErrorCode,

@@ -184,7 +184,6 @@ export const pt = {
   },
   listen: {
     tagline: 'Ouça a história.',
-    reopen: 'Reabrir',
     confirm: 'Já ouvi a história completa',
   },
   cut: {

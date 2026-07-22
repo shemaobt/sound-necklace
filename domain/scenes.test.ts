@@ -7,7 +7,6 @@ import {
   confirmParts,
   confirmWhole,
   primePart,
-  reopenWhole,
   type SceneResult,
 } from './scenes';
 import { createSession, type ScenePart, type SessionState } from './state';
@@ -136,24 +135,6 @@ describe('confirmWhole (referência L685–694 + enterLayer L930–935)', () => 
     expect(s.current).toEqual({ layer: 'parts', index: -1 });
     expect(s.selection).toBeNull();
     expect(s.pendingStart).toBeNull();
-  });
-});
-
-describe('reopenWhole (referência L677–680)', () => {
-  it('limpa confirmed e partsConfirmed, volta à camada whole, preserva cenas E seleção (quirk)', () => {
-    const base = sess({
-      partsConfirmed: true,
-      parts: [part({ part_id: 'PT1', span: { s: 0, e: 23 }, locked: true })],
-      selection: { s: 4, e: 8 },
-      pendingStart: null,
-    });
-    const confirmed = { ...base, whole: { ...base.whole, confirmed: true } };
-    const s = reopenWhole(confirmed);
-    expect(s.whole.confirmed).toBe(false);
-    expect(s.partsConfirmed).toBe(false);
-    expect(s.current).toEqual({ layer: 'whole', index: -1 });
-    expect(s.parts).toEqual(confirmed.parts);
-    expect(s.selection).toEqual({ s: 4, e: 8 }); // a referência NÃO limpa aqui
   });
 });
 

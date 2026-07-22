@@ -1,11 +1,11 @@
 /**
  * História inteira + corte sequencial de cenas — port 1:1 de confirmWhole
- * (docs/reference/index.html L685–694), reopenWhole (L677–680), primePart
- * (L698–703), addPart (L705–711), confirmPart (L713–724), confirmParts
- * (L757–767) e enterLayer('parts') (L930–935). O reabrir CENA (reference
+ * (docs/reference/index.html L685–694), primePart (L698–703), addPart
+ * (L705–711), confirmPart (L713–724), confirmParts (L757–767) e
+ * enterLayer('parts') (L930–935). Todo o reabrir (história L677–680 e cena
  * L726–731) foi removido na ENG-342 — ajuste pós-fato é arrastar fronteira
- * (dragSceneBoundary, domain/seam.ts); reopenWhole (reabrir a história na
- * Escuta) permanece. PRD v2 §8.3–§8.4, §11.
+ * (dragSceneBoundary, domain/seam.ts) e desconfirmar a história é o "← Voltar"
+ * do Cortar (setMode('escuta') + whole.confirmed=false). PRD v2 §8.3–§8.4, §11.
  *
  * Erros de validação são códigos tipados com a cópia PT-BR contratual como
  * constante (a UI reusa a mensagem; o significado é contrato). Sem throw no
@@ -62,19 +62,6 @@ export function confirmWhole(state: SessionState): SceneResult {
     review: false,
   };
   return { ok: true, state: enterPartsLayer(confirmed) };
-}
-
-/** Reabrir a história inteira na Escuta (handler do Reabrir, reference L677–680):
- *  desconfirma e volta à camada whole. NÃO é o reabrir cena/frase (esse virou
- *  arrastar fronteira, ENG-342) — é a UX distinta de "quero reouvir a história".
- *  A referência NÃO limpa selection/pendingStart aqui — quirk espelhado. */
-export function reopenWhole(state: SessionState): SessionState {
-  return {
-    ...state,
-    whole: { ...state.whole, confirmed: false },
-    partsConfirmed: false,
-    current: { layer: 'whole', index: -1 },
-  };
 }
 
 export function addPart(state: SessionState): SessionState {

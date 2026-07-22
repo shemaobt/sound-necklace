@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import type { UiSound } from '../../../adapters/ui-sound';
-import { confirmWhole, reopenWhole } from '../../../domain';
-import { Button } from '../../atoms';
+import { confirmWhole } from '../../../domain';
 import { Necklace, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import { ShemaIcon } from '../../tokens';
@@ -14,7 +13,8 @@ import './listen.css';
 /**
  * Escuta 1 — a abertura cerimonial (PRD v2 §8.3, redesign §6.2): fundo olive
  * full-bleed, "Ouça a história." em Merriweather itálico, o colar como transporte
- * e a decisão única "Já ouvi a história completa" (com "Reabrir" que reverte).
+ * e a decisão única "Já ouvi a história completa" (uma vez confirmada, a Escuta 2
+ * assume; reabrir a história vive no "← Voltar" do Cortar — ENG-342).
  *
  * Camada de wiring: lê a sessão do domínio pelo `sessionStore` e recebe o `Player`
  * de transporte por prop (injeção da estação/teste; o áudio só é ligado pelo Setup
@@ -72,11 +72,6 @@ export function Listen({ player = null, sound }: ListenProps) {
     sessionStore.getState().apply(() => result.state);
   };
 
-  const reopen = (): void => {
-    setError(null);
-    sessionStore.getState().apply(reopenWhole);
-  };
-
   return (
     <section className="cds-listen">
       <div className="cds-listen-watermark" aria-hidden="true">
@@ -105,11 +100,9 @@ export function Listen({ player = null, sound }: ListenProps) {
           data-role="primary-action"
           data-heard={heardEnough || undefined}
         >
-          {session.whole.confirmed ? (
-            <Button key="reopen" variant="ghost" onClick={reopen}>
-              {t('listen.reopen')}
-            </Button>
-          ) : (
+          {/* história confirmada → só revisão (a Escuta 2 assumiu); reabrir a
+              história vive no "← Voltar" do Cortar, não aqui (ENG-342). */}
+          {session.whole.confirmed ? null : (
             <button type="button" className="cds-listen-confirm" onClick={confirm}>
               <svg
                 width={18}

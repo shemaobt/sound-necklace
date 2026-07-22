@@ -97,12 +97,6 @@
   color: var(--cds-olive);
 }
 
-/* o "Reabrir" fantasma precisa ler sobre o oliva */
-.cds-listen .cds-button[data-variant='ghost'] {
-  border-color: rgba(246, 245, 235, 0.35);
-  color: var(--cds-cream);
-}
-
 .cds-listen-error {
   margin: 0;
   max-width: 32ch;

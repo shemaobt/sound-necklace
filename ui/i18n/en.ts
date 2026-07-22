@@ -166,7 +166,6 @@ export const en: Dict = {
   },
   listen: {
     tagline: 'Listen to the story.',
-    reopen: 'Reopen',
     confirm: 'I have heard the whole story',
   },
   cut: {
