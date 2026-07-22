@@ -73,7 +73,10 @@ export function ConversationProgressBar({
         </div>
         <div
           className="cds-conv-progress-marker"
-          style={{ left: `${markerPct}%`, boxShadow: `0 0 0 3px ${currentTrecho.color.base}` }}
+          style={{
+            left: `${markerPct}%`,
+            boxShadow: `0 0 0 3px ${currentTrecho.color.base}, 0 2px 6px rgba(10, 7, 3, 0.4)`,
+          }}
         />
       </div>
       <div className="cds-conv-progress-caption">{currentTrecho.label}</div>

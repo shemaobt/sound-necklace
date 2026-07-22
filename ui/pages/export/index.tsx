@@ -24,7 +24,7 @@ import {
   type ArtifactDownloads,
   type ArtifactKind,
 } from '../../organisms/artifact-cards/artifact-cards';
-import { Necklace, type NecklaceSegment, SIZE_EXPORT } from '../../organisms';
+import { Necklace, type NecklaceSegment, PreparingSession, SIZE_EXPORT } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import './export.css';
 
@@ -151,6 +151,11 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
   );
 
   if (!session) return null;
+  // enquanto a tela de guardar carrega, a espera oliva do protótipo (ENG-312/redesign):
+  // "Guardando · Reunindo as decisões de vocês nos documentos…", não o palco meio montado.
+  if (phase === 'loading') {
+    return <PreparingSession eyebrow={t('export.waitEyebrow')} line={t('export.waitLine')} />;
+  }
   const { canExport, semFim } = retornoExportStatus(session);
 
   const onDownload = async (kind: ArtifactKind): Promise<void> => {
@@ -234,45 +239,36 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
         />
       </div>
 
-      {phase !== 'loading' ? (
-        <>
-          {phase === 'edit' && semFim > 0 ? (
-            <p className="cds-export-warning" role="status">
-              {t('export.semFim', { n: semFim })}
-            </p>
-          ) : null}
-
-          <ArtifactCards downloaded={downloaded} onDownload={onDownload} />
-
-          {notice ? (
-            <p className="cds-export-notice" role="alert">
-              {notice}
-            </p>
-          ) : null}
-
-          <div className="cds-export-action" data-role="primary-action">
-            {phase === 'saved' ? (
-              // key: o swap dark→ghost NUNCA reaproveita o <button> — reaproveitado, a
-              // transição de background-color fica presa no valor inicial (oliva) e o
-              // rótulo some (oliva sobre oliva).
-              <Button key="reopen" variant="ghost" onClick={onReopen}>
-                {t('export.reopen')}
-              </Button>
-            ) : (
-              // guardar leva 3 requests reais: o estado vive no botão (ENG-324) —
-              // 'Guardando…' desabilitado até o persist confirmar; cliques repetidos morrem
-              <Button
-                key="complete"
-                variant="dark"
-                disabled={!canExport || busy}
-                onClick={onComplete}
-              >
-                {busy ? t('export.saving') : t('export.complete')}
-              </Button>
-            )}
-          </div>
-        </>
+      {phase === 'edit' && semFim > 0 ? (
+        <p className="cds-export-warning" role="status">
+          {t('export.semFim', { n: semFim })}
+        </p>
       ) : null}
+
+      <ArtifactCards downloaded={downloaded} onDownload={onDownload} />
+
+      {notice ? (
+        <p className="cds-export-notice" role="alert">
+          {notice}
+        </p>
+      ) : null}
+
+      <div className="cds-export-action" data-role="primary-action">
+        {phase === 'saved' ? (
+          // key: o swap dark→ghost NUNCA reaproveita o <button> — reaproveitado, a
+          // transição de background-color fica presa no valor inicial (oliva) e o
+          // rótulo some (oliva sobre oliva).
+          <Button key="reopen" variant="ghost" onClick={onReopen}>
+            {t('export.reopen')}
+          </Button>
+        ) : (
+          // guardar leva 3 requests reais: o estado vive no botão (ENG-324) —
+          // 'Guardando…' desabilitado até o persist confirmar; cliques repetidos morrem
+          <Button key="complete" variant="dark" disabled={!canExport || busy} onClick={onComplete}>
+            {busy ? t('export.saving') : t('export.complete')}
+          </Button>
+        )}
+      </div>
     </section>
   );
 }

@@ -21,36 +21,6 @@
   color: var(--cds-cream);
 }
 
-.cds-conversation-instruction {
-  margin: 0;
-  max-width: 34ch;
-  font-family: var(--cds-font-quiet-voice);
-  font-style: italic;
-  font-size: 15px;
-  line-height: 1.35;
-  color: var(--cds-olive-soft);
-}
-
-/* creme só quando o shell escureceu junto (mesmo seletor :has() do app.css) —
-   sem suporte a :has(), o fundo segue creme e a instrução fica oliva, legível */
-.cds-conversation:has(.cds-conversation-stage) .cds-conversation-instruction {
-  color: rgba(246, 245, 235, 0.72);
-}
-
-.cds-conversation-listen {
-  display: flex;
-  justify-content: center;
-}
-
-/* o ▶ do trecho, fantasma sobre o oliva (só quando o shell escureceu) */
-.cds-conversation:has(.cds-conversation-stage)
-  .cds-conversation-listen
-  .cds-button[data-variant='ghost'] {
-  border-color: rgba(246, 245, 235, 0.3);
-  background: rgba(246, 245, 235, 0.12);
-  color: var(--cds-cream);
-}
-
 .cds-conversation .cds-conversation-stage {
   align-self: stretch;
   flex: 1;

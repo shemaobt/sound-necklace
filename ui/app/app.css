@@ -28,7 +28,8 @@
 }
 
 .cds-app:has(.cds-listen),
-.cds-app:has(.cds-conversation-stage) {
+.cds-app:has(.cds-conversation-stage),
+.cds-app:has(.cds-preparing) {
   background: var(--cds-olive);
 
   --cds-chrome-bg: rgba(10, 7, 3, 0.12);

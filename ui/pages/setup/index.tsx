@@ -192,15 +192,10 @@ export function Setup({
   // A espera pós-clique vira palco (ENG-334): enquanto fetch+decode+create voam,
   // o formulário sai e o fio de contas em onda assume — o mesmo componente que a
   // rota da sessão usa na retomada, então criar e retomar falam a mesma língua.
+  // a tela de espera é full-bleed oliva (com a própria marca d'água): sem o cartão
+  // creme do setup em volta, ela fala a MESMA língua da retomada de sessão.
   if (busy) {
-    return (
-      <section className="cds-setup">
-        <span className="cds-setup-watermark" aria-hidden="true">
-          <ShemaIcon colorway="telha" size={340} />
-        </span>
-        <PreparingSession />
-      </section>
-    );
+    return <PreparingSession />;
   }
 
   return (

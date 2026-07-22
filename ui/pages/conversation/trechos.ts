@@ -56,33 +56,66 @@ export function buildTrechos(
 }
 
 /**
- * O trecho da pergunta ATUAL (cor + rótulo) para o indicador de trecho: a
- * história (N1), a cena (N2) ou a frase (N3, herdando o tipo da cena-mãe). Usa a
- * MESMA cor/rótulo que o segmento correspondente da barra (buildTrechos) — o
- * índice da cena/frase é a posição em lockedParts/productiveFrases.
+ * Rótulos do eyebrow de bloco, agnósticos ao formato do número — cada superfície
+ * decide se soletra ("Cena um", ouvinte/§9.2) ou usa dígito ("Cena 1", relatório
+ * da facilitadora/§7.2). Recebem o número 1-based.
  */
-export function currentTrecho(
+export interface BlockLabels {
+  /** o bloco da história (N1), sem número */
+  story: string;
+  /** "Cena {n}" no formato da superfície */
+  scene: (num: number) => string;
+  /** "Frase {n}" no formato da superfície */
+  phrase: (num: number) => string;
+}
+
+/**
+ * O eyebrow do bloco da pergunta ATUAL (protótipo `mapBlockEyebrow`) + a cor do
+ * bloco, para o indicador de trecho e para os cabeçalhos do relatório: "A história
+ * inteira" (N1), "Cena N · <tipo>" (N2) ou "Cena N · Frase M" (N3). A cena N é a
+ * posição em lockedParts; a frase M é a posição DENTRO da cena-mãe (protótipo
+ * `Frase j+1`). A cor casa com o segmento da barra (buildTrechos): cena por índice
+ * em lockedParts, frase por índice achatado em productiveFrases.
+ */
+export function blockEyebrow(
   state: SessionState,
   slot: QuestionSlot,
   lang: string,
-  labels: TrechoLabels,
-): { color: PaletteEntry; label: string } {
-  const kindLabel = (kind: string | null): string =>
-    kind ? sceneKindLabel(kind, lang) : labels.sceneUntyped;
-
-  if (slot.level === 1) return { color: storyColor, label: labels.story };
+  labels: BlockLabels,
+): { color: PaletteEntry; eyebrow: string } {
+  if (slot.level === 1) return { color: storyColor, eyebrow: labels.story };
+  const parts = lockedParts(state);
   if (slot.level === 2) {
-    const parts = lockedParts(state);
-    const i = parts.findIndex((p) => p.part_id === slot.partId);
+    const i = Math.max(
+      0,
+      parts.findIndex((p) => p.part_id === slot.partId),
+    );
+    const base = labels.scene(i + 1);
+    const kind = parts[i]?.scene_kind ?? null;
     return {
-      color: scenePalette[Math.max(0, i) % scenePalette.length]!,
-      label: kindLabel(parts[i]?.scene_kind ?? null),
+      color: scenePalette[i % scenePalette.length]!,
+      eyebrow: kind ? `${base} · ${sceneKindLabel(kind, lang)}` : base,
     };
   }
   const frases = productiveFrases(state);
-  const j = frases.findIndex((f) => f.fr.prop_id === slot.propId);
+  const flat = Math.max(
+    0,
+    frases.findIndex((f) => f.fr.prop_id === slot.propId),
+  );
+  const sceneId = frases[flat]?.scene.part_id;
+  const sceneNum =
+    Math.max(
+      0,
+      parts.findIndex((p) => p.part_id === sceneId),
+    ) + 1;
+  const within = frases.filter((f) => f.scene.part_id === sceneId);
+  const phraseNum =
+    Math.max(
+      0,
+      within.findIndex((f) => f.fr.prop_id === slot.propId),
+    ) + 1;
   return {
-    color: phrasePalette[Math.max(0, j) % phrasePalette.length]!,
-    label: kindLabel(frases[j]?.scene.scene_kind ?? null),
+    color: phrasePalette[flat % phrasePalette.length]!,
+    eyebrow: `${labels.scene(sceneNum)} · ${labels.phrase(phraseNum)}`,
   };
 }

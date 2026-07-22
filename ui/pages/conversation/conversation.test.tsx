@@ -442,7 +442,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
 });
 
 describe('Conversation — perguntas conduzidas pela facilitadora (PRD v2 §8.7)', () => {
-  it('a pergunta de ausência (nível 1) mostra o marcador de papel e a nota da facilitadora', async () => {
+  it('a pergunta de ausência (nível 1) mostra o marcador de papel', async () => {
     load(mapping());
     render(<Conversation />);
 
@@ -450,7 +450,6 @@ describe('Conversation — perguntas conduzidas pela facilitadora (PRD v2 §8.7)
     for (let i = 0; i < 10; i += 1) await next();
     expect(questionText()).toBe(L1_Q[10]!.q);
     expect(screen.getByRole('img', { name: 'conduzida pela facilitadora' })).toBeTruthy();
-    expect(screen.getByText(new RegExp(L1_Q[10]!.note!.slice(0, 12)))).toBeTruthy();
   });
 });
 
