@@ -136,30 +136,27 @@ afterEach(() => {
 });
 
 describe('Escuta 2 — modelo de clique com áudio na hora (PRD v2 §8.2/§8.4)', () => {
-  it('1º toque fixa o início e toca a conta; 2º toca o intervalo; 3º (ajuste da borda) toca a seleção INTEIRA', () => {
+  it('clicar o começo OUVE a história; clicar além define só o FIM, sem interromper (regras 1–3)', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(cutting());
+    sessionStore.getState().load(cutting()); // fronteira 0; colar de 10 contas (0…9)
     const { root, el } = mount(player);
 
-    // 1º toque: fixa o início e toca só aquela conta
-    firePointer(el, 3);
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [3, 3] });
-    expect(sessionStore.getState().session!.pendingStart).toBe(3);
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 3, e: 3 });
+    // clicar o começo (fronteira 0) → ouvir a história a partir dali; não seleciona
+    firePointer(el, 0);
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 9] });
+    expect(sessionStore.getState().session!.selection).toBeNull();
 
-    // 2º toque: fecha o intervalo e toca o pedaço inteiro
+    // clicar além → define SÓ o FIM (o começo fica fixo em 0). head=null (o espião
+    // não avança) → o playhead não chegou, então nada toca (nem para)
+    const n = calls.length;
     firePointer(el, 6);
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [3, 6] });
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 3, e: 6 });
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 6 });
     expect(sessionStore.getState().session!.pendingStart).toBeNull();
+    expect(calls.length).toBe(n);
 
-    // 3º toque: aproxima a borda mais próxima; por definir a cena, reproduz a
-    // SELEÇÃO INTEIRA (decisão do dono) — a janela curta do fim fica para o
-    // ajuste da fronteira (arrastar o punho / onEdgeHover), não para o corte.
-    firePointer(el, 5);
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [3, 5] });
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 3, e: 5 });
-
+    // reclicar o começo → ouvir de novo
+    firePointer(el, 0);
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 9] });
     root.unmount();
   });
 });
@@ -225,31 +222,31 @@ describe('Escuta 2 — a conta acesa pausa, venha o playback de onde vier (ENG-2
     sessionStore.getState().load(withLockedScene());
     const { root, el } = mount(player);
 
-    firePointer(el, 1); // toca a cena inteira → toggle('PT1', 0, 3)
+    firePointer(el, 1); // toca a cena a partir da conta 1 → toggle('PT1:1', 1, 3)
     advanceBy(transport, 0.3);
-    expect(player.state).toEqual({ key: 'PT1', playing: true, paused: false });
+    expect(player.state).toEqual({ key: 'PT1:1', playing: true, paused: false });
 
     // a conta acesa DE FATO — o colar só roteia para `onHeadTap` nela
     const acesa = el.querySelector('.cds-necklace-bead[data-play="head"]');
     firePointer(el, Number(acesa!.getAttribute('data-idx')));
 
     // pausa (retomável), não `stop`: aqui existe chave, logo existe o que retomar
-    expect(player.state).toEqual({ key: 'PT1', playing: true, paused: true });
+    expect(player.state).toEqual({ key: 'PT1:1', playing: true, paused: true });
     root.unmount();
   });
 });
 
 describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
-  it('tocar numa conta da cena travada toca a CENA INTEIRA e deixa o corte quieto', () => {
+  it('tocar numa conta da cena travada toca A PARTIR dela até o fim, e deixa o corte quieto', () => {
     const { player, calls } = spyPlayer();
     sessionStore.getState().load(withLockedScene());
     const { root, el } = mount(player);
 
     firePointer(el, 2); // conta no meio da cena um (0…3)
 
-    // toca a cena inteira (0…3) pela chave por cena (#1, igual à frase); o log
-    // inteiro, não só a última: um toggle seguido de play seriam dois sons
-    expect(calls).toEqual([{ m: 'toggle', key: 'PT1', args: [0, 3] }]);
+    // toca de 2 até o fim da cena (3), pela chave por conta (regra 4); o log inteiro,
+    // não só a última: um toggle seguido de play seriam dois sons
+    expect(calls).toEqual([{ m: 'toggle', key: 'PT1:2', args: [2, 3] }]);
     // e a emenda costurada sobrevive: sem isto o clique é clampado até a emenda e
     // CONSOME a pré-ancoragem, fechando uma cena degenerada de uma conta só onde a
     // próxima ia começar (o toggle acima é quem prova que o toque de fato chegou)
@@ -259,16 +256,17 @@ describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
     root.unmount();
   });
 
-  it('a conta ainda livre continua cortando: a cena fecha da emenda até ela', () => {
+  it('a conta ainda livre define o FIM da próxima cena, da emenda até ela', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(withLockedScene());
+    sessionStore.getState().load(withLockedScene()); // PT2 pendente, fronteira 4
     const { root, el } = mount(player);
 
+    const n = calls.length;
     firePointer(el, 6);
 
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [4, 6] });
     expect(sessionStore.getState().session!.selection).toEqual({ s: 4, e: 6 });
     expect(sessionStore.getState().session!.pendingStart).toBeNull();
+    expect(calls.length).toBe(n); // head=null → só define o fim, não toca
     root.unmount();
   });
 
@@ -282,39 +280,39 @@ describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
 
     firePointer(el, 2);
 
-    expect(calls).toEqual([{ m: 'toggle', key: 'PT1', args: [0, 3] }]);
+    expect(calls).toEqual([{ m: 'toggle', key: 'PT1:2', args: [2, 3] }]);
     root.unmount();
   });
 
-  it('tocar qualquer conta da cena travada toca a cena INTEIRA pela MESMA chave (#1, igual à frase)', () => {
+  it('tocar OUTRA conta da cena travada pula para ela (chave por conta, regra 4)', () => {
     const { player, calls } = spyPlayer();
     sessionStore.getState().load(withLockedScene());
     const { root, el } = mount(player);
 
-    firePointer(el, 3); // uma conta da cena
-    firePointer(el, 1); // OUTRA conta da mesma cena → mesma chave, mesma reprodução
+    firePointer(el, 3); // toca a partir da 3
+    firePointer(el, 1); // OUTRA conta → chave nova = pula para ela
 
     expect(calls).toEqual([
-      { m: 'toggle', key: 'PT1', args: [0, 3] },
-      { m: 'toggle', key: 'PT1', args: [0, 3] },
+      { m: 'toggle', key: 'PT1:3', args: [3, 3] },
+      { m: 'toggle', key: 'PT1:1', args: [1, 3] },
     ]);
     root.unmount();
   });
 
-  it('tocar a mesma cena de novo pausa e retoma no lugar (mesma chave)', () => {
+  it('tocar a MESMA conta de partida pausa e retoma no lugar (mesma chave)', () => {
     const { player, transport } = realPlayer();
     sessionStore.getState().load(withLockedScene());
     const { root, el } = mount(player);
 
-    firePointer(el, 1); // toca a cena inteira (do começo)
+    firePointer(el, 1); // toca a partir da conta 1
     advanceBy(transport, 0.2); // a cabeça avança
-    expect(player.state).toEqual({ key: 'PT1', playing: true, paused: false });
+    expect(player.state).toEqual({ key: 'PT1:1', playing: true, paused: false });
 
-    firePointer(el, 1); // a mesma cena → pausa
-    expect(player.state).toEqual({ key: 'PT1', playing: true, paused: true });
+    firePointer(el, 1); // a MESMA conta de partida → pausa
+    expect(player.state).toEqual({ key: 'PT1:1', playing: true, paused: true });
 
     firePointer(el, 1); // de novo → retoma
-    expect(player.state).toEqual({ key: 'PT1', playing: true, paused: false });
+    expect(player.state).toEqual({ key: 'PT1:1', playing: true, paused: false });
     root.unmount();
   });
 });

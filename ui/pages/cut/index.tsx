@@ -20,7 +20,8 @@ import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import {
   lockedItemAt,
-  playSelectionOrAction,
+  playClick,
+  playEditWindow,
   rankLockedScenes,
   sceneColor,
   sceneOrdinal,
@@ -118,43 +119,46 @@ export function Cut({ player = null, sound }: CutProps) {
     );
 
   /**
-   * Tocar numa cena já travada a reproduz INTEIRA (início→fim), idêntico à frase
-   * (playLockedPhraseAt) — decisão do dono, simetria cena↔frase (#1). A chave é
-   * por cena (part_id): tocar qualquer conta da cena toca-a do começo; tocar a
-   * MESMA cena de novo pausa/retoma no lugar. Vem ANTES do `clickBead` porque o
-   * redutor clampa o clique até a emenda e consumiria a pré-ancoragem da próxima
-   * cena. Devolve true quando a conta era de cena travada (o corte não corre).
+   * Tocar numa cena já CONFIRMADA (travada) reproduz A PARTIR da conta clicada até
+   * o fim da cena (regra 4, docs/segmentation-rules.md). Chave por conta:
+   * tocar OUTRA conta pula para ela; a MESMA pausa/retoma. Vem ANTES do `clickBead`
+   * porque o redutor consumiria a pré-ancoragem da próxima cena. Devolve true
+   * quando a conta era de cena travada (o corte não corre).
    */
   const playLockedSceneAt = (bead: number): boolean => {
     const s = sessionStore.getState().session;
     const locked = s ? lockedItemAt(s.parts, bead) : null;
     if (!locked?.span) return false;
-    player?.toggle(locked.part_id, locked.span.s, locked.span.e);
+    player?.toggle(`${locked.part_id}:${bead}`, bead, locked.span.e);
     return true;
   };
 
+  // DEFININDO uma cena (regras 1–3): clicar o começo OUVE a história a partir dali;
+  // clicar além define o FIM (para se o playhead já passou, senão continua). O
+  // começo é a fronteira, nunca settável (regra 7). O playhead entra por `head`.
   const onBead = (bead: number): void => {
     if (playLockedSceneAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
-    if (play && player) playSelectionOrAction(player, play, state.selection);
+    if (play && player) playClick(player, play, s.whole.span.e, head);
   };
 
   /**
-   * A conta que brilha pausa — idêntico à frase (#1). Sem chave ativa (nada
-   * tocando, ou uma prévia de borda que limpa a chave) não há o que retomar →
-   * `stop`. Com chave, re-tocar a cena da conta acesa cai na MESMA chave (por
-   * cena) → o adapter pausa/retoma no lugar.
+   * A conta que brilha pausa. Sem chave ativa (um `listen`/`set-end`/transporte
+   * toca SEM chave via `play`) não há o que retomar → `stop`. Com chave (uma cena
+   * confirmada tocando por `toggle`) re-tocar a MESMA chave pausa/retoma no lugar
+   * — usamos a chave ATIVA, não uma re-derivada do playhead móvel.
    */
   const onHeadTap = (): void => {
     if (!player) return;
-    if (player.state.key === null) {
+    const activeKey = player.state.key;
+    if (activeKey === null) {
       player.stop();
       return;
     }
-    if (head !== null) playLockedSceneAt(head);
+    player.toggle(activeKey, head ?? 0, head ?? 0);
   };
 
   const onEdgeHover = (edge: number): void => {
@@ -204,12 +208,12 @@ export function Cut({ player = null, sound }: CutProps) {
       );
   };
 
-  // Arrastar o fim de uma cena (ENG-342, substitui o reabrir): a cena `id`
-  // cresce/encolhe até `toBead`; a vizinha absorve o resto (Pac-Man) ou, na
-  // última, a cobertura fica esparsa. `primePart` reancora a cena pendente na
-  // nova fronteira — senão um clique seguinte fecharia no lugar antigo (#3).
+  // Arrastar o fim de uma cena (ENG-342): a cena `id` cresce/encolhe até `toBead`,
+  // a seguinte SEGUE (Pac-Man). `primePart` reancora a pendente na nova fronteira.
+  // Enquanto edita, toca a prévia ~4 contas antes do limite até ~3 depois (regra 5).
   const onDragBoundary = (id: string, toBead: number): void => {
     sessionStore.getState().apply((s) => primePart(dragSceneBoundary(s, id, toBead)));
+    if (player) playEditWindow(player, toBead, session.totalBeads);
   };
 
   // Remover a cena + a SEGUINTE absorve o espaço liberado (#3): removePart é puro

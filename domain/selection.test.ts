@@ -41,50 +41,59 @@ function anchored(over: Partial<SessionState> = {}): SessionState {
   };
 }
 
-describe('clickBead — 1º e 2º cliques (referência L567–573)', () => {
-  it('1º clique marca o início pendente, seleciona a conta única e toca só ela', () => {
-    const r = clickBead(anchored(), 7);
-    expect(r.state.pendingStart).toBe(7);
-    expect(r.state.selection).toEqual({ s: 7, e: 7 });
-    expect(r.play).toEqual({ type: 'single-bead', bead: 7 });
+/** Duas cenas travadas; PT1{0,3}, PT2 pendente → fronteira do corte = 4. */
+function afterPT1(over: Partial<SessionState> = {}): SessionState {
+  return anchored({
+    parts: [part({ part_id: 'PT1', span: { s: 0, e: 3 }, locked: true }), part({ part_id: 'PT2' })],
+    current: { layer: 'parts', index: 1 },
+    ...over,
   });
+}
 
-  it('2º clique fecha o range e toca o trecho inteiro', () => {
-    const r = clickBead(anchored({ selection: { s: 7, e: 7 }, pendingStart: 7 }), 12);
-    expect(r.state.selection).toEqual({ s: 7, e: 12 });
+describe('clickBead — só o FIM se define; o começo é a fronteira (§8.2, novo modelo)', () => {
+  it('clicar além da fronteira define o FIM; o começo fica na fronteira', () => {
+    const r = clickBead(anchored(), 7); // fronteira 0
+    expect(r.state.selection).toEqual({ s: 0, e: 7 });
     expect(r.state.pendingStart).toBeNull();
-    expect(r.play).toEqual({ type: 'range', s: 7, e: 12 });
+    expect(r.play).toEqual({ type: 'set-end', end: 7 });
   });
 
-  it('2º clique antes do início normaliza a ordem', () => {
-    const r = clickBead(anchored({ selection: { s: 7, e: 7 }, pendingStart: 7 }), 3);
-    expect(r.state.selection).toEqual({ s: 3, e: 7 });
-    expect(r.play).toEqual({ type: 'range', s: 3, e: 7 });
+  it('novo clique além redefine o FIM (o começo continua fixo)', () => {
+    const r = clickBead(anchored({ selection: { s: 0, e: 7 }, pendingStart: null }), 12);
+    expect(r.state.selection).toEqual({ s: 0, e: 12 });
+    expect(r.play).toEqual({ type: 'set-end', end: 12 });
   });
-});
 
-describe('clickBead — clamp a [fronteira, fim da história] (referência L565–566)', () => {
-  it('clique antes da fronteira é puxado para ela', () => {
-    const s = anchored({
-      parts: [
-        part({ part_id: 'PT1', span: { s: 0, e: 3 }, locked: true }),
-        part({ part_id: 'PT2' }),
-      ],
-      current: { layer: 'parts', index: 1 },
-    });
+  it('clicar no começo (a fronteira) pede OUVIR a partir dali; a seleção fica intacta', () => {
+    const s = anchored({ selection: { s: 0, e: 7 } });
+    const r = clickBead(s, 0);
+    expect(r.state).toBe(s); // nada muda
+    expect(r.play).toEqual({ type: 'listen', from: 0 });
+  });
+
+  it('clicar ANTES da fronteira também é OUVIR — nunca puxa o começo (fronteira 4)', () => {
+    const s = afterPT1();
     const r = clickBead(s, 1);
-    expect(r.state.selection).toEqual({ s: 4, e: 4 });
-    expect(r.state.pendingStart).toBe(4);
-    expect(r.play).toEqual({ type: 'single-bead', bead: 4 });
+    expect(r.play).toEqual({ type: 'listen', from: 4 });
+    expect(r.state).toBe(s);
   });
 
-  it('clique além do fim da história é puxado para a última conta', () => {
+  it('exatamente na fronteira é OUVIR; fronteira+1 define o fim', () => {
+    const s = afterPT1();
+    expect(clickBead(s, 4).play).toEqual({ type: 'listen', from: 4 });
+    const r = clickBead(s, 5);
+    expect(r.state.selection).toEqual({ s: 4, e: 5 });
+    expect(r.play).toEqual({ type: 'set-end', end: 5 });
+  });
+
+  it('clique além do fim da história satura na última conta', () => {
     const r = clickBead(anchored(), 99);
-    expect(r.state.selection).toEqual({ s: 23, e: 23 });
+    expect(r.state.selection).toEqual({ s: 0, e: 23 });
+    expect(r.play).toEqual({ type: 'set-end', end: 23 });
   });
 });
 
-describe('clickBead — clamp na camada de frases: fronteira com back-reach (referência L563–566 + L400–409)', () => {
+describe('clickBead — a fronteira na camada de frases é o começo de OUVIR (back-reach §6.4)', () => {
   function frase(over: Partial<Frase>): Frase {
     return {
       prop_id: 'P1',
@@ -97,8 +106,8 @@ describe('clickBead — clamp na camada de frases: fronteira com back-reach (ref
     };
   }
 
-  /** Duas cenas produtivas travadas; ancorando uma frase na 2ª (PT2). */
-  function fraseando(frases: Frase[], index: number): SessionState {
+  /** Duas cenas produtivas travadas; ancorando uma frase na cena `index`. */
+  function fraseando(frases: Frase[], index: number, activeSceneId = 'PT2'): SessionState {
     const base = sess();
     return {
       ...base,
@@ -122,94 +131,34 @@ describe('clickBead — clamp na camada de frases: fronteira com back-reach (ref
       partsConfirmed: true,
       frases,
       current: { layer: 'frases', index },
-      activeSceneId: 'PT2',
+      activeSceneId,
     };
   }
 
-  it('1ª frase da cena: clique antes da vizinha anterior é puxado ao início dela (back-reach)', () => {
+  it('1ª frase: a fronteira recua ao início da vizinha (4); clicar antes é OUVIR de lá', () => {
     const r = clickBead(fraseando([frase({})], 0), 1);
-    expect(r.state.selection).toEqual({ s: 4, e: 4 });
-    expect(r.state.pendingStart).toBe(4);
-    expect(r.play).toEqual({ type: 'single-bead', bead: 4 });
+    expect(r.play).toEqual({ type: 'listen', from: 4 });
   });
 
-  it('o piso do clique é o fim da última frase travada DA CENA +1 — não o máximo global', () => {
-    const base = fraseando(
+  it('o piso da cena (fim da última frase DELA +1) é o começo; além dele define o fim', () => {
+    const s = fraseando(
       [
         frase({ prop_id: 'P1', span: { s: 5, e: 6 }, locked: true, part_link: 'PT1' }),
         frase({ prop_id: 'P2', span: { s: 12, e: 13 }, locked: true, part_link: 'PT2' }),
         frase({ prop_id: 'P3' }),
       ],
       2,
+      'PT1',
     );
-    const s = { ...base, activeSceneId: 'PT1' };
-    // piso na cena PT1 = 7 (fim da P1 +1); o ramo genérico daria 14 (fim da P2 +1)
-    const r = clickBead(s, 5);
-    expect(r.state.selection).toEqual({ s: 7, e: 7 });
-    expect(r.play).toEqual({ type: 'single-bead', bead: 7 });
+    // fronteira na cena PT1 = 7 (fim da P1 +1); o ramo genérico daria 14
+    expect(clickBead(s, 5).play).toEqual({ type: 'listen', from: 7 });
+    const r = clickBead(s, 9);
+    expect(r.state.selection).toEqual({ s: 7, e: 9 });
+    expect(r.play).toEqual({ type: 'set-end', end: 9 });
   });
 });
 
-describe('clickBead — nudge da borda mais próxima (referência L574–581)', () => {
-  it('clique em/antes do início move o início e toca só a fronteira ajustada', () => {
-    const r = clickBead(anchored({ selection: { s: 4, e: 8 } }), 2);
-    expect(r.state.selection).toEqual({ s: 2, e: 8 });
-    // janela do playEdge: max(1, round(1/0.5)) = 2 contas de cada lado
-    expect(r.play).toEqual({ type: 'edge', edge: 2, s: 0, e: 4 });
-  });
-
-  it('clique em/depois do fim move o fim', () => {
-    const r = clickBead(anchored({ selection: { s: 4, e: 8 } }), 10);
-    expect(r.state.selection).toEqual({ s: 4, e: 10 });
-    expect(r.play).toEqual({ type: 'edge', edge: 10, s: 8, e: 12 });
-  });
-
-  it('clique exatamente no início mantém a seleção e reproduz a borda', () => {
-    const r = clickBead(anchored({ selection: { s: 4, e: 8 } }), 4);
-    expect(r.state.selection).toEqual({ s: 4, e: 8 });
-    expect(r.play).toEqual({ type: 'edge', edge: 4, s: 2, e: 6 });
-  });
-
-  it('clique interno mais perto do início move o início', () => {
-    const r = clickBead(anchored({ selection: { s: 2, e: 9 } }), 4);
-    expect(r.state.selection).toEqual({ s: 4, e: 9 });
-    expect(r.play).toEqual({ type: 'edge', edge: 4, s: 2, e: 6 });
-  });
-
-  it('clique interno mais perto do fim move o fim', () => {
-    const r = clickBead(anchored({ selection: { s: 2, e: 9 } }), 7);
-    expect(r.state.selection).toEqual({ s: 2, e: 7 });
-    expect(r.play).toEqual({ type: 'edge', edge: 7, s: 5, e: 9 });
-  });
-
-  it('empate exato move o INÍCIO — a comparação é (b−s) <= (e−b)', () => {
-    const r = clickBead(anchored({ selection: { s: 2, e: 8 } }), 5);
-    expect(r.state.selection).toEqual({ s: 5, e: 8 });
-    expect(r.play).toEqual({ type: 'edge', edge: 5, s: 3, e: 7 });
-  });
-
-  it('a janela da borda satura na última conta do colar', () => {
-    const r = clickBead(anchored({ selection: { s: 20, e: 22 } }), 23);
-    expect(r.state.selection).toEqual({ s: 20, e: 23 });
-    expect(r.play).toEqual({ type: 'edge', edge: 23, s: 21, e: 23 });
-  });
-
-  it('a janela nunca é menor que 1 conta de cada lado (beadSec > 1 s)', () => {
-    // 48 s a 4 s/conta → 12 contas; round(1/4) = 0 → max(1, 0) = 1
-    const base = sess({}, 48, 4);
-    const s: SessionState = {
-      ...base,
-      whole: { ...base.whole, confirmed: true },
-      parts: [part({})],
-      current: { layer: 'parts', index: 0 },
-      selection: { s: 3, e: 6 },
-    };
-    const r = clickBead(s, 8);
-    expect(r.play).toEqual({ type: 'edge', edge: 8, s: 7, e: 9 });
-  });
-});
-
-describe('clickBead — sem ancoragem ativa: transporte apenas (referência L562–564; PRD §8.2)', () => {
+describe('clickBead — sem ancoragem ativa: transporte apenas (PRD §8.2)', () => {
   it('ouvindo a história inteira, o toque vira transporte e nada é selecionado', () => {
     const s = sess();
     const r = clickBead(s, 5);
@@ -246,7 +195,7 @@ describe('clickBead — sem ancoragem ativa: transporte apenas (referência L562
 
 describe('clickBead — pureza', () => {
   it('não muta o estado de entrada', () => {
-    const s = anchored({ selection: { s: 4, e: 8 } });
+    const s = anchored({ selection: { s: 0, e: 8 } });
     const before = JSON.stringify(s);
     clickBead(s, 2);
     clickBead(s, 10);

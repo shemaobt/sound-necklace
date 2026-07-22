@@ -23,42 +23,41 @@ export function lockedItemAt<T extends { locked: boolean; span: Span | null }>(
   return items.find((i) => i.locked && i.span && bead >= i.span.s && bead <= i.span.e) ?? null;
 }
 
-/** Toca a ação de seleção: conta única e intervalo por `play`, fronteira por `playEdge`. */
-export function playActionOn(player: Player, action: PlayAction): void {
+/** Contas de prévia de cada lado do limite ao EDITAR a fronteira (§ regra 5). */
+const EDIT_BEFORE = 4;
+const EDIT_AFTER = 3;
+
+/**
+ * Interpreta a intenção do `clickBead` ao DEFINIR um segmento (cena/frase), com o
+ * playhead como entrada (docs/segmentation-rules.md):
+ * - `transport` → toca a conta tocada;
+ * - `listen` → ouve a partir do começo até `parentEnd` (fim da história p/ cena,
+ *   fim da cena p/ frase);
+ * - `set-end` → só define o FIM; se o áudio JÁ passou desse ponto, para; senão
+ *   continua tocando (não interrompe). `head` é a posição corrente do playhead.
+ */
+export function playClick(
+  player: Player,
+  action: PlayAction,
+  parentEnd: number,
+  head: number | null,
+): void {
   switch (action.type) {
-    case 'single-bead':
-      player.play(action.bead, action.bead);
-      return;
-    case 'range':
-      player.play(action.s, action.e);
-      return;
-    case 'edge':
-      player.playEdge(action.edge);
-      return;
     case 'transport':
       player.play(action.bead, action.bead);
+      return;
+    case 'listen':
+      player.play(action.from, parentEnd);
+      return;
+    case 'set-end':
+      if (head !== null && head >= action.end) player.stop();
       return;
   }
 }
 
-/**
- * Reprodução ao DEFINIR uma cena/frase (decisão do dono): o toque reproduz a
- * SELEÇÃO INTEIRA (início→fim), não só a janela da borda. O `clickBead` classifica
- * um toque que aproxima a borda como `edge` (janela curta do fim); aqui, enquanto
- * se define o corte, isso vira o intervalo todo — a prévia curta do fim fica
- * reservada ao AJUSTE da fronteira (arrastar o punho / `onEdgeHover` → `playEdge`).
- * Conta única, intervalo e transporte seguem 1:1 (`playActionOn`).
- */
-export function playSelectionOrAction(
-  player: Player,
-  action: PlayAction,
-  selection: Span | null,
-): void {
-  if (action.type === 'edge' && selection) {
-    player.play(selection.s, selection.e);
-    return;
-  }
-  playActionOn(player, action);
+/** Prévia ao EDITAR a fronteira (arrasto): ~4 contas antes do limite até ~3 depois. */
+export function playEditWindow(player: Player, limit: number, totalBeads: number): void {
+  player.play(Math.max(0, limit - EDIT_BEFORE), Math.min(totalBeads - 1, limit + EDIT_AFTER));
 }
 
 const UNIDADES_PT = [
