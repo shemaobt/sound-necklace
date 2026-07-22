@@ -28,11 +28,13 @@ export {
 export { activeAnchor, frontier, type ActiveAnchor } from './frontier';
 export { clickBead, type ClickResult, type PlayAction } from './selection';
 export {
+  absorbNextScene,
   addPart,
   confirmPart,
   confirmParts,
   confirmWhole,
   primePart,
+  removePart,
   SCENE_ERROR_COPY,
   type SceneError,
   type SceneErrorCode,
@@ -72,6 +74,7 @@ export {
   type BorderOfferKind,
 } from './seam';
 export {
+  absorbNextFrase,
   activeScene,
   addFrase,
   confirmFrase,
@@ -84,6 +87,7 @@ export {
   FRASES_EMPTY_WARNING,
   moveBorder,
   phraseFrontier,
+  primeFrase,
   reanchorFrase,
   removeFrase,
   sceneIndexOf,

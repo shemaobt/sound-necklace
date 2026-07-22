@@ -4,18 +4,28 @@ import { useTranslation } from 'react-i18next';
 import type { Player } from '../../../adapters/audio';
 import type { UiSound } from '../../../adapters/ui-sound';
 import {
+  absorbNextScene,
   activeAnchor,
   clickBead,
   confirmPart,
   confirmParts,
   dragSceneBoundary,
+  primePart,
+  removePart,
   setMode,
   type Span,
 } from '../../../domain';
 import { Button } from '../../atoms';
 import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
-import { lockedItemAt, playActionOn, rankLockedScenes, sceneColor, sceneOrdinal } from './cutting';
+import {
+  lockedItemAt,
+  playClick,
+  playEditWindow,
+  rankLockedScenes,
+  sceneColor,
+  sceneOrdinal,
+} from './cutting';
 import { ScenePhraseChip } from '../../molecules';
 import './cut.css';
 
@@ -68,11 +78,12 @@ export function Cut({ player = null, sound }: CutProps) {
     () => lockedScenes.map((sc) => sc.span.e),
     [lockedScenes],
   );
-  // Punhos de arrasto (ENG-342): a fronteira à DIREITA de cada cena, exceto a
-  // última (cujo fim é o fim da história, fixo). `id` = a cena esquerda; o
-  // domínio (`dragSceneBoundary`) empurra a vizinha por span.
+  // Punhos de arrasto (ENG-342): o FIM de cada cena travada, inclusive a última
+  // (#2 — como a frase, o fim arrasta livre até o fim do colar). `id` = a cena
+  // cujo fim se move; o domínio (`dragSceneBoundary`) empurra a vizinha por span
+  // ou, na última, deixa a cobertura ficar esparsa.
   const dragHandles = useMemo(
-    () => lockedScenes.slice(0, -1).map((sc) => ({ at: sc.span.e, id: sc.part.part_id })),
+    () => lockedScenes.map((sc) => ({ at: sc.span.e, id: sc.part.part_id })),
     [lockedScenes],
   );
 
@@ -108,42 +119,37 @@ export function Cut({ player = null, sound }: CutProps) {
     );
 
   /**
-   * Tocar numa cena já travada a reproduz inteira — o `clickCut`/`_sceneOf` de
-   * "Ouvir no colar" (o estudo `pure` escolhido, redesign §11; o arquivo chamado
-   * "Protótipo" é o estudo VELHO e traz o oposto: play no chip e nenhum ramo de
-   * cena travada). A Triage faz o mesmo pelo colar da cena em foco. Vem ANTES do
-   * `clickBead` porque o redutor é port 1:1 da referência v1: ele clampa o clique
-   * até a emenda e, ao fazer isso, consome a pré-ancoragem da próxima cena. Levar
-   * a regra para o domínio muda camada congelada — o golden é o juiz, não esta
-   * estação. Devolve true quando a conta era de cena travada (o corte não corre).
+   * Tocar numa cena já CONFIRMADA (travada) reproduz A PARTIR da conta clicada até
+   * o fim da cena (regra 4, docs/segmentation-rules.md). Chave por conta:
+   * tocar OUTRA conta pula para ela; a MESMA pausa/retoma. Vem ANTES do `clickBead`
+   * porque o redutor consumiria a pré-ancoragem da próxima cena. Devolve true
+   * quando a conta era de cena travada (o corte não corre).
    */
   const playLockedSceneAt = (bead: number): boolean => {
     const s = sessionStore.getState().session;
     const locked = s ? lockedItemAt(s.parts, bead) : null;
     if (!locked?.span) return false;
-    // Toca da conta TOCADA até o fim da cena, com a chave por conta (ENG-347):
-    // tocar OUTRA conta é chave nova → pula na hora (nada de esperar acabar);
-    // tocar a MESMA é a mesma chave → pausa/retoma no lugar.
     player?.toggle(`${locked.part_id}:${bead}`, bead, locked.span.e);
     return true;
   };
 
+  // DEFININDO uma cena (regras 1–3): clicar o começo OUVE a história a partir dali;
+  // clicar além define o FIM (para se o playhead já passou, senão continua). O
+  // começo é a fronteira, nunca settável (regra 7). O playhead entra por `head`.
   const onBead = (bead: number): void => {
     if (playLockedSceneAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
-    if (play && player) playActionOn(player, play);
+    if (play && player) playClick(player, play, s.whole.span.e, head);
   };
 
   /**
-   * A conta que brilha pausa — o `_headTapPause` de "Ouvir no colar" (:697), que
-   * também vem antes de decidir o que tocar. `play`/`playEdge` não têm chave (o
-   * `playRange` a limpa), e só o `toggle` da MESMA chave pausa: sem o corte seco
-   * abaixo, a cabeça acesa durante uma prévia de borda — cuja janela invade a cena
-   * travada — cairia num `toggle` de chave alheia e RECOMEÇARIA a cena para quem
-   * tocou querendo parar. Sem chave não há o que retomar, então é `stop`.
+   * A conta que brilha pausa. Sem chave ativa (um `listen`/`set-end`/transporte
+   * toca SEM chave via `play`) não há o que retomar → `stop`. Com chave (uma cena
+   * confirmada tocando por `toggle`) re-tocar a MESMA chave pausa/retoma no lugar
+   * — usamos a chave ATIVA, não uma re-derivada do playhead móvel.
    */
   const onHeadTap = (): void => {
     if (!player) return;
@@ -152,11 +158,6 @@ export function Cut({ player = null, sound }: CutProps) {
       player.stop();
       return;
     }
-    // A conta acesa pausa/retoma no lugar a cena que já toca (mesma chave → o
-    // adapter suspende/retoma; s/e ignorados). NÃO re-derivamos a chave do
-    // playhead móvel: como agora a chave carrega a conta de partida (ENG-347),
-    // usar `head` viraria uma chave nova e RECOMEÇARIA a cena para quem tocou
-    // querendo parar.
     player.toggle(activeKey, head ?? 0, head ?? 0);
   };
 
@@ -207,11 +208,26 @@ export function Cut({ player = null, sound }: CutProps) {
       );
   };
 
-  // Arrastar a fronteira entre duas cenas (ENG-342, substitui o reabrir): a cena
-  // `id` cresce/encolhe até `toBead`, a vizinha absorve o resto (Pac-Man). Cada
-  // move do ponteiro aplica o ajuste puro do domínio.
+  // Arrastar o fim de uma cena (ENG-342): a cena `id` cresce/encolhe até `toBead`,
+  // a seguinte SEGUE (Pac-Man). `primePart` reancora a pendente na nova fronteira.
+  // Enquanto edita, toca a prévia ~4 contas antes do limite até ~3 depois (regra 5).
   const onDragBoundary = (id: string, toBead: number): void => {
-    sessionStore.getState().apply((s) => dragSceneBoundary(s, id, toBead));
+    sessionStore.getState().apply((s) => primePart(dragSceneBoundary(s, id, toBead)));
+    if (player) playEditWindow(player, toBead, session.totalBeads);
+  };
+
+  // Remover a cena + a SEGUINTE absorve o espaço liberado (#3): removePart é puro
+  // (fiel ao reference, golden), a absorção é composta aqui — como o reprime.
+  const removeScene = (partId: string): void => {
+    setError(null);
+    sessionStore.getState().apply((s) => {
+      const removed = s.parts.find((p) => p.part_id === partId);
+      const after = removePart(
+        s,
+        s.parts.findIndex((p) => p.part_id === partId),
+      );
+      return removed?.locked && removed.span ? absorbNextScene(after, removed.span.s) : after;
+    });
   };
 
   return (
@@ -260,6 +276,15 @@ export function Cut({ player = null, sound }: CutProps) {
                   <ScenePhraseChip
                     label={ordinal ? t('cut.sceneLabel', { ordinal }) : t('cut.sceneLabelBare')}
                     swatch={sceneColor(sc.rank)}
+                    actions={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeScene(sc.part.part_id)}
+                      >
+                        {t('cut.remove')}
+                      </Button>
+                    }
                   />
                 </li>
               );

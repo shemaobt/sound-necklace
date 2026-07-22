@@ -1,15 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { PlayAction, ScenePart } from '../../../domain';
+import type { ScenePart } from '../../../domain';
 import { scenePalette } from '../../tokens';
-import { lockedItemAt, playActionOn, rankLockedScenes, sceneColor, sceneOrdinal } from './cutting';
+import {
+  lockedItemAt,
+  playClick,
+  playEditWindow,
+  rankLockedScenes,
+  sceneColor,
+  sceneOrdinal,
+} from './cutting';
 
 /**
  * Helpers puros da estação de corte (Escuta 2): o intérprete efeito→player que
- * traduz a `PlayAction` do redutor de seleção em chamadas do `Player` (áudio
- * instantâneo por clique, §8.2), o número de cena por extenso e por idioma SEM
- * dígitos (§9.2), o ranqueamento das cenas travadas por posição no colar e a cor
- * de cena por índice (paleta terrosa §4.2). Blackbox: entradas → chamadas/valores.
+ * traduz a INTENÇÃO do redutor de seleção em chamadas do `Player`, com o playhead
+ * como entrada (regras de segmentação, docs/segmentation-rules.md); o
+ * número de cena por extenso e por idioma SEM dígitos (§9.2), o ranqueamento das
+ * cenas travadas por posição no colar e a cor de cena (§4.2). Blackbox.
  */
 
 function spyPlayer() {
@@ -23,32 +30,53 @@ function spyPlayer() {
   };
 }
 
-describe('playActionOn — efeito-como-valor → player (PRD v2 §8.2)', () => {
-  it('single-bead toca só aquela conta (play b..b)', () => {
+describe('playClick — intenção do clique → player, com o playhead (regras 1–3)', () => {
+  it('transport toca a partir da conta (fallback sem ancoragem)', () => {
     const player = spyPlayer();
-    playActionOn(player, { type: 'single-bead', bead: 4 });
-    expect(player.play).toHaveBeenCalledWith(4, 4);
-    expect(player.playEdge).not.toHaveBeenCalled();
+    playClick(player, { type: 'transport', bead: 3 }, 23, null);
+    expect(player.play).toHaveBeenCalledWith(3, 3);
   });
 
-  it('range toca o intervalo inteiro (play s..e)', () => {
+  it('listen ouve do começo até o fim do pai (história/cena)', () => {
     const player = spyPlayer();
-    playActionOn(player, { type: 'range', s: 2, e: 7 });
-    expect(player.play).toHaveBeenCalledWith(2, 7);
+    playClick(player, { type: 'listen', from: 4 }, 23, null);
+    expect(player.play).toHaveBeenCalledWith(4, 23);
   });
 
-  it('edge toca SÓ a janela da fronteira ajustada (playEdge)', () => {
+  it('set-end com o playhead JÁ no ponto (ou além): para', () => {
     const player = spyPlayer();
-    const action: PlayAction = { type: 'edge', edge: 5, s: 1, e: 9 };
-    playActionOn(player, action);
-    expect(player.playEdge).toHaveBeenCalledWith(5);
+    playClick(player, { type: 'set-end', end: 10 }, 23, 10);
+    expect(player.stop).toHaveBeenCalled();
     expect(player.play).not.toHaveBeenCalled();
   });
 
-  it('transport toca a partir da conta (fallback sem ancoragem)', () => {
+  it('set-end com o playhead ANTES do ponto: continua (não interrompe)', () => {
     const player = spyPlayer();
-    playActionOn(player, { type: 'transport', bead: 3 });
-    expect(player.play).toHaveBeenCalledWith(3, 3);
+    playClick(player, { type: 'set-end', end: 10 }, 23, 6);
+    expect(player.stop).not.toHaveBeenCalled();
+    expect(player.play).not.toHaveBeenCalled();
+  });
+
+  it('set-end sem playhead (nada tocando): não faz nada', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'set-end', end: 10 }, 23, null);
+    expect(player.stop).not.toHaveBeenCalled();
+  });
+});
+
+describe('playEditWindow — prévia ao editar a fronteira (regra 5)', () => {
+  it('toca ~4 contas antes do limite até ~3 depois', () => {
+    const player = spyPlayer();
+    playEditWindow(player, 12, 24);
+    expect(player.play).toHaveBeenCalledWith(8, 15);
+  });
+
+  it('satura nas bordas do colar', () => {
+    const player = spyPlayer();
+    playEditWindow(player, 1, 24);
+    expect(player.play).toHaveBeenCalledWith(0, 4);
+    playEditWindow(player, 23, 24);
+    expect(player.play).toHaveBeenCalledWith(19, 23);
   });
 });
 

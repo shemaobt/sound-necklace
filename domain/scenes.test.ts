@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { buildBeads } from './grid';
 import {
+  absorbNextScene,
   addPart,
   confirmPart,
   confirmParts,
   confirmWhole,
   primePart,
+  removePart,
   type SceneResult,
 } from './scenes';
 import { createSession, type ScenePart, type SessionState } from './state';
@@ -301,6 +303,70 @@ describe('pureza dos reducers', () => {
     confirmParts(pronto);
     addPart(pronto);
     primePart(pronto);
+    removePart(pronto, 0);
     expect(JSON.stringify(pronto)).toBe(before);
+  });
+});
+
+describe('removePart — libera o PT# e reancora no ÚLTIMO destravado (espelho de removeFrase)', () => {
+  it('remove a cena travada, libera o PT# e reancora a pendente na nova fronteira', () => {
+    const s = sess({
+      parts: [
+        part({ part_id: 'PT1', span: { s: 0, e: 4 }, locked: true }),
+        part({ part_id: 'PT2', span: { s: 5, e: 9 }, locked: true }),
+        part({ part_id: 'PT3' }), // pendente
+      ],
+      partsConfirmed: false,
+      current: { layer: 'parts', index: 2 },
+    });
+    const next = removePart(s, 1); // remove PT2
+    expect(next.parts.map((p) => p.part_id)).toEqual(['PT1', 'PT3']);
+    expect(next.current).toEqual({ layer: 'parts', index: 1 }); // PT3, último destravado
+    expect(next.pendingStart).toBe(5); // fronteira = PT1.fim + 1
+    expect(next.selection).toEqual({ s: 5, e: 5 });
+  });
+
+  it('sem destravado restante: auto-add com o menor PT# livre', () => {
+    const s = sess({
+      parts: [
+        part({ part_id: 'PT1', span: { s: 0, e: 4 }, locked: true }),
+        part({ part_id: 'PT2', span: { s: 5, e: 9 }, locked: true }),
+      ],
+      current: { layer: 'parts', index: -1 },
+    });
+    const next = removePart(s, 1); // sobra só PT1 travada → auto-add
+    expect(next.parts).toHaveLength(2);
+    expect(next.parts[1]).toMatchObject({ part_id: 'PT2', locked: false, span: null });
+    expect(next.current).toEqual({ layer: 'parts', index: 1 });
+  });
+
+  it('remover a do MEIO + absorbNextScene: a próxima absorve o espaço (estica o início) — #3', () => {
+    const s = sess({
+      parts: [
+        part({ part_id: 'PT1', span: { s: 0, e: 7 }, locked: true }),
+        part({ part_id: 'PT2', span: { s: 8, e: 15 }, locked: true }),
+        part({ part_id: 'PT3', span: { s: 16, e: 23 }, locked: true }),
+      ],
+      current: { layer: 'parts', index: -1 },
+      partsConfirmed: true,
+    });
+    const gapStart = s.parts[1]!.span!.s; // PT2 começa em 8
+    const next = absorbNextScene(removePart(s, 1), gapStart);
+    const locked = next.parts.filter((p) => p.locked);
+    expect(locked.map((p) => p.part_id)).toEqual(['PT1', 'PT3']);
+    expect(locked[1]!.span).toEqual({ s: 8, e: 23 }); // PT3 absorveu [8,15]
+  });
+
+  it('absorbNextScene sem cena seguinte (removeu a última): no-op', () => {
+    const s = sess({
+      parts: [
+        part({ part_id: 'PT1', span: { s: 0, e: 7 }, locked: true }),
+        part({ part_id: 'PT2', span: { s: 8, e: 15 }, locked: true }),
+      ],
+      current: { layer: 'parts', index: -1 },
+      partsConfirmed: true,
+    });
+    const afterRemove = removePart(s, 1); // removeu a última travada (PT2)
+    expect(absorbNextScene(afterRemove, 8)).toBe(afterRemove);
   });
 });

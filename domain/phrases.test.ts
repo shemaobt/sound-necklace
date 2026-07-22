@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildBeads } from './grid';
 import { createSession, type Frase, type ScenePart, type SessionState, type Span } from './state';
 import {
+  absorbNextFrase,
   activeScene,
   addFrase,
   confirmFrase,
@@ -13,6 +14,7 @@ import {
   enterSegmentacao,
   moveBorder,
   phraseFrontier,
+  primeFrase,
   reanchorFrase,
   removeFrase,
   sceneIndexOf,
@@ -342,57 +344,113 @@ describe('removeFrase — libera o P# e escolhe o ÚLTIMO destravado', () => {
     expect(next.frases[1]).toMatchObject({ prop_id: 'P2', locked: false, span: null });
     expect(next.current).toEqual({ layer: 'frases', index: 1 });
   });
+
+  it('remover a do MEIO + absorbNextFrase: a próxima da MESMA cena absorve — #3', () => {
+    const s = sess({
+      frases: [
+        mkFrase('P1', { locked: true, span: { s: 10, e: 14 }, part_link: 'PT2' }),
+        mkFrase('P2', { locked: true, span: { s: 15, e: 19 }, part_link: 'PT2' }),
+        mkFrase('P3', { locked: true, span: { s: 20, e: 24 }, part_link: 'PT2' }),
+      ],
+      current: { layer: 'frases', index: -1 },
+      activeSceneId: 'PT2',
+    });
+    const removed = s.frases[1]!; // P2 {15,19}
+    const next = absorbNextFrase(removeFrase(s, 1), removed.part_link!, removed.span!.s);
+    const locked = next.frases.filter((f) => f.locked);
+    expect(locked.map((f) => f.prop_id)).toEqual(['P1', 'P3']);
+    expect(locked[1]!.span).toEqual({ s: 15, e: 24 }); // P3 absorveu [15,19]
+  });
+
+  it('absorbNextFrase só absorve na MESMA cena; sem seguinte é no-op', () => {
+    const s = sess({
+      frases: [
+        mkFrase('P1', { locked: true, span: { s: 10, e: 14 }, part_link: 'PT2' }),
+        mkFrase('P2', { locked: true, span: { s: 20, e: 24 }, part_link: 'PT1' }), // outra cena
+      ],
+      activeSceneId: 'PT2',
+    });
+    expect(absorbNextFrase(s, 'PT2', 15)).toBe(s); // P2 é de PT1 → não absorve
+  });
 });
 
-describe('dragPhraseBoundary — arrastar a borda de uma frase (ENG-342)', () => {
-  // PT2 = {10,29}; F1 e F2 travadas nela, com um vão entre elas (16–19, 26–29)
+describe('dragPhraseBoundary — arrastar o FIM, Pac-Man/ladrilhado (ENG-342, #2/#4)', () => {
+  // PT2={10,29}; F1{12,15} e F2{20,25} travadas nela
   const F1 = mkFrase('P1', { span: { s: 12, e: 15 }, part_link: 'PT2', locked: true });
   const F2 = mkFrase('P2', { span: { s: 20, e: 25 }, part_link: 'PT2', locked: true });
   const base = () => sess({ parts: [PT1, PT2, PT3], frases: [F1, F2] });
 
-  it('crescer o fim para dentro do vão: cresce sozinha, a vizinha fica intacta', () => {
-    const next = dragPhraseBoundary(base(), 0, 'end', 18);
+  it('crescer o fim: a seguinte segue (empurra o início dela)', () => {
+    const next = dragPhraseBoundary(base(), 0, 18);
     expect(next.frases[0]!.span).toEqual({ s: 12, e: 18 });
-    expect(next.frases[1]!.span).toEqual({ s: 20, e: 25 });
+    expect(next.frases[1]!.span).toEqual({ s: 19, e: 25 }); // F2 seguiu para 19
   });
 
-  it('crescer o fim até tocar a vizinha: empurra o início dela (encolhe)', () => {
-    const next = dragPhraseBoundary(base(), 0, 'end', 22);
-    expect(next.frases[0]!.span).toEqual({ s: 12, e: 22 });
-    expect(next.frases[1]!.span).toEqual({ s: 23, e: 25 });
+  it('encolher o fim: a seguinte segue (cresce para preencher), SEM vão', () => {
+    const next = dragPhraseBoundary(base(), 0, 13);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 13 });
+    expect(next.frases[1]!.span).toEqual({ s: 14, e: 25 }); // F2 acompanhou até 14
   });
 
-  it('clampa: a vizinha nunca fica vazia', () => {
-    const next = dragPhraseBoundary(base(), 0, 'end', 40);
+  it('clampa: a seguinte nunca fica vazia (para no fim dela − 1)', () => {
+    const next = dragPhraseBoundary(base(), 0, 40);
     expect(next.frases[0]!.span).toEqual({ s: 12, e: 24 });
     expect(next.frases[1]!.span).toEqual({ s: 25, e: 25 });
   });
 
-  it('crescer o começo para dentro do vão: só cresce', () => {
-    const next = dragPhraseBoundary(base(), 1, 'start', 17);
-    expect(next.frases[1]!.span).toEqual({ s: 17, e: 25 });
-    expect(next.frases[0]!.span).toEqual({ s: 12, e: 15 });
+  it('clampa: a própria frase nunca fica vazia; a seguinte segue', () => {
+    const next = dragPhraseBoundary(base(), 0, 5);
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 12 });
+    expect(next.frases[1]!.span).toEqual({ s: 13, e: 25 });
   });
 
-  it('crescer o começo até tocar a vizinha anterior: encolhe o fim dela', () => {
-    const next = dragPhraseBoundary(base(), 1, 'start', 14);
-    expect(next.frases[1]!.span).toEqual({ s: 14, e: 25 });
-    expect(next.frases[0]!.span).toEqual({ s: 12, e: 13 });
-  });
-
-  it('sem vizinha à frente: cresce livre até o fim da cena, clampado nele', () => {
-    const next = dragPhraseBoundary(base(), 1, 'end', 40);
+  it('última frase (sem seguinte): cresce livre até o fim da cena', () => {
+    const next = dragPhraseBoundary(base(), 1, 40);
     expect(next.frases[1]!.span).toEqual({ s: 20, e: 29 });
+  });
+
+  it('última frase (sem seguinte): encolhe o fim, a cauda fica por frasear', () => {
+    const next = dragPhraseBoundary(base(), 1, 22);
+    expect(next.frases[1]!.span).toEqual({ s: 20, e: 22 });
+    expect(next.frases[0]!.span).toEqual({ s: 12, e: 15 });
   });
 
   it('arrastar para a posição atual não muda nada', () => {
     const s = base();
-    expect(dragPhraseBoundary(s, 0, 'end', 15)).toBe(s);
+    expect(dragPhraseBoundary(s, 0, 15)).toBe(s);
   });
 
   it('frase destravada ou sem span: no-op', () => {
     const s = sess({ parts: [PT1, PT2, PT3], frases: [mkFrase('P1', { part_link: 'PT2' })] });
-    expect(dragPhraseBoundary(s, 0, 'end', 20)).toBe(s);
+    expect(dragPhraseBoundary(s, 0, 20)).toBe(s);
+  });
+
+  // O bug do print (#3): uma frase cobrindo o FIM do colar deixa a fronteira FORA
+  // da grade (quirk de phraseFrontier). Arrastá-la de volta e reancorar tem de
+  // trazer a âncora pendente para dentro do colar — senão o próximo clique fecha
+  // uma seleção com fim = totalBeads e o confirm cospe "A frase precisa terminar
+  // dentro do colar." A página compõe primeFrase(dragPhraseBoundary(...)).
+  it('frase cobrindo o fim do colar, arrastada de volta + primeFrase, reancora na grade', () => {
+    const solo = mkPart('PT1', { s: 0, e: 39 }, { tag_state: 'tagged', scene_kind: 'MEAL_SCENE' });
+    const s = sess({
+      parts: [solo],
+      frases: [
+        mkFrase('P1', { span: { s: 0, e: 39 }, part_link: 'PT1', locked: true }),
+        mkFrase('P2'), // pendente
+      ],
+      current: { layer: 'frases', index: 1 },
+      activeSceneId: 'PT1',
+    });
+    expect(phraseFrontier(s)).toBe(40); // sanity: quirk deixa a fronteira fora da grade
+
+    const reprimed = primeFrase(dragPhraseBoundary(s, 0, 19));
+    expect(reprimed.frases[0]!.span).toEqual({ s: 0, e: 19 });
+    expect(reprimed.pendingStart).toBe(20);
+    expect(reprimed.selection).toEqual({ s: 20, e: 20 });
+
+    // e agora dá pra fechar uma nova frase até o fim, sem FRASE_BEYOND_STORY
+    const clicked = { ...reprimed, selection: { s: 20, e: 39 }, pendingStart: null };
+    expect(confirmFrase(clicked, 1).kind).toBe('locked');
   });
 });
 

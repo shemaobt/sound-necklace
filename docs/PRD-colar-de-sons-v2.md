@@ -135,6 +135,8 @@ Segmentation is **sequential from a locked frontier**:
 - Phrases (inside the active scene): the frontier is `last locked phrase end in this scene + 1`; if the scene has no phrases yet, the **first phrase may reach back** to the *start of the previous neighboring scene* (start-of-scene test) — otherwise the scene's own start.
 - Reopening item *i* unlocks *i and everything after it* (frontier integrity).
 
+> **Post-lock editing (owner decisions, supersede "reopen"):** since ENG-342 there is no "reopen". A locked scene/phrase is adjusted by **dragging its END** (one handle per segment; the start is the seam) and the **next segment follows** (Pac-Man/tiled — no gaps), or **removed** (the next segment absorbs the freed space). Scene and phrase behave **identically**. Playback while segmenting is also owner-specified: while defining, clicking the start listens from there and clicking beyond only sets the END (the start is never settable); clicking a **confirmed** segment plays **from the tapped bead**; editing a boundary previews around the new limit. The full, authoritative rule set lives in **`docs/segmentation-rules.md`** — read it before touching segmentation interaction.
+
 ### 6.5 Productive scenes
 A scene is **productive** when locked, spanned, and triaged to a real Ruth kind (`tag_state "tagged"` + `scene_kind`). Only productive scenes are phrased in Segmentação and get L3 questions in Mapeamento. `none_fit` scenes are *findings* (evidence toward a native scene type; the decision belongs to the facilitator → SC), not dead ends — they still receive L2 questions.
 

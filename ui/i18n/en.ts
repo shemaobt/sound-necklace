@@ -180,6 +180,7 @@ export const en: Dict = {
     instructionReplay: '. Tap a finished scene to hear it again.',
     sceneLabel: 'Scene {{ordinal}}',
     sceneLabelBare: 'Scene',
+    remove: 'Remove',
     back: '← Back',
     confirmScene: '✓ Confirm this scene',
     confirmAll: 'Confirm the scenes →',

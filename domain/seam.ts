@@ -198,28 +198,40 @@ export function slideSeam(
 }
 
 /**
- * Arrastar a fronteira INTERNA entre `leftPartId` e a vizinha travada seguinte
- * (ENG-342): a fronteira passa a terminar a cena esquerda em `newEnd`, e a
- * direita começa em `newEnd+1` — Pac-Man, só a vizinha imediata muda de tamanho.
- * Clampa em `[left.span.s, right.span.e-1]` (nenhuma das duas fica vazia). É só
- * um caso dirigido por gesto do `slideSeam` já existente: crescer para a direita
- * estica a esquerda; para a esquerda, estica a direita. Sem vizinha à frente
- * (última cena) ou sem mudança → no-op (identidade).
+ * Arrastar o FIM de uma cena travada (ENG-342) — Pac-Man/ladrilhado, idêntico ao
+ * `dragPhraseBoundary` (decisão do dono, simetria cena↔frase, #2/#4): a cena
+ * SEGUINTE SEGUE a fronteira (seu início vira `newE+1`), nas duas direções —
+ * encolher NÃO abre vão, a seguinte cresce para preencher; crescer empurra a
+ * seguinte. Só o FIM arrasta; o começo é a emenda. Sem vizinha à frente (última
+ * cena), cresce/encolhe livre até o fim do colar. Clampa em `[span.s,
+ * neighbor.e-1]` (ou `totalBeads-1`) — nenhuma fica vazia. Sem mudança → no-op. O
+ * reancorar da pendente na nova fronteira é composto na página (primePart) —
+ * seam.ts não pode importar scenes/frontier (ciclo).
  */
 export function dragSceneBoundary(
   state: SessionState,
-  leftPartId: string,
-  newEnd: number,
+  partId: string,
+  toBead: number,
 ): SessionState {
-  const left = state.parts.find((p) => p.part_id === leftPartId);
-  if (!left || !left.locked || !left.span) return state;
-  const right = nextNeighbor(state, left);
-  if (!right) return state;
-  const clamped = Math.max(left.span.s, Math.min(right.span.e - 1, newEnd));
-  if (clamped === left.span.e) return state;
-  return clamped > left.span.e
-    ? slideSeam(state, leftPartId, null, clamped)
-    : slideSeam(state, right.part_id, clamped + 1, null);
+  const idx = state.parts.findIndex((p) => p.part_id === partId);
+  const p = state.parts[idx];
+  if (!p || !p.locked || !p.span) return state;
+  const pSpan = p.span;
+  type Nb = { s: number; e: number; k: number };
+  // vizinha à direita: a cena travada com o MENOR início depois desta
+  const neighbor = state.parts.reduce<Nb | null>((acc, q, k) => {
+    if (k === idx || !q.locked || !q.span || q.span.s <= pSpan.s) return acc;
+    return !acc || q.span.s < acc.s ? { s: q.span.s, e: q.span.e, k } : acc;
+  }, null);
+  const hardHi = neighbor ? neighbor.e - 1 : state.totalBeads - 1;
+  const newE = Math.max(pSpan.s, Math.min(hardHi, toBead));
+  if (newE === pSpan.e) return state;
+  const parts = state.parts.map((q, k) => {
+    if (k === idx) return { ...q, span: { s: pSpan.s, e: newE } };
+    if (neighbor && k === neighbor.k) return { ...q, span: { s: newE + 1, e: neighbor.e } };
+    return q;
+  });
+  return { ...state, parts };
 }
 
 /** Margem da janela da segmentação: max(3, round(2/beadSec)) (L509). */

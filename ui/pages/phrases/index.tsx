@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { Player } from '../../../adapters/audio';
 import type { UiSound } from '../../../adapters/ui-sound';
 import {
+  absorbNextFrase,
   activeAnchor,
   activeScene,
   type BorderOffer,
@@ -15,6 +16,7 @@ import {
   moveBorder,
   nextNeighbor,
   prevNeighbor,
+  primeFrase,
   productiveScenes,
   reanchorFrase,
   removeFrase,
@@ -33,7 +35,7 @@ import {
 } from '../../organisms';
 import { resolveWindow } from '../../organisms/necklace/geometry';
 import { sessionStore, useSessionStore } from '../../state';
-import { lockedItemAt, playActionOn, sceneColor, sceneLabel } from '../cut/cutting';
+import { lockedItemAt, playClick, playEditWindow, sceneColor, sceneLabel } from '../cut/cutting';
 import { phraseColor, phraseLabel } from './wiring';
 import './phrases.css';
 
@@ -83,13 +85,11 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
       tint: phraseColor(pos),
     }));
     const lockedEndBeads = scenePhrases.map(({ f }) => f.span!.e);
-    // Punhos de arrasto (ENG-342): as duas bordas de cada frase travada. `id` =
-    // `<índiceGlobal>:<start|end>`; o domínio cresce/encolhe e só toca a vizinha
-    // quando encostam (cobertura esparsa é legal).
-    const dragHandles = scenePhrases.flatMap(({ f, index }) => [
-      { at: f.span!.s, id: `${index}:start` },
-      { at: f.span!.e, id: `${index}:end` },
-    ]);
+    // Punhos de arrasto (ENG-342): só o FIM de cada frase travada — estritamente
+    // como as cenas (decisão do dono, simetria cena↔frase). O começo é a emenda e
+    // NÃO arrasta; ao arrastar o fim, a frase SEGUINTE segue (Pac-Man, sem vão),
+    // igual à cena. `id` = o índice global da frase.
+    const dragHandles = scenePhrases.map(({ f, index }) => ({ at: f.span!.e, id: `${index}` }));
     return { sc, scSpan: sc.span, scenePhrases, segments, lockedEndBeads, dragHandles };
   }, [session]);
 
@@ -123,10 +123,9 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   const anchor = activeAnchor(session);
 
   /**
-   * Tocar numa frase já travada a reproduz inteira (ENG-296), como a Escuta 2 faz
-   * com as cenas: o `clickBead` é port 1:1 da v1 e clamparia o toque até a emenda,
-   * consumindo a pré-ancoragem da frase seguinte. Só as frases DESTA cena entram —
-   * são as únicas na janela do colar.
+   * Tocar numa frase já CONFIRMADA reproduz A PARTIR da conta clicada até o fim da
+   * frase (regra 4, idêntico à cena). Chave por conta: outra conta pula, a mesma
+   * pausa/retoma. Só as frases DESTA cena entram — são as únicas na janela do colar.
    */
   const playLockedPhraseAt = (bead: number): boolean => {
     const locked = lockedItemAt(
@@ -134,27 +133,33 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
       bead,
     );
     if (!locked?.span) return false;
-    player?.toggle(locked.prop_id, locked.span.s, locked.span.e);
+    player?.toggle(`${locked.prop_id}:${bead}`, bead, locked.span.e);
     return true;
   };
 
+  // DEFININDO uma frase (regras 1–3): clicar o começo OUVE a cena a partir dali;
+  // clicar além define o FIM (para se o playhead já passou, senão continua). O
+  // começo é a fronteira, nunca settável (regra 7). `parentEnd` = fim da cena ativa.
   const onBead = (bead: number): void => {
     if (playLockedPhraseAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
-    if (play && player) playActionOn(player, play);
+    if (play && player) playClick(player, play, scSpan.e, head);
   };
 
-  /** A conta acesa pausa — chave alheia reiniciaria a frase (ENG-297). */
+  /** A conta acesa pausa. Sem chave (listen/set-end/transporte tocam via `play`,
+   *  sem chave) → `stop`. Com chave (frase confirmada por `toggle`) → pausa/retoma
+   *  pela chave ATIVA. */
   const onHeadTap = (): void => {
     if (!player) return;
-    if (player.state.key === null) {
+    const activeKey = player.state.key;
+    if (activeKey === null) {
       player.stop();
       return;
     }
-    if (head !== null) playLockedPhraseAt(head);
+    player.toggle(activeKey, head ?? 0, head ?? 0);
   };
 
   const onEdgeHover = (edge: number): void => {
@@ -213,18 +218,27 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     sessionStore.getState().apply((s) => setMode(s, 'triagem'));
   };
 
-  // Arrastar a borda de uma frase (ENG-342, substitui o reabrir/⚑): `id` =
-  // `<índiceGlobal>:<start|end>`. Cada move aplica o ajuste puro do domínio.
+  // Arrastar o FIM de uma frase (ENG-342, substitui o reabrir/⚑): `id` = o índice
+  // global da frase. `primeFrase` reancora a frase pendente na nova fronteira
+  // depois do ajuste — senão, com a frase antes cobrindo o fim do colar (fronteira
+  // fora da grade), o clique seguinte fecharia além do colar e o confirm cospe
+  // "A frase precisa terminar dentro do colar" (#3).
   const onDragBoundary = (id: string, toBead: number): void => {
-    const sep = id.lastIndexOf(':');
-    const index = Number(id.slice(0, sep));
-    const edge = id.slice(sep + 1) as 'start' | 'end';
-    sessionStore.getState().apply((s) => dragPhraseBoundary(s, index, edge, toBead));
+    sessionStore.getState().apply((s) => primeFrase(dragPhraseBoundary(s, Number(id), toBead)));
+    if (player) playEditWindow(player, toBead, session.totalBeads);
   };
 
+  // Remover a frase + a SEGUINTE da mesma cena absorve o espaço (#3): removeFrase
+  // é puro (fiel ao reference, golden), a absorção é composta aqui — como o reprime.
   const remove = (i: number): void => {
     setError(null);
-    sessionStore.getState().apply((s) => removeFrase(s, i));
+    sessionStore.getState().apply((s) => {
+      const removed = s.frases[i];
+      const after = removeFrase(s, i);
+      return removed?.locked && removed.span && removed.part_link
+        ? absorbNextFrase(after, removed.part_link, removed.span.s)
+        : after;
+    });
   };
 
   const done = (): void => {
