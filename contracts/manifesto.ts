@@ -1,5 +1,5 @@
 /**
- * manifesto-contas.json — schema (PRD v2 §10.1) + mapper, port 1:1 de
+ * bead-manifest.json — schema (PRD v2 §10.1) + mapper, port 1:1 de
  * buildManifest() da referência (docs/reference/index.html L1316–1317).
  * A ordem das chaves do literal é parte da byte-identidade: manifest_id,
  * audio_filename, bead_duration_sec, total_beads, beads[{index, startTime,

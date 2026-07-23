@@ -20,11 +20,11 @@ describe('ArtifactCards (PRD §8.8 / redesign §6.7 — os três documentos)', (
   it('renderiza os três cards com filename e nome humano exatos', () => {
     render(<ArtifactCards downloaded={nenhum} />);
 
-    expect(screen.getByText('retorno-ancoragem.json')).toBeDefined();
+    expect(screen.getByText('anchoring-return.json')).toBeDefined();
     expect(screen.getByText('As decisões de vocês')).toBeDefined();
-    expect(screen.getByText('manifesto-contas.json')).toBeDefined();
+    expect(screen.getByText('bead-manifest.json')).toBeDefined();
     expect(screen.getByText('O mapa das contas')).toBeDefined();
-    expect(screen.getByText('relatorio-mapeamento.md')).toBeDefined();
+    expect(screen.getByText('mapping-report.md')).toBeDefined();
     expect(screen.getByText('A conversa sobre o sentido')).toBeDefined();
   });
 

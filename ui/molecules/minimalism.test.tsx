@@ -39,7 +39,7 @@ describe('moléculas não mostram dígitos ao ouvinte (PRD v2 §9.2)', () => {
           <p>a resposta gravada</p>
         </QuestionCard>
         <DocumentCard
-          filename="retorno-ancoragem.json"
+          filename="anchoring-return.json"
           title="As decisões de vocês"
           description="Onde cada cena e cada frase começa e termina."
         />

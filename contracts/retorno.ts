@@ -1,5 +1,5 @@
 /**
- * retorno-ancoragem.json — schema (PRD v2 §10.2) + mapper, port 1:1 de
+ * anchoring-return.json — schema (PRD v2 §10.2) + mapper, port 1:1 de
  * buildReturn() da referência (docs/reference/index.html L1318–1329) e do gate
  * do dlReturn (L1332–1335).
  *

@@ -40,11 +40,15 @@ import {
  */
 const LOCK_CONFLICT = 409;
 
-/** Filenames congelados do PRD §10 — parte do contrato com o Compilador. */
+/**
+ * Filenames do PRD §10 — inglês desde a ENG-359. O `kind` é o identificador do
+ * contrato (a API roteia por ele); estes nomes são o rótulo do multipart.
+ * ⚠️ `tripod-api` e Compilador ainda esperam os nomes PT-BR — ENG-358/ENG-359.
+ */
 const ARTIFACT_FILES: Record<ArtifactKind, { name: string; type: string }> = {
-  manifest: { name: 'manifesto-contas.json', type: 'application/json' },
-  anchoring: { name: 'retorno-ancoragem.json', type: 'application/json' },
-  report: { name: 'relatorio-mapeamento.md', type: 'text/markdown' },
+  manifest: { name: 'bead-manifest.json', type: 'application/json' },
+  anchoring: { name: 'anchoring-return.json', type: 'application/json' },
+  report: { name: 'mapping-report.md', type: 'text/markdown' },
 };
 
 export interface HttpSessionStoreOptions {

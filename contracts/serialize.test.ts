@@ -29,12 +29,12 @@ describe('serializeArtifact — O serializador único (referência download() L1
 
 describe('nomes de arquivo dos artefatos (referência L1331/L1336)', () => {
   it('prefixa com o slug da história', () => {
-    expect(manifestoFilename('fluxo-minimo')).toBe('fluxo-minimo-manifesto-contas.json');
-    expect(retornoFilename('fluxo-minimo')).toBe('fluxo-minimo-retorno-ancoragem.json');
+    expect(manifestoFilename('fluxo-minimo')).toBe('fluxo-minimo-bead-manifest.json');
+    expect(retornoFilename('fluxo-minimo')).toBe('fluxo-minimo-anchoring-return.json');
   });
 
-  it('slug vazio cai no fallback "colar" (quase morto na prática; portado fiel)', () => {
-    expect(manifestoFilename('')).toBe('colar-manifesto-contas.json');
-    expect(retornoFilename('')).toBe('colar-retorno-ancoragem.json');
+  it('slug vazio cai no fallback "story" — unificado com o .md na ENG-359', () => {
+    expect(manifestoFilename('')).toBe('story-bead-manifest.json');
+    expect(retornoFilename('')).toBe('story-anchoring-return.json');
   });
 });

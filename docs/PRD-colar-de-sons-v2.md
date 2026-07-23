@@ -173,7 +173,7 @@ A **session** is one story classification effort — audio + grid + hierarchy + 
 Lists **all the user's sessions** across their projects:
 - Per session: story name/slug, project, status (*em progresso* / *concluída*), last-modified time, and a glanceable progress indicator (natural fit: the redesign's "fio de contas" stations).
 - **In-progress sessions:** open/resume directly into the current step of the guided flow.
-- **Completed sessions:** the three artifacts — `retorno-ancoragem.json`, `manifesto-contas.json`, `relatorio-mapeamento.md` — are **downloadable directly from the dashboard**, without opening the session and navigating to its final screen.
+- **Completed sessions:** the three artifacts — `anchoring-return.json`, `bead-manifest.json`, `mapping-report.md` — are **downloadable directly from the dashboard**, without opening the session and navigating to its final screen.
 - **New session** creation lives here (audio source per §7.4).
 - Facilitator surface: normal text density; PT-BR copy.
 
@@ -294,16 +294,16 @@ A guided **conversation, not a questionnaire** (redesign §6.6): full-bleed cere
 - Facilitator-led questions (the significant-absence questions) keep their notes ("conduzida pela facilitadora — nunca preencha por conta própria") and role marker.
 - The answer store extends lazily so late structural changes (reopened scenes, added phrases) never lose existing answers.
 
-**The report:** a consolidated, **editable** artifact — every question as a card with its answer (voice row with play + waveform + duration, or text, or "ainda sem resposta gravada"), plus an optional facilitator note per question. Exports `<slug>-relatorio-mapeamento.md` with the exact skeleton and header contract of §10.4. The app collects **raw material only**: it never classifies vocabulary, never fills in absence, never generates the map.
+**The report:** a consolidated, **editable** artifact — every question as a card with its answer (voice row with play + waveform + duration, or text, or "ainda sem resposta gravada"), plus an optional facilitator note per question. Exports `<slug>-mapping-report.md` with the exact skeleton and header contract of §10.4. The app collects **raw material only**: it never classifies vocabulary, never fills in absence, never generates the map.
 
 **Transcription & translation drafts (decided — ENG-326).** A voice answer may carry a **speech-to-text draft** and, on top of it, a **PT→EN translation draft** — both produced by our own API (§12), both **editable in the report**, and both shown as *drafts* until a human confirms them: the facilitator (or the listener, aloud, through the facilitator) confirms the transcription; a **bilingual** human confirms the translation. Nothing here is ever put to the listener as a reading task (§1.1). **Confirmed English text is an export requirement:** the exported report carries the confirmed English, never a draft — an answer whose transcription or translation is still unconfirmed exports as if it had no text, exactly like an untranscribed voice answer, and the recording path (§10.4) is what carries it. The report also stays exportable at any time: an unconfirmed answer blocks nothing, it just does not contribute text. *(The contract-level rendering and field naming of that English text is a frozen-layer change owned by ENG-356 — §10.2, §10.4.)*
 
 ### 8.8 Completion & artifacts — "Guardar os documentos"
 
 Completion screen headed **"A história está inteira no colar."** with the full necklace shown strung. **Three document cards**, explained in human language:
-- `retorno-ancoragem.json` — **"As decisões de vocês"** (requires the whole story confirmed; warns how many phrases lack a locked end).
-- `manifesto-contas.json` — **"O mapa das contas"** (the exact pair for this audio).
-- `relatorio-mapeamento.md` — **"A conversa sobre o sentido"**.
+- `anchoring-return.json` — **"As decisões de vocês"** (requires the whole story confirmed; warns how many phrases lack a locked end).
+- `bead-manifest.json` — **"O mapa das contas"** (the exact pair for this audio).
+- `mapping-report.md` — **"A conversa sobre o sentido"**.
 Each card has a "Baixar" → "baixado" state. Completing the session stores all three server-side (§7.3) — they remain downloadable from the dashboard forever after.
 
 ### 8.9 Pipeline imports
@@ -337,7 +337,7 @@ These are shared invariants with the downstream pipeline. Any change requires a 
 
 **Normative reference — extremely important:** the output of v2 must be **exactly identical** — same schemas, same field names, same ID rules, same value vocabularies, same semantics — to the output produced by the v1 prototype (`index.html`). The prototype is the executable reference implementation of this contract: given the same audio, grid, and decisions, v2's exported files must match the prototype's byte for byte. The schemas below transcribe that contract; in any doubt or discrepancy, **the prototype's behavior wins**. Note that the acousteme-driven granularity (§6.1) does not touch this contract: it only *selects* the uniform `bead_duration_sec`; the grid math, the manifest schema, and the `manifest_id` hash are unchanged.
 
-### 10.1 `<slug>-manifesto-contas.json`
+### 10.1 `<slug>-bead-manifest.json`
 ```json
 {
   "manifest_id": "fnv1a32:xxxxxxxx",
@@ -348,7 +348,7 @@ These are shared invariants with the downstream pipeline. Any change requires a 
 }
 ```
 
-### 10.2 `<slug>-retorno-ancoragem.json`
+### 10.2 `<slug>-anchoring-return.json`
 ```json
 {
   "manifest_id": "fnv1a32:xxxxxxxx",
@@ -391,7 +391,7 @@ Scripts source: `docs/scripts/nivel-1-holistico.md`, `nivel-2-partes.md`. Order 
 
 Answer store keying: `level1{k}`, `level2{part_id}{k}`, `level3{prop_id}{k}`.
 
-**Report Markdown skeleton** (`<slug>-relatorio-mapeamento.md`) — English since ENG-356; the *filename* stays as-is:
+**Report Markdown skeleton** (`<slug>-mapping-report.md`) — English since ENG-356; the *filename* stays as-is:
 ```
 # Meaning Mapping Report — <slug>
 
@@ -422,6 +422,22 @@ The three artifacts are produced **client-side**, byte-identical to the v1 proto
 - The API (`tripod-api`) must **not deserialize an artifact into a Pydantic model and re-serialize it**. Round-tripping through Pydantic/JSON can reorder keys or change formatting and silently break byte-identity (and the golden harness). Persist artifacts as opaque blobs/text; validate only the envelope around them (session id, `manifest_id`, filenames), never the payload's internal shape.
 - The report `.md` is likewise stored/served verbatim — never re-rendered server-side.
 - This applies to storage, download, and any pipeline hand-off. The artifact bytes that leave the browser are the artifact bytes the Compilador receives.
+
+### 10.6 Artifact filenames (ENG-359)
+
+The filenames are **English**, matching the artifact content (§10.2 "Artifact language"):
+
+| kind (API handle) | filename |
+|---|---|
+| `manifest` | `<slug>-bead-manifest.json` |
+| `anchoring` | `<slug>-anchoring-return.json` |
+| `report` | `<slug>-mapping-report.md` |
+
+An empty slug falls back to `story` for all three — the v1 reference's split fallback (`colar` for the JSONs, `historia` for the `.md`) did not survive the rename.
+
+**The `kind` remains the contract handle**, not the filename: the API routes by `kind`, and the filename is the download label and storage key. This is what makes the rename tractable at all.
+
+> ⚠️ **Cross-repo debt, open at the time of writing.** `tripod-api` still documents in its OpenAPI that "the stored FILENAMES stay Portuguese … the kind is the handle, not the file", and the Compilador still fetches the PT-BR names. The SPA moved first (ENG-359); the API and the pipeline must follow, ideally accepting both names on read during the transition. `contracts/openapi.json` is **generated** from the API and therefore still carries the old text — it is not hand-edited on purpose. Tracked in ENG-358.
 
 ---
 

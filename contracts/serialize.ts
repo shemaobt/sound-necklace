@@ -15,15 +15,23 @@ export function serializeArtifact(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
-/** Fallback "colar" da referência (L1331/L1336) — quase morto na prática
- *  (segment() garante slug), portado fiel. O nav do mapeamento da referência
- *  usa um SEGUNDO fallback divergente ("historia", L1152), fora deste contrato:
- *  o export-card é o normativo. O fallback é SÓ de nome de arquivo — o
- *  story_slug dentro do retorno é o slug cru. */
+/**
+ * Nomes de arquivo dos artefatos — INGLÊS desde a ENG-359, divergindo dos nomes
+ * PT-BR da referência (`<slug>-manifesto-contas.json`, L1331/L1336). O `kind` da
+ * API (`manifest`/`anchoring`/`report`) segue sendo o identificador; o nome é
+ * rótulo de download e chave de armazenamento. ⚠️ O `tripod-api` e o Compilador
+ * ainda esperam os nomes antigos — ver ENG-358/ENG-359.
+ *
+ * O fallback de slug vazio ("story") é único para os três, também da ENG-359: a
+ * referência divergia ("colar" nos JSONs, "historia" no .md, L1152) e o quirk
+ * não sobreviveu à renomeação. Quase morto na prática — `segment()` garante
+ * slug. O fallback é SÓ de nome de arquivo: o `story_slug` dentro do retorno é
+ * o slug cru.
+ */
 export function manifestoFilename(slug: string): string {
-  return `${slug || 'colar'}-manifesto-contas.json`;
+  return `${slug || 'story'}-bead-manifest.json`;
 }
 
 export function retornoFilename(slug: string): string {
-  return `${slug || 'colar'}-retorno-ancoragem.json`;
+  return `${slug || 'story'}-anchoring-return.json`;
 }

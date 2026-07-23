@@ -77,7 +77,7 @@ describe('buildMapReport — cabeçalho e esqueleto', () => {
     expect(md.endsWith('\n\n')).toBe(false);
   });
 
-  it('sem slug, o título cai em "story" (o filename segue em "historia" — ENG-356 não renomeia arquivos)', () => {
+  it('sem slug, o título cai em "story", igual ao fallback do filename (ENG-359)', () => {
     const md = buildMapReport(baseState({ slug: '', mapping: emptyMapping() }));
     expect(md.startsWith('# Meaning Mapping Report — story\n')).toBe(true);
   });
@@ -232,10 +232,10 @@ describe('buildMapReport — a voz nunca entra no artefato (ENG-356)', () => {
 
 describe('relatorioFilename', () => {
   it('usa o slug', () => {
-    expect(relatorioFilename('fluxo-minimo')).toBe('fluxo-minimo-relatorio-mapeamento.md');
+    expect(relatorioFilename('fluxo-minimo')).toBe('fluxo-minimo-mapping-report.md');
   });
 
-  it('cai no fallback "historia" (SEM acento) quando o slug é vazio', () => {
-    expect(relatorioFilename('')).toBe('historia-relatorio-mapeamento.md');
+  it('cai no mesmo fallback "story" dos JSONs (a divergência da referência caiu na ENG-359)', () => {
+    expect(relatorioFilename('')).toBe('story-mapping-report.md');
   });
 });

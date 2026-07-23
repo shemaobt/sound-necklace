@@ -162,15 +162,15 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
       readFileSync(join(__dirname, 'expected', 'minimal-flow', file));
     expect(
       Buffer.from(serializeArtifact(buildManifesto(r.state)), 'utf8').equals(
-        golden('manifesto-contas.json'),
+        golden('bead-manifest.json'),
       ),
-      'manifesto-contas.json: bytes divergem do golden',
+      'bead-manifest.json: bytes divergem do golden',
     ).toBe(true);
     expect(
       Buffer.from(serializeArtifact(buildRetorno(r.state)), 'utf8').equals(
-        golden('retorno-ancoragem.json'),
+        golden('anchoring-return.json'),
       ),
-      'retorno-ancoragem.json: bytes divergem do golden',
+      'anchoring-return.json: bytes divergem do golden',
     ).toBe(true);
   });
 

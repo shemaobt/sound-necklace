@@ -218,11 +218,10 @@ function runStepsInPage(steps) {
       }
       case 'export': {
         if (step.artifacts.includes('manifesto'))
-          out['manifesto-contas.json'] = JSON.stringify(buildManifest(), null, 2);
+          out['bead-manifest.json'] = JSON.stringify(buildManifest(), null, 2);
         if (step.artifacts.includes('retorno'))
-          out['retorno-ancoragem.json'] = JSON.stringify(buildReturn(), null, 2);
-        if (step.artifacts.includes('relatorio'))
-          out['relatorio-mapeamento.md'] = buildMapReportMd();
+          out['anchoring-return.json'] = JSON.stringify(buildReturn(), null, 2);
+        if (step.artifacts.includes('relatorio')) out['mapping-report.md'] = buildMapReportMd();
         break;
       }
       default:

@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 1,
   "durationSec": 1,
   "beadSec": 0.5,
   "totalBeads": 2,
@@ -17,7 +17,23 @@
       "span": { "s": 0, "e": 1 },
       "locked": true,
       "scene_kind": "GLEANING_SCENE",
-      "scene_kind_confidence": "high",
+      "scene_kind_confidence": "alta",
+      "tag_state": "tagged"
+    },
+    {
+      "part_id": "PT2",
+      "span": null,
+      "locked": false,
+      "scene_kind": "MEAL_SCENE",
+      "scene_kind_confidence": "média",
+      "tag_state": "tagged"
+    },
+    {
+      "part_id": "PT3",
+      "span": null,
+      "locked": false,
+      "scene_kind": "VOW_SCENE",
+      "scene_kind_confidence": "baixa",
       "tag_state": "tagged"
     }
   ],
@@ -25,7 +41,7 @@
   "frases": [
     {
       "prop_id": "P1",
-      "statement": "A chegada.",
+      "statement_pt": "A chegada.",
       "qa": ["Quem chega?"],
       "span": { "s": 0, "e": 1 },
       "part_link": "PT1",

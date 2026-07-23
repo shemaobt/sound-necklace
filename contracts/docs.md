@@ -4,8 +4,8 @@ Path: @/contracts
 
 ### Overview
 
-- Zod-4-validated DTOs, mappers, and **the serializer** — the single place where the app's artifacts and exchanged payloads take their exact byte shape: `manifesto-contas.json`, `retorno-ancoragem.json`, the report `.md` builder, session state, pipeline imports, and API/bucket payloads.
-- The artifact export trio is complete: @/contracts/serialize.ts (the one JSON serializer + export filenames), @/contracts/manifesto.ts and @/contracts/retorno.ts (schema + mapper + export gate each), and @/contracts/relatorio.ts (the `<slug>-relatorio-mapeamento.md` builder), plus valid/invalid schema fixtures under `fixtures/`. ENG-235 added @/contracts/api.ts and @/contracts/bucket.ts (endpoint + bucket DTOs, since reconciled with the real tripod-api OpenAPI — see below). ENG-234 completed the layer with @/contracts/session-state.ts (versioned full-session autosave DTO + round-trip mappers) and @/contracts/imports.ts (the two pipeline import mappers).
+- Zod-4-validated DTOs, mappers, and **the serializer** — the single place where the app's artifacts and exchanged payloads take their exact byte shape: `bead-manifest.json`, `anchoring-return.json`, the report `.md` builder, session state, pipeline imports, and API/bucket payloads.
+- The artifact export trio is complete: @/contracts/serialize.ts (the one JSON serializer + export filenames), @/contracts/manifesto.ts and @/contracts/retorno.ts (schema + mapper + export gate each), and @/contracts/relatorio.ts (the `<slug>-mapping-report.md` builder), plus valid/invalid schema fixtures under `fixtures/`. ENG-235 added @/contracts/api.ts and @/contracts/bucket.ts (endpoint + bucket DTOs, since reconciled with the real tripod-api OpenAPI — see below). ENG-234 completed the layer with @/contracts/session-state.ts (versioned full-session autosave DTO + round-trip mappers) and @/contracts/imports.ts (the two pipeline import mappers).
 - Exists as its own frozen layer because byte-identity of artifacts is the product's core promise to the downstream pipeline. Mappers are 1:1 ports of the reference's export functions in @/docs/reference/index.html.
 
 ### How it fits into the larger codebase
@@ -42,3 +42,9 @@ Path: @/contracts
 - Byte-identity is fragile by nature: key order, number formatting, and newline discipline all matter. Node and Chromium are both V8, so `JSON.stringify` number formatting matches across the golden-harness boundary — do not introduce any other serialization path.
 
 Created and maintained by Nori.
+
+## Nomes de arquivo e versões do DTO (ENG-357/ENG-359)
+
+- **Filenames em inglês** (@/contracts/serialize.ts, @/contracts/relatorio.ts): `<slug>-bead-manifest.json`, `<slug>-anchoring-return.json`, `<slug>-mapping-report.md`, com fallback único `story` para slug vazio. O `kind` da API (`manifest`/`anchoring`/`report`) continua sendo o **handle do contrato** — o nome do arquivo é rótulo de download e chave de armazenamento. ⚠️ `tripod-api` e Compilador ainda esperam os nomes PT-BR (ENG-358); `contracts/openapi.json` é gerado do backend e por isso ainda descreve o contrato antigo — não editar à mão.
+- **DTO de sessão versionado** (@/contracts/session-state.ts): `schema_version` 2 é a forma corrente (inglesa); 1 é a forma PT-BR anterior à ENG-356. `fromSessionDto` recebe `unknown` e é o **único ponto de validação da borda de leitura** — o adapter entrega o corpo cru (`http.ts`: "validado a fundo pela camada de estado"). Aceita v1 e promove para v2; `SessionStateDtoSchema` (v2) **recusa** v1, porque migrar é passo explícito e não tolerância de schema. Reabrir e salvar promove a sessão.
+- Buraco conhecido: sessões gravadas na janela de um commit entre a ENG-356 e a ENG-357 carregam a forma v2 carimbada como v1 e reprovam nas duas validações — deliberadamente, já que falhar alto é melhor que reidratar meio estado.

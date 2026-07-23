@@ -8,9 +8,9 @@ import { ColarApp } from './support';
 
 /**
  * Acceptance 2 (plano-de-acao §3.2; PRD v2 §10 — o gate mais duro): dirigir a UI REAL
- * com as decisões de um caso golden produz downloads de `retorno-ancoragem.json` e
- * `manifesto-contas.json` byte-idênticos aos goldens da referência, e um
- * `relatorio-mapeamento.md` byte-idêntico ao seu golden. O golden harness já prova
+ * com as decisões de um caso golden produz downloads de `anchoring-return.json` e
+ * `bead-manifest.json` byte-idênticos aos goldens da referência, e um
+ * `mapping-report.md` byte-idêntico ao seu golden. O golden harness já prova
  * domain+contracts = referência; ESTE teste fecha a última fresta: o fio da UI
  * (Setup→…→Export) não introduz nenhuma divergência de serialização ou de estado.
  *
@@ -107,9 +107,9 @@ test('minimal-flow: os três artefatos exportados pela UI são byte-idênticos a
   await app.completeSession();
 
   for (const [shown, golden, filenameFor] of [
-    ['retorno-ancoragem.json', 'retorno-ancoragem.json', retornoFilename],
-    ['manifesto-contas.json', 'manifesto-contas.json', manifestoFilename],
-    ['relatorio-mapeamento.md', 'relatorio-mapeamento.md', relatorioFilename],
+    ['anchoring-return.json', 'anchoring-return.json', retornoFilename],
+    ['bead-manifest.json', 'bead-manifest.json', manifestoFilename],
+    ['mapping-report.md', 'mapping-report.md', relatorioFilename],
   ] as const) {
     const { filename, bytes } = await downloadFromExport(page, shown);
     expect(filename).toBe(filenameFor(slug));
@@ -142,8 +142,8 @@ test('seam-small-move: manifesto+retorno exportados pela UI são byte-idênticos
   await app.completeSession(); // sem respostas: o gate de export só pede ≥1 frase produtiva
 
   for (const [shown, golden, filenameFor] of [
-    ['retorno-ancoragem.json', 'retorno-ancoragem.json', retornoFilename],
-    ['manifesto-contas.json', 'manifesto-contas.json', manifestoFilename],
+    ['anchoring-return.json', 'anchoring-return.json', retornoFilename],
+    ['bead-manifest.json', 'bead-manifest.json', manifestoFilename],
   ] as const) {
     const { filename, bytes } = await downloadFromExport(page, shown);
     expect(filename).toBe(filenameFor(slug));
@@ -190,9 +190,9 @@ test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate co
   await expect(page.getByRole('button', { name: 'Unlock to edit' })).toBeVisible();
 
   for (const [shown, golden, filenameFor] of [
-    ['retorno-ancoragem.json', 'retorno-ancoragem.json', retornoFilename],
-    ['manifesto-contas.json', 'manifesto-contas.json', manifestoFilename],
-    ['relatorio-mapeamento.md', 'relatorio-mapeamento.md', relatorioFilename],
+    ['anchoring-return.json', 'anchoring-return.json', retornoFilename],
+    ['bead-manifest.json', 'bead-manifest.json', manifestoFilename],
+    ['mapping-report.md', 'mapping-report.md', relatorioFilename],
   ] as const) {
     // O nome EXIBIDO no card é o do contrato e nunca traduz — o locator vale nos dois idiomas.
     const card = page.locator('.cds-export .cds-document-card', { hasText: shown });

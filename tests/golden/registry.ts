@@ -110,7 +110,7 @@ const manifestReplayer: Replayer = (steps) => {
         const { artifacts } = step as ExportStep;
         if (artifacts.includes('manifesto')) {
           if (!state) throw new Error('export antes de segment');
-          out['manifesto-contas.json'] = serializeArtifact(buildManifesto(state));
+          out['bead-manifest.json'] = serializeArtifact(buildManifesto(state));
         }
         if (artifacts.some((a) => a !== 'manifesto')) {
           throw new Error('manifestReplayer só produz o manifesto (ENG-214)');
@@ -180,7 +180,7 @@ interface AnswerStep extends GoldenStep {
 }
 
 interface ImportReturnStep extends GoldenStep {
-  /** um retorno-ancoragem.json cru (validado por ReturnSchema no replay) */
+  /** um anchoring-return.json cru (validado por ReturnSchema no replay) */
   dto: unknown;
 }
 
@@ -348,13 +348,13 @@ const sessionExportReplayer: Replayer = (steps) => {
   }
   const out: Record<string, string> = {};
   if (step.artifacts.includes('manifesto')) {
-    out['manifesto-contas.json'] = serializeArtifact(buildManifesto(state));
+    out['bead-manifest.json'] = serializeArtifact(buildManifesto(state));
   }
   if (step.artifacts.includes('retorno')) {
-    out['retorno-ancoragem.json'] = serializeArtifact(buildRetorno(state));
+    out['anchoring-return.json'] = serializeArtifact(buildRetorno(state));
   }
   if (step.artifacts.includes('relatorio')) {
-    out['relatorio-mapeamento.md'] = buildMapReport(state);
+    out['mapping-report.md'] = buildMapReport(state);
   }
   return out;
 };
