@@ -52,7 +52,7 @@ Stubs behind interfaces (do not hardcode): `GranularityResolver` (acousteme → 
 
 ## UI rules
 
-- **PT-BR is the default UI language and the artifact language; the UI chrome is PT/EN** (`ui/i18n/`, react-i18next). Quoted strings in the PRDs remain contract-level copy — reuse them verbatim, but as values in `ui/i18n/pt.ts` (never hardcoded in a component; `en.ts` is key-parity-checked by the typechecker). Exported artifacts are NEVER routed through i18n: they are built by `contracts/` from `domain/` PT-BR data. Copy defined inside `domain/`/`contracts/` (gate/error messages) still renders PT-BR under an EN UI — translating it is a frozen-layer change.
+- **PT-BR is the default UI language and the UI chrome is PT/EN** (`ui/i18n/`, react-i18next); **artifacts are always English** (owner decision, ENG-326 — PT/EN are working languages, the exported output is English; the contract normalization itself is ENG-356). Quoted strings in the PRDs remain contract-level copy — reuse them verbatim, but as values in `ui/i18n/pt.ts` (never hardcoded in a component; `en.ts` is key-parity-checked by the typechecker). Exported artifacts are NEVER routed through i18n: they are built by `contracts/` from `domain/` data, and any PT text reaches them only as **human-confirmed English**. Copy defined inside `domain/`/`contracts/` (gate/error messages) still renders PT-BR under an EN UI — translating it is a frozen-layer change.
 - Listener-facing screens: max ONE short instruction line, one dominant action, **no counters/numbers/IDs/tables**. Audio responds before text (bead click plays the bead; edge nudge plays ~1 s around the boundary only). Facilitator surfaces (dashboard, coverage drawer, setup) may be denser.
 - Never punish: errors guide, warnings allow a second-click proceed, border-crossing offers choices.
 - Respect `prefers-reduced-motion`; visible focus outlines; header sound toggle.
@@ -76,7 +76,12 @@ Anti-gaming rules (for autonomous sessions): never lower a threshold, delete a f
 - Never touch a module another active session owns. `contracts/` and `domain/` PRs require human review; `ui/` and `adapters/` (fixture-safe) may merge on green.
 - Sacrifice order if time runs out: tutorial popup → animated guide (static human figure is acceptable) → TTS → audit-log UI. Domain and contracts never give.
 - Never add telemetry/analytics on listener behavior. No network calls from `domain/`.
-- **No AI-generated *content*.** The app never transcribes, translates, or invents anything the story contains or the listener said. The interview's spoken voice is the one carve-out and it is not an exception to the rule: it reads **human-authored frozen strings** (`domain/mapeamento-scripts.ts`), is synthesized **by our API**, never by the SPA, and its use is disclosed on the setup screen (PRD v2 §4, §8.7, §12). Anything beyond that — a model touching the story, an answer, or a classification — is still forbidden.
+- **No AI-generated *content*, with exactly three carve-outs.** No model ever touches the **story audio**, and no model ever classifies, decides, or invents meaning. Three model uses are allowed, and all four conditions apply to each of them: run **by our API, never by the SPA**; **disclosed on the setup screen**; producing a **draft only**; and **an unconfirmed draft never enters an artifact**.
+  1. **Interview voice** — speaks **human-authored frozen strings** (`domain/mapeamento-scripts.ts`); nothing the listener said is ever sent to the voice provider.
+  2. **STT of the voice answers** — an **editable transcription draft** of what the listener recorded; a human confirms it before it counts.
+  3. **PT→EN translation** — a **translation draft** of confirmed PT text, confirmed by a **bilingual** human before export.
+
+  Still forbidden: a model transcribing, translating, or analysing the **story audio**; a model producing or suggesting a `scene_kind`, a confidence, or the meaning map; and any unconfirmed draft reaching an artifact (PRD v2 §1.1, §4, §8.7, §12, §14).
 
 ## Loop execution contract (read every iteration)
 
