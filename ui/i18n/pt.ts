@@ -183,7 +183,6 @@ export const pt = {
   },
   sessionList: {
     statusInProgress: 'Em andamento',
-    statusPreparingReview: 'Preparando a revisão',
     statusCompleted: 'Concluída',
     editedAt: 'Editado {{when}}',
     newStoryTitle: 'Comece uma nova história',

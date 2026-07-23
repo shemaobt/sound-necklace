@@ -70,7 +70,6 @@ const STEPS: readonly { key: SessionStep; labelKey: string }[] = [
 
 const STATUS: Record<SessionSummary['status'], SessionStatus> = {
   in_progress: 'in-progress',
-  preparing_review: 'preparing-review',
   completed: 'completed',
 };
 

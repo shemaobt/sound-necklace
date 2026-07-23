@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Pearl } from '../../atoms';
 import { scenePalette } from '../../tokens';
 
-export type SessionStatus = 'in-progress' | 'preparing-review' | 'completed';
+export type SessionStatus = 'in-progress' | 'completed';
 
 export interface SessionCardData {
   id: string;
@@ -34,7 +34,6 @@ export interface SessionListProps {
 /** Status → chave i18n (a cópia vive no dicionário — ENG-279). */
 const STATUS_KEY: Record<SessionStatus, string> = {
   'in-progress': 'sessionList.statusInProgress',
-  'preparing-review': 'sessionList.statusPreparingReview',
   completed: 'sessionList.statusCompleted',
 };
 

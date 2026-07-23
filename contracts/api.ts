@@ -91,14 +91,8 @@ export type MyProjectRolesResponse = z.infer<typeof MyProjectRolesResponseSchema
 
 // ── Sessions (§7.2/§7.3) ──
 
-/**
- * Estados do ciclo de vida (§7.3), em ascii no fio (rótulo acentuado é display).
- * `preparing_review` (ENG-327) marca a janela do job assíncrono de transcrição:
- * a entrevista acabou, os rascunhos estão sendo preparados, e dá para sair e
- * voltar sem perder nada. Quem emite é a API (ENG-325); até ela existir, só o
- * fixture o produz.
- */
-export const SessionStatusSchema = z.enum(['in_progress', 'preparing_review', 'completed']);
+/** Estados do ciclo de vida (§7.3), em ascii no fio (rótulo acentuado é display). */
+export const SessionStatusSchema = z.enum(['in_progress', 'completed']);
 export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 
 /** As seis estações do fio de contas (§8.0), como indicador de progresso glanceável. */

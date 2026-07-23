@@ -165,7 +165,6 @@ export const en: Dict = {
   },
   sessionList: {
     statusInProgress: 'In progress',
-    statusPreparingReview: 'Preparing review',
     statusCompleted: 'Completed',
     editedAt: 'Edited {{when}}',
     newStoryTitle: 'Start a new story',
