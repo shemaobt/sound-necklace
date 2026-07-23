@@ -124,6 +124,16 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
     if (plan(i).typed) await app.typeAnswerInReport(i, typedText(i));
   }
 
+  // As respostas SÓ-VOZ chegam com um rascunho de transcrição+tradução (ENG-327).
+  // Confirmar o inglês é o que as transforma em texto — e é REQUISITO para exportar:
+  // sem isso, `completeSession()` abaixo seria recusada.
+  const confirmedEn = new Map<number, string>();
+  for (let i = 0; i < EXPECTED_WORDINGS.length; i++) {
+    const { voice, typed } = plan(i);
+    if (voice && !typed) confirmedEn.set(i, await app.confirmDraftInReport(i));
+  }
+  expect(confirmedEn.size).toBe(11);
+
   // ——— conclui e guarda os documentos ———
   await app.completeSession();
 
@@ -168,8 +178,12 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
     if (typed) {
       expect(storedTyped).toBe(typedText(i)); // texto na chave level{1,2,3} exata
       expect(md).toContain(typedText(i)); // e refletido na célula
+    } else if (voice) {
+      // só-voz: o inglês CONFIRMADO virou a resposta, pela mesma chave de sempre
+      expect(storedTyped).toBe(confirmedEn.get(i));
+      expect(md).toContain(confirmedEn.get(i)!);
     } else {
-      expect(storedTyped).toBe(''); // só-voz/nenhuma não deixam texto
+      expect(storedTyped).toBe(''); // sem gravação e sem texto: nada
     }
 
     if (voice) {
@@ -178,16 +192,19 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
       expect(voicePaths.has(path)).toBe(false);
     }
 
-    // célula do `.md` (ENG-356): SÓ o texto confirmado. A gravação é proveniência,
-    // fica no bucket e NUNCA entra no artefato — só-voz cai em "(no answer)".
+    // célula do `.md`: SÓ o texto confirmado. A gravação é proveniência — fica no
+    // bucket e NUNCA entra no artefato (ENG-356/ENG-327).
     expect(md).not.toContain(path);
-    if (!typed) noneCount++;
+    if (!voice && !typed) noneCount++;
   }
 
-  // sem texto confirmado (nenhuma resposta OU só-voz) → exatamente uma "(no answer)"
+  // aqui os bytes vieram do app REAL, pelo store real — não de um builder isolado
   expect(md).not.toContain('respostas/');
+
+  // só as perguntas sem gravação E sem texto rendem "(no answer)": as só-voz foram
+  // confirmadas acima, e sem isso a exportação nem teria acontecido
   expect(md.match(/_\(no answer\)_/g) ?? []).toHaveLength(noneCount);
-  expect(noneCount).toBe(21); // 10 sem nada + 11 só-voz
+  expect(noneCount).toBe(10);
 
   // sanidade do mix: 21 caminhos de voz gravados (só-voz 11 + ambas 10)
   expect(voicePaths.size).toBe(21);

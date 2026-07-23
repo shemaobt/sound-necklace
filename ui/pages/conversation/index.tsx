@@ -2,6 +2,7 @@ import { type ComponentType, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
+import type { Transcriber } from '../../../adapters/stt/types';
 import type { SpeechSynthesizer } from '../../../adapters/tts/types';
 import type { UiSound } from '../../../adapters/ui-sound';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
@@ -53,6 +54,12 @@ export interface ConversationProps {
   sound?: UiSound;
   /** Porta de fala (ENG-280): ausente = sem voz (ambiente sem Web Speech) e o botão some. */
   speaker?: SpeechSynthesizer | null;
+  /** Transcrição+tradução: o relatório dispara o job ao abrir (ENG-327). */
+  stt?: Transcriber | null;
+  /** Id da sessão — o job de transcrição é por sessão. */
+  sessionId?: string | null;
+  /** Versão da gravação de cada resposta: regravar invalida o rascunho (ENG-327). */
+  recordingVersion?: Record<string, number>;
   /** O shell registra o caminho `respostas/…` recém-gravado no `meta.voice` da sessão (ENG-276). */
   onVoiceSaved?: (path: string) => void;
   /**
@@ -82,6 +89,10 @@ interface ReportSlotProps {
   recorder?: VoiceRecorder | null;
   /** Descoberta de voz feita pelo preparo pré-revisão (ENG-337). */
   preloaded?: { checked: ReadonlySet<string>; has: ReadonlySet<string> };
+  /** Transcrição+tradução das respostas gravadas (ENG-327). */
+  stt?: Transcriber | null;
+  sessionId?: string | null;
+  recordingVersion?: Record<string, number>;
 }
 
 /**
@@ -395,6 +406,9 @@ export function Conversation({
   onVoiceSaved,
   onGoToExport,
   voicePaths = () => [],
+  stt = null,
+  sessionId = null,
+  recordingVersion,
 }: ConversationProps) {
   const { t, i18n } = useTranslation();
   const muted = useAppStore((s) => s.muted);
@@ -470,7 +484,13 @@ export function Conversation({
         {ReportStation ? (
           // sem o recorder o relatório não acha gravação nenhuma e todo card cai no
           // "ainda sem resposta gravada" — a voz da entrevista ficava inalcançável lá
-          <ReportStation recorder={recorder} preloaded={reportVoice ?? undefined} />
+          <ReportStation
+            recorder={recorder}
+            preloaded={reportVoice ?? undefined}
+            stt={stt}
+            sessionId={sessionId}
+            recordingVersion={recordingVersion}
+          />
         ) : (
           <div className="cds-conversation-report-fallback">
             <p>{t('conversation.reportFallback')}</p>

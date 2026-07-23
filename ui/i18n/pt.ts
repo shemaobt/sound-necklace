@@ -87,6 +87,12 @@ export const pt = {
     waitEyebrow: 'Guardando',
     waitLine: 'Reunindo as decisões de vocês nos documentos…',
     anchoringBlocked: 'Confirme o colar antes de exportar.',
+    reportBlocked_one:
+      'Ainda há 1 resposta gravada sem o texto em inglês confirmado. Confirme-a no relatório — ou escreva a resposta à mão.',
+    reportBlocked_other:
+      'Ainda há {{count}} respostas gravadas sem o texto em inglês confirmado. Confirme cada uma no relatório — ou escreva a resposta à mão.',
+    reportBlockedUnknown:
+      'Não consegui conferir quais respostas foram gravadas. Recarregue a página antes de guardar.',
     semFim: '{{n}} frase(s) ainda sem fim travado.',
     reopen: 'Destravar para editar',
     complete: 'Concluir e guardar os documentos',
@@ -239,7 +245,7 @@ export const pt = {
     },
     report: {
       title: 'A conversa sobre o sentido',
-      description: 'O relatório editável, com as respostas em voz referenciadas por pergunta.',
+      description: 'O relatório editável, com o texto confirmado de cada resposta.',
     },
     saved: 'documentos salvos — nada saiu deste computador',
   },
@@ -341,6 +347,16 @@ export const pt = {
     voicePending: 'procurando a resposta gravada',
     writeAnswer: 'escrever a resposta',
     addNote: 'acrescentar uma observação',
+    draftsRegion: 'rascunhos das respostas',
+    draftsReady_one: 'Sugestão pronta — {{count}} resposta para revisar.',
+    draftsReady_other: 'Sugestão pronta — {{count}} respostas para revisar.',
+    transcribing: 'transcrevendo a resposta…',
+    draftBadge: 'sugestão — revise',
+    draftSource: 'o que se ouviu',
+    draftEnglish: 'em inglês (vai para o documento)',
+    draftConfirm: 'confirmar o inglês',
+    draftRetry: 'tentar de novo',
+    draftFailed: 'não consegui transcrever agora — dá para escrever a resposta à mão',
   },
   conversationStage: {
     listen: 'Ouvir a pergunta',

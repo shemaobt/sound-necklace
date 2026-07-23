@@ -237,6 +237,19 @@ export class ColarApp {
     await this.page.getByRole('textbox', { name: 'resposta' }).nth(index).fill(text);
   }
 
+  /**
+   * Confirma o inglês sugerido no cartão `index` (ENG-327). Espera o rascunho
+   * chegar (o job é assíncrono) e devolve o texto que virou a resposta.
+   */
+  async confirmDraftInReport(index: number): Promise<string> {
+    const card = this.page.locator('.cds-report-card').nth(index);
+    const confirm = card.getByRole('button', { name: /confirmar o inglês/i });
+    await confirm.waitFor({ state: 'visible', timeout: 15000 });
+    const en = await card.locator('.cds-report-draft-en').inputValue();
+    await confirm.click();
+    return en;
+  }
+
   /** Anda até a prévia do relatório clicando "Próxima pergunta" até a conversa acabar. */
   async walkToReport(): Promise<void> {
     for (let step = 0; step < 60; step++) {
@@ -273,7 +286,33 @@ export class ColarApp {
     // …texto DEPOIS, no relatório (§8.7 "a facilitadora pode escrever depois")
     await this.walkToReport();
     await this.typeAnswerInReport(0, TYPED_ANSWER);
+    // e o inglês das respostas gravadas é CONFIRMADO (ENG-327): sem isso elas não
+    // viram texto nenhum, e a exportação fica travada — como no app de verdade.
+    await this.confirmAllDrafts();
     return { voicedLevels: [...voiced].sort(), typed: true };
+  }
+
+  /**
+   * Confirma o inglês sugerido em TODOS os cartões que ainda mostram um rascunho
+   * (ENG-327). Percorre por posição porque confirmar um cartão remove o próprio
+   * botão, e a lista encolhe a cada clique.
+   */
+  async confirmAllDrafts(): Promise<number> {
+    const buttons = this.page.getByRole('button', { name: /confirmar o inglês/i });
+    // o job é assíncrono: sem esperar o PRIMEIRO rascunho, a contagem seria 0 e o
+    // laço sairia sem confirmar nada
+    try {
+      await buttons.first().waitFor({ state: 'visible', timeout: 15000 });
+    } catch {
+      return 0; // nenhuma resposta gravada nesta sessão
+    }
+    let confirmed = 0;
+    for (let guard = 0; guard < 60; guard++) {
+      if ((await buttons.count()) === 0) break;
+      await buttons.first().click();
+      confirmed++;
+    }
+    return confirmed;
   }
 
   // ——— fio de contas / Export ———

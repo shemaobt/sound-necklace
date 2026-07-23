@@ -251,3 +251,81 @@
     animation: none;
   }
 }
+
+/* ——— rascunho de transcrição + tradução (ENG-327) ———
+   A sugestão da máquina precisa LER-SE como sugestão: fundo areia recuado e uma
+   pílula que a nomeia. O estado nunca é só cor (WCAG 1.4.1) — a pílula é texto. */
+.cds-report-draft {
+  margin: 10px 0 2px;
+  padding: 10px 12px;
+  border: 1px dashed #d9c9a6;
+  border-radius: 10px;
+  background: #f6f1e4;
+}
+
+.cds-report-draft-badge {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ede7d6;
+  color: var(--cds-ink-subtle);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.cds-report-draft-label {
+  display: block;
+  margin: 6px 0 2px;
+  color: var(--cds-ink-subtle);
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+}
+
+/* a origem é REFERÊNCIA, não campo: quem confere o inglês olha para cá */
+.cds-report-draft-source {
+  margin: 0 0 4px;
+  color: var(--cds-olive);
+  font-family: var(--cds-font-quiet-voice);
+  font-size: 14.5px;
+  font-style: italic;
+  line-height: 1.55;
+}
+
+.cds-report-draft-en {
+  width: 100%;
+  padding: 0 0 0 14px;
+  border: none;
+  border-left: 2px solid #c9b98f;
+  border-radius: 0;
+  background: transparent;
+  color: var(--cds-olive);
+  font-family: var(--cds-font-quiet-voice);
+  font-size: 15px;
+  line-height: 1.6;
+  field-sizing: content;
+  resize: none;
+  overflow: hidden;
+}
+
+/* "transcrevendo…" / a falha: uma linha quieta, nunca um alarme (§9 nunca punir) */
+.cds-report-draft-status {
+  margin: 8px 0 2px;
+  color: var(--cds-ink-subtle);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* O anúncio dos rascunhos é para o leitor de tela E para quem enxerga: uma linha
+   quieta, no tom das eyebrows. Vazia, não ocupa espaço (:empty) — a região precisa
+   existir no DOM desde o início para ser anunciada, mas não deve abrir um buraco. */
+.cds-report-drafts-live {
+  margin: 0 0 6px;
+  color: var(--cds-ink-subtle);
+  font-size: 13.5px;
+}
+
+.cds-report-drafts-live:empty {
+  margin: 0;
+}

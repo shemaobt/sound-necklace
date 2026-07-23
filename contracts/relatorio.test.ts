@@ -3,13 +3,15 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBeads,
   createSession,
+  questionSequence,
+  voiceAnswerPath,
   type Frase,
   type Mapping,
   type ScenePart,
   type SessionState,
 } from '../domain';
 
-import { buildMapReport, relatorioFilename } from './relatorio';
+import { buildMapReport, relatorioFilename, reportExportStatus } from './relatorio';
 
 function baseState(over: Partial<SessionState> = {}): SessionState {
   const beadSec = 0.5;
@@ -227,6 +229,60 @@ describe('buildMapReport — a voz nunca entra no artefato (ENG-356)', () => {
     ]) {
       expect(md, `resíduo PT-BR: ${pt}`).not.toContain(pt);
     }
+  });
+});
+
+describe('reportExportStatus — inglês confirmado é requisito de exportação (ENG-327)', () => {
+  const stateWith = (mapping: Mapping): SessionState =>
+    baseState({ parts: [part({})], frases: [frase({})], mapping });
+
+  const allPaths = (state: SessionState): Set<string> =>
+    new Set(questionSequence(state).map((slot) => voiceAnswerPath(slot)));
+
+  it('sem gravação nenhuma, exporta — perguntas em branco não travam', () => {
+    const state = stateWith(emptyMapping());
+    expect(reportExportStatus(state, new Set())).toEqual({ canExport: true, pendingSlots: 0 });
+  });
+
+  it('uma resposta gravada sem texto confirmado trava a exportação', () => {
+    const state = stateWith(emptyMapping());
+    const voice = new Set([voiceAnswerPath({ level: 1, k: 'recontar' })]);
+    expect(reportExportStatus(state, voice)).toEqual({ canExport: false, pendingSlots: 1 });
+  });
+
+  it('confirmar o texto daquela resposta libera a exportação', () => {
+    const state = stateWith({ ...emptyMapping(), level1: { recontar: 'Confirmed English.' } });
+    const voice = new Set([voiceAnswerPath({ level: 1, k: 'recontar' })]);
+    expect(reportExportStatus(state, voice)).toEqual({ canExport: true, pendingSlots: 0 });
+  });
+
+  it('conta cada resposta gravada e ainda não confirmada, nos três níveis', () => {
+    // 1 cena travada + 1 frase ⇒ 11 (N1) + 5 (N2) + 5 (N3) = 21 perguntas, todas gravadas
+    const state = stateWith(emptyMapping());
+    expect(reportExportStatus(state, allPaths(state))).toEqual({
+      canExport: false,
+      pendingSlots: 21,
+    });
+  });
+
+  it('conta só as que ainda faltam quando parte já foi confirmada', () => {
+    const state = stateWith({
+      ...emptyMapping(),
+      level1: { recontar: 'Confirmed.', arco_inicio_fim: 'Confirmed.' },
+    });
+    const voice = new Set([
+      voiceAnswerPath({ level: 1, k: 'recontar' }),
+      voiceAnswerPath({ level: 1, k: 'arco_inicio_fim' }),
+      voiceAnswerPath({ level: 1, k: 'lugar' }),
+      voiceAnswerPath({ level: 2, partId: 'PT1', k: 'quem' }),
+    ]);
+    expect(reportExportStatus(state, voice)).toEqual({ canExport: false, pendingSlots: 2 });
+  });
+
+  it('texto só de espaços não conta como confirmado (o .md também o descartaria)', () => {
+    const state = stateWith({ ...emptyMapping(), level1: { recontar: '   ' } });
+    const voice = new Set([voiceAnswerPath({ level: 1, k: 'recontar' })]);
+    expect(reportExportStatus(state, voice)).toEqual({ canExport: false, pendingSlots: 1 });
   });
 });
 

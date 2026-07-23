@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { AnswerDraft, Transcriber } from '../../../adapters/stt/types';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import {
   type AnswerSlot,
@@ -17,6 +18,7 @@ import { Button, WaveformBar } from '../../atoms';
 import type { PaletteEntry } from '../../tokens';
 import { type BlockLabels, blockEyebrow } from '../conversation/trechos';
 import { sessionStore, useSessionStore } from '../../state';
+import { type SttPhase, useSttDrafts } from './use-stt-drafts';
 import './report.css';
 
 /**
@@ -35,11 +37,18 @@ import './report.css';
  * `VoiceRecorder` (playback das respostas) por prop; nada de domínio/contracts
  * muda. As edições de texto passam por `setAnswer` (store preguiçoso).
  *
- * A nota da facilitadora ("acrescentar uma observação") vive no answer store sob
- * uma chave reservada `nota__<k>` no MESMO bucket da resposta: persiste no autosave
- * e no round-trip do DTO (buckets são `record<string,string>` livres), mas
- * `buildMapReport` só emite as chaves das perguntas → a nota NUNCA sai no `.md`
- * (§10.4: o esqueleto congelado não tem linhas de nota).
+ * DUAS coisas vivem no answer store sob chaves RESERVADAS, no MESMO bucket da
+ * resposta: a nota da facilitadora (`nota__<k>`) e o inglês em revisão do rascunho
+ * de transcrição (`en__<k>`, ENG-327). Ambas persistem no autosave e no round-trip
+ * do DTO (buckets são `record<string,string>` livres), mas `buildMapReport` só
+ * percorre o vocabulário das perguntas (`L1_Q/L2_Q/L3_Q`) → nenhuma das duas sai no
+ * `.md` (§10.4: o esqueleto congelado não tem essas linhas). É assim que
+ * "rascunho não confirmado nunca entra em artefato" vale POR CONSTRUÇÃO, e não por
+ * lembrança de quem for mexer no builder um dia.
+ *
+ * Confirmar é implícito: o inglês confirmado É a resposta, escrita no slot real
+ * pelo mesmo `setAnswer` da digitação. Não existe flag de confirmação para
+ * dessincronizar — e apagar a resposta desconfirma, que é o que se espera.
  */
 /** Descoberta de voz feita ANTES de abrir a revisão (ENG-337): as linhas nascem prontas. */
 export interface PreloadedVoice {
@@ -52,6 +61,17 @@ export interface PreloadedVoice {
 export interface ReportProps {
   recorder?: VoiceRecorder | null;
   preloaded?: PreloadedVoice;
+  /** Transcrição+tradução das respostas gravadas (ENG-327). Ausente ⇒ só digitar. */
+  stt?: Transcriber | null;
+  /** Sessão do job de transcrição; sem ela o job não dispara. */
+  sessionId?: string | null;
+  /**
+   * Quantas vezes cada resposta foi GRAVADA. Regravar reusa o mesmo caminho, então
+   * é este contador — e só ele — que distingue a gravação nova da antiga: sem ele
+   * um rascunho obsoleto seguiria confirmável, escrevendo no artefato a tradução
+   * de um áudio que a pessoa descartou (ENG-327).
+   */
+  recordingVersion?: Record<string, number>;
 }
 
 /** Prefixo da chave reservada da nota — fora do vocabulário de perguntas. */
@@ -66,9 +86,38 @@ function formatDuration(sec: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
+/**
+ * Prefixo do rascunho de tradução (ENG-327) — mesma mecânica da nota: chave
+ * reservada, fora do vocabulário de perguntas, invisível para `buildMapReport`.
+ * É o que garante "rascunho não confirmado nunca entra em artefato" por
+ * construção, e não por lembrança de quem escreve o builder.
+ */
+const DRAFT_EN_PREFIX = 'en__';
+
+/**
+ * Versão da gravação que produziu o rascunho guardado em `en__<k>`. Precisa ser
+ * DURÁVEL: voltar à entrevista para regravar desmonta o relatório, então um ref
+ * em memória não sobrevive justamente à navegação que ele existe para detectar.
+ */
+const DRAFT_VER_PREFIX = 'enver__';
+
 /** O slot da nota: a mesma resposta sob a chave reservada `nota__<k>`. */
 function noteSlot(slot: QuestionSlot): AnswerSlot {
-  const k = NOTE_PREFIX + slot.k;
+  return reservedSlot(slot, NOTE_PREFIX);
+}
+
+/** O slot do inglês em revisão, ainda NÃO confirmado. */
+function draftEnSlot(slot: QuestionSlot): AnswerSlot {
+  return reservedSlot(slot, DRAFT_EN_PREFIX);
+}
+
+/** O slot da versão de gravação a que o rascunho guardado corresponde. */
+function draftVerSlot(slot: QuestionSlot): AnswerSlot {
+  return reservedSlot(slot, DRAFT_VER_PREFIX);
+}
+
+function reservedSlot(slot: QuestionSlot, prefix: string): AnswerSlot {
+  const k = prefix + slot.k;
   switch (slot.level) {
     case 1:
       return { level: 1, k };
@@ -77,6 +126,27 @@ function noteSlot(slot: QuestionSlot): AnswerSlot {
     case 3:
       return { level: 3, propId: slot.propId, k };
   }
+}
+
+/** id estável para casar <label> e <textarea> do rascunho. */
+function draftFieldId(slot: QuestionSlot): string {
+  return slot.level === 1
+    ? `1-${slot.k}`
+    : slot.level === 2
+      ? `2-${slot.partId}-${slot.k}`
+      : `3-${slot.propId}-${slot.k}`;
+}
+
+/**
+ * A chave existe no bucket? Distingue "nunca preenchida" de "esvaziada por alguém"
+ * — `readAnswer` devolve '' nos dois casos. É o que impede o rascunho de renascer
+ * por cima de uma edição humana quando a tela remonta (voltar à sessão, recarregar).
+ */
+function hasAnswerKey(m: Mapping | null, slot: AnswerSlot): boolean {
+  if (!m) return false;
+  if (slot.level === 1) return slot.k in m.level1;
+  if (slot.level === 2) return slot.k in (m.level2[slot.partId] ?? {});
+  return slot.k in (m.level3[slot.propId] ?? {});
 }
 
 function readAnswer(m: Mapping | null, slot: AnswerSlot): string {
@@ -164,6 +234,69 @@ function PlusGlyph() {
   );
 }
 
+/**
+ * O rascunho da máquina (ENG-327): conselho, nunca resposta. Fica marcado como
+ * sugestão até alguém confirmar o inglês — e é o inglês que vai ao documento.
+ * Digitar à mão continua disponível o tempo todo: se o job falhar ou demorar, o
+ * campo de resposta do cartão resolve sozinho (§8.7 — sem beco sem saída).
+ */
+function DraftReview({
+  slot,
+  show,
+  phase,
+  draft,
+  draftEn,
+  onDraftEn,
+  onConfirm,
+  onRetry,
+}: {
+  slot: QuestionSlot;
+  show: boolean;
+  phase: SttPhase;
+  draft?: AnswerDraft;
+  draftEn: string;
+  onDraftEn?: (text: string) => void;
+  onConfirm?: () => void;
+  onRetry?: () => void;
+}) {
+  const { t } = useTranslation();
+  if (!show) return null;
+  if (phase === 'running')
+    return <p className="cds-report-draft-status">{t('report.transcribing')}</p>;
+  if (phase === 'failed') {
+    return (
+      <p className="cds-report-draft-status">
+        {t('report.draftFailed')}{' '}
+        <Button variant="ghost" size="sm" onClick={onRetry}>
+          {t('report.draftRetry')}
+        </Button>
+      </p>
+    );
+  }
+  if (!draft) return null;
+  const fieldId = `en-${draftFieldId(slot)}`;
+  return (
+    <div className="cds-report-draft">
+      <p className="cds-report-draft-badge">{t('report.draftBadge')}</p>
+      <p className="cds-report-draft-label">{t('report.draftSource')}</p>
+      <p className="cds-report-draft-source">{draft.source}</p>
+      <label className="cds-report-draft-label" htmlFor={fieldId}>
+        {t('report.draftEnglish')}
+      </label>
+      <textarea
+        id={fieldId}
+        className="cds-report-draft-en"
+        rows={2}
+        value={draftEn}
+        onChange={(e) => onDraftEn?.(e.target.value)}
+      />
+      <Button variant="ghost" size="sm" onClick={onConfirm}>
+        {t('report.draftConfirm')}
+      </Button>
+    </div>
+  );
+}
+
 interface ReportCardProps {
   slot: QuestionSlot;
   /** Posição na conversa (protótipo `r.num`): "Q11". Superfície de facilitadora (§7.2). */
@@ -182,6 +315,15 @@ interface ReportCardProps {
   onTyped: (text: string) => void;
   onNote: (text: string) => void;
   onPlay: () => void;
+  /** Fase do job de transcrição desta sessão (ENG-327). */
+  sttPhase?: SttPhase;
+  /** Rascunho desta resposta, quando o job já entregou. */
+  draft?: AnswerDraft;
+  /** Inglês do rascunho, editável antes de confirmar. */
+  draftEn?: string;
+  onDraftEn?: (text: string) => void;
+  onConfirmDraft?: () => void;
+  onRetryDraft?: () => void;
 }
 
 function ReportCard({
@@ -198,12 +340,21 @@ function ReportCard({
   onTyped,
   onNote,
   onPlay,
+  sttPhase = 'idle',
+  draft,
+  draftEn = '',
+  onDraftEn,
+  onConfirmDraft,
+  onRetryDraft,
 }: ReportCardProps) {
   const { t, i18n } = useTranslation();
   const [showNote, setShowNote] = useState(note !== '');
   const facilitatorLed = slot.k === 'ausencia';
   const voiceOnly = hasVoice && !typed.trim();
   const pendingRow = voicePending && !hasVoice && !typed.trim();
+  // O rascunho só interessa enquanto a resposta não tem texto confirmado: uma vez
+  // confirmada, o cartão é uma linha respondida como qualquer outra.
+  const awaitingConfirm = hasVoice && !typed.trim();
 
   return (
     <div className="cds-report-card">
@@ -263,6 +414,17 @@ function ReportCard({
         </div>
       ) : null}
 
+      <DraftReview
+        slot={slot}
+        show={awaitingConfirm}
+        phase={sttPhase}
+        draft={draft}
+        draftEn={draftEn}
+        onDraftEn={onDraftEn}
+        onConfirm={onConfirmDraft}
+        onRetry={onRetryDraft}
+      />
+
       {/* A digitação vive AQUI (decisão do dono: a entrevista é só-voz). Mas o campo
           fica quieto: uma linha, sem caixa nem alça — vazio, lê-se como o
           "ainda sem resposta gravada" em itálico do protótipo, e cresce ao escrever.
@@ -296,7 +458,13 @@ function ReportCard({
   );
 }
 
-export function Report({ recorder = null, preloaded }: ReportProps) {
+export function Report({
+  recorder = null,
+  preloaded,
+  stt = null,
+  sessionId = null,
+  recordingVersion,
+}: ReportProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   // O preload (ENG-337) semeia os dois conjuntos: linha conhecida nasce resolvida,
@@ -337,8 +505,9 @@ export function Report({ recorder = null, preloaded }: ReportProps) {
     });
   }, [recorder]);
 
-  // Descobre quais respostas TÊM gravação (define a linha de voz e alimenta o
-  // `voice` do `buildMapReport` para que o .md referencie a gravação, §10.4).
+  // Descobre quais respostas TÊM gravação: define a linha de voz, escolhe o que vai
+  // para o job de transcrição e conta o que ainda espera confirmação. NUNCA alimenta
+  // o `.md` — a gravação é proveniência e o builder nem recebe caminhos (ENG-356).
   // POR RESPOSTA, sem barreira (ENG-319): um Promise.all sobre os ~41 caminhos
   // segurava TODAS as linhas de voz até o caminho mais lento responder — no modo
   // real (rede + decode por blob) o relatório abria parecendo sem respostas. Cada
@@ -368,6 +537,52 @@ export function Report({ recorder = null, preloaded }: ReportProps) {
     };
   }, [recorder, voicePaths, preloaded]);
 
+  // Só as respostas COM gravação vão para o job — não há o que transcrever nas outras.
+  // `voiceSet` cresce um caminho por vez (ENG-319, sem barreira), então a lista pode
+  // começar parcial. Esperar a descoberta inteira seria pior — um único `has()`
+  // pendurado travaria a transcrição de todas as outras.
+  const recordedPaths = voicePaths.filter((p) => voiceSet.has(p));
+  // Reprocessar (force) quando ALGUMA resposta gravada e ainda-não-confirmada não
+  // está transcrita NA VERSÃO atual: gravação nova (nunca transcrita) ou regravada
+  // (a versão subiu). É DURÁVEL porque compara com `enver__` no mapping — sobrevive a
+  // remontar/sair e voltar à sessão, que era o furo do contador só-em-memória. Uma
+  // resposta já confirmada por texto não precisa de rascunho, então não força.
+  const needsTranscription = recordedPaths.some((p) => {
+    const slot = sequence.find((s) => voiceAnswerPath(s) === p);
+    if (!slot) return false;
+    if (readAnswer(mapped?.mapping ?? null, slot).trim()) return false;
+    const want = String(recordingVersion?.[p] ?? 0);
+    return readAnswer(mapped?.mapping ?? null, draftVerSlot(slot)) !== want;
+  });
+  const {
+    phase: sttPhase,
+    drafts,
+    retry,
+  } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion, needsTranscription);
+
+  // O inglês que chegou vira o conteúdo INICIAL do campo em revisão, gravado uma
+  // única vez na chave reservada. Depois disso o campo é da pessoa: apagá-lo tem
+  // de deixá-lo apagado — ler o rascunho como fallback ressuscitaria o texto que
+  // ela acabou de recusar.
+  useEffect(() => {
+    for (const [path, draft] of Object.entries(drafts)) {
+      const slot = sequence.find((s) => voiceAnswerPath(s) === path);
+      if (!slot) continue;
+      const m = mapped?.mapping ?? null;
+      const version = String(recordingVersion?.[path] ?? 0);
+      const seededVersion = readAnswer(m, draftVerSlot(slot));
+      const known = hasAnswerKey(m, draftEnSlot(slot));
+      // A chave já existe e é da MESMA gravação: houve edição humana (inclusive
+      // apagá-la de propósito) e não se mexe. Se a versão MUDOU, o que está ali é a
+      // tradução de um áudio descartado e precisa dar lugar ao rascunho novo.
+      if (known && seededVersion === version) continue;
+      sessionStore.getState().apply((s) => {
+        const withEn = setAnswer(s.mapping ? s : ensureMapping(s), draftEnSlot(slot), draft.en);
+        return setAnswer(withEn, draftVerSlot(slot), version);
+      });
+    }
+  }, [drafts, sequence, mapped, recordingVersion]);
+
   if (!session || !mapped || !sequence.length) return null;
 
   // eyebrow de bloco COM dígito — o relatório é superfície da facilitadora (§7.2)
@@ -386,6 +601,21 @@ export function Report({ recorder = null, preloaded }: ReportProps) {
       .getState()
       .apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), noteSlot(slot), text));
   };
+  const writeDraftEn = (slot: QuestionSlot, text: string): void => {
+    sessionStore
+      .getState()
+      .apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), draftEnSlot(slot), text));
+  };
+  /** Confirmar: o inglês em revisão vira A resposta, pelo mesmo caminho de digitar. */
+  const confirmDraft = (slot: QuestionSlot, text: string): void => {
+    writeTyped(slot, text);
+  };
+
+  // Quantas respostas gravadas ainda esperam confirmação — o número que o leitor
+  // de tela ouve quando os rascunhos chegam.
+  const toReview = sequence.filter(
+    (s) => voiceSet.has(voiceAnswerPath(s)) && !readAnswer(mapped.mapping, s).trim(),
+  ).length;
 
   return (
     <section className="cds-report">
@@ -393,6 +623,17 @@ export function Report({ recorder = null, preloaded }: ReportProps) {
         <p className="cds-report-eyebrow">{t('report.eyebrow')}</p>
         <p className="cds-report-headline">{t('report.headline')}</p>
       </header>
+      {/* Registrada VAZIA desde o início: uma região live criada junto com o
+          conteúdo não é anunciada. Anuncia o resumo, nunca os rascunhos inteiros,
+          e não move o foco (WCAG 2.2 SC 4.1.3) — quem revisa chega quando quiser. */}
+      <div
+        className="cds-report-drafts-live"
+        role="status"
+        aria-live="polite"
+        aria-label={t('report.draftsRegion')}
+      >
+        {sttPhase === 'done' && toReview > 0 ? t('report.draftsReady', { count: toReview }) : ''}
+      </div>
       {rows.map(({ slot, header, num }) => {
         const path = voiceAnswerPath(slot);
         return (
@@ -431,6 +672,16 @@ export function Report({ recorder = null, preloaded }: ReportProps) {
                 // falha ao abrir (rede): a espera não pode ficar presa
                 void recorder.play(path).catch(() => setOpeningPath(null));
               }}
+              sttPhase={stt ? sttPhase : 'idle'}
+              draft={drafts[path]}
+              // o inglês em revisão começa no que a máquina propôs e passa a viver
+              // na chave reservada assim que alguém encosta nele
+              draftEn={readAnswer(mapped.mapping, draftEnSlot(slot))}
+              onDraftEn={(text) => writeDraftEn(slot, text)}
+              onConfirmDraft={() =>
+                confirmDraft(slot, readAnswer(mapped.mapping, draftEnSlot(slot)))
+              }
+              onRetryDraft={retry}
             />
           </div>
         );

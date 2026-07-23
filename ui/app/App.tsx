@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import { ApiError, AuthError } from '../../adapters/api';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
+import sttRegistration from '../../adapters/stt/register';
+import type { Transcriber } from '../../adapters/stt/types';
 import ttsRegistration from '../../adapters/tts/register';
 import type { SpeechSynthesizer } from '../../adapters/tts/types';
 import voiceRegistration from '../../adapters/voice/register';
@@ -77,6 +79,8 @@ function SessionStations({
   onVoiceSaved,
   initialExport,
   voicePaths,
+  stt,
+  recordingVersion,
 }: {
   session: SessionState;
   sessionId: string;
@@ -94,6 +98,10 @@ function SessionStations({
   initialExport: boolean;
   /** Getter for `meta.voice` — resuming Conversation opens on the first unanswered question (ENG-321). */
   voicePaths: () => readonly string[];
+  /** Transcrição+tradução das respostas gravadas (ENG-327). */
+  stt: Transcriber | null;
+  /** Quantas vezes cada resposta foi gravada — regravar invalida o rascunho. */
+  recordingVersion: Record<string, number>;
 }) {
   // Escolha MANUAL da cauda "Guardar": enquanto null, a vista segue o status da
   // sessão (concluída abre na Export — ENG-320), que pode chegar depois da montagem
@@ -128,6 +136,9 @@ function SessionStations({
             sound,
             onVoiceSaved,
             voicePaths,
+            stt,
+            sessionId,
+            recordingVersion,
             // a prévia do relatório fecha com "Guardar os documentos →" (protótipo
             // toExport); a Export é estado local do shell, então a chave é nossa
             onGoToExport: () => setManualExport(true),
@@ -405,11 +416,18 @@ export function App() {
   // desta sessão e persiste JÁ (autosave + flush): a voz é uma ação discreta e entrar
   // no Export não dispara flush, então esperar o debounce arriscaria o relatório sair
   // com "sem resposta" (§8.7/§10.4, ENG-276). Fora de uma sessão viva/hidratada é no-op.
+  // Versão da GRAVAÇÃO de cada resposta (ENG-327): regravar a mesma pergunta reusa
+  // o mesmo caminho canônico, então sem este contador nada distingue a gravação
+  // nova da antiga — e o rascunho velho continuaria de pé, pronto para ser
+  // confirmado e escrever no artefato a tradução de um áudio descartado.
+  const [recordingVersion, setRecordingVersion] = useState<Record<string, number>>({});
+
   const onVoiceSaved = useCallback(
     (path: string) => {
       const meta = metaRef.current;
       const live = sessionStore.getState().session;
       if (!meta || !live || routeId === null) return;
+      setRecordingVersion((v) => ({ ...v, [path]: (v[path] ?? 0) + 1 }));
       if (!meta.voice.includes(path)) meta.voice = [...meta.voice, path];
       const store = appSessionStore();
       store.autosave(routeId, toSessionDto(live, meta));
@@ -441,6 +459,10 @@ export function App() {
       ? voiceRegistration.fixture()
       : voiceRegistration.real({ store: voiceStoreFor(routeId) });
   }, [routeId]);
+  // Transcrição+tradução das respostas (ENG-327): FIXTURE por enquanto — o job
+  // assíncrono de verdade é da API (ENG-325) e ainda não existe. Trocar por
+  // `sttRegistration.real(...)` quando ela entrar; o resto do fluxo não muda.
+  const stt = useMemo<Transcriber>(() => sttRegistration.fixture(), []);
   // A voz do guia é a implementação REAL, não a fixture: falar de verdade É a feature
   // (ENG-280). Ela busca o clipe ElevenLabs na API com o Web Speech dentro de si como
   // fallback (ENG-284). O wiring (ENG-247) injeta a base real e o Bearer vivo do
@@ -532,6 +554,8 @@ export function App() {
           speaker={speaker}
           sound={sound}
           onVoiceSaved={onVoiceSaved}
+          stt={stt}
+          recordingVersion={recordingVersion}
           initialExport={completed}
           voicePaths={getVoicePaths}
         />

@@ -15,10 +15,14 @@ import {
 import {
   buildBeads,
   createSession,
+  ensureMapping,
   type Frase,
+  L1_Q,
   type ScenePart,
+  setAnswer,
   type SessionState,
   type Span,
+  voiceAnswerPath,
 } from '../../../domain';
 import { splitByGuard } from '../../atoms/testing/css';
 import { sessionStore } from '../../state';
@@ -326,5 +330,83 @@ describe('Export — fronteiras de IO real (ENG-247)', () => {
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('Não consegui baixar o documento.');
     expect(save).not.toHaveBeenCalled();
+  });
+});
+
+describe('Export — inglês confirmado é requisito para guardar (ENG-327)', () => {
+  const Q = L1_Q[0]!;
+  const PATH = voiceAnswerPath({ level: 1, k: Q.k });
+
+  /** Semeia a sessão com UMA resposta gravada, e o texto que a confirma (ou nenhum). */
+  async function seedWithRecording(
+    store: FixtureSessionStore,
+    confirmedText: string | null,
+  ): Promise<{ id: string; state: SessionState }> {
+    let state = ensureMapping(exportable());
+    if (confirmedText !== null) state = setAnswer(state, { level: 1, k: Q.k }, confirmedText);
+    const id = await seedInProgress(store, state);
+    store.autosave(id, toSessionDto(state, { ...META, voice: [PATH] }));
+    await store.flush(id);
+    return { id, state };
+  }
+
+  it('uma resposta gravada sem inglês confirmado impede concluir, e explica por quê', async () => {
+    const store = new FixtureSessionStore();
+    const { id, state } = await seedWithRecording(store, null);
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
+    );
+
+    expect((await store.get(id)).status).toBe('in_progress');
+    expect(screen.getByText(/sem o texto em inglês confirmado/i)).toBeTruthy();
+  });
+
+  it('confirmado o inglês, concluir volta a funcionar', async () => {
+    const store = new FixtureSessionStore();
+    const { id, state } = await seedWithRecording(store, 'He told of the dolphin.');
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
+    );
+
+    expect((await store.get(id)).status).toBe('completed');
+  });
+
+  it('se a custódia não carrega, RECUSA em vez de exportar às cegas', async () => {
+    const store = new FixtureSessionStore();
+    const { id, state } = await seedWithRecording(store, 'He told of the dolphin.');
+    // a rede cai justamente ao ler quais respostas foram gravadas
+    vi.spyOn(store, 'load').mockRejectedValue(new Error('rede fora'));
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
+    );
+
+    // sem saber o que foi gravado, deixar passar exportaria "(no answer)" no lugar
+    // do que a pessoa disse — o gate falha FECHADO
+    expect((await store.get(id)).status).toBe('in_progress');
+    expect(screen.getByText(/não consegui conferir/i)).toBeTruthy();
+  });
+
+  it('o .md guardado leva o texto confirmado e nenhum caminho de gravação', async () => {
+    const store = new FixtureSessionStore();
+    const { id, state } = await seedWithRecording(store, 'He told of the dolphin.');
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
+    );
+
+    const { report } = await store.getArtifacts(id);
+    expect(report).toContain('He told of the dolphin.');
+    expect(report).not.toContain('respostas/');
   });
 });
