@@ -1,7 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -14,8 +10,6 @@ import {
 } from '../domain';
 
 import { buildMapReport, relatorioFilename } from './relatorio';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function baseState(over: Partial<SessionState> = {}): SessionState {
   const beadSec = 0.5;
@@ -37,7 +31,7 @@ function part(over: Partial<ScenePart>): ScenePart {
     span: { s: 0, e: 9 },
     locked: true,
     scene_kind: 'GLEANING_SCENE',
-    scene_kind_confidence: 'alta',
+    scene_kind_confidence: 'high',
     tag_state: 'tagged',
     ...over,
   };
@@ -46,7 +40,7 @@ function part(over: Partial<ScenePart>): ScenePart {
 function frase(over: Partial<Frase>): Frase {
   return {
     prop_id: 'P1',
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: { s: 0, e: 4 },
     part_link: 'PT1',
@@ -60,7 +54,7 @@ const emptyMapping = (): Mapping => ({ level1: {}, level2: {}, level3: {} });
 describe('buildMapReport — cabeçalho e esqueleto', () => {
   it('abre com o título (travessão U+2014) e o slug', () => {
     const md = buildMapReport(baseState({ mapping: emptyMapping() }));
-    expect(md.startsWith('# Relatório de Mapeamento — fluxo-minimo\n\n')).toBe(true);
+    expect(md.startsWith('# Meaning Mapping Report — fluxo-minimo\n\n')).toBe(true);
   });
 
   it('emite a linha de contexto com o manifest e os pontos médios U+00B7', () => {
@@ -83,16 +77,16 @@ describe('buildMapReport — cabeçalho e esqueleto', () => {
     expect(md.endsWith('\n\n')).toBe(false);
   });
 
-  it('sem slug, o título cai em "história" (COM acento — distinto do filename "historia")', () => {
+  it('sem slug, o título cai em "story" (o filename segue em "historia" — ENG-356 não renomeia arquivos)', () => {
     const md = buildMapReport(baseState({ slug: '', mapping: emptyMapping() }));
-    expect(md.startsWith('# Relatório de Mapeamento — história\n')).toBe(true);
+    expect(md.startsWith('# Meaning Mapping Report — story\n')).toBe(true);
   });
 
-  it('com mapping nulo, todas as respostas saem como _(sem resposta)_ (sem quebrar)', () => {
+  it('com mapping nulo, todas as respostas saem como _(no answer)_ (sem quebrar)', () => {
     const md = buildMapReport(baseState({ parts: [part({})], mapping: null }));
-    expect(md).toContain('_(whole)_\n  _(sem resposta)_');
+    expect(md).toContain('_(whole)_\n  _(no answer)_');
     expect(md).toContain(
-      '- **Quem aparece nesse trecho? Pessoas, animais, um grupo, alguém de quem se fala?** _(sem resposta)_',
+      '- **Who appears in this stretch? People, animals, a group, someone who is spoken about?** _(no answer)_',
     );
   });
 });
@@ -100,23 +94,23 @@ describe('buildMapReport — cabeçalho e esqueleto', () => {
 describe('buildMapReport — Nível 1', () => {
   it('cada pergunta ocupa duas linhas: título com _(field)_ e resposta indentada com 2 espaços', () => {
     const md = buildMapReport(
-      baseState({ mapping: { ...emptyMapping(), level1: { recontar: 'Uma história.' } } }),
+      baseState({ mapping: { ...emptyMapping(), level1: { recontar: 'A story.' } } }),
     );
     expect(md).toContain(
-      '- **Conte essa história com as suas palavras, como se fosse para alguém que nunca ouviu.** _(whole)_\n  Uma história.',
+      '- **Tell this story in your own words, as if to someone who has never heard it.** _(whole)_\n  A story.',
     );
   });
 
-  it('resposta ausente vira _(sem resposta)_ na linha indentada', () => {
+  it('resposta ausente vira _(no answer)_ na linha indentada', () => {
     const md = buildMapReport(baseState({ mapping: emptyMapping() }));
-    expect(md).toContain('_(whole)_\n  _(sem resposta)_');
+    expect(md).toContain('_(whole)_\n  _(no answer)_');
   });
 
   it('resposta só de espaços é tratada como ausente', () => {
     const md = buildMapReport(
       baseState({ mapping: { ...emptyMapping(), level1: { recontar: '   ' } } }),
     );
-    expect(md).toContain('_(whole)_\n  _(sem resposta)_');
+    expect(md).toContain('_(whole)_\n  _(no answer)_');
   });
 });
 
@@ -125,12 +119,12 @@ describe('buildMapReport — Nível 2', () => {
     const md = buildMapReport(
       baseState({
         parts: [part({})],
-        mapping: { ...emptyMapping(), level2: { PT1: { quem: 'Duas mulheres.' } } },
+        mapping: { ...emptyMapping(), level2: { PT1: { quem: 'Two women.' } } },
       }),
     );
-    expect(md).toContain('### Cena 1 (S1) — scene_kind: GLEANING_SCENE\n');
+    expect(md).toContain('### Scene 1 (S1) — scene_kind: GLEANING_SCENE\n');
     expect(md).toContain(
-      '- **Quem aparece nesse trecho? Pessoas, animais, um grupo, alguém de quem se fala?** Duas mulheres.',
+      '- **Who appears in this stretch? People, animals, a group, someone who is spoken about?** Two women.',
     );
   });
 
@@ -148,7 +142,7 @@ describe('buildMapReport — Nível 2', () => {
         mapping: emptyMapping(),
       }),
     );
-    expect(md).toContain('### Cena 1 (S1) — scene_kind: (nenhum) [none_fit]');
+    expect(md).toContain('### Scene 1 (S1) — scene_kind: (none) [none_fit]');
   });
 });
 
@@ -158,13 +152,13 @@ describe('buildMapReport — Nível 3', () => {
       baseState({
         parts: [part({})],
         frases: [frase({})],
-        mapping: { ...emptyMapping(), level3: { P1: { oque: 'A chegada.' } } },
+        mapping: { ...emptyMapping(), level3: { P1: { oque: 'The arrival.' } } },
       }),
     );
-    expect(md).toContain('**Frase 1 (P1) — contas 0–4:**');
-    expect(md).toContain('- O que aconteceu nesta frase? A chegada.');
+    expect(md).toContain('**Phrase 1 (P1) — beads 0–4:**');
+    expect(md).toContain('- What happened in this phrase? The arrival.');
     // não-bold: a linha da pergunta L3 não começa com "- **"
-    expect(md).not.toContain('- **O que aconteceu nesta frase?');
+    expect(md).not.toContain('- **What happened in this phrase?');
   });
 
   it('numeração S# tem lacuna quando uma cena none_fit vem antes de uma produtiva', () => {
@@ -184,8 +178,8 @@ describe('buildMapReport — Nível 3', () => {
       }),
     );
     // a única cena produtiva é a PT2, cujo S# é 2 (a none_fit ocupa o índice 1)
-    expect(md).toContain('### Cena 2 (S2) — GLEANING_SCENE');
-    expect(md).toContain('**Frase 1 (P1) — contas 10–23:**');
+    expect(md).toContain('### Scene 2 (S2) — GLEANING_SCENE');
+    expect(md).toContain('**Phrase 1 (P1) — beads 10–23:**');
   });
 
   it('cena produtiva sem frases travadas gera o heading sem blocos de Frase (slot dangling é ignorado)', () => {
@@ -197,40 +191,42 @@ describe('buildMapReport — Nível 3', () => {
         mapping: emptyMapping(),
       }),
     );
-    expect(md).toContain('### Cena 1 (S1) — GLEANING_SCENE');
-    expect(md).not.toContain('**Frase 1');
+    expect(md).toContain('### Scene 1 (S1) — GLEANING_SCENE');
+    expect(md).not.toContain('**Phrase 1');
   });
 });
 
-describe('buildMapReport — respostas por voz (extensão PRD §10.4)', () => {
-  const voice = (): {
-    recordedPaths: string[];
-  } =>
-    JSON.parse(
-      readFileSync(join(__dirname, 'fixtures', 'relatorio', 'voice-answers.json'), 'utf8'),
-    ) as { recordedPaths: string[] };
-
-  it('sem texto, a célula recebe o caminho do recurso de voz nos três níveis', () => {
-    const paths = new Set(voice().recordedPaths);
+describe('buildMapReport — a voz nunca entra no artefato (ENG-356)', () => {
+  it('gravação sem texto confirmado deixa a célula em _(no answer)_', () => {
     const md = buildMapReport(
       baseState({ parts: [part({})], frases: [frase({})], mapping: emptyMapping() }),
-      paths,
     );
-    expect(md).toContain('_(whole)_\n  respostas/level1/recontar.webm');
-    expect(md).toContain(
-      '- **Quem aparece nesse trecho? Pessoas, animais, um grupo, alguém de quem se fala?** respostas/level2/PT1/quem.webm',
-    );
-    expect(md).toContain('- O que aconteceu nesta frase? respostas/level3/P1/oque.webm');
+    expect(md).toContain('_(whole)_\n  _(no answer)_');
+    expect(md).not.toContain('respostas/');
+    expect(md).not.toContain('.webm');
   });
 
-  it('quando há texto E voz, o texto digitado vence', () => {
-    const paths = new Set(voice().recordedPaths);
+  it('o texto confirmado é a única coisa que ocupa a célula', () => {
     const md = buildMapReport(
-      baseState({ mapping: { ...emptyMapping(), level1: { recontar: 'Texto digitado.' } } }),
-      paths,
+      baseState({ mapping: { ...emptyMapping(), level1: { recontar: 'Confirmed answer.' } } }),
     );
-    expect(md).toContain('_(whole)_\n  Texto digitado.');
-    expect(md).not.toContain('respostas/level1/recontar.webm');
+    expect(md).toContain('_(whole)_\n  Confirmed answer.');
+  });
+
+  it('o artefato inteiro sai em inglês — nenhum resíduo do esqueleto PT-BR', () => {
+    const md = buildMapReport(
+      baseState({ parts: [part({})], frases: [frase({})], mapping: emptyMapping() }),
+    );
+    for (const pt of [
+      'Nível',
+      'Relatório',
+      'sem resposta',
+      '### Cena ',
+      '**Frase ',
+      ' — contas ',
+    ]) {
+      expect(md, `resíduo PT-BR: ${pt}`).not.toContain(pt);
+    }
   });
 });
 

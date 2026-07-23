@@ -43,7 +43,7 @@ function part(overrides: Partial<ScenePart> & { part_id: string }): ScenePart {
 
 function frase(overrides: Partial<Frase> & { prop_id: string }): Frase {
   return {
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,
@@ -93,7 +93,7 @@ describe('buildRetorno — espelho de buildReturn (referência L1318–1329)', (
           span: { s: 0, e: 9 },
           locked: true,
           scene_kind: 'GLEANING_SCENE',
-          scene_kind_confidence: 'média',
+          scene_kind_confidence: 'medium',
           tag_state: 'tagged',
         }),
         part({ part_id: 'PT2', span: { s: 10, e: 23 }, locked: true, tag_state: 'none_fit' }),
@@ -102,7 +102,7 @@ describe('buildRetorno — espelho de buildReturn (referência L1318–1329)', (
     const parts = buildRetorno(st).scenes[0]!.parts;
     expect(parts[0]).toMatchObject({
       scene_kind: 'GLEANING_SCENE',
-      scene_kind_confidence: 'média',
+      scene_kind_confidence: 'medium',
       tag_state: 'tagged',
     });
     expect(parts[1]).toMatchObject({
@@ -167,7 +167,7 @@ describe('buildRetorno — espelho de buildReturn (referência L1318–1329)', (
           span: { s: 0, e: 9 },
           locked: true,
           scene_kind: 'GLEANING_SCENE',
-          scene_kind_confidence: 'média',
+          scene_kind_confidence: 'medium',
           tag_state: 'tagged',
         }),
       ],
@@ -200,13 +200,13 @@ describe('retornoExportStatus — gate do dlReturn (referência L1332–1335)', 
     expect(retornoExportStatus(st).canExport).toBe(true);
   });
 
-  it('semFim conta frases destravadas com span OU statement_pt não-branco; travadas não', () => {
+  it('semFim conta frases destravadas com span OU statement não-branco; travadas não', () => {
     const st = session({
       whole: { id: 'S1', span: { s: 0, e: 23 }, confirmed: true },
       frases: [
         frase({ prop_id: 'P1', span: { s: 0, e: 2 } }), // destravada com span → conta
-        frase({ prop_id: 'P2', statement_pt: 'uma frase dita' }), // texto não-branco → conta
-        frase({ prop_id: 'P3', statement_pt: '   ' }), // só espaços → NÃO conta
+        frase({ prop_id: 'P2', statement: 'uma frase dita' }), // texto não-branco → conta
+        frase({ prop_id: 'P3', statement: '   ' }), // só espaços → NÃO conta
         frase({ prop_id: 'P4', span: { s: 3, e: 4 }, locked: true }), // travada → NÃO conta
         frase({ prop_id: 'P5' }), // vazia → NÃO conta
       ],

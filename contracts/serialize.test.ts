@@ -9,9 +9,11 @@ describe('serializeArtifact — O serializador único (referência download() L1
     expect(bytes.endsWith('\n')).toBe(false);
   });
 
-  it('emite acentos como UTF-8 cru, nunca \\u-escapado (média com U+00E9)', () => {
-    const bytes = serializeArtifact({ scene_kind_confidence: 'média' });
-    expect(bytes).toContain('média');
+  // O artefato normalizou para inglês (ENG-356), mas `story_slug`/`audio_filename`
+  // ainda carregam o nome PT-BR do arquivo de campo — o acento cru segue sendo contrato.
+  it('emite acentos como UTF-8 cru, nunca \\u-escapado (história com U+00F3)', () => {
+    const bytes = serializeArtifact({ story_slug: 'história' });
+    expect(bytes).toContain('história');
     expect(bytes).not.toContain('\\u');
   });
 

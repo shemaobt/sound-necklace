@@ -96,9 +96,9 @@ const THEMES: Theme[] = [
 
 /** Onde o token presentacional do trio vira o valor gravado (contrato). */
 const CONFIDENCE_BY_CHOICE: Record<ConfidenceChoice, Confidence> = {
-  certeza: 'alta',
-  quase: 'média',
-  duvida: 'baixa',
+  certeza: 'high',
+  quase: 'medium',
+  duvida: 'low',
 };
 
 function tintOf(value: string): PaletteEntry {

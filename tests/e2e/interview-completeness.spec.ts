@@ -23,8 +23,9 @@ import { ColarApp, STORAGE_KEY, TYPED_ANSWER } from './support';
  * Mix determinístico por posição i (i % 4): só-voz, só-texto, ambas (o texto vence
  * a célula), nenhuma. Ao fim prova, contra o estado persistido e o `.md` exportado:
  * a sequência apresentada == a que o domínio computa; cada texto sob a chave exata;
- * cada caminho de voz em `voice`; cada célula do `.md` correta (voz / texto / "sem
- * resposta"). O app real roda em modo fixture; o Playwright dirige a UI.
+ * cada caminho de voz em `voice`; cada célula do `.md` correta — que desde a ENG-356
+ * é SÓ texto: a voz fica no bucket como proveniência e nunca entra no artefato, então
+ * só-voz sai como "(no answer)". O app roda em fixture; o Playwright dirige a UI.
  */
 
 /** Marcador único da resposta digitada da pergunta na posição i. */
@@ -177,15 +178,16 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
       expect(voicePaths.has(path)).toBe(false);
     }
 
-    // célula do `.md`: texto vence a voz; só-voz mostra o caminho; nenhuma → "sem resposta"
-    if (voice && !typed) expect(md).toContain(path);
-    if (voice && typed) expect(md).not.toContain(path); // texto vence → caminho ausente
-    if (!voice && !typed) noneCount++;
+    // célula do `.md` (ENG-356): SÓ o texto confirmado. A gravação é proveniência,
+    // fica no bucket e NUNCA entra no artefato — só-voz cai em "(no answer)".
+    expect(md).not.toContain(path);
+    if (!typed) noneCount++;
   }
 
-  // toda pergunta sem resposta rende exatamente uma célula "(sem resposta)"
-  expect(md.match(/_\(sem resposta\)_/g) ?? []).toHaveLength(noneCount);
-  expect(noneCount).toBe(10);
+  // sem texto confirmado (nenhuma resposta OU só-voz) → exatamente uma "(no answer)"
+  expect(md).not.toContain('respostas/');
+  expect(md.match(/_\(no answer\)_/g) ?? []).toHaveLength(noneCount);
+  expect(noneCount).toBe(21); // 10 sem nada + 11 só-voz
 
   // sanidade do mix: 21 caminhos de voz gravados (só-voz 11 + ambas 10)
   expect(voicePaths.size).toBe(21);

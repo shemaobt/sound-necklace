@@ -20,14 +20,14 @@ function tagged(part_id: string): ScenePart {
   return mkPart(part_id, {
     tag_state: 'tagged',
     scene_kind: 'GLEANING_SCENE',
-    scene_kind_confidence: 'alta',
+    scene_kind_confidence: 'high',
   });
 }
 
 function mkFrase(prop_id: string, over: Partial<Frase> = {}): Frase {
   return {
     prop_id,
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: { s: 0, e: 1 },
     part_link: 'PT1',

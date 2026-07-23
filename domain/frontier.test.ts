@@ -32,7 +32,7 @@ function part(over: Partial<ScenePart>): ScenePart {
 function frase(over: Partial<Frase>): Frase {
   return {
     prop_id: 'P1',
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,

@@ -36,7 +36,7 @@ function lockedPart(id: string, span: Span, tag: TagState = 'pending'): ScenePar
     span,
     locked: true,
     scene_kind: tag === 'tagged' ? 'APPEAL_SCENE' : null,
-    scene_kind_confidence: tag === 'tagged' ? 'alta' : null,
+    scene_kind_confidence: tag === 'tagged' ? 'high' : null,
     tag_state: tag,
   };
 }
@@ -106,7 +106,7 @@ describe('Triage — classificar cada cena (PRD v2 §8.5)', () => {
     const s = sessionStore.getState().session!;
     expect(s.parts[0]!.tag_state).toBe('tagged');
     expect(s.parts[0]!.scene_kind).toBe('APPEAL_SCENE');
-    expect(s.parts[0]!.scene_kind_confidence).toBe('alta');
+    expect(s.parts[0]!.scene_kind_confidence).toBe('high');
     // o foco pula para a segunda cena (a próxima pendente)
     expect(dots()[1]!.getAttribute('aria-current')).toBe('step');
   });

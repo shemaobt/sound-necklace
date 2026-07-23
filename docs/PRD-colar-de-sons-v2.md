@@ -149,10 +149,10 @@ A scene is **productive** when locked, spanned, and triaged to a real Ruth kind 
 
 Values are **English in state and exports**; PT-BR labels are display-only (e.g. `GLEANING_SCENE` → "Respiga"), with the English value available on hover.
 
-Coverage targets: `ALTA: 1` (displayed "1–2"), `comum: 3`. "Firm" counts are `alta` + `média` confidence; `baixa` counts separately as "hesitant". A rare kind with zero firm coverage is a **"candidato a ausência"**.
+Coverage targets: `ALTA: 1` (displayed "1–2"), `comum: 3`. "Firm" counts are `high` + `medium` confidence; `low` counts separately as "hesitant". A rare kind with zero firm coverage is a **"candidato a ausência"**.
 
 ### 6.7 Confidence & tag states
-- `scene_kind_confidence` stored values: `alta` / `média` / `baixa` (UI: "Certeza" / "Quase" / "Na dúvida" — rendered as the redesign's three-shape gesture: filled / half / dashed disc).
+- `scene_kind_confidence` stored values: `high` / `medium` / `low` (ENG-356 — the artifact is English; UI: "Certeza" / "Quase" / "Na dúvida" — rendered as the redesign's three-shape gesture: filled / half / dashed disc).
 - `tag_state` values: `pending` / `tagged` / `none_fit`.
 
 ### 6.8 Sessions
@@ -308,7 +308,7 @@ Each card has a "Baixar" → "baixado" state. Completing the session stores all 
 
 ### 8.9 Pipeline imports
 
-- **Delivery JSON** ("Carregar entrega do projeto"): loads *proposed* spans **unlocked** — "confirme de ouvido" — including `scene_kind`/`tag_state` prefills and phrase `statement_pt` / `qa_readback_pt` texts. A `manifest_id` mismatch warns: "Atenção: o manifest_id da entrega não bate com o do áudio. A grade pode estar diferente."
+- **Delivery JSON** ("Carregar entrega do projeto"): loads *proposed* spans **unlocked** — "confirme de ouvido" — including `scene_kind`/`tag_state` prefills and phrase `statement` / `qa_readback` texts (English — ENG-356). A `manifest_id` mismatch warns: "Atenção: o manifest_id da entrega não bate com o do áudio. A grade pode estar diferente."
 - **Return JSON** ("Retomar retorno salvo"): loads *confirmed* spans **locked**, with `NEEDS_REVIEW` flags re-applied.
 - Both require the session's audio to be segmented first; both remain accessible from session setup at any time (they are interoperability paths — §7.3's autosave is the primary persistence).
 
@@ -360,7 +360,7 @@ These are shared invariants with the downstream pipeline. Any change requires a 
       "part_id": "PT1",
       "scene_id": "S1",
       "scene_kind": "GLEANING_SCENE" | null,
-      "scene_kind_confidence": "alta" | "média" | "baixa" | null,
+      "scene_kind_confidence": "high" | "medium" | "low" | null,
       "tag_state": "pending" | "tagged" | "none_fit",
       "confirmed_span": { "start_bead": …, "end_bead": … }
     } ],
@@ -370,18 +370,20 @@ These are shared invariants with the downstream pipeline. Any change requires a 
       "confirmed_span": { "start_bead": …, "end_bead": … }
     } ]
   } ],
-  "flags": [ { "kind": "NEEDS_REVIEW", "prop_id": "P3", "note_pt": "" } ]
+  "flags": [ { "kind": "NEEDS_REVIEW", "prop_id": "P3", "note": "" } ]
 }
 ```
 Rules: only **locked** scenes/phrases export; `parts[].scene_id` is sequential `S#` by list order (distinct from the stable `part_id`); the outer `scenes` array holds exactly one scene — the whole story.
 
+**Artifact language (ENG-356, policy §1.1/§12):** every human-readable value and every field name in the artifacts is **English**. `scene_kind_confidence` therefore stores `high`/`medium`/`low` (the PT-BR words "Certeza"/"Quase"/"Na dúvida" are UI labels only), and the former `note_pt` is `note`. The legacy PT-BR values are **rejected** by the schema, not coerced.
+
 ### 10.3 Import shapes
-- **Delivery:** same shape with `proposed_span` on parts/propositions, plus optional `statement_pt` and `qa_readback_pt` on propositions.
+- **Delivery:** same shape with `proposed_span` on parts/propositions, plus optional `statement` and `qa_readback` on propositions (both English — renamed from `statement_pt`/`qa_readback_pt` by ENG-356; the Compilador emits the new names).
 - **Resume/return:** the return shape itself (`confirmed_span` ⇒ locked).
 
 ### 10.4 Mapeamento — question scripts & report skeleton (contract)
 
-Scripts source: `docs/scripts/nivel-1-holistico.md`, `nivel-2-partes.md`. Order and PT-BR wording are fixed; the *script* is method, the *skin* is free.
+Scripts source: `docs/scripts/nivel-1-holistico.md`, `nivel-2-partes.md`. Order and PT-BR wording are fixed; the *script* is method, the *skin* is free. Each question carries **two frozen strings** (`domain/mapeamento-scripts.ts`): `q` — the PT-BR wording, which is what the facilitator reads and what the interview voice speaks — and `q_en` — the English wording, which is what the report `.md` serializes (ENG-356). Both are human-authored; neither is ever machine-translated at runtime.
 
 **L1 (11):** `recontar` (whole), `arco_inicio_fim` (arc), `arco_muda` (arc), `lugar` (context), `tempo` (context; note: permita "não tem"), `saber_antes` (context), `sentimento` (tone), `ritmo` (pace), `funcao` (function), `prepara` (function; optional), `ausencia` (significant_absence; facilitator-led — "nunca preencha por conta própria").
 **L2 (5, per locked scene incl. `none_fit`):** `descrever`, `quem` (beings_in_scene), `onde` (places_in_scene), `objeto` (objects_in_scene), `ausencia` (significant_absence; facilitator-led).
@@ -389,27 +391,29 @@ Scripts source: `docs/scripts/nivel-1-holistico.md`, `nivel-2-partes.md`. Order 
 
 Answer store keying: `level1{k}`, `level2{part_id}{k}`, `level3{prop_id}{k}`.
 
-**Report Markdown skeleton** (`<slug>-relatorio-mapeamento.md`):
+**Report Markdown skeleton** (`<slug>-relatorio-mapeamento.md`) — English since ENG-356; the *filename* stays as-is:
 ```
-# Relatório de Mapeamento — <slug>
+# Meaning Mapping Report — <slug>
 
-> Matéria-prima para o Claude Code. **Não** é o mapa. Respostas em texto livre …
+> Raw material for Claude Code. This is **not** the map. Free-text answers …
 > `source_domain: oral_archive` · `speaker_role: LISTENER_NOT_STORYTELLER` · manifest: `fnv1a32:…`
 
-## Nível 1 — a história inteira
-- **<question>** _(field)_
-  <answer | _(sem resposta)_>
+## Level 1 — the whole story
+- **<question q_en>** _(field)_
+  <answer | _(no answer)_>
 
-## Nível 2 — as cenas
-### Cena N (SN) — scene_kind: <KIND | (nenhum)> [none_fit]
-- **<question>** <answer | _(sem resposta)_>
+## Level 2 — the scenes
+### Scene N (SN) — scene_kind: <KIND | (none)> [none_fit]
+- **<question q_en>** <answer | _(no answer)_>
 
-## Nível 3 — proposições (cenas produtivas)
-### Cena N (SN) — <KIND>
-**Frase i (Pn) — contas s–e:**
-- <question> <answer | _(sem resposta)_>
+## Level 3 — propositions (productive scenes)
+### Scene N (SN) — <KIND>
+**Phrase i (Pn) — beads s–e:**
+- <question q_en> <answer | _(no answer)_>
 ```
-The header contract lines (`source_domain: oral_archive`, `speaker_role: LISTENER_NOT_STORYTELLER`, manifest id) are non-negotiable. **Voice answers (decided):** where an answer exists only as a voice recording, the report cell references the recording by its session-resource path — `respostas/level1/<k>.webm`, `respostas/level2/<part_id>/<k>.webm`, `respostas/level3/<prop_id>/<k>.webm` (WebM/Opus, one file per question) — keeping the Markdown structure valid whether the answer is typed, recorded, or both.
+The header contract lines (`source_domain: oral_archive`, `speaker_role: LISTENER_NOT_STORYTELLER`, manifest id) are non-negotiable.
+
+**Voice answers — provenance, not artifact (decided 2026-07-23, ENG-356).** The cell is **text only**. A recording (`respostas/level1/<k>.webm`, `respostas/level2/<part_id>/<k>.webm`, `respostas/level3/<prop_id>/<k>.webm` — WebM/Opus, one file per question) stays in the bucket and in the session `meta.voice` as provenance, and remains playable in the on-screen review, but it **never appears in the `.md`**. An answer that exists only as audio therefore reads `_(no answer)_` until a human confirms its English text (§12).
 
 ### 10.5 Artifact custody — opaque storage (byte-identity rule)
 
@@ -435,7 +439,7 @@ The three artifacts are produced **client-side**, byte-identical to the v1 proto
 | Border escalation | neighbor productive + has phrases ⇒ Triagem or re-anchor only |
 | "Mover mesmo assim" | offered only when the neighbor isn't fully consumed |
 | Coverage targets | rare (ALTA) 1 (shown "1–2") · common 3 — firm counts only |
-| Firm vs hesitant | firm = `alta`+`média`; hesitant = `baixa` |
+| Firm vs hesitant | firm = `high`+`medium`; hesitant = `low` |
 | Gate → Triagem | scenes confirmed (≥ 1 locked scene, whole confirmed) |
 | Gate → Segmentação | ≥ 1 productive scene |
 | Gate → Mapeamento | ≥ 1 productive scene AND ≥ 1 locked phrase |

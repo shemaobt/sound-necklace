@@ -199,7 +199,7 @@ function runStepsInPage(steps) {
           }
           state.frases = (sc.propositions || []).map((p, idx) => ({
             prop_id: p.prop_id,
-            statement_pt: '',
+            statement_pt: '', // campo da REFERÊNCIA (intocada) — não renomear junto com o domain
             qa: [],
             span: { s: p.confirmed_span.start_bead, e: p.confirmed_span.end_bead },
             part_link: p.part_link || null,
@@ -233,6 +233,111 @@ function runStepsInPage(steps) {
   /* eslint-enable no-undef */
 }
 
+/**
+ * ENG-356 — o artefato normalizou para inglês (política ENG-326), mas a
+ * referência (INTOCÁVEL) só sabe emitir PT-BR. Em vez de passar a escrever o
+ * golden do `.md` à mão — o que mataria a prova do `--verify` —, o golden segue
+ * DERIVADO da referência e recebe esta tabela explícita e revisada.
+ *
+ * Consequência desejada: estrutura, ordem, spans e respostas continuam provados
+ * byte-a-byte contra a referência; só as strings congeladas abaixo divergem, e
+ * divergem de um jeito auditável. A tabela é escrita à mão de propósito — ela
+ * NÃO importa de domain/contracts, senão os dois lados concordariam por
+ * construção e o diff do `pnpm golden` não provaria mais nada.
+ */
+const REPORT_PT_TO_EN = [
+  ['# Relatório de Mapeamento — ', '# Meaning Mapping Report — '],
+  [
+    '> Matéria-prima para o Claude Code. **Não** é o mapa. Respostas em texto livre (perguntas gerais do método); o agente faz as perguntas contextuais, classifica o vocabulário controlado, sinaliza NEW_VALUE e escreve a prosa do meaning map.',
+    '> Raw material for Claude Code. This is **not** the map. Free-text answers (the general questions of the method); the agent asks the contextual questions, classifies the controlled vocabulary, flags NEW_VALUE and writes the prose of the meaning map.',
+  ],
+  ['## Nível 1 — a história inteira', '## Level 1 — the whole story'],
+  ['## Nível 2 — as cenas', '## Level 2 — the scenes'],
+  ['## Nível 3 — proposições (cenas produtivas)', '## Level 3 — propositions (productive scenes)'],
+  ['### Cena ', '### Scene '],
+  ['scene_kind: (nenhum)', 'scene_kind: (none)'],
+  ['**Frase ', '**Phrase '],
+  [') — contas ', ') — beads '],
+  ['_(sem resposta)_', '_(no answer)_'],
+  // as 21 perguntas (domain/mapeamento-scripts.ts: q → q_en)
+  [
+    'Conte essa história com as suas palavras, como se fosse para alguém que nunca ouviu.',
+    'Tell this story in your own words, as if to someone who has never heard it.',
+  ],
+  ['Como a história começa? E como ela termina?', 'How does the story begin? And how does it end?'],
+  [
+    'O que muda do começo para o fim? A história deixa as coisas diferentes de como começou?',
+    'What changes from the beginning to the end? Does the story leave things different from how they started?',
+  ],
+  ['Onde essa história acontece?', 'Where does this story take place?'],
+  [
+    'Tem um tempo, uma época em que ela acontece? Ou a história não marca isso?',
+    'Is there a time, a period when it takes place? Or does the story not mark that?',
+  ],
+  [
+    'Tem alguma coisa que quem escuta já precisa saber de antemão para a história fazer sentido?',
+    'Is there anything a listener already needs to know beforehand for the story to make sense?',
+  ],
+  [
+    'Que sentimento essa história passa enquanto você escuta? Muda em algum momento?',
+    'What feeling does this story carry while you listen? Does it change at any point?',
+  ],
+  [
+    'A história corre rápida ou devagar? Tem parte que demora mais que as outras?',
+    'Does the story run fast or slow? Is there a part that takes longer than the others?',
+  ],
+  [
+    'Para que serve essa história? O que ela quer fazer com quem escuta — ensinar, abrir um assunto, avisar, plantar uma ideia?',
+    'What is this story for? What does it want to do to whoever listens — teach, open a subject, warn, plant an idea?',
+  ],
+  [
+    'Se essa história faz parte de algo maior, o que ela prepara para o que vem depois?',
+    'If this story is part of something larger, what does it prepare for what comes after?',
+  ],
+  [
+    'Tem alguma coisa que você esperaria nessa história e que não aparece? Um nome, alguém no comando, um problema, um acontecimento? O narrador parece ter deixado algo de fora de propósito?',
+    'Is there anything you would expect in this story that does not appear? A name, someone in charge, a problem, an event? Does the narrator seem to have left something out on purpose?',
+  ],
+  [
+    'Me conte o que acontece nesse trecho, com as suas palavras.',
+    'Tell me what happens in this stretch, in your own words.',
+  ],
+  [
+    'Quem aparece nesse trecho? Pessoas, animais, um grupo, alguém de quem se fala?',
+    'Who appears in this stretch? People, animals, a group, someone who is spoken about?',
+  ],
+  [
+    'Onde isso acontece? É o mesmo lugar de antes ou mudou?',
+    'Where does this happen? Is it the same place as before, or has it changed?',
+  ],
+  [
+    'Tem alguma coisa, algum objeto, algum elemento importante nesse trecho?',
+    'Is there anything, any object, any important element in this stretch?',
+  ],
+  [
+    'Tem algo que você esperaria nesse trecho e que não aparece?',
+    'Is there anything you would expect in this stretch that does not appear?',
+  ],
+  ['O que aconteceu nesta frase?', 'What happened in this phrase?'],
+  ['Quem?', 'Who?'],
+  ['Onde?', 'Where?'],
+  ['Como? Por quê?', 'How? Why?'],
+  ['O que mais tem nessa frase?', 'What else is in this phrase?'],
+];
+
+/** Sobras de PT-BR = tabela incompleta. Falha aqui em vez de no byte-diff. */
+const PT_LEFTOVERS = ['Nível', 'Relatório', 'sem resposta', '### Cena ', '**Frase ', ' — contas '];
+
+function translateReport(md) {
+  let out = md;
+  for (const [pt, en] of REPORT_PT_TO_EN) out = out.replaceAll(pt, en);
+  for (const marker of PT_LEFTOVERS) {
+    if (out.includes(marker))
+      throw new Error(`REPORT_PT_TO_EN incompleta: "${marker}" sobrou no .md traduzido (ENG-356).`);
+  }
+  return out;
+}
+
 async function main() {
   const caseFiles = readdirSync(casesDir)
     .filter((f) => f.endsWith('.json'))
@@ -250,7 +355,9 @@ async function main() {
       await page.close();
 
       const dir = join(expectedDir, spec.name);
-      for (const [name, content] of Object.entries(artifacts)) {
+      for (const [name, raw] of Object.entries(artifacts)) {
+        // só o .md diverge da referência, e só pela tabela revisada (ENG-356)
+        const content = name.endsWith('.md') ? translateReport(raw) : raw;
         const target = join(dir, name);
         if (verifyMode) {
           if (!existsSync(target)) {

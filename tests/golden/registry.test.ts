@@ -25,7 +25,7 @@ function toSegmentacao(segment: GoldenStep): GoldenStep[] {
     { type: 'cutScene', endBead: 9 },
     { type: 'cutScene', endBead: 23 },
     { type: 'confirmParts' },
-    { type: 'triage', partIndex: 0, kind: 'GLEANING_SCENE', confidence: 'alta' },
+    { type: 'triage', partIndex: 0, kind: 'GLEANING_SCENE', confidence: 'high' },
     { type: 'triage', partIndex: 1, none_fit: true },
     { type: 'triagemDone' },
   ];
@@ -53,7 +53,7 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
     expect(r.state.parts[0]).toMatchObject({
       tag_state: 'tagged',
       scene_kind: 'GLEANING_SCENE',
-      scene_kind_confidence: 'alta',
+      scene_kind_confidence: 'high',
     });
     expect(r.state.parts[1]).toMatchObject({
       tag_state: 'none_fit',
@@ -74,17 +74,15 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
     expect(r.state.mode).toBe('mapeamento');
 
     // respostas do caso nos buckets certos; não respondidas semeadas com ""
-    expect(r.state.mapping?.level1['recontar']).toBe(
-      'Uma história sobre respiga e retorno ao lar.',
-    );
+    expect(r.state.mapping?.level1['recontar']).toBe('A story about gleaning and returning home.');
     expect(r.state.mapping?.level1['tempo']).toBe('');
     expect(r.state.mapping?.level1['lugar']).toBe('');
-    expect(r.state.mapping?.level2['PT1']?.['quem']).toBe('Duas mulheres e os ceifeiros.');
+    expect(r.state.mapping?.level2['PT1']?.['quem']).toBe('Two women and the reapers.');
     expect(r.state.mapping?.level2['PT2']?.['descrever']).toBe(
-      'Um trecho que não se encaixa nos tipos.',
+      'A stretch that fits none of the kinds.',
     );
     expect(r.state.mapping?.level3['P1']?.['oque']).toBe(
-      'A chegada ao campo — com acentos: coração, você, média.',
+      'Arrival at the field — names kept as spoken: José, Conceição, Belém.',
     );
   });
 
@@ -191,7 +189,7 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
           span: { s: 0, e: 9 },
           locked: true,
           scene_kind: 'GLEANING_SCENE',
-          scene_kind_confidence: 'alta',
+          scene_kind_confidence: 'high',
           tag_state: 'tagged',
         },
         {
@@ -207,7 +205,7 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
       frases: [
         {
           prop_id: 'P1',
-          statement_pt: '',
+          statement: '',
           qa: [],
           span: { s: 0, e: 4 },
           part_link: 'PT1',

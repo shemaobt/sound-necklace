@@ -52,7 +52,7 @@ function part(overrides: Partial<ScenePart> & { part_id: string }): ScenePart {
 
 function frase(overrides: Partial<Frase> & { prop_id: string }): Frase {
   return {
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,
@@ -76,7 +76,7 @@ describe('applyDelivery — entrega vira propostas DESTRAVADAS', () => {
             part_id: 'PT7',
             proposed_span: { start_bead: 0, end_bead: 9 },
             scene_kind: 'GLEANING_SCENE',
-            scene_kind_confidence: 'alta',
+            scene_kind_confidence: 'high',
             tag_state: 'tagged',
           },
           { proposed_span: { start_bead: 10, end_bead: 23 } }, // sem part_id → fallback
@@ -84,12 +84,12 @@ describe('applyDelivery — entrega vira propostas DESTRAVADAS', () => {
         propositions: [
           {
             prop_id: 'P9',
-            statement_pt: 'A chegada ao campo.',
-            qa_readback_pt: ['Quem chega?'],
+            statement: 'A chegada ao campo.',
+            qa_readback: ['Quem chega?'],
             proposed_span: { start_bead: 0, end_bead: 4 },
             part_link: 'PT7',
           },
-          { statement_pt: 'Sem span nem id.' }, // sem prop_id/span → fallback + span null
+          { statement: 'Sem span nem id.' }, // sem prop_id/span → fallback + span null
         ],
       },
     ],
@@ -106,7 +106,7 @@ describe('applyDelivery — entrega vira propostas DESTRAVADAS', () => {
         part_id: 'PT7',
         span: { s: 0, e: 9 },
         scene_kind: 'GLEANING_SCENE',
-        scene_kind_confidence: 'alta',
+        scene_kind_confidence: 'high',
         tag_state: 'tagged',
       }),
       part({ part_id: 'PT2', span: { s: 10, e: 23 } }), // fallback PT+(idx+1), pending, destravada
@@ -114,12 +114,12 @@ describe('applyDelivery — entrega vira propostas DESTRAVADAS', () => {
     expect(r.state.frases).toEqual([
       frase({
         prop_id: 'P9',
-        statement_pt: 'A chegada ao campo.',
+        statement: 'A chegada ao campo.',
         qa: ['Quem chega?'],
         span: { s: 0, e: 4 },
         part_link: 'PT7',
       }),
-      frase({ prop_id: 'P2', statement_pt: 'Sem span nem id.', span: null }), // fallback P+(idx+1)
+      frase({ prop_id: 'P2', statement: 'Sem span nem id.', span: null }), // fallback P+(idx+1)
     ]);
     // propostas: nada travado nem confirmado
     expect(r.state.parts.every((p) => !p.locked)).toBe(true);
@@ -179,7 +179,7 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
             part_id: 'PT1',
             confirmed_span: { start_bead: 0, end_bead: 9 },
             scene_kind: 'GLEANING_SCENE',
-            scene_kind_confidence: 'alta',
+            scene_kind_confidence: 'high',
             tag_state: 'tagged',
           },
         ],
@@ -189,7 +189,7 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
         ],
       },
     ],
-    flags: [{ kind: 'NEEDS_REVIEW', prop_id: 'P2', note_pt: '' }],
+    flags: [{ kind: 'NEEDS_REVIEW', prop_id: 'P2', note: '' }],
   };
 
   it('trava colar/cenas/frases, marca partsConfirmed e reaplica flags por prop_id', () => {
@@ -204,7 +204,7 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
         span: { s: 0, e: 9 },
         locked: true,
         scene_kind: 'GLEANING_SCENE',
-        scene_kind_confidence: 'alta',
+        scene_kind_confidence: 'high',
         tag_state: 'tagged',
       }),
     ]);
@@ -242,7 +242,7 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
   it('sem cena confirmada: pula o bloco mas move o cursor a frases; ignora flags legadas (ENG-342)', () => {
     // frases já no estado; retorno sem cena → o bloco da cena é pulado, o cursor
     // vai a frases, e `flags` (de um retorno antigo) é IGNORADO — o ⚑ foi removido
-    const soFlags: ReturnImport = { flags: [{ kind: 'NEEDS_REVIEW', prop_id: 'P1', note_pt: '' }] };
+    const soFlags: ReturnImport = { flags: [{ kind: 'NEEDS_REVIEW', prop_id: 'P1', note: '' }] };
     const seeded = session({
       frases: [frase({ prop_id: 'P1', span: { s: 0, e: 4 }, part_link: 'PT1', locked: true })],
       current: { layer: 'whole', index: -1 },
@@ -294,7 +294,7 @@ describe('fidelidade import→export: retorno → import → export é byte-idê
           span: { s: 0, e: 9 },
           locked: true,
           scene_kind: 'GLEANING_SCENE',
-          scene_kind_confidence: 'alta',
+          scene_kind_confidence: 'high',
           tag_state: 'tagged',
         }),
         part({ part_id: 'PT2', span: { s: 10, e: 23 }, locked: true, tag_state: 'none_fit' }),
@@ -328,7 +328,7 @@ describe('imports — fixtures válidas/inválidas', () => {
     expect(() => ReturnSchema.parse(fixture('return-valid.json'))).not.toThrow();
   });
 
-  it('rejeita entrega com confiança fora do enum', () => {
+  it('rejeita entrega com confiança fora do enum — inclusive o valor PT-BR legado "alta" (ENG-356)', () => {
     expect(() => DeliverySchema.parse(fixture('delivery-invalid-confidence.json'))).toThrow();
   });
 

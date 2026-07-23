@@ -93,7 +93,7 @@ Ordered by expected value, not by commitment:
 2. **Full project audio library via the API** (§7.4 "beyond MVP") — generalize the specific bucket into the browsable Oral Collector library, with search and metadata.
 3. **Audio upload** (§7.4) — upload as a secondary source, stored to the project; requires defining granularity fallback durations for audios without acoustemes.
 4. **Project admin surfaces** (§3, §7.1) — a dedicated in-app admin UI for membership and audio management.
-5. **Facilitator note on review flags** — an input for `flags[].note_pt` (today always empty; the UI says "descreva o ajuste no chat"). Schema-compatible: the field already exists in the contract.
+5. **Facilitator note on review flags** — an input for `flags[].note` (today always empty; the UI says "descreva o ajuste no chat"). Schema-compatible: the field already exists in the contract.
 6. **Retention & compliance automation** (§12) — the MVP ships audit logging and manual deletion on request; automated retention SLAs, audit reporting, and community-withdrawal tooling mature after validation.
 7. **Ecosystem conveniences** — artifact push directly to the Compilador (instead of download), session hand-off between facilitators, cross-story coverage views for the project.
 8. **Graceful small-screen degradation** (§4 non-goal for mobile-first stands) — improvements only if validation shows real tablet/small-notebook use.

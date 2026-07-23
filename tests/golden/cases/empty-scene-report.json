@@ -12,16 +12,21 @@
     { "type": "confirmWhole" },
     { "type": "cutScene", "endBead": 23 },
     { "type": "confirmParts" },
-    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "high" },
     { "type": "triagemDone" },
     { "type": "sceneDone", "forceEmpty": true },
-    { "type": "answer", "level": 1, "key": "recontar", "text": "Uma cena sem frases fraseadas." },
+    {
+      "type": "answer",
+      "level": 1,
+      "key": "recontar",
+      "text": "A scene with no phrases carved out."
+    },
     {
       "type": "answer",
       "level": 2,
       "partId": "PT1",
       "key": "descrever",
-      "text": "A cena inteira, sem recorte de frases."
+      "text": "The whole scene, with no phrase cuts."
     },
     { "type": "export", "artifacts": ["manifesto", "retorno", "relatorio"] }
   ]

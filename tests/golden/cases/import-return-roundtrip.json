@@ -21,7 +21,7 @@
                 "part_id": "PT1",
                 "confirmed_span": { "start_bead": 0, "end_bead": 11 },
                 "scene_kind": "GLEANING_SCENE",
-                "scene_kind_confidence": "alta",
+                "scene_kind_confidence": "high",
                 "tag_state": "tagged"
               },
               {

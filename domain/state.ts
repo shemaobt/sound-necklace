@@ -23,7 +23,7 @@ export interface Span {
 export type Layer = 'whole' | 'parts' | 'frases';
 export type Mode = 'escuta' | 'triagem' | 'segmentacao' | 'mapeamento';
 export type TagState = 'pending' | 'tagged' | 'none_fit';
-export type Confidence = 'alta' | 'média' | 'baixa';
+export type Confidence = 'high' | 'medium' | 'low';
 
 export interface ScenePart {
   part_id: string;
@@ -36,7 +36,7 @@ export interface ScenePart {
 
 export interface Frase {
   prop_id: string;
-  statement_pt: string;
+  statement: string;
   qa: string[];
   span: Span | null;
   part_link: string | null;

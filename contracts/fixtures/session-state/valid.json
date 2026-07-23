@@ -17,7 +17,7 @@
       "span": { "s": 0, "e": 1 },
       "locked": true,
       "scene_kind": "GLEANING_SCENE",
-      "scene_kind_confidence": "alta",
+      "scene_kind_confidence": "high",
       "tag_state": "tagged"
     }
   ],
@@ -25,7 +25,7 @@
   "frases": [
     {
       "prop_id": "P1",
-      "statement_pt": "A chegada.",
+      "statement": "A chegada.",
       "qa": ["Quem chega?"],
       "span": { "s": 0, "e": 1 },
       "part_link": "PT1",

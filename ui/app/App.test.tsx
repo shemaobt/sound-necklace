@@ -96,14 +96,14 @@ function completableSession(): SessionState {
         span: { s: 0, e: 15 },
         locked: true,
         scene_kind: 'BIRTH_SCENE',
-        scene_kind_confidence: 'alta',
+        scene_kind_confidence: 'high',
         tag_state: 'tagged',
       },
     ],
     frases: [
       {
         prop_id: 'P1',
-        statement_pt: '',
+        statement: '',
         qa: [],
         span: { s: 0, e: 1 },
         part_link: 'PT1',
@@ -343,7 +343,7 @@ describe('App shell', () => {
     expect(await screen.findByRole('button', { name: 'Parar' })).toBeDefined();
   });
 
-  it('persiste o caminho da resposta de voz em meta.voice → o relatório exportado a referencia', async () => {
+  it('persiste o caminho da voz em meta.voice como proveniência — o relatório exportado NÃO a referencia', async () => {
     // Gravar voz no Conversation (§8.7) deve entrar no `meta.voice` da sessão persistida,
     // de modo que o Export/relatório reflita a resposta como caminho `respostas/…` em vez
     // de "sem resposta" (ENG-276). O gravador em si já funciona; o que faltava era o shell
@@ -388,7 +388,8 @@ describe('App shell', () => {
       expect((await store.load(summary.id)).voice).toContain('respostas/level1/recontar.webm');
     });
 
-    // e o relatório concluído a referencia como caminho de voz (não "sem resposta")
+    // ...mas o artefato NÃO a referencia: a voz é proveniência, fica no bucket e
+    // nunca entra no .md (ENG-356). Sem texto confirmado, a célula é "_(no answer)_".
     await act(async () => {
       screen.getByText('Guardar').click();
     });
@@ -399,7 +400,8 @@ describe('App shell', () => {
       concluir.click();
     });
     const artifacts = await store.getArtifacts(summary.id);
-    expect(artifacts.report).toContain('respostas/level1/recontar.webm');
+    expect(artifacts.report).not.toContain('respostas/');
+    expect(artifacts.report).toContain('_(whole)_\n  _(no answer)_');
   });
 
   it('fia o player de áudio: tocar a cena acende a cabeça de reprodução no colar', async () => {

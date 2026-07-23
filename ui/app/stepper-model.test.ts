@@ -19,7 +19,7 @@ const productive: ScenePart = {
   span: { s: 0, e: 3 },
   locked: true,
   scene_kind: 'BIRTH_SCENE',
-  scene_kind_confidence: 'alta',
+  scene_kind_confidence: 'high',
   tag_state: 'tagged',
 };
 
@@ -79,7 +79,7 @@ describe('stepperStations — estados derivados dos gates do domínio', () => {
       frases: [
         {
           prop_id: 'P1',
-          statement_pt: '',
+          statement: '',
           qa: [],
           span: { s: 0, e: 1 },
           part_link: 'PT1',
@@ -118,7 +118,7 @@ describe('stepperStations — estados derivados dos gates do domínio', () => {
       frases: [
         {
           prop_id: 'P1',
-          statement_pt: '',
+          statement: '',
           qa: [],
           span: { s: 0, e: 1 },
           part_link: 'PT1',

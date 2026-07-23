@@ -68,7 +68,7 @@ export function addFrase(state: SessionState): SessionState {
   if (activeAnchor(state)) return state;
   const nova: Frase = {
     prop_id: nextPid(state.frases),
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,

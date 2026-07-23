@@ -45,9 +45,9 @@ function coverageFixture() {
   const tag = (id: string, kind: string, conf: Confidence) => {
     state = tagScene(state, id, kind, conf);
   };
-  tag('PT1', 'GLEANING_SCENE', 'alta');
-  tag('PT2', 'GLEANING_SCENE', 'baixa');
-  tag('PT3', 'APPEAL_SCENE', 'média');
+  tag('PT1', 'GLEANING_SCENE', 'high');
+  tag('PT2', 'GLEANING_SCENE', 'low');
+  tag('PT3', 'APPEAL_SCENE', 'medium');
   state = markNoneFit(state, 'PT4');
   return computeCoverage(state);
 }

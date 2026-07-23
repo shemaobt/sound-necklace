@@ -3,7 +3,7 @@
  * L1272–1308), reduzido ao cálculo puro (a tabela/drawer é ENG-225). PRD v2
  * §6.6 (alvos), §8.5. O componente de UI decide exibição ("1–2", cores).
  *
- * Firme = tagged com confiança alta|média; hesitante = baixa. `candidateAbsence`
+ * Firme = tagged com confiança high|medium; hesitante = low. `candidateAbsence`
  * (o `open-rara` da referência) marca tipo raro sem nenhuma cobertura firme.
  */
 
@@ -45,7 +45,7 @@ export function computeCoverage(state: SessionState): Coverage {
   }
   for (const pt of parts) {
     if (pt.tag_state === 'tagged' && pt.scene_kind && firm.has(pt.scene_kind)) {
-      if (pt.scene_kind_confidence === 'baixa')
+      if (pt.scene_kind_confidence === 'low')
         hes.set(pt.scene_kind, (hes.get(pt.scene_kind) ?? 0) + 1);
       else firm.set(pt.scene_kind, (firm.get(pt.scene_kind) ?? 0) + 1);
     }
