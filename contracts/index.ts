@@ -15,7 +15,12 @@ export {
   type Retorno,
   type RetornoExportStatus,
 } from './retorno';
-export { buildMapReport, relatorioFilename } from './relatorio';
+export {
+  buildMapReport,
+  relatorioFilename,
+  reportExportStatus,
+  type ReportExportStatus,
+} from './relatorio';
 export {
   fromSessionDto,
   SessionStateDtoSchema,

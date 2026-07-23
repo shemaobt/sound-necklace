@@ -343,7 +343,7 @@ describe('App shell', () => {
     expect(await screen.findByRole('button', { name: 'Parar' })).toBeDefined();
   });
 
-  it('persiste o caminho da voz em meta.voice como proveniência — o relatório exportado NÃO a referencia', async () => {
+  it('persiste o caminho da resposta de voz em meta.voice — e sem inglês confirmado, não exporta', async () => {
     // Gravar voz no Conversation (§8.7) deve entrar no `meta.voice` da sessão persistida,
     // de modo que o Export/relatório reflita a resposta como caminho `respostas/…` em vez
     // de "sem resposta" (ENG-276). O gravador em si já funciona; o que faltava era o shell
@@ -388,8 +388,9 @@ describe('App shell', () => {
       expect((await store.load(summary.id)).voice).toContain('respostas/level1/recontar.webm');
     });
 
-    // ...mas o artefato NÃO a referencia: a voz é proveniência, fica no bucket e
-    // nunca entra no .md (ENG-356). Sem texto confirmado, a célula é "_(no answer)_".
+    // ...mas gravar não basta para exportar (ENG-327): sem o inglês confirmado, a
+    // resposta não vira texto nenhum, e guardar assim perderia em silêncio o que
+    // foi dito. Então concluir é recusado, com o motivo na tela.
     await act(async () => {
       screen.getByText('Guardar').click();
     });
@@ -399,9 +400,8 @@ describe('App shell', () => {
     await act(async () => {
       concluir.click();
     });
-    const artifacts = await store.getArtifacts(summary.id);
-    expect(artifacts.report).not.toContain('respostas/');
-    expect(artifacts.report).toContain('_(whole)_\n  _(no answer)_');
+    expect((await store.get(summary.id)).status).toBe('in_progress');
+    expect(screen.getByText(/sem o texto em inglês confirmado/i)).toBeTruthy();
   });
 
   it('fia o player de áudio: tocar a cena acende a cabeça de reprodução no colar', async () => {

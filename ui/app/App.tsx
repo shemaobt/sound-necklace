@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import { ApiError, AuthError } from '../../adapters/api';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
+import sttRegistration from '../../adapters/stt/register';
+import type { Transcriber } from '../../adapters/stt/types';
 import ttsRegistration from '../../adapters/tts/register';
 import type { SpeechSynthesizer } from '../../adapters/tts/types';
 import voiceRegistration from '../../adapters/voice/register';
@@ -77,6 +79,7 @@ function SessionStations({
   onVoiceSaved,
   initialExport,
   voicePaths,
+  stt,
 }: {
   session: SessionState;
   sessionId: string;
@@ -94,6 +97,8 @@ function SessionStations({
   initialExport: boolean;
   /** Getter for `meta.voice` — resuming Conversation opens on the first unanswered question (ENG-321). */
   voicePaths: () => readonly string[];
+  /** Transcrição+tradução das respostas gravadas (ENG-327). */
+  stt: Transcriber | null;
 }) {
   // Escolha MANUAL da cauda "Guardar": enquanto null, a vista segue o status da
   // sessão (concluída abre na Export — ENG-320), que pode chegar depois da montagem
@@ -128,6 +133,8 @@ function SessionStations({
             sound,
             onVoiceSaved,
             voicePaths,
+            stt,
+            sessionId,
             // a prévia do relatório fecha com "Guardar os documentos →" (protótipo
             // toExport); a Export é estado local do shell, então a chave é nossa
             onGoToExport: () => setManualExport(true),
@@ -441,6 +448,10 @@ export function App() {
       ? voiceRegistration.fixture()
       : voiceRegistration.real({ store: voiceStoreFor(routeId) });
   }, [routeId]);
+  // Transcrição+tradução das respostas (ENG-327): FIXTURE por enquanto — o job
+  // assíncrono de verdade é da API (ENG-325) e ainda não existe. Trocar por
+  // `sttRegistration.real(...)` quando ela entrar; o resto do fluxo não muda.
+  const stt = useMemo<Transcriber>(() => sttRegistration.fixture(), []);
   // A voz do guia é a implementação REAL, não a fixture: falar de verdade É a feature
   // (ENG-280). Ela busca o clipe ElevenLabs na API com o Web Speech dentro de si como
   // fallback (ENG-284). O wiring (ENG-247) injeta a base real e o Bearer vivo do
@@ -532,6 +543,7 @@ export function App() {
           speaker={speaker}
           sound={sound}
           onVoiceSaved={onVoiceSaved}
+          stt={stt}
           initialExport={completed}
           voicePaths={getVoicePaths}
         />

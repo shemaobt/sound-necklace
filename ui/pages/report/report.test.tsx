@@ -2,6 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import type { Transcriber } from '../../../adapters/stt/types';
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import { buildMapReport, type ResourcePath } from '../../../contracts';
@@ -324,5 +325,145 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
     const after = buildMapReport(sessionStore.getState().session!);
     expect(after).toBe(before);
     expect(after).not.toContain('checar vocabulário');
+  });
+});
+
+describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () => {
+  /** Transcriber controlável: `resolve()` entrega os rascunhos quando o teste quiser. */
+  function controllableStt(drafts: Record<string, { source: string; en: string }>): {
+    stt: Transcriber;
+    finish: () => void;
+    started: string[][];
+  } {
+    const started: string[][] = [];
+    let release: (() => void) | null = null;
+    // o job só termina quando o TESTE mandar: `progress` espera esta promessa, então
+    // nenhum caso depende da ordem dos microtasks nem do atraso real do polling
+    const gate = new Promise<void>((res) => {
+      release = res;
+    });
+    let settled = false;
+    void gate.then(() => {
+      settled = true;
+    });
+    return {
+      started,
+      finish: () => release?.(),
+      stt: {
+        start: (_id, paths) => {
+          started.push([...paths]);
+          return Promise.resolve();
+        },
+        progress: async () => {
+          await Promise.resolve();
+          return settled ? { done: true, drafts } : { done: false, drafts: {} };
+        },
+      },
+    };
+  }
+
+  const Q = L1_Q[0]!;
+  const PATH = voiceAnswerPath({ level: 1, k: Q.k });
+  const DRAFTS = { [PATH]: { source: 'Ele contou do boto.', en: 'He told of the dolphin.' } };
+
+  it('enquanto o job roda, o cartão avisa que está transcrevendo e a resposta segue vazia', async () => {
+    const { stt } = controllableStt(DRAFTS);
+    load(report());
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    const status = await screen.findByText(/transcrevendo/i);
+    const card = status.closest('.cds-report-card') as HTMLElement;
+    expect(within(card).getByText(Q.q)).toBeTruthy();
+    expect((within(card).getByLabelText('resposta') as HTMLTextAreaElement).value).toBe('');
+  });
+
+  it('o rascunho chega marcado como sugestão, e ainda NÃO é a resposta', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    finish();
+    const en = await screen.findByDisplayValue('He told of the dolphin.');
+
+    const card = en.closest('.cds-report-card') as HTMLElement;
+    expect(within(card).getByText('Ele contou do boto.')).toBeTruthy();
+    expect(within(card).getByText(/sugestão/i)).toBeTruthy();
+    // o rascunho NÃO virou resposta: o .md continua sem ele
+    expect(buildMapReport(sessionStore.getState().session!)).not.toContain(
+      'He told of the dolphin.',
+    );
+  });
+
+  it('confirmar põe o inglês na resposta — e é ele que sai no .md', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    finish();
+    const en = await screen.findByDisplayValue('He told of the dolphin.');
+    const card = en.closest('.cds-report-card') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: /confirmar/i }));
+
+    expect((within(card).getByLabelText('resposta') as HTMLTextAreaElement).value).toBe(
+      'He told of the dolphin.',
+    );
+    expect(buildMapReport(sessionStore.getState().session!)).toContain('He told of the dolphin.');
+  });
+
+  it('editar o inglês antes de confirmar guarda o texto editado, não o rascunho', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    finish();
+    const en = await screen.findByDisplayValue('He told of the dolphin.');
+    await userEvent.clear(en);
+    await userEvent.type(en, 'He spoke about the river dolphin.');
+
+    const card = en.closest('.cds-report-card') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: /confirmar/i }));
+
+    const md = buildMapReport(sessionStore.getState().session!);
+    expect(md).toContain('He spoke about the river dolphin.');
+    expect(md).not.toContain('He told of the dolphin.');
+  });
+
+  it('uma pergunta sem gravação nunca ganha rascunho', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    const outra = L1_Q[1]!;
+    load(report());
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    finish();
+    await screen.findByDisplayValue('He told of the dolphin.');
+
+    const card = cardFor(outra.q);
+    expect(within(card).queryByText(/sugestão/i)).toBeNull();
+    expect(within(card).queryByRole('button', { name: /confirmar/i })).toBeNull();
+  });
+
+  it('só pede transcrição das respostas que TÊM gravação', async () => {
+    const { stt, started } = controllableStt(DRAFTS);
+    load(report());
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    await screen.findByText(/transcrevendo/i);
+    expect(started.flat()).toEqual([PATH]);
+  });
+
+  it('a chegada dos rascunhos é anunciada por uma região registrada vazia de antemão', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    // registrada ANTES de ter conteúdo, senão o leitor de tela não anuncia nada
+    const region = screen.getByRole('status', { name: /rascunho/i });
+    expect(region.textContent).toBe('');
+
+    finish();
+    await screen.findByDisplayValue('He told of the dolphin.');
+    // e o que se anuncia é o RESUMO, não o rascunho inteiro
+    expect(region.textContent).toMatch(/1 resposta para revisar/i);
+    expect(region.textContent).not.toContain('He told of the dolphin.');
   });
 });

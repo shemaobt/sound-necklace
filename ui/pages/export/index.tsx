@@ -11,6 +11,7 @@ import {
   canExportManifesto,
   manifestoFilename,
   relatorioFilename,
+  reportExportStatus,
   retornoExportStatus,
   retornoFilename,
   type SessionMeta,
@@ -158,6 +159,12 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
     return <PreparingSession eyebrow={t('export.waitEyebrow')} line={t('export.waitLine')} />;
   }
   const { canExport, semFim } = retornoExportStatus(session);
+  // Inglês confirmado é requisito (ENG-327): uma resposta gravada sem texto não
+  // exporta nada — guardar assim perderia em silêncio o que a pessoa disse.
+  const { canExport: reportReady } = reportExportStatus(
+    session,
+    custody?.voice ?? new Set<string>(),
+  );
 
   const onDownload = async (kind: ArtifactKind): Promise<void> => {
     if (!triple) return;
@@ -167,6 +174,11 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       return;
     }
     if (kind === 'manifest' && !canExportManifesto(session)) return;
+    if (kind === 'report' && !reportReady) {
+      setNotice(t('export.reportBlocked'));
+      sound?.refuse();
+      return;
+    }
     // Fronteira de IO real (ENG-247): já concluída, o download busca os bytes
     // guardados na API (§10.5 — sem rebuild); a falha vira aviso, nunca silêncio.
     let bytes: string;
@@ -192,6 +204,11 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
   // punir). `busy` fecha o duplo-clique enquanto a sequência voa.
   const onComplete = async (): Promise<void> => {
     if (!store || !sessionId || !triple || !canExport || busy) return;
+    if (!reportReady) {
+      setNotice(t('export.reportBlocked'));
+      sound?.refuse();
+      return;
+    }
     setBusy(true);
     try {
       await store.complete(sessionId, toSessionDto(session, custody?.meta ?? DEFAULT_META), triple);

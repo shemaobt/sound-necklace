@@ -18,6 +18,9 @@
  *
  * A célula é SÓ TEXTO (ENG-356): o `.webm` fica no bucket como proveniência e
  * nunca entra no artefato — sem texto confirmado, a resposta sai "_(no answer)_".
+ * Daí `reportExportStatus` (ENG-327): uma resposta GRAVADA sem texto confirmado
+ * trava a exportação, senão ela sairia vazia e perderia em silêncio o que a
+ * pessoa disse.
  */
 
 import {
@@ -26,6 +29,8 @@ import {
   L3_Q,
   lockedParts,
   productiveScenes,
+  questionSequence,
+  voiceAnswerPath,
   type Mapping,
   type SessionState,
 } from '../domain';
@@ -103,6 +108,44 @@ export function buildMapReport(state: SessionState): string {
 
   L.push('');
   return L.join('\n');
+}
+
+export interface ReportExportStatus {
+  /** gate de guardar/baixar: falso enquanto houver gravação sem texto confirmado */
+  canExport: boolean;
+  /** quantas respostas gravadas ainda esperam o inglês confirmado */
+  pendingSlots: number;
+}
+
+/**
+ * O inglês confirmado é REQUISITO de exportação (ENG-326/§8.7): como a gravação
+ * não entra no artefato, uma resposta só-voz não exporta nada — exportá-la
+ * silenciosamente perderia o que a pessoa disse. Então ela trava, e a saída é
+ * confirmar o rascunho (ou digitar/traduzir na mão, sempre possível: sem beco).
+ *
+ * Uma pergunta SEM gravação não trava nada — segue `_(no answer)_`, como
+ * sempre foi. O trim espelha `answerCell`: o que o `.md` descartaria não conta
+ * como confirmado aqui, senão gate e célula discordariam.
+ *
+ * @param voice caminhos (`respostas/…`) que TÊM gravação nesta sessão.
+ */
+export function reportExportStatus(
+  state: SessionState,
+  voice: ReadonlySet<string>,
+): ReportExportStatus {
+  const m = state.mapping ?? EMPTY_MAPPING;
+  let pendingSlots = 0;
+  for (const slot of questionSequence(state)) {
+    if (!voice.has(voiceAnswerPath(slot))) continue;
+    const confirmed =
+      slot.level === 1
+        ? m.level1[slot.k]
+        : slot.level === 2
+          ? m.level2[slot.partId]?.[slot.k]
+          : m.level3[slot.propId]?.[slot.k];
+    if (!(confirmed ?? '').trim()) pendingSlots++;
+  }
+  return { canExport: pendingSlots === 0, pendingSlots };
 }
 
 /** Nome do arquivo do relatório (ENG-359) — mesmo fallback "story" dos JSONs;
