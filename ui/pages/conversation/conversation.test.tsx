@@ -58,7 +58,7 @@ function tagged(id: string, span: Span, kind = 'BIRTH_SCENE'): ScenePart {
     span,
     locked: true,
     scene_kind: kind,
-    scene_kind_confidence: 'alta',
+    scene_kind_confidence: 'high',
     tag_state: 'tagged',
   });
 }
@@ -70,7 +70,7 @@ function noneFit(id: string, span: Span): ScenePart {
 function frase(overrides: Partial<Frase>): Frase {
   return {
     prop_id: 'P1',
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,

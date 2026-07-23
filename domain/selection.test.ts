@@ -97,7 +97,7 @@ describe('clickBead — o começo da frase é a fronteira DENTRO da cena (um-toq
   function frase(over: Partial<Frase>): Frase {
     return {
       prop_id: 'P1',
-      statement_pt: '',
+      statement: '',
       qa: [],
       span: null,
       part_link: null,

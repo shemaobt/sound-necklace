@@ -59,14 +59,14 @@ function segmenting(): SessionState {
         span: { s: 0, e: 6 },
         locked: true,
         scene_kind: 'BIRTH_SCENE',
-        scene_kind_confidence: 'alta',
+        scene_kind_confidence: 'high',
         tag_state: 'tagged',
       },
     ],
     frases: [
       {
         prop_id: 'P1',
-        statement_pt: '',
+        statement: '',
         qa: [],
         span: null,
         part_link: null,
@@ -126,7 +126,7 @@ afterEach(() => {
 function frase(over: Partial<Frase>): Frase {
   return {
     prop_id: 'P1',
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,

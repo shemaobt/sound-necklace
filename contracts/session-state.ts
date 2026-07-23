@@ -51,13 +51,13 @@ const ScenePartSchema = z.strictObject({
   span: SpanSchema.nullable(),
   locked: z.boolean(),
   scene_kind: z.enum(sceneKindValues).nullable(),
-  scene_kind_confidence: z.enum(['alta', 'média', 'baixa']).nullable(),
+  scene_kind_confidence: z.enum(['high', 'medium', 'low']).nullable(),
   tag_state: z.enum(['pending', 'tagged', 'none_fit']),
 });
 
 const FraseSchema = z.strictObject({
   prop_id: z.string(),
-  statement_pt: z.string(),
+  statement: z.string(),
   qa: z.array(z.string()),
   span: SpanSchema.nullable(),
   part_link: z.string().nullable(),
@@ -136,7 +136,7 @@ export function toSessionDto(state: SessionState, meta: SessionMeta): SessionSta
     partsConfirmed: state.partsConfirmed,
     frases: state.frases.map((f) => ({
       prop_id: f.prop_id,
-      statement_pt: f.statement_pt,
+      statement: f.statement,
       qa: [...f.qa],
       span: f.span ? { ...f.span } : null,
       part_link: f.part_link,
@@ -182,7 +182,7 @@ export function fromSessionDto(dto: SessionStateDto): { state: SessionState; met
     partsConfirmed: dto.partsConfirmed,
     frases: dto.frases.map((f) => ({
       prop_id: f.prop_id,
-      statement_pt: f.statement_pt,
+      statement: f.statement,
       qa: [...f.qa],
       span: f.span ? { ...f.span } : null,
       part_link: f.part_link,

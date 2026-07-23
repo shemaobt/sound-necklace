@@ -31,6 +31,29 @@ Serialização capturada exatamente como a referência serializa:
 `JSON.stringify(x, null, 2)` **sem** newline final para os JSON; o `.md` é
 `join("\n")` com exatamente **um** newline final.
 
+## O `.md` em inglês (ENG-356) — divergência derivada, não escrita à mão
+
+O artefato normalizou para inglês (política ENG-326) e a referência, INTOCÁVEL,
+só sabe emitir PT-BR. Em vez de passar a escrever o golden do `.md` à mão — o
+que mataria a prova do `--verify` —, `generate.mjs` aplica a tabela explícita
+`REPORT_PT_TO_EN` à saída da referência antes de gravar/comparar, e **falha alto**
+se qualquer marcador PT-BR sobreviver (`PT_LEFTOVERS`).
+
+O que continua provado byte a byte contra a referência: estrutura, ordem das
+seções, numeração `S#`/`Frase i`, spans e o texto das respostas. O que diverge:
+apenas as strings congeladas listadas na tabela (título, blockquote, cabeçalhos,
+`_(no answer)_` e as 21 perguntas).
+
+A tabela é escrita à mão **de propósito** e NÃO importa nada de
+`domain/`/`contracts/`: se importasse, os dois lados concordariam por construção
+e o byte-diff do `pnpm golden` deixaria de provar qualquer coisa. Mexeu em
+`q_en` ou no esqueleto do relatório? Mexa na tabela também — e é isso que a
+revisão humana da PR congelada tem que olhar.
+
+Os textos de resposta em `cases/*.json` também são inglês: a referência é
+passthrough para eles (e para `scene_kind_confidence`), então nada disso precisa
+de tradução — sai da referência já no idioma do caso.
+
 ## PCM sintético (determinístico por construção)
 
 LCG com aritmética **BigInt** (1103515245·x excede 2^53 — em double perderia

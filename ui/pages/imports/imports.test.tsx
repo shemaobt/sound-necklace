@@ -53,15 +53,15 @@ const DELIVERY = {
         {
           proposed_span: { start_bead: 0, end_bead: 4 },
           scene_kind: 'APPEAL_SCENE',
-          scene_kind_confidence: 'alta',
+          scene_kind_confidence: 'high',
           tag_state: 'tagged',
         },
       ],
       propositions: [
         {
           prop_id: 'P1',
-          statement_pt: 'ele partiu ao amanhecer',
-          qa_readback_pt: ['quem partiu?'],
+          statement: 'ele partiu ao amanhecer',
+          qa_readback: ['quem partiu?'],
           proposed_span: { start_bead: 1, end_bead: 3 },
         },
       ],
@@ -79,14 +79,14 @@ const RETURN = {
         {
           confirmed_span: { start_bead: 0, end_bead: 4 },
           scene_kind: 'APPEAL_SCENE',
-          scene_kind_confidence: 'alta',
+          scene_kind_confidence: 'high',
           tag_state: 'tagged',
         },
       ],
       propositions: [{ prop_id: 'P1', confirmed_span: { start_bead: 0, end_bead: 2 } }],
     },
   ],
-  flags: [{ kind: 'NEEDS_REVIEW', prop_id: 'P1', note_pt: 'rever este trecho' }],
+  flags: [{ kind: 'NEEDS_REVIEW', prop_id: 'P1', note: 'rever este trecho' }],
 };
 
 const MISMATCH_MSG = /o manifest_id da entrega não bate com o do áudio/;
@@ -110,7 +110,7 @@ describe('estação imports — entrega', () => {
     expect(s.parts[0]!.locked).toBe(false);
     expect(s.parts[0]!.scene_kind).toBe('APPEAL_SCENE');
     expect(s.parts[0]!.tag_state).toBe('tagged');
-    expect(s.frases[0]!.statement_pt).toBe('ele partiu ao amanhecer');
+    expect(s.frases[0]!.statement).toBe('ele partiu ao amanhecer');
     expect(s.frases[0]!.locked).toBe(false);
   });
 

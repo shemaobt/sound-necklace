@@ -32,7 +32,7 @@ function goldenBytes(caseName: string, file: string): Buffer {
 /**
  * Triage de um caso golden GLEANING+none_fit. `GLEANING_SCENE` é tier ALTA (label
  * "Respiga"), fora da grade "mais comuns" — alcançado expandindo "Ver todos os tipos
- * por tema". A confiança "alta" do caso é o rádio "Certeza". A 2ª parte é "Nenhum se
+ * por tema". A confiança "high" do caso é o rádio "Certeza". A 2ª parte é "Nenhum se
  * encaixa".
  */
 async function triageGleaningThenNoneFit(page: Page): Promise<void> {
@@ -49,7 +49,7 @@ async function triageGleaningThenNoneFit(page: Page): Promise<void> {
  * Digita as respostas do caso nas posições exatas da sequência de perguntas
  * (domain/mapping.ts): a conversa começa no índice 0 e "Próxima pergunta" avança de 1.
  * Os alvos vêm em ordem crescente; entre eles, avança clicando "Próxima pergunta".
- * Perguntas não visitadas (e a resposta vazia de `tempo`) ficam "(sem resposta)" no
+ * Perguntas não visitadas (e a resposta vazia de `tempo`) ficam "(no answer)" no
  * relatório — idêntico ao golden. NENHUMA resposta por voz (poluiria o .md com paths).
  * A digitação acontece no RELATÓRIO (a entrevista é só-voz): anda até a prévia e
  * preenche o card do índice exato da sequência.
@@ -90,7 +90,7 @@ test('minimal-flow: os três artefatos exportados pela UI são byte-idênticos a
 
   await app.confirmWholeStory();
   await app.cutScenes([9, 23]); // PT1 0–9, PT2 10–23
-  await triageGleaningThenNoneFit(page); // PT1 GLEANING/alta, PT2 none_fit
+  await triageGleaningThenNoneFit(page); // PT1 GLEANING/high, PT2 none_fit
 
   await app.cutPhrase(0, 4); // frase contida em PT1 (0–9) → trava direto
   await app.finishPhrases(); // 1 cena produtiva → finaliza a segmentação
@@ -98,10 +98,10 @@ test('minimal-flow: os três artefatos exportados pela UI são byte-idênticos a
   // Respostas digitadas nas posições exatas: L1 recontar(0), L2 PT1 quem(12),
   // L2 PT2 descrever(16), L3 P1 oque(21). `tempo`(4) vazio é inerte → omitido.
   await typeAnswersAt(app, page, [
-    [0, 'Uma história sobre respiga e retorno ao lar.'],
-    [12, 'Duas mulheres e os ceifeiros.'],
-    [16, 'Um trecho que não se encaixa nos tipos.'],
-    [21, 'A chegada ao campo — com acentos: coração, você, média.'],
+    [0, 'A story about gleaning and returning home.'],
+    [12, 'Two women and the reapers.'],
+    [16, 'A stretch that fits none of the kinds.'],
+    [21, 'Arrival at the field — names kept as spoken: José, Conceição, Belém.'],
   ]);
 
   await app.completeSession();
@@ -171,10 +171,10 @@ test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate co
   await app.cutPhrase(0, 4);
   await app.finishPhrases();
   await typeAnswersAt(app, page, [
-    [0, 'Uma história sobre respiga e retorno ao lar.'],
-    [12, 'Duas mulheres e os ceifeiros.'],
-    [16, 'Um trecho que não se encaixa nos tipos.'],
-    [21, 'A chegada ao campo — com acentos: coração, você, média.'],
+    [0, 'A story about gleaning and returning home.'],
+    [12, 'Two women and the reapers.'],
+    [16, 'A stretch that fits none of the kinds.'],
+    [21, 'Arrival at the field — names kept as spoken: José, Conceição, Belém.'],
   ]);
 
   // Troca a UI para INGLÊS. De quebra isto é um smoke test do chrome EN: o fluxo só

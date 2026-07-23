@@ -144,10 +144,11 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
         ? {
             manifest: serializeArtifact(buildManifesto(session)),
             anchoring: serializeArtifact(buildRetorno(session)),
-            report: buildMapReport(session, custody?.voice ?? new Set<string>()),
+            // ENG-356: o .webm fica no bucket como proveniência e NUNCA entra no .md
+            report: buildMapReport(session),
           }
         : null,
-    [session, custody],
+    [session],
   );
 
   if (!session) return null;

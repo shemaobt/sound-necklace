@@ -202,9 +202,9 @@ describe('TriagePicker — escolher tipo revela o passo de confiança', () => {
 
 describe('TriagePicker — confirmar emite os valores contratuais exatos', () => {
   it.each([
-    ['Certeza', 'alta'],
-    ['Quase', 'média'],
-    ['Na dúvida', 'baixa'],
+    ['Certeza', 'high'],
+    ['Quase', 'medium'],
+    ['Na dúvida', 'low'],
   ] as const)('%s + Confirmar emite "%s"', (label, stored) => {
     const onConfirm = vi.fn();
     const { container, getByText } = render(<TriagePicker onConfirm={onConfirm} />);
@@ -235,17 +235,7 @@ describe('TriagePicker — confirmar emite os valores contratuais exatos', () =>
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
     expect(onConfirm).not.toHaveBeenCalled();
     fireEvent.click(getByText('Confirmar'));
-    expect(onConfirm).toHaveBeenCalledExactlyOnceWith('APPEAL_SCENE', 'baixa');
-  });
-
-  it('"média" carrega o U+00E9 (contrato)', () => {
-    const onConfirm = vi.fn();
-    const { container, getByText } = render(<TriagePicker onConfirm={onConfirm} />);
-    fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
-    fireEvent.click(getByText('Quase'));
-    fireEvent.click(getByText('Confirmar'));
-    const conf = onConfirm.mock.calls[0]?.[1] as string;
-    expect(conf.codePointAt(1)).toBe(0xe9);
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith('APPEAL_SCENE', 'low');
   });
 
   it('none-fit emite sem confiança e sem passar pelo trio', () => {

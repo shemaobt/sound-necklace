@@ -32,21 +32,21 @@ describe('tagScene — classifica uma cena com tipo + confiança', () => {
   it('marca a cena alvo como tagged e não toca nas outras', () => {
     const s = stateWith([mkPart('PT1'), mkPart('PT2')]);
 
-    const next = tagScene(s, 'PT1', 'GLEANING_SCENE', 'alta');
+    const next = tagScene(s, 'PT1', 'GLEANING_SCENE', 'high');
 
     expect(next.parts[0]).toMatchObject({
       part_id: 'PT1',
       tag_state: 'tagged',
       scene_kind: 'GLEANING_SCENE',
-      scene_kind_confidence: 'alta',
+      scene_kind_confidence: 'high',
     });
     expect(next.parts[1]).toMatchObject({ part_id: 'PT2', tag_state: 'pending' });
   });
 
-  it('preserva a confiança média (U+00E9 exportada verbatim)', () => {
+  it('preserva a confiança intermediária tal como recebida', () => {
     const s = stateWith([mkPart('PT1')]);
-    const next = tagScene(s, 'PT1', 'MEAL_SCENE', 'média');
-    expect(next.parts[0]!.scene_kind_confidence).toBe('média');
+    const next = tagScene(s, 'PT1', 'MEAL_SCENE', 'medium');
+    expect(next.parts[0]!.scene_kind_confidence).toBe('medium');
   });
 
   it('reclassificar substitui o tipo e a confiança anteriores', () => {
@@ -54,11 +54,11 @@ describe('tagScene — classifica uma cena com tipo + confiança', () => {
       mkPart('PT1', {
         tag_state: 'tagged',
         scene_kind: 'MEAL_SCENE',
-        scene_kind_confidence: 'baixa',
+        scene_kind_confidence: 'low',
       }),
     ]);
-    const next = tagScene(s, 'PT1', 'VOW_SCENE', 'alta');
-    expect(next.parts[0]).toMatchObject({ scene_kind: 'VOW_SCENE', scene_kind_confidence: 'alta' });
+    const next = tagScene(s, 'PT1', 'VOW_SCENE', 'high');
+    expect(next.parts[0]).toMatchObject({ scene_kind: 'VOW_SCENE', scene_kind_confidence: 'high' });
   });
 });
 
@@ -68,7 +68,7 @@ describe('markNoneFit — marca "nenhum se encaixa"', () => {
       mkPart('PT1', {
         tag_state: 'tagged',
         scene_kind: 'MEAL_SCENE',
-        scene_kind_confidence: 'alta',
+        scene_kind_confidence: 'high',
       }),
     ]);
 
@@ -100,13 +100,13 @@ describe('productiveScenes — travadas, com span, tagged e com scene_kind', () 
       mkPart('PT1', {
         tag_state: 'tagged',
         scene_kind: 'GLEANING_SCENE',
-        scene_kind_confidence: 'alta',
+        scene_kind_confidence: 'high',
       }),
       mkPart('PT2', { tag_state: 'none_fit' }),
       mkPart('PT3', {
         tag_state: 'tagged',
         scene_kind: 'MEAL_SCENE',
-        scene_kind_confidence: 'baixa',
+        scene_kind_confidence: 'low',
       }),
       mkPart('PT4'),
     ]);
@@ -119,7 +119,7 @@ describe('productiveScenes — travadas, com span, tagged e com scene_kind', () 
         locked: false,
         tag_state: 'tagged',
         scene_kind: 'GLEANING_SCENE',
-        scene_kind_confidence: 'alta',
+        scene_kind_confidence: 'high',
       }),
     ]);
     expect(productiveScenes(s)).toHaveLength(0);

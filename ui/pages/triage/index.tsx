@@ -48,9 +48,9 @@ type Translate = (key: string) => string;
 
 /** Rótulo de confiança para o estado atual (referência L1211; sem dígitos, §9.2). */
 function confLabel(c: Confidence | null, t: Translate): string {
-  if (c === 'alta') return t('triage.confAlta');
-  if (c === 'média') return t('triage.confMedia');
-  if (c === 'baixa') return t('triage.confBaixa');
+  if (c === 'high') return t('triage.confAlta');
+  if (c === 'medium') return t('triage.confMedia');
+  if (c === 'low') return t('triage.confBaixa');
   return '';
 }
 

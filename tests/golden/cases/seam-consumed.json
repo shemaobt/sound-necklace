@@ -13,7 +13,7 @@
     { "type": "cutScene", "endBead": 11 },
     { "type": "cutScene", "endBead": 23 },
     { "type": "confirmParts" },
-    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "high" },
     { "type": "triage", "partIndex": 1, "none_fit": true },
     { "type": "triagemDone" },
     { "type": "phraseSelect", "s": 0, "e": 23 },

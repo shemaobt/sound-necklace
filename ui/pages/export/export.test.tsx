@@ -50,7 +50,7 @@ function lockedTagged(part_id: string, span: Span): ScenePart {
     span,
     locked: true,
     scene_kind: 'APPEAL_SCENE',
-    scene_kind_confidence: 'alta',
+    scene_kind_confidence: 'high',
     tag_state: 'tagged',
   };
 }
@@ -58,7 +58,7 @@ function lockedTagged(part_id: string, span: Span): ScenePart {
 function frase(over: Partial<Frase>): Frase {
   return {
     prop_id: 'P1',
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,
@@ -234,8 +234,8 @@ describe('Export — gate do retorno (PRD v2 §8.8)', () => {
   it('avisa quantas frases estão sem fim travado com a contagem exata', async () => {
     const state = exportable({
       frases: [
-        frase({ prop_id: 'P1', statement_pt: 'algo', locked: false }),
-        frase({ prop_id: 'P2', statement_pt: 'outra', locked: false }),
+        frase({ prop_id: 'P1', statement: 'algo', locked: false }),
+        frase({ prop_id: 'P2', statement: 'outra', locked: false }),
       ],
     });
     const store = new FixtureSessionStore();

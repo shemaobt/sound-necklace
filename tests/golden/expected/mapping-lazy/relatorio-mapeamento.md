@@ -1,55 +1,55 @@
-# Relatório de Mapeamento — mapeamento-preguicoso
+# Meaning Mapping Report — mapeamento-preguicoso
 
-> Matéria-prima para o Claude Code. **Não** é o mapa. Respostas em texto livre (perguntas gerais do método); o agente faz as perguntas contextuais, classifica o vocabulário controlado, sinaliza NEW_VALUE e escreve a prosa do meaning map.
+> Raw material for Claude Code. This is **not** the map. Free-text answers (the general questions of the method); the agent asks the contextual questions, classifies the controlled vocabulary, flags NEW_VALUE and writes the prose of the meaning map.
 > `source_domain: oral_archive` · `speaker_role: LISTENER_NOT_STORYTELLER` · manifest: `fnv1a32:cb90e5f3`
 
-## Nível 1 — a história inteira
-- **Conte essa história com as suas palavras, como se fosse para alguém que nunca ouviu.** _(whole)_
-  Resposta inicial da história.
-- **Como a história começa? E como ela termina?** _(arc)_
-  _(sem resposta)_
-- **O que muda do começo para o fim? A história deixa as coisas diferentes de como começou?** _(arc)_
-  _(sem resposta)_
-- **Onde essa história acontece?** _(context)_
-  _(sem resposta)_
-- **Tem um tempo, uma época em que ela acontece? Ou a história não marca isso?** _(context)_
-  _(sem resposta)_
-- **Tem alguma coisa que quem escuta já precisa saber de antemão para a história fazer sentido?** _(context)_
-  _(sem resposta)_
-- **Que sentimento essa história passa enquanto você escuta? Muda em algum momento?** _(tone)_
-  _(sem resposta)_
-- **A história corre rápida ou devagar? Tem parte que demora mais que as outras?** _(pace)_
-  _(sem resposta)_
-- **Para que serve essa história? O que ela quer fazer com quem escuta — ensinar, abrir um assunto, avisar, plantar uma ideia?** _(function)_
-  _(sem resposta)_
-- **Se essa história faz parte de algo maior, o que ela prepara para o que vem depois?** _(function)_
-  _(sem resposta)_
-- **Tem alguma coisa que você esperaria nessa história e que não aparece? Um nome, alguém no comando, um problema, um acontecimento? O narrador parece ter deixado algo de fora de propósito?** _(significant_absence)_
-  _(sem resposta)_
+## Level 1 — the whole story
+- **Tell this story in your own words, as if to someone who has never heard it.** _(whole)_
+  Initial answer for the story.
+- **How does the story begin? And how does it end?** _(arc)_
+  _(no answer)_
+- **What changes from the beginning to the end? Does the story leave things different from how they started?** _(arc)_
+  _(no answer)_
+- **Where does this story take place?** _(context)_
+  _(no answer)_
+- **Is there a time, a period when it takes place? Or does the story not mark that?** _(context)_
+  _(no answer)_
+- **Is there anything a listener already needs to know beforehand for the story to make sense?** _(context)_
+  _(no answer)_
+- **What feeling does this story carry while you listen? Does it change at any point?** _(tone)_
+  _(no answer)_
+- **Does the story run fast or slow? Is there a part that takes longer than the others?** _(pace)_
+  _(no answer)_
+- **What is this story for? What does it want to do to whoever listens — teach, open a subject, warn, plant an idea?** _(function)_
+  _(no answer)_
+- **If this story is part of something larger, what does it prepare for what comes after?** _(function)_
+  _(no answer)_
+- **Is there anything you would expect in this story that does not appear? A name, someone in charge, a problem, an event? Does the narrator seem to have left something out on purpose?** _(significant_absence)_
+  _(no answer)_
 
-## Nível 2 — as cenas
+## Level 2 — the scenes
 
-### Cena 1 (S1) — scene_kind: GLEANING_SCENE
-- **Me conte o que acontece nesse trecho, com as suas palavras.** Resposta inicial da cena.
-- **Quem aparece nesse trecho? Pessoas, animais, um grupo, alguém de quem se fala?** _(sem resposta)_
-- **Onde isso acontece? É o mesmo lugar de antes ou mudou?** _(sem resposta)_
-- **Tem alguma coisa, algum objeto, algum elemento importante nesse trecho?** _(sem resposta)_
-- **Tem algo que você esperaria nesse trecho e que não aparece?** _(sem resposta)_
+### Scene 1 (S1) — scene_kind: GLEANING_SCENE
+- **Tell me what happens in this stretch, in your own words.** Initial answer for the scene.
+- **Who appears in this stretch? People, animals, a group, someone who is spoken about?** _(no answer)_
+- **Where does this happen? Is it the same place as before, or has it changed?** _(no answer)_
+- **Is there anything, any object, any important element in this stretch?** _(no answer)_
+- **Is there anything you would expect in this stretch that does not appear?** _(no answer)_
 
-## Nível 3 — proposições (cenas produtivas)
+## Level 3 — propositions (productive scenes)
 
-### Cena 1 (S1) — GLEANING_SCENE
+### Scene 1 (S1) — GLEANING_SCENE
 
-**Frase 1 (P1) — contas 0–9:**
-- O que aconteceu nesta frase? Resposta da P1.
-- Quem? _(sem resposta)_
-- Onde? _(sem resposta)_
-- Como? Por quê? _(sem resposta)_
-- O que mais tem nessa frase? _(sem resposta)_
+**Phrase 1 (P1) — beads 0–9:**
+- What happened in this phrase? Answer for P1.
+- Who? _(no answer)_
+- Where? _(no answer)_
+- How? Why? _(no answer)_
+- What else is in this phrase? _(no answer)_
 
-**Frase 2 (P2) — contas 10–15:**
-- O que aconteceu nesta frase? Resposta da P2.
-- Quem? _(sem resposta)_
-- Onde? _(sem resposta)_
-- Como? Por quê? _(sem resposta)_
-- O que mais tem nessa frase? _(sem resposta)_
+**Phrase 2 (P2) — beads 10–15:**
+- What happened in this phrase? Answer for P2.
+- Who? _(no answer)_
+- Where? _(no answer)_
+- How? Why? _(no answer)_
+- What else is in this phrase? _(no answer)_

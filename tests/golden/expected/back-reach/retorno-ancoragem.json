@@ -24,7 +24,7 @@
           "part_id": "PT2",
           "scene_id": "S2",
           "scene_kind": "GLEANING_SCENE",
-          "scene_kind_confidence": "alta",
+          "scene_kind_confidence": "high",
           "tag_state": "tagged",
           "confirmed_span": {
             "start_bead": 10,

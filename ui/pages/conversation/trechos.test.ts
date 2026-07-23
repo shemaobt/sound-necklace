@@ -34,7 +34,7 @@ function mkPart(part_id: string, span: Span, over: Partial<ScenePart> = {}): Sce
 function mkFrase(prop_id: string, over: Partial<Frase> = {}): Frase {
   return {
     prop_id,
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,

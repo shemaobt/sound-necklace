@@ -12,23 +12,23 @@
     { "type": "confirmWhole" },
     { "type": "cutScene", "endBead": 23 },
     { "type": "confirmParts" },
-    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "alta" },
+    { "type": "triage", "partIndex": 0, "kind": "GLEANING_SCENE", "confidence": "high" },
     { "type": "triagemDone" },
     { "type": "phraseSelect", "s": 0, "e": 9 },
     { "type": "confirmPhrase" },
     { "type": "phraseSelect", "s": 10, "e": 15 },
     { "type": "confirmPhrase" },
     { "type": "sceneDone" },
-    { "type": "answer", "level": 1, "key": "recontar", "text": "Resposta inicial da história." },
+    { "type": "answer", "level": 1, "key": "recontar", "text": "Initial answer for the story." },
     {
       "type": "answer",
       "level": 2,
       "partId": "PT1",
       "key": "descrever",
-      "text": "Resposta inicial da cena."
+      "text": "Initial answer for the scene."
     },
-    { "type": "answer", "level": 3, "propId": "P1", "key": "oque", "text": "Resposta da P1." },
-    { "type": "answer", "level": 3, "propId": "P2", "key": "oque", "text": "Resposta da P2." },
+    { "type": "answer", "level": 3, "propId": "P1", "key": "oque", "text": "Answer for P1." },
+    { "type": "answer", "level": 3, "propId": "P2", "key": "oque", "text": "Answer for P2." },
     { "type": "export", "artifacts": ["manifesto", "retorno", "relatorio"] }
   ]
 }

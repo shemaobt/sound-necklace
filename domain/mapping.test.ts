@@ -25,7 +25,7 @@ function mkPart(part_id: string, span: Span | null, over: Partial<ScenePart> = {
 function mkFrase(prop_id: string, over: Partial<Frase> = {}): Frase {
   return {
     prop_id,
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,
@@ -37,7 +37,7 @@ function mkFrase(prop_id: string, over: Partial<Frase> = {}): Frase {
 const PT1 = mkPart(
   'PT1',
   { s: 0, e: 9 },
-  { tag_state: 'tagged', scene_kind: 'GLEANING_SCENE', scene_kind_confidence: 'alta' },
+  { tag_state: 'tagged', scene_kind: 'GLEANING_SCENE', scene_kind_confidence: 'high' },
 );
 const PT2 = mkPart('PT2', { s: 10, e: 29 }, { tag_state: 'none_fit' });
 
@@ -171,7 +171,7 @@ describe('productiveFrases / questionSequence — ordem da conversa (referência
     const PT2prod = mkPart(
       'PT2',
       { s: 10, e: 29 },
-      { tag_state: 'tagged', scene_kind: 'MEAL_SCENE', scene_kind_confidence: 'média' },
+      { tag_state: 'tagged', scene_kind: 'MEAL_SCENE', scene_kind_confidence: 'medium' },
     );
     // frases em ordem INVERSA à das cenas no array state.frases
     const st = sess({ parts: [PT1, PT2prod], frases: [P2, P1] });

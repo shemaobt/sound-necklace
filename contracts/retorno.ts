@@ -29,7 +29,7 @@ const PartSchema = z.strictObject({
   part_id: z.string().regex(/^PT[1-9]\d*$/),
   scene_id: z.string().regex(/^S[1-9]\d*$/),
   scene_kind: z.enum(sceneKindValues).nullable(),
-  scene_kind_confidence: z.enum(['alta', 'média', 'baixa']).nullable(),
+  scene_kind_confidence: z.enum(['high', 'medium', 'low']).nullable(),
   tag_state: z.enum(['pending', 'tagged', 'none_fit']),
   confirmed_span: SpanSchema,
 });
@@ -46,7 +46,7 @@ const PropositionSchema = z.strictObject({
 const FlagSchema = z.strictObject({
   kind: z.literal('NEEDS_REVIEW'),
   prop_id: z.string().regex(/^P[1-9]\d*$/),
-  note_pt: z.string(),
+  note: z.string(),
 });
 
 export const RetornoSchema = z.strictObject({
@@ -131,6 +131,6 @@ export interface RetornoExportStatus {
 export function retornoExportStatus(state: SessionState): RetornoExportStatus {
   return {
     canExport: state.whole.confirmed,
-    semFim: state.frases.filter((p) => !p.locked && (p.span || p.statement_pt.trim())).length,
+    semFim: state.frases.filter((p) => !p.locked && (p.span || p.statement.trim())).length,
   };
 }

@@ -31,7 +31,7 @@ const ProposedSpanSchema = z.strictObject({
   end_bead: z.int().nonnegative(),
 });
 
-const ConfidenceSchema = z.enum(['alta', 'média', 'baixa']);
+const ConfidenceSchema = z.enum(['high', 'medium', 'low']);
 const TagStateSchema = z.enum(['pending', 'tagged', 'none_fit']);
 
 /* ---------------- ENTREGA ---------------- */
@@ -46,8 +46,8 @@ const DeliveryPartSchema = z.object({
 
 const DeliveryPropositionSchema = z.object({
   prop_id: z.string().optional(),
-  statement_pt: z.string().optional(),
-  qa_readback_pt: z.array(z.string()).optional(),
+  statement: z.string().optional(),
+  qa_readback: z.array(z.string()).optional(),
   proposed_span: ProposedSpanSchema.optional(),
   part_link: z.string().nullish(),
 });
@@ -101,7 +101,7 @@ export const ReturnSchema = z.object({
     )
     .optional(),
   flags: z
-    .array(z.object({ kind: z.literal('NEEDS_REVIEW'), prop_id: z.string(), note_pt: z.string() }))
+    .array(z.object({ kind: z.literal('NEEDS_REVIEW'), prop_id: z.string(), note: z.string() }))
     .optional(),
 });
 
@@ -141,8 +141,8 @@ export function applyDelivery(session: SessionState, dto: Delivery): ImportOutco
 
   const frases: Frase[] = (sc.propositions || []).map((p, idx) => ({
     prop_id: p.prop_id || `P${idx + 1}`,
-    statement_pt: p.statement_pt || '',
-    qa: p.qa_readback_pt || [],
+    statement: p.statement || '',
+    qa: p.qa_readback || [],
     span: p.proposed_span ? { s: p.proposed_span.start_bead, e: p.proposed_span.end_bead } : null,
     part_link: p.part_link || null,
     locked: false,
@@ -173,7 +173,7 @@ export function applyReturn(session: SessionState, dto: ReturnImport): ImportOut
     }));
     const frases: Frase[] = (sc.propositions || []).map((p) => ({
       prop_id: p.prop_id,
-      statement_pt: '',
+      statement: '',
       qa: [],
       span: { s: p.confirmed_span.start_bead, e: p.confirmed_span.end_bead },
       part_link: p.part_link || null,

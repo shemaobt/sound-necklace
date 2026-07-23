@@ -13,7 +13,7 @@
           "part_id": "PT1",
           "scene_id": "S1",
           "scene_kind": "GLEANING_SCENE",
-          "scene_kind_confidence": "alta",
+          "scene_kind_confidence": "high",
           "tag_state": "tagged",
           "confirmed_span": {
             "start_bead": 0,
@@ -24,7 +24,7 @@
           "part_id": "PT2",
           "scene_id": "S2",
           "scene_kind": "MEAL_SCENE",
-          "scene_kind_confidence": "alta",
+          "scene_kind_confidence": "high",
           "tag_state": "tagged",
           "confirmed_span": {
             "start_bead": 12,

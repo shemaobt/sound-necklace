@@ -10,7 +10,7 @@
           "part_id": "PT1",
           "scene_id": "S1",
           "scene_kind": "GLEANING_SCENE",
-          "scene_kind_confidence": "alta",
+          "scene_kind_confidence": "high",
           "tag_state": "tagged",
           "confirmed_span": { "start_bead": 0, "end_bead": 9 }
         },
@@ -32,5 +32,5 @@
       ]
     }
   ],
-  "flags": [{ "kind": "NEEDS_REVIEW", "prop_id": "P1", "note_pt": "" }]
+  "flags": [{ "kind": "NEEDS_REVIEW", "prop_id": "P1", "note": "" }]
 }

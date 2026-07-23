@@ -51,7 +51,7 @@ function part(overrides: Partial<ScenePart> & { part_id: string }): ScenePart {
 
 function frase(overrides: Partial<Frase> & { prop_id: string }): Frase {
   return {
-    statement_pt: '',
+    statement: '',
     qa: [],
     span: null,
     part_link: null,
@@ -90,7 +90,7 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
           span: { s: 0, e: 9 },
           locked: true,
           scene_kind: 'GLEANING_SCENE',
-          scene_kind_confidence: 'alta',
+          scene_kind_confidence: 'high',
           tag_state: 'tagged',
         }),
         part({ part_id: 'PT2', span: { s: 10, e: 23 }, locked: true, tag_state: 'none_fit' }),
@@ -113,7 +113,7 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
           span: { s: 0, e: 9 },
           locked: true,
           scene_kind: 'GLEANING_SCENE',
-          scene_kind_confidence: 'média',
+          scene_kind_confidence: 'medium',
           tag_state: 'tagged',
         }),
       ],
@@ -124,7 +124,7 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
           span: { s: 0, e: 4 },
           part_link: 'PT1',
           locked: true,
-          statement_pt: 'A chegada.',
+          statement: 'A chegada.',
           qa: ['Quem chega?'],
         }),
         frase({ prop_id: 'P2' }),

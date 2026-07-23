@@ -206,7 +206,7 @@ describe('sessions — autosave (session-state opaco; schema real vem no ENG-234
 
 describe('artifacts — payload OPACO (§10.5): nunca desserializar/reserializar', () => {
   it('OpaqueArtifactSchema devolve a string idêntica ao upload (round-trip byte-a-byte)', () => {
-    const bytes = '{"manifest_id":"fnv1a32:0f2a9c3d","média":"acento cru","z":1,"a":2}\n';
+    const bytes = '{"manifest_id":"fnv1a32:0f2a9c3d","história":"acento cru","z":1,"a":2}\n';
     expect(OpaqueArtifactSchema.parse(bytes)).toBe(bytes);
   });
 

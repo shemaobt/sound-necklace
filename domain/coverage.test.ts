@@ -43,9 +43,9 @@ function kindRow(state: SessionState, value: string) {
 describe('computeCoverage — firme vs. hesitante', () => {
   it('conta alta e média como firme; baixa como hesitante', () => {
     const s = stateWith([
-      tagged('PT1', 'GLEANING_SCENE', 'alta'),
-      tagged('PT2', 'GLEANING_SCENE', 'média'),
-      tagged('PT3', 'GLEANING_SCENE', 'baixa'),
+      tagged('PT1', 'GLEANING_SCENE', 'high'),
+      tagged('PT2', 'GLEANING_SCENE', 'medium'),
+      tagged('PT3', 'GLEANING_SCENE', 'low'),
     ]);
     const row = kindRow(s, 'GLEANING_SCENE');
     expect(row.firm).toBe(2);
@@ -62,14 +62,14 @@ describe('computeCoverage — alvos e status por tipo', () => {
     expect(rara.status).toBe('open');
     expect(rara.candidateAbsence).toBe(true);
 
-    const comFirme = stateWith([tagged('PT1', 'VOW_SCENE', 'alta')]);
+    const comFirme = stateWith([tagged('PT1', 'VOW_SCENE', 'high')]);
     const cob = kindRow(comFirme, 'VOW_SCENE');
     expect(cob.status).toBe('covered');
     expect(cob.candidateAbsence).toBe(false);
   });
 
   it('rara só com hesitante (baixa) fica "partial" mas SEGUE candidato a ausência (firme=0)', () => {
-    const s = stateWith([tagged('PT1', 'LAMENT_SCENE', 'baixa')]);
+    const s = stateWith([tagged('PT1', 'LAMENT_SCENE', 'low')]);
     const row = kindRow(s, 'LAMENT_SCENE');
     expect(row.status).toBe('partial');
     // open-rara da referência = tier ALTA && firme===0 (o hesitante não conta)
@@ -78,8 +78,8 @@ describe('computeCoverage — alvos e status por tipo', () => {
 
   it('comum exige 3 firmes para cobrir', () => {
     const dois = stateWith([
-      tagged('PT1', 'REPORT_SCENE', 'alta'),
-      tagged('PT2', 'REPORT_SCENE', 'alta'),
+      tagged('PT1', 'REPORT_SCENE', 'high'),
+      tagged('PT2', 'REPORT_SCENE', 'high'),
     ]);
     expect(kindRow(dois, 'REPORT_SCENE')).toMatchObject({
       tier: 'comum',
@@ -88,9 +88,9 @@ describe('computeCoverage — alvos e status por tipo', () => {
     });
 
     const tres = stateWith([
-      tagged('PT1', 'REPORT_SCENE', 'alta'),
-      tagged('PT2', 'REPORT_SCENE', 'média'),
-      tagged('PT3', 'REPORT_SCENE', 'baixa'),
+      tagged('PT1', 'REPORT_SCENE', 'high'),
+      tagged('PT2', 'REPORT_SCENE', 'medium'),
+      tagged('PT3', 'REPORT_SCENE', 'low'),
     ]);
     // 2 firmes + 1 hesitante = firme<3 → ainda parcial
     expect(kindRow(tres, 'REPORT_SCENE').status).toBe('partial');
@@ -100,7 +100,7 @@ describe('computeCoverage — alvos e status por tipo', () => {
 describe('computeCoverage — agregados', () => {
   it('resume raras cobertas, none-fit, produtivas e triadas', () => {
     const s = stateWith([
-      tagged('PT1', 'GLEANING_SCENE', 'alta'),
+      tagged('PT1', 'GLEANING_SCENE', 'high'),
       mkPart('PT2', { tag_state: 'none_fit' }),
       mkPart('PT3'), // pending
     ]);
@@ -131,7 +131,7 @@ describe('computeCoverage — trava all-none-fit', () => {
 
   it('não trava se há ao menos uma produtiva', () => {
     const s = stateWith([
-      tagged('PT1', 'GLEANING_SCENE', 'alta'),
+      tagged('PT1', 'GLEANING_SCENE', 'high'),
       mkPart('PT2', { tag_state: 'none_fit' }),
     ]);
     expect(computeCoverage(s).allNoneFit).toBe(false);
