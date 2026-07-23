@@ -94,6 +94,17 @@ describe('FixtureTranscriber — o job assíncrono de transcrição + tradução
     expect((await stt.progress(SESSION)).done).toBe(true);
   });
 
+  it('sem force, recomeçar um job AINDA RODANDO não o reinicia (não adia a conclusão)', async () => {
+    const stt = new FixtureTranscriber();
+    await stt.start(SESSION, [P1]);
+    await stt.progress(SESSION); // um poll: o job avançou, mas não terminou
+
+    await stt.start(SESSION, [P1]); // pedido duplicado sem force
+
+    // o poll seguinte conclui: o start duplicado NÃO zerou o progresso
+    expect((await stt.progress(SESSION)).done).toBe(true);
+  });
+
   it('sessões diferentes não compartilham job', async () => {
     const stt = new FixtureTranscriber();
     await stt.start(SESSION, [P1]);

@@ -41,9 +41,11 @@ export class FixtureTranscriber implements Transcriber {
 
   start(sessionId: string, paths: readonly string[], opts?: { force?: boolean }): Promise<void> {
     const current = this.#jobs.get(sessionId);
-    // sem force, um job já concluído fica como está — reabrir apagaria rascunhos
-    // que a facilitadora pode estar revisando neste instante
-    if (current && !opts?.force && current.polls >= POLLS_TO_FINISH) return Promise.resolve();
+    // sem force, um job existente fica como está (idempotente, por contrato) —
+    // inclusive um que ainda roda: reabrir zeraria `polls` e adiaria a conclusão,
+    // e reabrir um concluído apagaria rascunhos que a facilitadora pode estar
+    // revisando. Só `force` (regravação) recomeça.
+    if (current && !opts?.force) return Promise.resolve();
     this.#jobs.set(sessionId, { paths: [...paths], polls: 0 });
     return Promise.resolve();
   }

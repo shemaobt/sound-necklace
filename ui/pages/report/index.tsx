@@ -539,18 +539,26 @@ export function Report({
 
   // Só as respostas COM gravação vão para o job — não há o que transcrever nas outras.
   // `voiceSet` cresce um caminho por vez (ENG-319, sem barreira), então a lista pode
-  // começar parcial: cada crescimento redispara o job, e como só o PRIMEIRO pedido de
-  // cada montagem vai sem `force`, os seguintes reprocessam de fato em vez de esbarrar
-  // na idempotência do port. Esperar a descoberta inteira seria pior — um único
-  // `has()` pendurado travaria a transcrição de todas as outras.
-  // ponytail: reprocessa algumas vezes na abertura; se custar caro na API real,
-  // segurar o disparo por ~1s de silêncio da descoberta resolve.
+  // começar parcial. Esperar a descoberta inteira seria pior — um único `has()`
+  // pendurado travaria a transcrição de todas as outras.
   const recordedPaths = voicePaths.filter((p) => voiceSet.has(p));
+  // Reprocessar (force) quando ALGUMA resposta gravada e ainda-não-confirmada não
+  // está transcrita NA VERSÃO atual: gravação nova (nunca transcrita) ou regravada
+  // (a versão subiu). É DURÁVEL porque compara com `enver__` no mapping — sobrevive a
+  // remontar/sair e voltar à sessão, que era o furo do contador só-em-memória. Uma
+  // resposta já confirmada por texto não precisa de rascunho, então não força.
+  const needsTranscription = recordedPaths.some((p) => {
+    const slot = sequence.find((s) => voiceAnswerPath(s) === p);
+    if (!slot) return false;
+    if (readAnswer(mapped?.mapping ?? null, slot).trim()) return false;
+    const want = String(recordingVersion?.[p] ?? 0);
+    return readAnswer(mapped?.mapping ?? null, draftVerSlot(slot)) !== want;
+  });
   const {
     phase: sttPhase,
     drafts,
     retry,
-  } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion);
+  } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion, needsTranscription);
 
   // O inglês que chegou vira o conteúdo INICIAL do campo em revisão, gravado uma
   // única vez na chave reservada. Depois disso o campo é da pessoa: apagá-lo tem

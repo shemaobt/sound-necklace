@@ -60,14 +60,28 @@ export function useSttDrafts(
   sessionId: string | null,
   paths: readonly string[],
   versions: Record<string, number> = {},
+  /**
+   * Reprocessar em vez de reusar o job guardado no servidor. Quem decide é a
+   * página (@/ui/pages/report), que tem o dado DURÁVEL de qual versão de cada
+   * resposta já foi transcrita; o hook, por não persistir nada entre montagens,
+   * não saberia sozinho que uma resposta foi regravada desde a última vez.
+   */
+  force = false,
 ): SttDrafts {
   const pathsKey = keyOf(paths, versions);
   const [result, setResult] = useState<JobResult | null>(null);
   const [attempt, setAttempt] = useState(0);
   // identifica o pedido corrente: resposta de pedido velho é descartada
   const requestId = useRef(0);
-  // já disparamos algum job nesta montagem? (o 2º em diante reprocessa)
-  const started = useRef(false);
+  // lido no start via ref (não é dep do laço): quando o force muda SEM mudar o
+  // jobKey — o caso normal, force cai para falso quando o rascunho é semeado — o
+  // laço não deve reiniciar. Todo caso que EXIGE reprocessar (regravação, nova
+  // gravação, retry) já muda o pathsKey ou o attempt e re-roda por si, lendo o ref
+  // já atualizado. Ref escrito em efeito, nunca no render (regra da casa).
+  const forceRef = useRef(force);
+  useEffect(() => {
+    forceRef.current = force;
+  }, [force]);
 
   const active = Boolean(stt && sessionId && pathsKey !== '');
   const jobKey = `${pathsKey}#${attempt}`;
@@ -79,7 +93,10 @@ export function useSttDrafts(
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let delay = FIRST_DELAY_MS;
-    const startedAt = Date.now();
+    // conta a partir de quando o poll REALMENTE começa (em run), não da montagem
+    // do efeito: com a aba escondida, run é adiado pelo visibilitychange, e medir
+    // daqui gastaria o teto de 5 min com a aba dormindo e falharia na volta
+    let startedAt = Date.now();
 
     const stop = (): void => {
       cancelled = true;
@@ -109,12 +126,12 @@ export function useSttDrafts(
     };
 
     const run = async (): Promise<void> => {
+      startedAt = Date.now();
       try {
-        // `force` sempre que este pedido não é o primeiro desta montagem: ou a
-        // pessoa pediu de novo, ou regravou. Nos dois casos o rascunho guardado
-        // no servidor é de um áudio que não vale mais.
-        await stt.start(sessionId, list, started.current ? { force: true } : undefined);
-        started.current = true;
+        // force quando a página sinaliza reprocessar (regravação/nova gravação) ou
+        // num retry explícito; senão o job idempotente do servidor é reusado
+        const reprocess = attempt > 0 || forceRef.current;
+        await stt.start(sessionId, list, reprocess ? { force: true } : undefined);
       } catch {
         if (!cancelled && requestId.current === mine) {
           setResult({ key: jobKey, status: 'failed', drafts: {} });

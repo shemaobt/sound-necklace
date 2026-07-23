@@ -82,6 +82,24 @@ describe('useSttDrafts — o job de rascunhos do relatório', () => {
     expect(starts.map((s) => s.force)).toEqual([false, true]);
   });
 
+  it('quando a página sinaliza reprocessar (force), o pedido vai com force — mesmo o 1º', async () => {
+    const { stt, starts } = deferredTranscriber();
+    // é o que a página envia numa remontagem após regravar: a versão nova ainda
+    // não foi transcrita, então força já no primeiro start desta montagem
+    renderHook(() => useSttDrafts(stt, 's-1', [P1], { [P1]: 2 }, true));
+
+    await waitFor(() => expect(starts.length).toBe(1));
+    expect(starts[0]?.force).toBe(true);
+  });
+
+  it('sem sinal de reprocessar, o primeiro pedido reusa o job (sem force)', async () => {
+    const { stt, starts } = deferredTranscriber();
+    renderHook(() => useSttDrafts(stt, 's-1', [P1], {}, false));
+
+    await waitFor(() => expect(starts.length).toBe(1));
+    expect(starts[0]?.force).toBe(false);
+  });
+
   it('mudar o conjunto de gravações dispara um pedido com as novas', async () => {
     const { stt, starts } = deferredTranscriber();
     const { rerender } = renderHook(({ paths }) => useSttDrafts(stt, 's-1', paths), {
