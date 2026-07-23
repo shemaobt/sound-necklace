@@ -17,6 +17,7 @@ import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
+import i18n from '../i18n';
 import { API_BASE_URL, API_MODE } from './api-config';
 import { appAuth, authReady } from './auth-adapter';
 import { shouldGateToLogin } from './auth-gate';
@@ -459,10 +460,53 @@ export function App() {
       ? voiceRegistration.fixture()
       : voiceRegistration.real({ store: voiceStoreFor(routeId) });
   }, [routeId]);
-  // Transcrição+tradução das respostas (ENG-327): FIXTURE por enquanto — o job
-  // assíncrono de verdade é da API (ENG-325) e ainda não existe. Trocar por
-  // `sttRegistration.real(...)` quando ela entrar; o resto do fluxo não muda.
-  const stt = useMemo<Transcriber>(() => sttRegistration.fixture(), []);
+  // 401 numa porta de IO fora do ApiClient (TTS, STT): sessão caducada no meio da
+  // entrevista — recupera em vez de derrubar em silêncio. O 401 pode ser só a corrida
+  // do boot (resume em voo) — decide após assentar; com usuário vivo, o token caducou
+  // antes do refresh agendado: renova JÁ (a próxima chamada usa o token novo) e, se a
+  // renovação falhar de forma terminal, volta ao login. Compartilhado pelas duas portas.
+  const handleUnauthorized = useCallback(() => {
+    void authReady().then(async () => {
+      if (!appAuth().currentUser()) {
+        navigate('/login', { replace: true });
+        return;
+      }
+      try {
+        await appAuth().refresh();
+      } catch (err) {
+        // RECUSA da API = sessão morta: derruba TUDO (token/refresh/usuário) antes de
+        // voltar — senão o gate ainda vê um usuário e deixa navegar com token defunto.
+        // Rede/429/5xx são transitórios (mesmo critério do login): ficam, e a próxima
+        // chamada tenta de novo.
+        const terminal =
+          err instanceof AuthError ||
+          (err instanceof ApiError && err.status < 500 && err.status !== 429);
+        if (terminal) {
+          await appAuth()
+            .logout()
+            .catch(() => undefined);
+          navigate('/login', { replace: true });
+        }
+      }
+    });
+  }, []);
+  // Transcrição+tradução das respostas (ENG-327/ENG-360): REAL quando a API está
+  // configurada (VITE_API_MODE=real), fixture caso contrário — o fixture é um modo de
+  // dev/demo com rascunhos determinísticos, e o real não tem fallback (sem backend,
+  // `progress` falha, o hook desiste e a facilitadora digita à mão — sem beco). A língua
+  // da entrevista é o idioma da UI, em BCP-47, que o servidor exige. Wiring tipado.
+  const stt = useMemo<Transcriber>(
+    () =>
+      API_MODE === 'real'
+        ? sttRegistration.real({
+            baseUrl: API_BASE_URL,
+            token: () => appAuth().token(),
+            language: () => (i18n.language.startsWith('en') ? 'en-US' : 'pt-BR'),
+            onUnauthorized: handleUnauthorized,
+          })
+        : sttRegistration.fixture(),
+    [handleUnauthorized],
+  );
   // A voz do guia é a implementação REAL, não a fixture: falar de verdade É a feature
   // (ENG-280). Ela busca o clipe ElevenLabs na API com o Web Speech dentro de si como
   // fallback (ENG-284). O wiring (ENG-247) injeta a base real e o Bearer vivo do
@@ -473,37 +517,9 @@ export function App() {
       ttsRegistration.real({
         ...(API_MODE === 'real' ? { baseUrl: API_BASE_URL } : {}),
         token: () => appAuth().token(),
-        // sessão caducada no meio da entrevista: recupera em vez de robotizar.
-        // O 401 pode ser só a corrida do boot (resume em voo) — decide após assentar;
-        // com usuário vivo, o token caducou antes do refresh agendado: renova JÁ (a
-        // próxima fala usa o token novo) e, se a renovação falhar, volta ao login.
-        onUnauthorized: () => {
-          void authReady().then(async () => {
-            if (!appAuth().currentUser()) {
-              navigate('/login', { replace: true });
-              return;
-            }
-            try {
-              await appAuth().refresh();
-            } catch (err) {
-              // RECUSA da API = sessão morta: derruba TUDO (token/refresh/usuário)
-              // antes de voltar — senão o gate ainda vê um usuário e deixa navegar
-              // com token defunto. Rede/429/5xx são transitórios (mesmo critério do
-              // login): ficam, e a próxima fala tenta de novo.
-              const terminal =
-                err instanceof AuthError ||
-                (err instanceof ApiError && err.status < 500 && err.status !== 429);
-              if (terminal) {
-                await appAuth()
-                  .logout()
-                  .catch(() => undefined);
-                navigate('/login', { replace: true });
-              }
-            }
-          });
-        },
+        onUnauthorized: handleUnauthorized,
       }),
-    [],
+    [handleUnauthorized],
   );
   // O som da UI é a implementação REAL: tocar de volta É a feature num app
   // ear-first. Mudo troca a PORTA pela silenciosa — assim nenhum chamador precisa

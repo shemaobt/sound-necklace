@@ -143,6 +143,8 @@ export class HttpAuthProvider implements AuthProvider {
   readonly #expired = new Emitter();
   readonly #storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   #refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Refresh em voo (single-flight): 401s concorrentes reusam o mesmo em vez de correr. */
+  #refreshInFlight: Promise<void> | null = null;
   #refreshToken: string | null = null;
   #token: string | null = null;
   #user: AuthUser | null = null;
@@ -278,7 +280,20 @@ export class HttpAuthProvider implements AuthProvider {
     }
   }
 
+  /**
+   * Single-flight: 401s concorrentes (o polling do STT, uma fala do TTS, o refresh
+   * agendado) compartilham UM refresh. Sem isto, o segundo chamador POSTa o
+   * refresh-token JÁ rotacionado pelo primeiro — o servidor o rejeita — e cai no ramo
+   * terminal, derrubando a sessão que o primeiro acabou de salvar. Um refresh em voo
+   * é reusado; chamadas depois que ele assenta começam do zero (com o token novo).
+   */
   async refresh(): Promise<void> {
+    return (this.#refreshInFlight ??= this.#doRefresh().finally(() => {
+      this.#refreshInFlight = null;
+    }));
+  }
+
+  async #doRefresh(): Promise<void> {
     if (!this.#refreshToken) throw new AuthError('sem refresh token');
     const res = await this.#client.request('POST', '/auth/refresh', {
       body: { refresh_token: this.#refreshToken },

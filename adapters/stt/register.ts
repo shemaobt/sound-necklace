@@ -1,27 +1,34 @@
 /**
- * Registro do adapter de transcrição. O modo real depende do job assíncrono da
- * API (ENG-325), que ainda não existe — inventar um endpoint aqui seria adivinhar
- * a forma do contrato. Até lá `real()` recusa alto, e o composition root monta o
- * fixture.
+ * Registro do adapter de transcrição. O modo real fala com o job assíncrono da API
+ * (ENG-325); o fixture roda o fluxo inteiro sem backend. baseUrl/token/language reais
+ * chegam pelo wiring do composition root (ENG-247); sem wiring, vale o esqueleto —
+ * baseUrl relativo + fetch do browser + a língua default.
  */
 
 import { FixtureTranscriber } from './fixture';
+import { HttpTranscriber, type HttpSttDeps } from './http';
 import type { Transcriber } from './types';
+
+/** Wiring opcional do composition root. */
+export type RealSttWiring = Partial<HttpSttDeps>;
 
 export interface AdapterRegistration<TPort> {
   port: string;
   fixture: () => TPort;
-  real: () => TPort;
+  real: (wiring?: RealSttWiring) => TPort;
 }
 
 const registration: AdapterRegistration<Transcriber> = {
   port: 'stt',
   fixture: () => new FixtureTranscriber(),
-  real: () => {
-    throw new Error(
-      'adapters/stt: o modo real espera o job assíncrono de transcrição da API (ENG-325)',
-    );
-  },
+  real: (wiring = {}) =>
+    new HttpTranscriber({
+      baseUrl: wiring.baseUrl ?? '/api',
+      fetch: wiring.fetch ?? globalThis.fetch.bind(globalThis),
+      language: wiring.language ?? (() => 'pt-BR'),
+      token: wiring.token,
+      onUnauthorized: wiring.onUnauthorized,
+    }),
 };
 
 export default registration;

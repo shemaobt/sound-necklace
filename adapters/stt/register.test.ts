@@ -16,9 +16,22 @@ describe('registro do adapter de transcrição', () => {
     expect((await stt.progress('s-1')).drafts[P1]?.en.trim()).not.toBe('');
   });
 
-  it('o modo real recusa alto — nunca devolve o fixture disfarçado', () => {
-    // um fixture silenciosamente montado como "real" exportaria transcrição
-    // inventada como se fosse da API: melhor quebrar do que mentir
-    expect(() => registration.real()).toThrow();
+  it('o modo real compõe o HttpTranscriber contra o job da API (ENG-325)', async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      calls.push(url);
+      return new Response(
+        JSON.stringify({ total: 0, ready: 0, failed: 0, pending: 0, answers: [] }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    }) as unknown as typeof globalThis.fetch;
+
+    const stt = registration.real({ baseUrl: '/api', fetch: fetchImpl, language: () => 'pt-BR' });
+    await stt.progress('s-1');
+
+    expect(calls[0]).toBe('/api/sound-necklace/sessions/s-1/transcriptions');
   });
 });
