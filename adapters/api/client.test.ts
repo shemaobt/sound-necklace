@@ -209,6 +209,26 @@ describe('HttpAuthProvider', () => {
     expect(second?.init.body).toBe(JSON.stringify({ refresh_token: 'r2' }));
   });
 
+  it('refreshes CONCORRENTES coalescem num único POST (não correm com a rotação)', async () => {
+    const { fetch, calls } = stubFetch({
+      'POST /api/auth/login': { body: wireLogin },
+      'GET /api/auth/my-roles': { body: myRoles },
+      'POST /api/auth/refresh': {
+        body: { access_token: 'a2', refresh_token: 'r2', token_type: 'bearer' },
+      },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+    await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
+
+    // dois 401 quase simultâneos (o polling do STT + uma fala do TTS) disparam refresh
+    // ao mesmo tempo: sem single-flight, o segundo usa o refresh-token JÁ rotacionado
+    // pelo primeiro, toma um erro e derruba a sessão que o primeiro acabou de salvar.
+    await Promise.all([auth.refresh(), auth.refresh()]);
+
+    expect(calls.filter((c) => c.url.includes('/auth/refresh'))).toHaveLength(1);
+    expect(auth.token()).toBe('a2');
+  });
+
   it('refresh sem sessão lança AuthError', async () => {
     const { fetch } = stubFetch({});
     const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
