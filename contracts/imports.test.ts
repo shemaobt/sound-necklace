@@ -284,7 +284,7 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
 });
 
 describe('fidelidade import→export: retorno → import → export é byte-idêntico', () => {
-  it('reproduz o retorno-ancoragem.json byte a byte após semear pela via de retorno', () => {
+  it('reproduz o anchoring-return.json byte a byte após semear pela via de retorno', () => {
     // fonte: sessão já travada cujos mappers reais produzem o retorno "de origem"
     const source = session({
       whole: { id: 'S1', span: { s: 0, e: 23 }, confirmed: true },

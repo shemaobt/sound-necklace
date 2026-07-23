@@ -127,7 +127,7 @@ Four modes, driven by `setMode()`: **Escuta** (two internal steps: "Ouça a hist
 There is exactly **one player instance** that physically re-mounts into the active step's slot (`mountPlayer()` into `hostOuvir` / `hostCenas` / `hostFrases`), so the necklace + controls are always adjacent to the current decision. **Decided:** in the resolved direction the necklace itself is the transport — **tap any bead to play from there; the glowing head pauses** — so there is no floating, disembodied play bar. Saved items carry **no ▶ chip**: a bead inside a locked scene/phrase plays that whole item (ENG-291/ENG-293/ENG-296), so review lives on the cord too. The relocation between steps should be an animated, legible transition, not an instant jump.
 
 ### 5.3 Review mode
-Loading a saved return (`retorno-ancoragem.json`) or toggling review shows a locked state: banner "🔒 Modo de revisão", segmentation frozen, play-only. Unlock button returns to editing. Keep.
+Loading a saved return (`anchoring-return.json`) or toggling review shows a locked state: banner "🔒 Modo de revisão", segmentation frozen, play-only. Unlock button returns to editing. Keep.
 
 ---
 
@@ -180,7 +180,7 @@ For each screen: **current behavior (must keep)**, and — where design work hap
 **Decided:** the windowed scene sits inside a **dashed "awake" band**; sleeping beads are visibly dimmed. Locked phrases are pill chips (swatch · Frase N · ⚑ revisar · ✕ remover — no ▶; like scenes, a locked phrase is heard by tapping its beads, §8.2). **The border-crossing warning became a visual modal (`1g`):** an olive overlay that renders the relevant stretch of cord and **shows the seam sliding** — "A frase passou da borda da cena." — with the small-overshoot choices (*Mover a borda até aqui* / *Ficar dentro da cena*) or the large-overshoot choices (*Voltar à Triagem* / *Reancorar dentro da cena*), plus one line explaining the consequence ("A cena de hoje cresce, a vizinha encolhe").
 
 ### 6.6 Mapeamento (Phase 4) — **the big redesign: from questionnaire to conversation**
-**Current behavior:** three levels of scripted questions rendered one-per-screen (L1: 11 whole-story questions; L2: 5 per scene incl. none-fit; L3: 5 per phrase in productive scenes), each with a ▶ for the relevant audio span and a free-text textarea, then a consolidated **editable report**. Exports: `<slug>-relatorio-mapeamento.md` and the anchoring JSON. The report header states the contract: free-text raw material for Claude Code, `source_domain: oral_archive`, `speaker_role: LISTENER_NOT_STORYTELLER`, manifest id; the app never classifies vocabulary, never fills in absence, never generates the map itself.
+**Current behavior:** three levels of scripted questions rendered one-per-screen (L1: 11 whole-story questions; L2: 5 per scene incl. none-fit; L3: 5 per phrase in productive scenes), each with a ▶ for the relevant audio span and a free-text textarea, then a consolidated **editable report**. Exports: `<slug>-mapping-report.md` and the anchoring JSON. The report header states the contract: free-text raw material for Claude Code, `source_domain: oral_archive`, `speaker_role: LISTENER_NOT_STORYTELLER`, manifest id; the app never classifies vocabulary, never fills in absence, never generates the map itself.
 
 **Problem:** it reads and feels like an exam.
 
@@ -197,11 +197,11 @@ For each screen: **current behavior (must keep)**, and — where design work hap
 **Non-negotiable in this phase:** question keys and structure (`level1/level2/level3` keyed by question `k`, `part_id`, `prop_id`), the report's Markdown skeleton, and the principle that the app collects raw material only.
 
 ### 6.7 Export — "Salvar os Documentos" / "Guardar os documentos"
-**Keep:** two JSON downloads — `<slug>-retorno-ancoragem.json` (requires the whole story confirmed; warns how many phrases lack a locked end) and `<slug>-manifesto-contas.json` — plus the Mapeamento report `.md`; success/error messages; the card collapses to a saved state once files are downloaded.
+**Keep:** two JSON downloads — `<slug>-anchoring-return.json` (requires the whole story confirmed; warns how many phrases lack a locked end) and `<slug>-bead-manifest.json` — plus the Mapeamento report `.md`; success/error messages; the card collapses to a saved state once files are downloaded.
 **Decided:** a calm cream completion screen headed **"A história está inteira no colar."** with the **full necklace shown strung** conta-a-conta. **Three document cards**, each explained in human language rather than by filename alone:
-- `retorno-ancoragem.json` — **"As decisões de vocês"** (where each scene/phrase begins and ends, with kind + confidence).
-- `manifesto-contas.json` — **"O mapa das contas"** (how the audio was sliced; the exact pair for this audio).
-- `relatorio-mapeamento.md` — **"A conversa sobre o sentido"** (the editable report; voice answers referenced per question).
+- `anchoring-return.json` — **"As decisões de vocês"** (where each scene/phrase begins and ends, with kind + confidence).
+- `bead-manifest.json` — **"O mapa das contas"** (how the audio was sliced; the exact pair for this audio).
+- `mapping-report.md` — **"A conversa sobre o sentido"** (the editable report; voice answers referenced per question).
 Each card shows a "Baixar" → "baixado" state; once all are saved, a celebratory chip: **"documentos salvos — nada saiu deste computador."**
 
 ---
@@ -212,8 +212,8 @@ Any redesign, however deep, must leave these bit-identical:
 
 1. **Bead grid math.** `beadSec` default 0.25 s; `buildBeads` slices duration into `floor(dur/beadSec)` beads plus a final partial bead; bead indices are the universal coordinate system. Changing bead size after anchoring shifts boundaries — hence the setup warning.
 2. **`manifest_id`.** FNV-1a 32-bit hash over channel count, sample rate, sample count, strided quantized PCM samples, and bead duration in ms; serialized as `fnv1a32:xxxxxxxx`. Fingerprints the audio+grid pair across the pipeline.
-3. **`manifesto-contas.json` schema:** `{ manifest_id, audio_filename, bead_duration_sec, total_beads, beads:[{index,startTime,endTime}] }`.
-4. **`retorno-ancoragem.json` schema:** `{ manifest_id, story_slug, scenes:[{ scene_id:"S1", confirmed_span:{start_bead,end_bead}, parts:[{part_id, scene_id:"S"+n, scene_kind, scene_kind_confidence, tag_state, confirmed_span}], propositions:[{prop_id, part_link, confirmed_span}] }], flags:[{kind:"NEEDS_REVIEW", prop_id, note}] }`. IDs: `PT1…` for parts, `P1…` for propositions, sequential `S#` scene numbering by order.
+3. **`bead-manifest.json` schema:** `{ manifest_id, audio_filename, bead_duration_sec, total_beads, beads:[{index,startTime,endTime}] }`.
+4. **`anchoring-return.json` schema:** `{ manifest_id, story_slug, scenes:[{ scene_id:"S1", confirmed_span:{start_bead,end_bead}, parts:[{part_id, scene_id:"S"+n, scene_kind, scene_kind_confidence, tag_state, confirmed_span}], propositions:[{prop_id, part_link, confirmed_span}] }], flags:[{kind:"NEEDS_REVIEW", prop_id, note}] }`. IDs: `PT1…` for parts, `P1…` for propositions, sequential `S#` scene numbering by order.
 5. **`scene_kind` values stay in English** (e.g. `GLEANING_SCENE`) in state and exports — PT-BR is display-only (`SK_PT`). The 27-kind list and its ALTA/comum tiering are generated from `_spec/scene-kind-palette.json` (Compilador pin 5314907) and must not be hand-edited.
 6. **Confidence vocabulary:** stored values `high` / `medium` / `low` (English since ENG-356 — the artifact is English); tag states `pending` / `tagged` / `none_fit`. *(The three-shape UI in §4.4/§6.4 is display only — the PT-BR labels "Certeza"/"Quase"/"Na dúvida" map onto these exact stored values.)*
 7. **Frontier + seam semantics:** sequential locking, reopen-unlocks-everything-after, first-phrase back-reach, seam sliding rules and thresholds (max(3, 25% of scene)), the two-productive-scenes escalation.

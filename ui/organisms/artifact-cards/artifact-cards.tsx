@@ -20,9 +20,9 @@ export interface ArtifactCardsProps {
  * nunca traduz.
  */
 const DOCUMENTOS: readonly { kind: ArtifactKind; filename: string }[] = [
-  { kind: 'anchoring', filename: 'retorno-ancoragem.json' },
-  { kind: 'manifest', filename: 'manifesto-contas.json' },
-  { kind: 'report', filename: 'relatorio-mapeamento.md' },
+  { kind: 'anchoring', filename: 'anchoring-return.json' },
+  { kind: 'manifest', filename: 'bead-manifest.json' },
+  { kind: 'report', filename: 'mapping-report.md' },
 ];
 
 /**

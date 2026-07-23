@@ -166,8 +166,58 @@ describe('session-state DTO — round-trip domínio → DTO → domínio', () =>
     });
   }
 
-  it('carimba schema_version = 1', () => {
-    expect(toSessionDto(baseSession(), meta()).schema_version).toBe(1);
+  it('carimba schema_version = 2 (a ENG-356 mudou a forma; a ENG-357 versionou)', () => {
+    expect(toSessionDto(baseSession(), meta()).schema_version).toBe(2);
+  });
+});
+
+describe('session-state DTO — migração v1 → v2 na leitura (ENG-357)', () => {
+  it('lê uma sessão v1 e normaliza statement_pt → statement', () => {
+    const { state } = fromSessionDto(fixture('legacy-v1.json'));
+    expect(state.frases[0]!.statement).toBe('A chegada.');
+    expect('statement_pt' in state.frases[0]!).toBe(false);
+  });
+
+  it('lê uma sessão v1 e traduz a confiança PT-BR para o enum inglês', () => {
+    const { state } = fromSessionDto(fixture('legacy-v1.json'));
+    expect(state.parts.map((p) => p.scene_kind_confidence)).toEqual(['high', 'medium', 'low']);
+  });
+
+  it('o resto do estado v1 atravessa intacto (a migração só toca o que mudou)', () => {
+    const { state, meta: m } = fromSessionDto(fixture('legacy-v1.json'));
+    expect(state.manifestId).toBe('fnv1a32:d31a8419');
+    expect(state.totalBeads).toBe(2);
+    expect(state.parts[0]!.scene_kind).toBe('GLEANING_SCENE');
+    expect(state.mapping?.level3['P1']?.['oque']).toBe('A chegada.');
+    expect(m.voice).toEqual(['respostas/level1/recontar.webm']);
+  });
+
+  it('reidratar e regravar promove a sessão a v2 (a migração é de mão única)', () => {
+    const { state, meta: m } = fromSessionDto(fixture('legacy-v1.json'));
+    const promoted = toSessionDto(state, m);
+    expect(promoted.schema_version).toBe(2);
+    expect(promoted.frases[0]!.statement).toBe('A chegada.');
+    expect(promoted.parts[0]!.scene_kind_confidence).toBe('high');
+  });
+
+  it('a forma v1 NÃO passa pelo schema v2 — a migração é um passo explícito', () => {
+    expect(() => SessionStateDtoSchema.parse(fixture('legacy-v1.json'))).toThrow();
+  });
+
+  it('v1 continua estrito: chave desconhecida reprova mesmo no schema legado', () => {
+    const legacy = fixture('legacy-v1.json') as Record<string, unknown>;
+    expect(() => fromSessionDto({ ...legacy, intruso: 1 })).toThrow();
+  });
+
+  it('versão desconhecida reprova alto, em vez de corromper em silêncio', () => {
+    expect(() => fromSessionDto(fixture('invalid-schema-version.json'))).toThrow();
+  });
+
+  it('fromSessionDto VALIDA — um payload lixo não vira estado meio construído', () => {
+    // a regressão que motivou a ENG-357: o adapter faz cast cru, então sem
+    // validação aqui um DTO da forma antiga viraria `statement: undefined`
+    expect(() => fromSessionDto({ schema_version: 2 })).toThrow();
+    expect(() => fromSessionDto(null)).toThrow();
   });
 });
 

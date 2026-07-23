@@ -16,7 +16,7 @@ Path: @/ui/i18n
 
 ```
 domain (PT-BR scripts, scene_kind values)
-   ├─▶ contracts/ builders ─▶ retorno-ancoragem.json · manifesto-contas.json · relatorio-mapeamento.md
+   ├─▶ contracts/ builders ─▶ anchoring-return.json · bead-manifest.json · mapping-report.md
    │        (byte-frozen, PT-BR — the golden harness diffs these)
    └─▶ ui/i18n  ─▶ ui/organisms + ui/pages   (DISPLAY only: PT or EN)
 ```

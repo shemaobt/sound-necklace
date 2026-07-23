@@ -11,9 +11,20 @@
  *
  * Custódia (§10.5): a API guarda este DTO de forma opaca; a SPA VALIDA na
  * leitura — daí o schema estrito (chave extra/tipo errado/version divergente
- * reprovam alto). Campos TRANSIENTES da referência NÃO são persistidos: o
+ * reprovam alto). Essa validação mora em `fromSessionDto`, que recebe `unknown`:
+ * é o ÚNICO ponto por onde o documento vira estado do domínio, e o adapter
+ * entrega o corpo cru sem parse (`http.ts`: "validado a fundo pela camada de
+ * estado, não aqui"). Campos TRANSIENTES da referência NÃO são persistidos: o
  * marcador `warnedEmptyScene` (variável de módulo, L916) e o andaime de tela do
  * Mapeamento (`mapStep`/`mapN*i`) — reconstruídos ao reabrir a estação.
+ *
+ * VERSÕES (ENG-357). v1 = a forma PT-BR (`statement_pt`, confiança
+ * `alta`/`média`/`baixa`); v2 = a forma inglesa que a ENG-356 introduziu. A
+ * ENG-356 trocou a forma sem carimbar versão nova, então v1 e v2 conviveram
+ * indistinguíveis por um commit — daí o bump aqui. A leitura aceita as duas e
+ * normaliza para v2; a escrita só emite v2, então reabrir e salvar promove a
+ * sessão. `SessionStateDtoSchema` (v2) permanece o schema canônico e RECUSA v1:
+ * migrar é um passo explícito, nunca uma tolerância do schema.
  *
  * Importa apenas domain/ + zod (raiz) + o enum de granularidade do bucket.
  */
@@ -71,7 +82,7 @@ const MappingSchema = z.strictObject({
 });
 
 export const SessionStateDtoSchema = z.strictObject({
-  schema_version: z.literal(1),
+  schema_version: z.literal(2),
   // grade + identidade
   durationSec: z.number().nonnegative(),
   beadSec: z.number().positive(),
@@ -105,6 +116,56 @@ export const SessionStateDtoSchema = z.strictObject({
 
 export type SessionStateDto = z.infer<typeof SessionStateDtoSchema>;
 
+/* ---------------- v1 legado (ENG-357) ---------------- */
+
+/** A confiança como o v1 a gravava; a ordem casa com o enum inglês do v2. */
+const LEGACY_CONFIDENCE = { alta: 'high', média: 'medium', baixa: 'low' } as const;
+
+/** v1 difere do v2 em DOIS campos e mais nada — o resto é reusado, para que uma
+ *  mudança futura no formato não precise ser espelhada aqui. */
+const LegacyScenePartSchema = ScenePartSchema.extend({
+  scene_kind_confidence: z.enum(['alta', 'média', 'baixa']).nullable(),
+});
+
+const LegacyFraseSchema = FraseSchema.omit({ statement: true }).extend({
+  statement_pt: z.string(),
+});
+
+const SessionStateDtoV1Schema = SessionStateDtoSchema.extend({
+  schema_version: z.literal(1),
+  parts: z.array(LegacyScenePartSchema),
+  frases: z.array(LegacyFraseSchema),
+});
+
+/** Traz um documento v1 para a forma v2. Só toca o que mudou de nome/vocabulário. */
+function upgradeV1(dto: z.infer<typeof SessionStateDtoV1Schema>): SessionStateDto {
+  return {
+    ...dto,
+    schema_version: 2,
+    parts: dto.parts.map((p) => ({
+      ...p,
+      scene_kind_confidence: p.scene_kind_confidence
+        ? LEGACY_CONFIDENCE[p.scene_kind_confidence]
+        : null,
+    })),
+    frases: dto.frases.map(({ statement_pt, ...rest }) => ({ ...rest, statement: statement_pt })),
+  };
+}
+
+/**
+ * Valida o documento persistido e o entrega SEMPRE na forma v2. Aceita v1 e o
+ * promove; qualquer outra coisa (versão desconhecida, chave extra, tipo errado)
+ * reprova alto — corromper em silêncio é pior que falhar ao retomar.
+ */
+function parseSessionDto(raw: unknown): SessionStateDto {
+  const v2 = SessionStateDtoSchema.safeParse(raw);
+  if (v2.success) return v2.data;
+  const v1 = SessionStateDtoV1Schema.safeParse(raw);
+  if (v1.success) return upgradeV1(v1.data);
+  // o erro do v2 é o útil: v1 é o caminho de exceção, não o esperado
+  throw new Error(`estado de sessão inválido: ${v2.error.message}`);
+}
+
 /** Campos de sessão que não vivem no `SessionState` do domínio (§7.3). */
 export interface SessionMeta {
   granularityLevel: GranularityLevel;
@@ -116,7 +177,7 @@ export interface SessionMeta {
 
 export function toSessionDto(state: SessionState, meta: SessionMeta): SessionStateDto {
   return {
-    schema_version: 1,
+    schema_version: 2,
     durationSec: state.durationSec,
     beadSec: state.beadSec,
     totalBeads: state.totalBeads,
@@ -156,7 +217,13 @@ export function toSessionDto(state: SessionState, meta: SessionMeta): SessionSta
   };
 }
 
-export function fromSessionDto(dto: SessionStateDto): { state: SessionState; meta: SessionMeta } {
+/**
+ * O documento persistido vira estado do domínio. Recebe `unknown` de propósito:
+ * este é o ponto de validação da borda de leitura (§10.5) — o adapter entrega o
+ * corpo cru. Aceita v1 e v2; devolve sempre o estado da forma corrente.
+ */
+export function fromSessionDto(raw: unknown): { state: SessionState; meta: SessionMeta } {
+  const dto = parseSessionDto(raw);
   const state: SessionState = {
     durationSec: dto.durationSec,
     beadSec: dto.beadSec,

@@ -7,7 +7,7 @@ Path: @/ui/pages/dashboard
 - The Sessions dashboard (ENG-245, redesigned to the Shemá v2 prototype in ENG-278): the post-login home (PRD v2 §7.2). Lists ALL the facilitator's sessions as a **grid of story cards** — story name, `slug · project`, status, last-modified, and a glanceable progress cover; resumes an in-progress session straight into its saved step; downloads the three artifacts of a completed session **without opening it**; and starts a new story.
 - `Dashboard({ auth, store, saveBytes })` — the `AuthProvider` + `SessionStore` ports arrive **by prop** in tests; in production they resolve the fixture singletons in @/ui/pages/dashboard/ports.ts. The real download is the injectable `saveBytes(filename, bytes)` boundary (default Blob/anchor).
 - **A full-bleed surface with its OWN header** (brand + the authenticated user + "Sair"), like @/ui/pages/login: the shell suppresses its utility header on both routes, so this page owns the top of the screen.
-- **Direct downloads reuse the stored opaque bytes** (§10.5): `store.getArtifacts(id)[kind]` → `saveBytes` with `<slug>-retorno-ancoragem.json` / `-manifesto-contas.json` / `-relatorio-mapeamento.md` (filenames via the @/contracts helpers). Nothing is rebuilt on the dashboard.
+- **Direct downloads reuse the stored opaque bytes** (§10.5): `store.getArtifacts(id)[kind]` → `saveBytes` with `<slug>-anchoring-return.json` / `-bead-manifest.json` / `-mapping-report.md` (filenames via the @/contracts helpers). Nothing is rebuilt on the dashboard.
 
 ### How it fits into the larger codebase
 

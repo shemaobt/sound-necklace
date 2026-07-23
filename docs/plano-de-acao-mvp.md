@@ -77,7 +77,7 @@ This effort is **two repositories meeting at the contract**, not a full-stack ap
 The MVP is validated when, in real use (not demo):
 
 1. **End-to-end cycle:** a facilitator + listener pair completes a real story — bucket audio → session → Escuta → Cenas → Triagem → Segmentação → Mapeamento (voice) → *concluída* — across **at least two sittings on different days/machines**, with zero manual file handling and zero lost work.
-2. **Contract check:** given the same audio, grid, and decisions, the platform's `retorno-ancoragem.json` and `manifesto-contas.json` are **identical** to the v1 prototype's output, and the report `.md` keeps the exact skeleton/header; the Compilador ingests them unchanged.
+2. **Contract check:** given the same audio, grid, and decisions, the platform's `anchoring-return.json` and `bead-manifest.json` are **identical** to the v1 prototype's output, and the report `.md` keeps the exact skeleton/header; the Compilador ingests them unchanged.
 3. **Dashboard retrieval:** the three artifacts of a completed session are downloaded from the dashboard without opening the session.
 4. **Oral-mode review:** every listener-facing screen passes the §9.2 check (≤ 1 short instruction line, one dominant action, no counters/IDs/tables); the listener operates the session without reading beyond that line and without touching platform chrome.
 5. **Interview completeness:** all scripted questions are asked by the conversation and every answer (voice or typed) lands in the report and in session storage under the correct key.

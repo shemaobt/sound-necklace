@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { DocumentCard } from './document-card';
 
 const base = {
-  filename: 'retorno-ancoragem.json',
+  filename: 'anchoring-return.json',
   title: 'As decisões de vocês',
   description: 'Onde cada cena e cada frase começa e termina.',
 };
@@ -15,7 +15,7 @@ describe('DocumentCard — cartão de documento com estado Baixar/baixado (redes
     render(<DocumentCard {...base} />);
     expect(screen.getByText('As decisões de vocês')).toBeDefined();
     expect(screen.getByText('Onde cada cena e cada frase começa e termina.')).toBeDefined();
-    expect(screen.getByText('retorno-ancoragem.json')).toBeDefined();
+    expect(screen.getByText('anchoring-return.json')).toBeDefined();
   });
 
   it('o botão diz "Baixar" e chama onDownload', async () => {

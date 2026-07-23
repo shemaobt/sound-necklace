@@ -224,9 +224,9 @@ describe('Dashboard — downloads no cartão da concluída (§7.2/§10.5, ENG-30
     await userEvent.click(screen.getByRole('button', { name: /A conversa sobre o sentido/ }));
 
     const sent = Object.fromEntries(save.mock.calls.map(([name, bytes]) => [name, bytes]));
-    expect(sent['concluida-x-retorno-ancoragem.json']).toBe(triple.anchoring);
-    expect(sent['concluida-x-manifesto-contas.json']).toBe(triple.manifest);
-    expect(sent['concluida-x-relatorio-mapeamento.md']).toBe(triple.report);
+    expect(sent['concluida-x-anchoring-return.json']).toBe(triple.anchoring);
+    expect(sent['concluida-x-bead-manifest.json']).toBe(triple.manifest);
+    expect(sent['concluida-x-mapping-report.md']).toBe(triple.report);
 
     // baixado marca o item (as chaves agora batem com o kind — bug antigo corrigido)
     await waitFor(() =>

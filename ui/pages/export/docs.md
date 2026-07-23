@@ -26,7 +26,7 @@ Path: @/ui/pages/export
 
 ### Things to Know
 
-- **Two filename sets.** `saveBytes` uses the slug-prefixed @/contracts helpers `retornoFilename`/`manifestoFilename`/`reportFilename(slug)` (e.g. `historia-retorno-ancoragem.json`), distinct from the **unprefixed** display filenames shown inside the `ArtifactCards` organism (`retorno-ancoragem.json`).
+- **Two filename sets.** `saveBytes` uses the slug-prefixed @/contracts helpers `retornoFilename`/`manifestoFilename`/`reportFilename(slug)` (e.g. `historia-anchoring-return.json`), distinct from the **unprefixed** display filenames shown inside the `ArtifactCards` organism (`anchoring-return.json`).
 - **The download is the system-boundary seam.** `saveBytes(filename, bytes)` defaults to a Blob + object URL + anchor click (`domSaveBytes`); tests inject a spy to assert byte-identity against `store.getArtifacts(id)`.
 - **The semFim advisory** renders only in `edit` when `retornoExportStatus(session).semFim > 0`: the literal "N frase(s) ainda sem fim travado." (the "(s)" is literal, the count exact). It is advisory — it does not block completion.
 - **Facilitator surface.** Unlike listener screens, this is §7.2/§8.8 facilitator-facing, so the counts/numbers in the advisory and the document cards are allowed.

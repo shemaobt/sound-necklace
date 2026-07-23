@@ -200,16 +200,16 @@ describe('Export — downloads reusam os bytes guardados (PRD v2 §10.5)', () =>
 
     const stored = await store.getArtifacts(id);
 
-    await userEvent.click(cardButton('retorno-ancoragem.json'));
-    await userEvent.click(cardButton('manifesto-contas.json'));
-    await userEvent.click(cardButton('relatorio-mapeamento.md'));
+    await userEvent.click(cardButton('anchoring-return.json'));
+    await userEvent.click(cardButton('bead-manifest.json'));
+    await userEvent.click(cardButton('mapping-report.md'));
 
     const sent = Object.fromEntries(save.mock.calls.map(([name, bytes]) => [name, bytes]));
-    expect(sent['historia-retorno-ancoragem.json']).toBe(stored.anchoring);
-    expect(sent['historia-manifesto-contas.json']).toBe(stored.manifest);
-    expect(sent['historia-relatorio-mapeamento.md']).toBe(stored.report);
+    expect(sent['historia-anchoring-return.json']).toBe(stored.anchoring);
+    expect(sent['historia-bead-manifest.json']).toBe(stored.manifest);
+    expect(sent['historia-mapping-report.md']).toBe(stored.report);
 
-    expect(cardButton('retorno-ancoragem.json').textContent).toContain('baixado');
+    expect(cardButton('anchoring-return.json').textContent).toContain('baixado');
   });
 });
 
@@ -224,11 +224,11 @@ describe('Export — gate do retorno (PRD v2 §8.8)', () => {
     render(<Export store={store} sessionId={id} saveBytes={save} />);
     await screen.findByRole('button', { name: 'Concluir e guardar os documentos' });
 
-    await userEvent.click(cardButton('retorno-ancoragem.json'));
+    await userEvent.click(cardButton('anchoring-return.json'));
 
     expect(screen.getByText('Confirme o colar antes de exportar.')).toBeTruthy();
     expect(save).not.toHaveBeenCalled();
-    expect(cardButton('retorno-ancoragem.json').textContent).toContain('Baixar');
+    expect(cardButton('anchoring-return.json').textContent).toContain('Baixar');
   });
 
   it('avisa quantas frases estão sem fim travado com a contagem exata', async () => {
@@ -321,7 +321,7 @@ describe('Export — fronteiras de IO real (ENG-247)', () => {
     render(<Export store={store} sessionId={id} saveBytes={save} />);
     await screen.findByRole('button', { name: 'Destravar para editar' });
 
-    await userEvent.click(cardButton('retorno-ancoragem.json'));
+    await userEvent.click(cardButton('anchoring-return.json'));
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('Não consegui baixar o documento.');

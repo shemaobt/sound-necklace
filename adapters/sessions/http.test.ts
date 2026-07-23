@@ -266,9 +266,9 @@ describe('HttpSessionStore', () => {
       const manifest = form.get('manifest') as File;
       const anchoring = form.get('anchoring') as File;
       const report = form.get('report') as File;
-      expect(manifest.name).toBe('manifesto-contas.json');
-      expect(anchoring.name).toBe('retorno-ancoragem.json');
-      expect(report.name).toBe('relatorio-mapeamento.md');
+      expect(manifest.name).toBe('bead-manifest.json');
+      expect(anchoring.name).toBe('anchoring-return.json');
+      expect(report.name).toBe('mapping-report.md');
       expect(await manifest.text()).toBe('{"m":1}');
       expect(await report.text()).toBe('# r');
       // multipart: o content-type (com boundary) é do runtime, nunca nosso

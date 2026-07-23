@@ -1,5 +1,5 @@
 /**
- * <slug>-relatorio-mapeamento.md — port de buildMapReportMd() da referência
+ * <slug>-mapping-report.md — port de buildMapReportMd() da referência
  * (docs/reference/index.html L1155–1170). PRD v2 §10.4 (esqueleto + cabeçalho
  * são contrato byte-exato), §8.7 (relatório = matéria-prima; o app só coleta).
  *
@@ -105,8 +105,8 @@ export function buildMapReport(state: SessionState): string {
   return L.join('\n');
 }
 
-/** Nome do arquivo do relatório — fallback "historia" (SEM acento), fiel à
- *  referência L1151 (divergente do "colar" dos JSONs em serialize.ts). */
+/** Nome do arquivo do relatório (ENG-359) — mesmo fallback "story" dos JSONs;
+ *  a divergência da referência ("historia" aqui, "colar" lá) morreu junto. */
 export function relatorioFilename(slug: string): string {
-  return `${slug || 'historia'}-relatorio-mapeamento.md`;
+  return `${slug || 'story'}-mapping-report.md`;
 }

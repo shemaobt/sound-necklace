@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 99,
   "durationSec": 1,
   "beadSec": 0.5,
   "totalBeads": 2,
