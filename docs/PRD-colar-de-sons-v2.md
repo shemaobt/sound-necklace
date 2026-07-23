@@ -7,7 +7,7 @@
 - **PRD — UI/UX Redesign v2 (Shemá)** — owns the visual/interaction layer (design tokens, "fio de contas" stepper, necklace-as-transport, conversation Mapeamento, storyteller guide). This document defines *what the product does*; that one defines *how it looks and moves*. Its §11 lists the **Claude Design deliverables** — the interface is already designed and prototyped (`Colar de Sons - Protótipo.dc.html` end to end, plus the exploration/comparison boards); those prototypes are the **normative visual reference for the from-scratch build** (behavior and contracts still come from *this* document and the reference `index.html`).
 - **PRD as-built v1** — historical annex documenting the prototype implementation in code-level detail. Useful for implementers; not required to read this document.
 
-**PRD language:** English. **All UI copy is PT-BR** (Brazilian Portuguese). PT-BR strings quoted here are literal, contract-level UI copy.
+**PRD language:** English. **All UI copy is PT-BR** (Brazilian Portuguese). PT-BR strings quoted here are literal, contract-level UI copy. **Exported artifacts are English** — see §1.1.
 **Ecosystem:** authentication, projects, and audio are served by the **shared project API** (`tripod-api`, FastAPI/Pydantic/SQLAlchemy) — the same API that serves other systems, including **Oral Collector**, the companion field app that records/collects the oral audios. This effort spans two repos: the Colar de Sons SPA and an extension of `tripod-api` (§5, §15.2 O9).
 
 ---
@@ -32,7 +32,7 @@ Colar de Sons lets a facilitator and a native listener take a recorded oral stor
 
 The audio is sliced into a fixed grid of tiny **contas** (beads; default 0.25 s). Every boundary snaps to a bead index; bead indices are the universal coordinate system of the entire pipeline. The output is a set of artifacts (two JSON documents + a Markdown report) consumed downstream by an automated pipeline ("o Compilador" / Claude Code agents).
 
-The app **never transcribes, never classifies vocabulary, never generates the meaning map**. It is a listening and anchoring tool: it collects human decisions and stores them as raw material.
+The app **never transcribes the story, never classifies vocabulary, never generates the meaning map**. It is a listening and anchoring tool: it collects human decisions and stores them as raw material. (The listener's *answers* may carry a machine transcription and a machine translation — but only as **drafts a human confirms**, and only under the three disclosed carve-outs of §4 and §12. The story audio itself is never touched by a model.)
 
 ### 1.1 The founding premise — oral mode, even in the bridge language
 
@@ -42,6 +42,8 @@ The core users have minimal contact with technology, and their minds work **oral
 - Voice, color, shape, size, position, and motion are the primary channels of meaning; text is a facilitator channel. Any listener-facing text must justify its existence (§9.2).
 - Technology contact is minimized: guided flow, one decision per moment, big stable targets, audio-first feedback. The listener never operates accounts, files, or navigation.
 - Anything that looks like a form, a test, or an exam creates anxiety and distorts answers — the Mapeamento is a *conversation*, not a questionnaire.
+
+**The bridge language is a working language, not the output language (decided 2026-07-23 — ENG-326).** Portuguese is how the listener speaks and how the facilitator works; **the artifact normalizes to English**. PT-BR and EN are both working languages of the app, but everything a session exports is English: any content captured in Portuguese enters an artifact only after a **PT→EN translation draft confirmed by a bilingual human** (§12). This reverses the earlier "the artifact follows the interface language" reading of this premise — the bridge carries the *conversation*, not the *contract*. The oral-mode premise is untouched by it: the listener still speaks Portuguese, still never reads or writes, and never sees, reviews, or is asked about the English text.
 
 ### 1.2 The central metaphor
 
@@ -85,10 +87,10 @@ A user belongs to one or more **projects**; everything they can see — audios, 
 4. Results are one click away: completed sessions expose their artifacts directly from the dashboard.
 5. The oral-mode premise governs every listener-facing decision; everything platform-new is facilitator-facing.
 6. Voices and stories are protected: security and LGPD compliance as first-class requirements (§12).
-7. Produce pipeline-consumable artifacts bit-identical to the established contracts (§10).
+7. Produce pipeline-consumable artifacts bit-identical to the established contracts (§10), **in English**: PT content reaches an artifact only as human-confirmed English text (§1.1, §12).
 
 ### Non-goals
-- Transcription, translation, or AI-generated **content**: the app never transcribes, translates, or invents anything the story contains or the listener said. (Scope note, since the question voice is now synthetic: the scripted prompts are **human-authored frozen strings** — §10.4 — and speaking them aloud creates no content. No AI model runs inside the app; the voice is synthesized and cached server-side, and its use is disclosed — §8.7, §12.)
+- AI-generated **content**, outside three named carve-outs. The app never invents anything the story contains or the listener said; no model ever touches the **story audio**, and no model ever classifies a scene, assigns a confidence, or builds the meaning map. The three carve-outs — (1) the synthetic **question voice**, (2) **speech-to-text** of the voice answers, (3) **PT→EN translation** — share four conditions: each runs **on our own API and never inside the SPA**, each is **disclosed on the setup screen**, each produces a **draft** whose authority is a human's confirmation, and **an unconfirmed draft never enters an artifact** (§8.7, §12). The question voice creates no content at all: it reads **human-authored frozen strings** (§10.4). STT and translation create *drafts of what a human already said or wrote* — the human confirms, and only the confirmed English text is exported (§1.1).
 - Changing the Ruth ontology, coverage targets, or confidence model.
 - Telemetry or analytics on listener behavior.
 - Mobile-first layout (desktop-first; graceful degradation is enough).
@@ -223,7 +225,7 @@ Four modes: **Escuta** (two internal steps: "Ouça a história" and "Corte a his
 
 ### 8.1 Session setup — "Carregue o áudio"
 
-Facilitator-only screen. Inputs: audio source (§7.4); **granularity level** — three options, *small / medium / large* ("Pequena / Média / Grande"), resolved to a uniform bead duration per §6.1 (**there is no "Segundos por conta" numeric input** — the v1 field is removed as irrelevant to users); story title/slug (falls back to the audio filename without extension). The trust line (§5) is pinned and prominent.
+Facilitator-only screen. Inputs: audio source (§7.4); **granularity level** — three options, *small / medium / large* ("Pequena / Média / Grande"), resolved to a uniform bead duration per §6.1 (**there is no "Segundos por conta" numeric input** — the v1 field is removed as irrelevant to users); story title/slug (falls back to the audio filename without extension). The trust line (§5) is pinned and prominent, and next to it the **machine-help disclosure** — plain language, facilitator-facing, naming all three carve-outs of §12: the guide's voice is synthetic and the questions are written by people; answers may get a machine transcription; text may get a machine translation into English — and in both cases a person checks it before it counts.
 
 **Segmentation:** validates inputs (audio chosen: "Escolha um arquivo de áudio primeiro."; the resolved bead duration must be > 0 — an internal guard, since the user picks a level rather than a number); decodes ("Não consegui decodificar este áudio (…). Tente um WAV PCM." on failure); builds the bead grid; computes `manifest_id`; initializes the session; enters Escuta step 1.
 
@@ -293,6 +295,8 @@ A guided **conversation, not a questionnaire** (redesign §6.6): full-bleed cere
 - The answer store extends lazily so late structural changes (reopened scenes, added phrases) never lose existing answers.
 
 **The report:** a consolidated, **editable** artifact — every question as a card with its answer (voice row with play + waveform + duration, or text, or "ainda sem resposta gravada"), plus an optional facilitator note per question. Exports `<slug>-relatorio-mapeamento.md` with the exact skeleton and header contract of §10.4. The app collects **raw material only**: it never classifies vocabulary, never fills in absence, never generates the map.
+
+**Transcription & translation drafts (decided — ENG-326).** A voice answer may carry a **speech-to-text draft** and, on top of it, a **PT→EN translation draft** — both produced by our own API (§12), both **editable in the report**, and both shown as *drafts* until a human confirms them: the facilitator (or the listener, aloud, through the facilitator) confirms the transcription; a **bilingual** human confirms the translation. Nothing here is ever put to the listener as a reading task (§1.1). **Confirmed English text is an export requirement:** the exported report carries the confirmed English, never a draft — an answer whose transcription or translation is still unconfirmed exports as if it had no text, exactly like an untranscribed voice answer, and the recording path (§10.4) is what carries it. The report also stays exportable at any time: an unconfirmed answer blocks nothing, it just does not contribute text. *(The contract-level rendering and field naming of that English text is a frozen-layer change owned by ENG-356 — §10.2, §10.4.)*
 
 ### 8.8 Completion & artifacts — "Guardar os documentos"
 
@@ -454,8 +458,10 @@ The data is unusually sensitive: **voices of speakers from small oral communitie
 - **Consent (decided — two moments):** (1) **collection consent** is captured at recording time in **Oral Collector** and travels with the audio through the API — Colar de Sons displays/verifies that the audio carries it; (2) **pipeline-use consent** is confirmed at session start in Colar de Sons by the facilitator. Both moments admit an **oral form** (a recorded consent audio), consistent with §1.1.
 - **Access control:** all audio, session state, and artifacts scoped to project membership (§3); no cross-project visibility; least-privilege roles; **server-side authorization on every resource** (never client-side only).
 - **Encryption:** TLS for all transport; encryption at rest for audio, voice answers, and session data.
-- **Voice-data handling:** recordings (story audio and Mapeamento voice answers) are never used for model training, voice identification, or any purpose beyond the pipeline; no third-party analytics or telemetry on listener behavior.
-- **Synthetic question voice (decided — and its boundary):** the interview prompts are spoken by an **ElevenLabs** voice, synthesized and cached by **our own API** (§5, §8.7). The SPA never contacts the provider: **no third party sits in the session's data path**, and no listener audio, story audio, or answer ever leaves our control. What reaches the provider is only the *fixed, human-authored question text* (§10.4) — the same 21 strings for every session, cached after the first synthesis. **Disclosure is mandatory**, both because the provider's use policy requires it and because the honesty rule below demands it anyway: the setup screen states plainly that the guide's voice is synthetic and that the questions are written by people.
+- **Voice-data handling:** recordings (story audio and Mapeamento voice answers) are never used for model training, voice identification, or any purpose beyond the pipeline; no third-party analytics or telemetry on listener behavior. **The story audio never leaves our control — no exception, no carve-out.** Where an *answer* recording is sent for transcription (below), the processor is bound by contract to no-training and zero-retention, and the same prohibition on identification carries through.
+- **Synthetic question voice (decided — and its boundary):** the interview prompts are spoken by an **ElevenLabs** voice, synthesized and cached by **our own API** (§5, §8.7). The SPA never contacts the provider, and the provider **never sits in the session's data path**: no listener audio, no story audio, and no answer ever reaches it. What reaches it is only the *fixed, human-authored question text* (§10.4) — the same 21 strings for every session, cached after the first synthesis. **Disclosure is mandatory**, both because the provider's use policy requires it and because the honesty rule below demands it anyway: the setup screen states plainly that the guide's voice is synthetic and that the questions are written by people.
+- **Speech-to-text of the voice answers (decided — and its boundary):** an answer recording may be transcribed into an **editable draft** (§8.7). It runs **through our own API** — the SPA never calls a transcription provider — and the transcript is **advisory data with no authority of its own**: a human confirms it, and until then it is not an answer, does not appear in an artifact, and never overwrites the recording, which remains the record of what the listener said. Sending answer audio out for transcription is the *only* case where listener audio leaves our systems; it goes to a processor bound to no-training and zero-retention, under the LGPD basis and consent recorded above, and it is **disclosed on the setup screen**. The **story audio is never sent** — it stays inside our control under every circumstance.
+- **PT→EN translation (decided — and its boundary):** artifacts are exported in English (§1.1), so confirmed Portuguese text may be machine-translated into an **English draft**, again **through our own API only**. The draft is advisory: it must be **confirmed by a bilingual human** before export, an unconfirmed translation never enters an artifact, and the confirmed Portuguese it came from is retained as the source of truth for any later review. What reaches the translation processor is text a human already confirmed — never a recording. **Disclosed on the setup screen** with the other two carve-outs.
 - **Auditability:** access and download of audios/artifacts is logged (who, what, when).
 - **Retention & deletion:** defined retention policy; deleting a session/audio removes it and its derivatives from active storage within a defined SLA; communities/projects can request full withdrawal of their material.
 - **Account/session hygiene:** per the shared API's standards — expiring sessions, secure credential storage, rate limiting.
@@ -475,7 +481,7 @@ The data is unusually sensitive: **voices of speakers from small oral communitie
 
 ## 14. Out of scope
 
-- Transcription, translation, or AI-generated **content** — nothing about the story or the listener's answers is ever invented, transcribed, or translated by a model. The synthetic question voice is not an exception to this: it reads human-authored frozen strings (§4, §8.7, §12).
+- AI-generated **content** beyond the three carve-outs of §4 and §12 — nothing about the story is ever transcribed, translated, or analysed by a model; nothing is ever invented; no model classifies a scene or builds the meaning map. Inside the carve-outs, the model only drafts: the question voice reads human-authored frozen strings, and STT/translation restate what a human already said — a human confirms, and an unconfirmed draft never reaches an artifact (§1.1, §8.7).
 - Changing the Ruth ontology, coverage targets, or confidence model.
 - Telemetry/analytics on listener behavior.
 - Mobile-first layout.
@@ -496,6 +502,7 @@ The data is unusually sensitive: **voices of speakers from small oral communitie
 | O5 | Voice-answer storage | **WebM/Opus, one file per question**, stored as session resources keyed by question — `respostas/level1/<k>.webm`, `respostas/level2/<part_id>/<k>.webm`, `respostas/level3/<prop_id>/<k>.webm` — and referenced by that path in the report (§8.7, §10.4). |
 | O6 | Consent flow | **Two moments:** collection consent in Oral Collector at recording time (travels with the audio); pipeline-use consent at session start in Colar de Sons. Both admit oral form (§12). |
 | O7 | Trust copy | *"Seus áudios e respostas ficam guardados com segurança no seu projeto. Só a sua equipe tem acesso."* (§5). |
+| O10 | Artifact language & the AI-content rule *(2026-07-23, ENG-326)* | **Artifacts are always English**; PT/EN are working languages (§1.1). The no-AI-content rule admits **three carve-outs** — question voice, STT of answers, PT→EN translation — each on our own API, disclosed at setup, producing a draft a human confirms; an unconfirmed draft never enters an artifact (§4, §8.7, §12, §14). The contract normalization is ENG-356. |
 
 ### 15.2 Open items
 
