@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { SessionStore } from '../../../adapters/sessions';
+import { SessionNotFoundError, type SessionStore } from '../../../adapters/sessions';
 import type { UiSound } from '../../../adapters/ui-sound';
 import {
   type ArtifactTriple,
@@ -60,6 +60,8 @@ type Phase = 'loading' | 'edit' | 'saved';
 interface Custody {
   meta: SessionMeta;
   voice: Set<string>;
+  /** A custódia REALMENTE carregou. Falso ⇒ `voice` é um palpite vazio, não a verdade. */
+  ok: boolean;
 }
 
 const DEFAULT_META: SessionMeta = {
@@ -104,6 +106,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       let meta = DEFAULT_META;
       let voice = new Set<string>();
       let concluida = false;
+      let custodyOk: boolean;
       try {
         concluida = (await store.get(sessionId)).status === 'completed';
         const dto = await store.load(sessionId);
@@ -114,12 +117,18 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
           pipelineConsent: dto.pipelineConsent,
         };
         voice = new Set(dto.voice);
-      } catch {
-        // sessão inacessível pela store ou estado nunca salvo — defaults editáveis,
-        // sem travar em "loading" (o guard cobre o get, não só o load)
+        custodyOk = true;
+      } catch (err) {
+        // Estado NUNCA salvo (not-found) é um caso legítimo: não há DTO porque não
+        // há nada gravado, então `voice` vazio é a verdade e a custódia vale.
+        // Qualquer OUTRA falha (rede, 5xx) é ignorância, não ausência: aí `voice`
+        // vazio seria um palpite, e o gate de voz precisa recusar em vez de deixar
+        // passar (ENG-327). Defaults editáveis nos dois casos — nunca travar em
+        // "loading" (o guard cobre o get, não só o load).
+        custodyOk = err instanceof SessionNotFoundError;
       }
       if (!alive) return;
-      setCustody({ meta, voice });
+      setCustody({ meta, voice, ok: custodyOk });
       setPhase(concluida ? 'saved' : 'edit');
     })();
     return () => {
@@ -161,10 +170,19 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
   const { canExport, semFim } = retornoExportStatus(session);
   // Inglês confirmado é requisito (ENG-327): uma resposta gravada sem texto não
   // exporta nada — guardar assim perderia em silêncio o que a pessoa disse.
-  const { canExport: reportReady } = reportExportStatus(
+  // O gate de voz FALHA FECHADO (ENG-327): sem a custódia carregada não dá para
+  // saber quais respostas foram gravadas, e um `voice` vazio deixaria passar
+  // exatamente o que o gate existe para impedir — o `.md` sairia com "(no answer)"
+  // no lugar do que a pessoa disse. Na dúvida, recusa e explica.
+  const { canExport: reportTextReady, pendingSlots } = reportExportStatus(
     session,
     custody?.voice ?? new Set<string>(),
   );
+  const reportReady = custody?.ok === true && reportTextReady;
+  const reportBlockedNotice = (): string =>
+    custody?.ok === true
+      ? t('export.reportBlocked', { count: pendingSlots })
+      : t('export.reportBlockedUnknown');
 
   const onDownload = async (kind: ArtifactKind): Promise<void> => {
     if (!triple) return;
@@ -175,7 +193,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
     }
     if (kind === 'manifest' && !canExportManifesto(session)) return;
     if (kind === 'report' && !reportReady) {
-      setNotice(t('export.reportBlocked'));
+      setNotice(reportBlockedNotice());
       sound?.refuse();
       return;
     }
@@ -205,7 +223,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
   const onComplete = async (): Promise<void> => {
     if (!store || !sessionId || !triple || !canExport || busy) return;
     if (!reportReady) {
-      setNotice(t('export.reportBlocked'));
+      setNotice(reportBlockedNotice());
       sound?.refuse();
       return;
     }

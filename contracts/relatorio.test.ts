@@ -229,6 +229,9 @@ describe('buildMapReport — a voz nunca entra no artefato (ENG-356)', () => {
     ]) {
       expect(md, `resíduo PT-BR: ${pt}`).not.toContain(pt);
     }
+  });
+});
+
 describe('reportExportStatus — inglês confirmado é requisito de exportação (ENG-327)', () => {
   const stateWith = (mapping: Mapping): SessionState =>
     baseState({ parts: [part({})], frases: [frase({})], mapping });

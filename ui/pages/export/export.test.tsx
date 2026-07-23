@@ -377,6 +377,24 @@ describe('Export — inglês confirmado é requisito para guardar (ENG-327)', ()
     expect((await store.get(id)).status).toBe('completed');
   });
 
+  it('se a custódia não carrega, RECUSA em vez de exportar às cegas', async () => {
+    const store = new FixtureSessionStore();
+    const { id, state } = await seedWithRecording(store, 'He told of the dolphin.');
+    // a rede cai justamente ao ler quais respostas foram gravadas
+    vi.spyOn(store, 'load').mockRejectedValue(new Error('rede fora'));
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
+    );
+
+    // sem saber o que foi gravado, deixar passar exportaria "(no answer)" no lugar
+    // do que a pessoa disse — o gate falha FECHADO
+    expect((await store.get(id)).status).toBe('in_progress');
+    expect(screen.getByText(/não consegui conferir/i)).toBeTruthy();
+  });
+
   it('o .md guardado leva o texto confirmado e nenhum caminho de gravação', async () => {
     const store = new FixtureSessionStore();
     const { id, state } = await seedWithRecording(store, 'He told of the dolphin.');

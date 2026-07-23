@@ -428,6 +428,64 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     expect(md).not.toContain('He told of the dolphin.');
   });
 
+  it('apagar o inglês de propósito o mantém apagado ao remontar', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />,
+    );
+
+    finish();
+    const en = await screen.findByDisplayValue('He told of the dolphin.');
+    await userEvent.clear(en);
+
+    view.unmount();
+    const again = controllableStt(DRAFTS);
+    again.finish();
+    const remount = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={again.stt} sessionId="s-1" />,
+    );
+
+    // o rascunho NÃO ressuscita: a pessoa já o recusou
+    const scope = within(remount.container);
+    await scope.findByText('Ele contou do boto.'); // a origem chegou de novo…
+    expect((scope.getByLabelText(/em inglês/i) as HTMLTextAreaElement).value).toBe('');
+  });
+
+  it('regravar a resposta substitui o rascunho obsoleto', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+    finish();
+    await screen.findByDisplayValue('He told of the dolphin.');
+    view.unmount();
+
+    // a pessoa voltou, regravou (versão 2) e o job devolve outra tradução
+    const novo = controllableStt({
+      [PATH]: { source: 'Ele contou de novo.', en: 'He told it again.' },
+    });
+    novo.finish();
+    render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={novo.stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 2 }}
+      />,
+    );
+
+    // confirmar não pode escrever a tradução de um áudio descartado
+    await screen.findByDisplayValue('He told it again.');
+    expect(screen.queryByDisplayValue('He told of the dolphin.')).toBeNull();
+  });
+
   it('uma pergunta sem gravação nunca ganha rascunho', async () => {
     const { stt, finish } = controllableStt(DRAFTS);
     const outra = L1_Q[1]!;

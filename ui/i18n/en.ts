@@ -82,8 +82,12 @@ export const en: Dict = {
     waitEyebrow: 'Saving',
     waitLine: 'Gathering your decisions into the documents…',
     anchoringBlocked: 'Confirm the necklace before exporting.',
-    reportBlocked:
-      'Some recorded answers still have no confirmed English text. Confirm each one in the report — or write the answer by hand.',
+    reportBlocked_one:
+      '1 recorded answer still has no confirmed English text. Confirm it in the report — or write the answer by hand.',
+    reportBlocked_other:
+      '{{count}} recorded answers still have no confirmed English text. Confirm each one in the report — or write the answer by hand.',
+    reportBlockedUnknown:
+      'I could not check which answers were recorded. Reload the page before saving.',
     semFim: '{{n}} phrase(s) still without a locked end.',
     reopen: 'Unlock to edit',
     complete: 'Finish and save the documents',
@@ -329,12 +333,10 @@ export const en: Dict = {
     draftsReady_one: 'Suggestion ready — {{count}} answer to review.',
     draftsReady_other: 'Suggestion ready — {{count}} answers to review.',
     transcribing: 'transcribing the answer…',
-    translating: 'translating into English…',
     draftBadge: 'suggestion — review',
     draftSource: 'what was heard',
     draftEnglish: 'in English (goes into the document)',
     draftConfirm: 'confirm the English',
-    draftStale: 'the answer was re-recorded — this suggestion is from the old recording',
     draftRetry: 'try again',
     draftFailed: 'could not transcribe right now — you can write the answer by hand',
   },

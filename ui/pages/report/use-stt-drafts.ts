@@ -31,9 +31,21 @@ export interface SttDrafts {
   retry: () => void;
 }
 
-/** Uma chave estável para "este conjunto de gravações", para não redisparar à toa. */
-function keyOf(paths: readonly string[]): string {
-  return [...paths].sort().join('|');
+/**
+ * Chave estável de "este conjunto de gravações, NESTAS versões". A versão entra na
+ * chave porque regravar reusa o mesmo caminho: sem ela o job não seria redisparado
+ * e o rascunho da gravação antiga continuaria de pé.
+ */
+function keyOf(paths: readonly string[], versions: Record<string, number>): string {
+  return [...paths]
+    .sort()
+    .map((p) => `${p}@${versions[p] ?? 0}`)
+    .join('|');
+}
+
+/** Só os caminhos, sem a versão — é o que o job recebe. */
+function pathsOf(key: string): string[] {
+  return key ? key.split('|').map((e) => e.slice(0, e.lastIndexOf('@'))) : [];
 }
 
 /** Resultado de UM job, carimbado com a chave do pedido que o produziu. */
@@ -47,12 +59,15 @@ export function useSttDrafts(
   stt: Transcriber | null | undefined,
   sessionId: string | null,
   paths: readonly string[],
+  versions: Record<string, number> = {},
 ): SttDrafts {
-  const pathsKey = keyOf(paths);
+  const pathsKey = keyOf(paths, versions);
   const [result, setResult] = useState<JobResult | null>(null);
   const [attempt, setAttempt] = useState(0);
   // identifica o pedido corrente: resposta de pedido velho é descartada
   const requestId = useRef(0);
+  // já disparamos algum job nesta montagem? (o 2º em diante reprocessa)
+  const started = useRef(false);
 
   const active = Boolean(stt && sessionId && pathsKey !== '');
   const jobKey = `${pathsKey}#${attempt}`;
@@ -60,7 +75,7 @@ export function useSttDrafts(
   useEffect(() => {
     if (!stt || !sessionId || pathsKey === '') return;
     const mine = ++requestId.current;
-    const list = pathsKey.split('|');
+    const list = pathsOf(pathsKey);
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let delay = FIRST_DELAY_MS;
@@ -95,7 +110,11 @@ export function useSttDrafts(
 
     const run = async (): Promise<void> => {
       try {
-        await stt.start(sessionId, list, attempt > 0 ? { force: true } : undefined);
+        // `force` sempre que este pedido não é o primeiro desta montagem: ou a
+        // pessoa pediu de novo, ou regravou. Nos dois casos o rascunho guardado
+        // no servidor é de um áudio que não vale mais.
+        await stt.start(sessionId, list, started.current ? { force: true } : undefined);
+        started.current = true;
       } catch {
         if (!cancelled && requestId.current === mine) {
           setResult({ key: jobKey, status: 'failed', drafts: {} });

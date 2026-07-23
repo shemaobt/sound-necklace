@@ -87,8 +87,12 @@ export const pt = {
     waitEyebrow: 'Guardando',
     waitLine: 'Reunindo as decisões de vocês nos documentos…',
     anchoringBlocked: 'Confirme o colar antes de exportar.',
-    reportBlocked:
-      'Ainda há respostas gravadas sem o texto em inglês confirmado. Confirme cada uma no relatório — ou escreva a resposta à mão.',
+    reportBlocked_one:
+      'Ainda há 1 resposta gravada sem o texto em inglês confirmado. Confirme-a no relatório — ou escreva a resposta à mão.',
+    reportBlocked_other:
+      'Ainda há {{count}} respostas gravadas sem o texto em inglês confirmado. Confirme cada uma no relatório — ou escreva a resposta à mão.',
+    reportBlockedUnknown:
+      'Não consegui conferir quais respostas foram gravadas. Recarregue a página antes de guardar.',
     semFim: '{{n}} frase(s) ainda sem fim travado.',
     reopen: 'Destravar para editar',
     complete: 'Concluir e guardar os documentos',
@@ -348,12 +352,10 @@ export const pt = {
     draftsReady_one: 'Sugestão pronta — {{count}} resposta para revisar.',
     draftsReady_other: 'Sugestão pronta — {{count}} respostas para revisar.',
     transcribing: 'transcrevendo a resposta…',
-    translating: 'traduzindo para o inglês…',
     draftBadge: 'sugestão — revise',
     draftSource: 'o que se ouviu',
     draftEnglish: 'em inglês (vai para o documento)',
     draftConfirm: 'confirmar o inglês',
-    draftStale: 'a resposta foi regravada — a sugestão é da gravação antiga',
     draftRetry: 'tentar de novo',
     draftFailed: 'não consegui transcrever agora — dá para escrever a resposta à mão',
   },

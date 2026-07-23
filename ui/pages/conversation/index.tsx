@@ -58,6 +58,8 @@ export interface ConversationProps {
   stt?: Transcriber | null;
   /** Id da sessão — o job de transcrição é por sessão. */
   sessionId?: string | null;
+  /** Versão da gravação de cada resposta: regravar invalida o rascunho (ENG-327). */
+  recordingVersion?: Record<string, number>;
   /** O shell registra o caminho `respostas/…` recém-gravado no `meta.voice` da sessão (ENG-276). */
   onVoiceSaved?: (path: string) => void;
   /**
@@ -90,6 +92,7 @@ interface ReportSlotProps {
   /** Transcrição+tradução das respostas gravadas (ENG-327). */
   stt?: Transcriber | null;
   sessionId?: string | null;
+  recordingVersion?: Record<string, number>;
 }
 
 /**
@@ -405,6 +408,7 @@ export function Conversation({
   voicePaths = () => [],
   stt = null,
   sessionId = null,
+  recordingVersion,
 }: ConversationProps) {
   const { t, i18n } = useTranslation();
   const muted = useAppStore((s) => s.muted);
@@ -485,6 +489,7 @@ export function Conversation({
             preloaded={reportVoice ?? undefined}
             stt={stt}
             sessionId={sessionId}
+            recordingVersion={recordingVersion}
           />
         ) : (
           <div className="cds-conversation-report-fallback">

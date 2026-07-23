@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AnswerDraft, Transcriber } from '../../../adapters/stt/types';
@@ -65,6 +65,13 @@ export interface ReportProps {
   stt?: Transcriber | null;
   /** Sessão do job de transcrição; sem ela o job não dispara. */
   sessionId?: string | null;
+  /**
+   * Quantas vezes cada resposta foi GRAVADA. Regravar reusa o mesmo caminho, então
+   * é este contador — e só ele — que distingue a gravação nova da antiga: sem ele
+   * um rascunho obsoleto seguiria confirmável, escrevendo no artefato a tradução
+   * de um áudio que a pessoa descartou (ENG-327).
+   */
+  recordingVersion?: Record<string, number>;
 }
 
 /** Prefixo da chave reservada da nota — fora do vocabulário de perguntas. */
@@ -87,6 +94,13 @@ function formatDuration(sec: number): string {
  */
 const DRAFT_EN_PREFIX = 'en__';
 
+/**
+ * Versão da gravação que produziu o rascunho guardado em `en__<k>`. Precisa ser
+ * DURÁVEL: voltar à entrevista para regravar desmonta o relatório, então um ref
+ * em memória não sobrevive justamente à navegação que ele existe para detectar.
+ */
+const DRAFT_VER_PREFIX = 'enver__';
+
 /** O slot da nota: a mesma resposta sob a chave reservada `nota__<k>`. */
 function noteSlot(slot: QuestionSlot): AnswerSlot {
   return reservedSlot(slot, NOTE_PREFIX);
@@ -95,6 +109,11 @@ function noteSlot(slot: QuestionSlot): AnswerSlot {
 /** O slot do inglês em revisão, ainda NÃO confirmado. */
 function draftEnSlot(slot: QuestionSlot): AnswerSlot {
   return reservedSlot(slot, DRAFT_EN_PREFIX);
+}
+
+/** O slot da versão de gravação a que o rascunho guardado corresponde. */
+function draftVerSlot(slot: QuestionSlot): AnswerSlot {
+  return reservedSlot(slot, DRAFT_VER_PREFIX);
 }
 
 function reservedSlot(slot: QuestionSlot, prefix: string): AnswerSlot {
@@ -439,7 +458,13 @@ function ReportCard({
   );
 }
 
-export function Report({ recorder = null, preloaded, stt = null, sessionId = null }: ReportProps) {
+export function Report({
+  recorder = null,
+  preloaded,
+  stt = null,
+  sessionId = null,
+  recordingVersion,
+}: ReportProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   // O preload (ENG-337) semeia os dois conjuntos: linha conhecida nasce resolvida,
@@ -480,8 +505,9 @@ export function Report({ recorder = null, preloaded, stt = null, sessionId = nul
     });
   }, [recorder]);
 
-  // Descobre quais respostas TÊM gravação (define a linha de voz e alimenta o
-  // `voice` do `buildMapReport` para que o .md referencie a gravação, §10.4).
+  // Descobre quais respostas TÊM gravação: define a linha de voz, escolhe o que vai
+  // para o job de transcrição e conta o que ainda espera confirmação. NUNCA alimenta
+  // o `.md` — a gravação é proveniência e o builder nem recebe caminhos (ENG-356).
   // POR RESPOSTA, sem barreira (ENG-319): um Promise.all sobre os ~41 caminhos
   // segurava TODAS as linhas de voz até o caminho mais lento responder — no modo
   // real (rede + decode por blob) o relatório abria parecendo sem respostas. Cada
@@ -512,27 +538,42 @@ export function Report({ recorder = null, preloaded, stt = null, sessionId = nul
   }, [recorder, voicePaths, preloaded]);
 
   // Só as respostas COM gravação vão para o job — não há o que transcrever nas outras.
+  // `voiceSet` cresce um caminho por vez (ENG-319, sem barreira), então a lista pode
+  // começar parcial: cada crescimento redispara o job, e como só o PRIMEIRO pedido de
+  // cada montagem vai sem `force`, os seguintes reprocessam de fato em vez de esbarrar
+  // na idempotência do port. Esperar a descoberta inteira seria pior — um único
+  // `has()` pendurado travaria a transcrição de todas as outras.
+  // ponytail: reprocessa algumas vezes na abertura; se custar caro na API real,
+  // segurar o disparo por ~1s de silêncio da descoberta resolve.
   const recordedPaths = voicePaths.filter((p) => voiceSet.has(p));
-  const { phase: sttPhase, drafts, retry } = useSttDrafts(stt, sessionId, recordedPaths);
+  const {
+    phase: sttPhase,
+    drafts,
+    retry,
+  } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion);
 
   // O inglês que chegou vira o conteúdo INICIAL do campo em revisão, gravado uma
   // única vez na chave reservada. Depois disso o campo é da pessoa: apagá-lo tem
   // de deixá-lo apagado — ler o rascunho como fallback ressuscitaria o texto que
   // ela acabou de recusar.
-  const seeded = useRef(new Set<string>());
   useEffect(() => {
     for (const [path, draft] of Object.entries(drafts)) {
-      if (seeded.current.has(path)) continue;
-      seeded.current.add(path);
       const slot = sequence.find((s) => voiceAnswerPath(s) === path);
       if (!slot) continue;
-      // já houve edição humana nesta chave (inclusive apagá-la): não mexer
-      if (hasAnswerKey(mapped?.mapping ?? null, draftEnSlot(slot))) continue;
-      sessionStore
-        .getState()
-        .apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), draftEnSlot(slot), draft.en));
+      const m = mapped?.mapping ?? null;
+      const version = String(recordingVersion?.[path] ?? 0);
+      const seededVersion = readAnswer(m, draftVerSlot(slot));
+      const known = hasAnswerKey(m, draftEnSlot(slot));
+      // A chave já existe e é da MESMA gravação: houve edição humana (inclusive
+      // apagá-la de propósito) e não se mexe. Se a versão MUDOU, o que está ali é a
+      // tradução de um áudio descartado e precisa dar lugar ao rascunho novo.
+      if (known && seededVersion === version) continue;
+      sessionStore.getState().apply((s) => {
+        const withEn = setAnswer(s.mapping ? s : ensureMapping(s), draftEnSlot(slot), draft.en);
+        return setAnswer(withEn, draftVerSlot(slot), version);
+      });
     }
-  }, [drafts, sequence, mapped]);
+  }, [drafts, sequence, mapped, recordingVersion]);
 
   if (!session || !mapped || !sequence.length) return null;
 
