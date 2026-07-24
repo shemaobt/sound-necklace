@@ -29,6 +29,8 @@ Path: @/tests/golden
 
 ### Things to Know
 
+- **@/tests/golden/artifact-identity.test.ts is not the harness** and does not compare bytes. It states the INVARIANT the harness only implies: the three artifacts of one export carry the same `manifest_id`, and the same slug reaches the retorno, the report title and all three filenames. It runs over every case in `cases/` through `replaySessionSteps`, so a new case is covered the moment it lands. It also pins that the link lives in the BYTES, not in the filename — which is why ENG-359 could rename all three files without breaking anything downstream.
+
 - **If your change breaks the harness, your change is wrong — not the harness.** Never weaken it to pass; stop and escalate instead.
 - **The report `.md` has no PRD-derived extension left.** A v2-only rule used to put the voice-resource path (`respostas/…`) into a cell with no typed text; it was removed — `buildMapReport(state)` emits the confirmed English text or `_(no answer)_`, so the builder's output matches the reference **by construction** rather than only when a case records nothing (the report `.md` itself is English via the reviewed `REPORT_PT_TO_EN` normalization — ENG-356). The gate that replaced the voice cell, `reportExportStatus` (ENG-327), is a UI gate with no artifact bytes, so the harness does not see it.
 - **Import→export byte-identity** (proven in @/tests/golden/registry.test.ts and @/contracts/imports.test.ts): `retorno → applyReturn → buildRetorno` reproduces the seed byte-for-byte, given sequential `scene_id`s, `note:""` flags on present propositions, and `manifest_id`/`slug` equal to the session's (since `buildRetorno` uses `state.manifestId`/`state.slug`, not the seed's).
