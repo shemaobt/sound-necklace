@@ -1767,6 +1767,110 @@
           }
         }
       }
+    },
+    "/api/sound-necklace/sessions/{session_id}/transcriptions": {
+      "post": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Start Transcriptions",
+        "description": "Queue the drafts and answer 202 with the progress as it stands.\n\nIdempotent: a draft already made is not made again, so a reloaded report costs\nnothing. ``force`` is the re-record case and redoes everything.",
+        "operationId": "start_transcriptions_api_sound_necklace_sessions__session_id__transcriptions_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranscriptionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptionProgressResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Get Transcriptions",
+        "description": "Poll the job: how many are done, how many failed, and each answer's draft.\n\nA failed answer reports its own reason here — the job itself has no failure state,\nbecause one dead answer must never hold the report shut.",
+        "operationId": "get_transcriptions_api_sound_necklace_sessions__session_id__transcriptions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptionProgressResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1797,6 +1901,58 @@
         ],
         "title": "AcoustemeEnvelope",
         "description": "The granularity grid an audio's bead duration is derived from.\n\n``beadSec = granularity_frames[level] x hop_sec`` — the two fields exist together\nor the envelope is useless, so an audio whose grid is incomplete carries no\nenvelope at all rather than half of one.\n\n``codebook_version`` is a string, not a number: it is half of the acousteme\nartifact's primary key and reads like ``terena-xlsr53-k100-v1``. An integer here\nwould be a version the pipeline never mints.",
+        "x-stability": "experimental"
+      },
+      "AnswerTranscript": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TranscriptStatus"
+          },
+          "transcript_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript Source"
+          },
+          "translation_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Translation En"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "status"
+        ],
+        "title": "AnswerTranscript",
+        "description": "One answer's draft. Advisory: nothing here reaches an artifact unconfirmed.\n\n``translation_en`` carries the English text whatever the interview language was — for\nan English interview it is the transcript itself — so the report reads one field.\n``error`` is the answer's own failure, and it never means the job failed.",
         "x-stability": "experimental"
       },
       "ArtifactKind": {
@@ -2738,6 +2894,76 @@
           "refresh_token"
         ],
         "title": "TokenResponse"
+      },
+      "TranscriptStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "ready",
+          "failed"
+        ],
+        "title": "TranscriptStatus",
+        "description": "Where one answer's draft is. There is no ``running``: a claimed-but-unfinished\nstate survives a crashed worker as a row nothing will ever move again, and the cure\n(a sweeper, or a heartbeat column) costs more than the disease. A lost worker leaves\n``pending``, which the next trigger simply picks up."
+      },
+      "TranscriptionProgressResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "ready": {
+            "type": "integer",
+            "title": "Ready"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerTranscript"
+            },
+            "type": "array",
+            "title": "Answers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "ready",
+          "failed",
+          "pending",
+          "answers"
+        ],
+        "title": "TranscriptionProgressResponse",
+        "description": "What the SPA polls while the report is open.",
+        "x-stability": "experimental"
+      },
+      "TranscriptionRequest": {
+        "properties": {
+          "language": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 2,
+            "title": "Language"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "language"
+        ],
+        "title": "TranscriptionRequest",
+        "description": "Start (or restart) the drafts for a session's recorded answers.\n\n``language`` is the interview language, and it is the client's to say: the session\nrow does not carry one, and the SPA is what knows which language the questions were\nasked in. It is a hint for the transcriber and the switch that decides whether a\ntranslation is needed at all.",
+        "x-stability": "experimental"
       },
       "UserLoginRequest": {
         "properties": {

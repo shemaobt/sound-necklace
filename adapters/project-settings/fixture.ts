@@ -28,7 +28,6 @@ export interface FixtureProjectSettingsOptions {
 
 export class FixtureProjectSettings implements ProjectSettingsStore {
   readonly #rows = new Map<string, Row>();
-  readonly #cut = new Set<string>();
   readonly #now: () => string;
 
   constructor(opts: FixtureProjectSettingsOptions = {}) {
@@ -48,22 +47,22 @@ export class FixtureProjectSettings implements ProjectSettingsStore {
 
   setLevel(projectId: string, level: GranularityLevel): Promise<ProjectSettings> {
     const row = this.#rows.get(projectId);
-    if (row?.level === level) return Promise.resolve(this.#view(projectId));
-    if (this.#cut.has(projectId)) return Promise.reject(new GranularityLockedError(projectId));
+    if (row) {
+      // Confirmar É a trava (ENG-361): existir linha significa que já foi confirmado.
+      // Reenviar o mesmo nível segue passando — duplo clique não vira erro.
+      if (row.level === level) return Promise.resolve(this.#view(projectId));
+      return Promise.reject(new GranularityLockedError(projectId));
+    }
 
-    this.#rows.set(projectId, {
-      level,
-      beadSec: row?.beadSec ?? null,
-      updatedAt: this.#now(),
-    });
+    this.#rows.set(projectId, { level, beadSec: null, updatedAt: this.#now() });
     return Promise.resolve(this.#view(projectId));
   }
 
   /**
-   * O projeto cortou um áudio: carimba a grade resolvida e congela o nível — o que a
-   * `create_session` faz no backend. Grava o nível quando não havia nenhum, pelo mesmo
-   * motivo que lá: uma sessão criada antes desta configuração existir ainda define a
-   * grade do projeto.
+   * O projeto cortou um áudio: carimba a grade resolvida — o que a `create_session` faz
+   * no backend. Grava o nível quando não havia linha, pelo mesmo motivo que lá: uma
+   * sessão criada antes desta configuração existir ainda define a grade do projeto, e a
+   * linha que ela escreve trava o projeto igual a uma confirmação teria travado.
    */
   noteSessionCreated(projectId: string, level: GranularityLevel, beadSec: number): void {
     const row = this.#rows.get(projectId);
@@ -72,7 +71,6 @@ export class FixtureProjectSettings implements ProjectSettingsStore {
       beadSec: row?.beadSec ?? beadSec,
       updatedAt: row?.updatedAt ?? this.#now(),
     });
-    this.#cut.add(projectId);
   }
 
   #view(projectId: string): ProjectSettings {
@@ -81,7 +79,7 @@ export class FixtureProjectSettings implements ProjectSettingsStore {
       project_id: projectId,
       granularity_level: row?.level ?? null,
       bead_sec: row?.beadSec ?? null,
-      locked: this.#cut.has(projectId),
+      locked: this.#rows.has(projectId),
       updated_at: row?.updatedAt ?? null,
     };
   }

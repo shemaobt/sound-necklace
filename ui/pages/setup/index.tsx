@@ -89,7 +89,7 @@ function ProjectGranularity({ level }: { level: GranularityLevel | null }) {
   if (level === null) {
     return (
       <p className="cds-setup-note" data-role="warning" role="note">
-        {t('setup.granUnset')} <a href="/project-settings">{t('setup.granConfigureLink')}</a>
+        {t('setup.granUnset')} <a href="/settings">{t('setup.granConfigureLink')}</a>
       </p>
     );
   }

@@ -47,6 +47,22 @@ export async function resolveProjectId(): Promise<string> {
   return remember(first);
 }
 
+/**
+ * Se a pessoa logada pode DECIDIR a granularidade deste projeto (§8.1, ENG-352) — o
+ * mesmo `my-project-roles` que resolve o projeto também diz o papel nele.
+ *
+ * Um platform admin passa por cima da tabela de papéis (é o que a API faz). Falha de
+ * rede responde `false`: oferecer o controle a quem vai tomar 403 na confirmação é
+ * pior do que mandar falar com quem administra o projeto.
+ */
+export async function canEditProjectGranularity(projectId: string): Promise<boolean> {
+  await authReady();
+  const res = await apiGet('/auth/my-project-roles');
+  if (!res.ok) return false;
+  const parsed = MyProjectRolesResponseSchema.parse(await res.json());
+  return parsed.is_platform_admin || parsed.project_roles[projectId] === 'project_admin';
+}
+
 function apiGet(path: string): Promise<Response> {
   const token = appAuth().token();
   return fetch(`${API_BASE_URL}${path}`, {

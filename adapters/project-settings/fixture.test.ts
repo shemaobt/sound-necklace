@@ -37,13 +37,12 @@ describe('FixtureProjectSettings', () => {
     expect(settings.bead_sec).toBeNull();
   });
 
-  it('troca o nível enquanto nada foi cortado', async () => {
+  it('confirmar É a trava — não espera a primeira história', async () => {
     const store = new FixtureProjectSettings({ now: NOW });
-    await store.setLevel('proj-1', 'small');
+    await expect(store.setLevel('proj-1', 'small')).resolves.toMatchObject({ locked: true });
 
-    await expect(store.setLevel('proj-1', 'large')).resolves.toMatchObject({
-      granularity_level: 'large',
-    });
+    await expect(store.setLevel('proj-1', 'large')).rejects.toBeInstanceOf(GranularityLockedError);
+    await expect(store.get('proj-1')).resolves.toMatchObject({ granularity_level: 'small' });
   });
 
   it('congela o nível depois que o projeto cortou alguma coisa', async () => {
@@ -106,6 +105,7 @@ describe('FixtureProjectSettings', () => {
     const settings = await registration.fixture().get('projeto');
 
     expect(settings.granularity_level).toBe('medium');
-    expect(settings.locked).toBe(false);
+    // semeado = já confirmado: o demo abre com o cordão decidido, como um projeto real
+    expect(settings.locked).toBe(true);
   });
 });

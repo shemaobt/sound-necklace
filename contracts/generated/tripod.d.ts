@@ -558,6 +558,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sound-necklace/sessions/{session_id}/transcriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Transcriptions
+         * @description Poll the job: how many are done, how many failed, and each answer's draft.
+         *
+         *     A failed answer reports its own reason here — the job itself has no failure state,
+         *     because one dead answer must never hold the report shut.
+         */
+        get: operations["get_transcriptions_api_sound_necklace_sessions__session_id__transcriptions_get"];
+        put?: never;
+        /**
+         * Start Transcriptions
+         * @description Queue the drafts and answer 202 with the progress as it stands.
+         *
+         *     Idempotent: a draft already made is not made again, so a reloaded report costs
+         *     nothing. ``force`` is the re-record case and redoes everything.
+         */
+        post: operations["start_transcriptions_api_sound_necklace_sessions__session_id__transcriptions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -583,6 +613,25 @@ export interface components {
             granularity_frames: {
                 [key: string]: number;
             };
+        };
+        /**
+         * AnswerTranscript
+         * @description One answer's draft. Advisory: nothing here reaches an artifact unconfirmed.
+         *
+         *     ``translation_en`` carries the English text whatever the interview language was — for
+         *     an English interview it is the transcript itself — so the report reads one field.
+         *     ``error`` is the answer's own failure, and it never means the job failed.
+         */
+        AnswerTranscript: {
+            /** Path */
+            path: string;
+            status: components["schemas"]["TranscriptStatus"];
+            /** Transcript Source */
+            transcript_source?: string | null;
+            /** Translation En */
+            translation_en?: string | null;
+            /** Error */
+            error?: string | null;
         };
         /**
          * ArtifactKind
@@ -1023,6 +1072,49 @@ export interface components {
              * @default bearer
              */
             token_type: string;
+        };
+        /**
+         * TranscriptStatus
+         * @description Where one answer's draft is. There is no ``running``: a claimed-but-unfinished
+         *     state survives a crashed worker as a row nothing will ever move again, and the cure
+         *     (a sweeper, or a heartbeat column) costs more than the disease. A lost worker leaves
+         *     ``pending``, which the next trigger simply picks up.
+         * @enum {string}
+         */
+        TranscriptStatus: "pending" | "ready" | "failed";
+        /**
+         * TranscriptionProgressResponse
+         * @description What the SPA polls while the report is open.
+         */
+        TranscriptionProgressResponse: {
+            /** Total */
+            total: number;
+            /** Ready */
+            ready: number;
+            /** Failed */
+            failed: number;
+            /** Pending */
+            pending: number;
+            /** Answers */
+            answers: components["schemas"]["AnswerTranscript"][];
+        };
+        /**
+         * TranscriptionRequest
+         * @description Start (or restart) the drafts for a session's recorded answers.
+         *
+         *     ``language`` is the interview language, and it is the client's to say: the session
+         *     row does not carry one, and the SPA is what knows which language the questions were
+         *     asked in. It is a hint for the transcriber and the switch that decides whether a
+         *     translation is needed at all.
+         */
+        TranscriptionRequest: {
+            /** Language */
+            language: string;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
         };
         /** UserLoginRequest */
         UserLoginRequest: {
@@ -2207,6 +2299,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_transcriptions_api_sound_necklace_sessions__session_id__transcriptions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptionProgressResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_transcriptions_api_sound_necklace_sessions__session_id__transcriptions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TranscriptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptionProgressResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

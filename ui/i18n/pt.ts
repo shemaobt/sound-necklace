@@ -38,23 +38,43 @@ export const pt = {
     busy: 'Entrando…',
     refused: 'Não foi possível entrar. Confira o usuário e a senha.',
   },
-  projectSettings: {
+  settings: {
     eyebrow: 'Projeto',
-    title: 'Tamanho da conta',
-    lead: 'O tamanho da conta vale para o projeto inteiro: todos os áudios são cortados na mesma grade. É o que mantém o material do projeto num sistema de coordenadas só.',
-    levelsAria: 'Tamanho da conta do projeto',
-    save: 'Salvar',
-    saving: 'Salvando…',
-    saved: 'Tamanho da conta salvo.',
+    title: 'Configurações',
+    lead: 'Valem para o projeto inteiro, fora da criação das histórias.',
     loading: 'Carregando…',
-    readError: 'Não foi possível ler a configuração do projeto. Recarregue a página.',
-    saveError: 'Não foi possível salvar. Tente de novo.',
-    forbidden: 'Só quem administra o projeto pode mudar o tamanho da conta.',
-    lockedTitle: 'Já definido',
-    lockedBody:
-      'Este projeto já cortou áudio nesta grade, então o tamanho da conta não muda mais. Recortá-lo mudaria a referência de tudo o que já foi exportado.',
-    unset: 'Ninguém definiu ainda.',
-    back: '← Voltar',
+    readError: 'Não foi possível ler as configurações do projeto. Recarregue a página.',
+    langHeading: 'Idioma da interface',
+    langLead:
+      'Muda só os textos da ferramenta. O áudio, os nomes das histórias e as decisões de vocês não mudam.',
+    langPtName: 'Português',
+    langPtRegion: 'Brasil',
+    langEnName: 'English',
+    langEnRegion: 'Global',
+    granEyebrow: 'Granularidade do cordão',
+    granTitle: 'De que tamanho serão as contas deste cordão?',
+    granLead:
+      'A conta é o menor pedaço do áudio — a unidade de todo corte do projeto. Escolha o tamanho: ele vale para todas as histórias e não muda depois.',
+    granTitleConfirmed: 'As contas deste cordão já têm tamanho.',
+    granLeadConfirmed:
+      'Foi escolhido para o projeto inteiro e não muda mais. Mudá-lo agora mudaria a referência de tudo o que já foi cortado e exportado.',
+    granConfirm: 'Confirmar — isto não muda depois',
+    granConfirming: 'Confirmando…',
+    granAskAdmin: 'Peça a quem administra o projeto para escolher o tamanho da conta.',
+    granForbidden: 'Só quem administra o projeto pode escolher o tamanho da conta.',
+    granAlreadyConfirmed: 'O tamanho da conta deste projeto já foi confirmado e não muda mais.',
+    granSaveError: 'Não foi possível confirmar. Tente de novo.',
+    level: {
+      small: 'Pequeno',
+      medium: 'Médio',
+      large: 'Grande',
+    },
+    levelDesc: {
+      small: 'Contas curtas, corte mais fino. Serve a histórias densas, em que cada palavra pesa.',
+      medium:
+        'O equilíbrio recomendado entre precisão e leveza. Serve à grande maioria das histórias.',
+      large: 'Contas longas, cordão mais leve. Serve a histórias corridas, de fôlego largo.',
+    },
   },
   setup: {
     eyebrow: 'Preparação',
