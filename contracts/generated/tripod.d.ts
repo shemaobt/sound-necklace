@@ -255,6 +255,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sound-necklace/projects/{project_id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Project Settings
+         * @description The granularity this project cuts at, and whether it can still change.
+         */
+        get: operations["get_project_settings_api_sound_necklace_projects__project_id__settings_get"];
+        /**
+         * Set Project Settings
+         * @description Decide the project's bead granularity, while it is still decidable.
+         *
+         *     ``ProjectAdmin`` gates the role; ``assert_project_access`` still runs on top, or an
+         *     admin of one project could set another's grid.
+         *
+         *     The payload carries a LEVEL and nothing else. The resolved duration comes from each
+         *     audio's acousteme (``granularity_frames[level] * hop_sec``), so it is not knowable
+         *     until an audio is cut — the project's first session stamps it.
+         */
+        put: operations["set_project_settings_api_sound_necklace_projects__project_id__settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sound-necklace/sessions": {
         parameters: {
             query?: never;
@@ -795,6 +826,60 @@ export interface components {
             avatar_url?: string | null;
             /** Locale */
             locale?: string | null;
+        };
+        /**
+         * ProjectGranularityLockedResponse
+         * @description The 409 the PUT answers with once the project has cut something.
+         */
+        ProjectGranularityLockedResponse: {
+            /** Detail */
+            detail: string;
+            /**
+             * Code
+             * @default PROJECT_GRANULARITY_LOCKED
+             * @constant
+             */
+            code: "PROJECT_GRANULARITY_LOCKED";
+        };
+        /**
+         * ProjectSettingsResponse
+         * @description The project's bead granularity, as every screen reads it.
+         *
+         *     Both values are nullable and mean different things when absent. A null
+         *     ``granularity_level`` is a project nobody has configured yet — the setup screen
+         *     renders that as "not decided", never as an error. A null ``bead_sec`` is a project
+         *     that has not cut anything yet, so no audio has a grid to agree with.
+         *
+         *     ``locked`` is derived, not stored: it says the project already has a session, which
+         *     is what freezes the level. The client needs it to decide whether the settings screen
+         *     offers a control or an explanation, and deriving it there from a session list would
+         *     make every screen fetch sessions to render one field.
+         */
+        ProjectSettingsResponse: {
+            /** Project Id */
+            project_id: string;
+            granularity_level?: components["schemas"]["GranularityLevel"] | null;
+            /** Bead Sec */
+            bead_sec?: number | null;
+            /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
+         * ProjectSettingsUpdate
+         * @description What a project admin decides: a LEVEL, and nothing else.
+         *
+         *     ``bead_sec`` is deliberately not settable. It is ``granularity_frames[level] *
+         *     hop_sec`` off each audio's own acousteme (the O8 rule), so a client that sent one
+         *     would be asserting a grid rather than resolving it — and a wrong assertion here is
+         *     a corpus cut on two coordinate systems. The project's first session stamps it.
+         */
+        ProjectSettingsUpdate: {
+            granularity_level: components["schemas"]["GranularityLevel"];
         };
         /** ResetPasswordRequest */
         ResetPasswordRequest: {
@@ -1429,6 +1514,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_project_settings_api_sound_necklace_projects__project_id__settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_project_settings_api_sound_necklace_projects__project_id__settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSettingsResponse"];
+                };
+            };
+            /** @description The project has already been cut at its granularity, so the level cannot move. Nothing to retry: re-cutting re-derives every manifest_id already exported, which is a migration. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectGranularityLockedResponse"];
                 };
             };
             /** @description Validation Error */

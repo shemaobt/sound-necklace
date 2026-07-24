@@ -664,6 +664,120 @@
         }
       }
     },
+    "/api/sound-necklace/projects/{project_id}/settings": {
+      "get": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Get Project Settings",
+        "description": "The granularity this project cuts at, and whether it can still change.",
+        "operationId": "get_project_settings_api_sound_necklace_projects__project_id__settings_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSettingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "sound-necklace"
+        ],
+        "summary": "Set Project Settings",
+        "description": "Decide the project's bead granularity, while it is still decidable.\n\n``ProjectAdmin`` gates the role; ``assert_project_access`` still runs on top, or an\nadmin of one project could set another's grid.\n\nThe payload carries a LEVEL and nothing else. The resolved duration comes from each\naudio's acousteme (``granularity_frames[level] * hop_sec``), so it is not knowable\nuntil an audio is cut — the project's first session stamps it.",
+        "operationId": "set_project_settings_api_sound_necklace_projects__project_id__settings_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectSettingsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSettingsResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The project has already been cut at its granularity, so the level cannot move. Nothing to retry: re-cutting re-derives every manifest_id already exported, which is a migration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectGranularityLockedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sound-necklace/sessions": {
       "post": {
         "tags": [
@@ -2217,6 +2331,93 @@
         },
         "type": "object",
         "title": "ProfileUpdate"
+      },
+      "ProjectGranularityLockedResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "const": "PROJECT_GRANULARITY_LOCKED",
+            "title": "Code",
+            "default": "PROJECT_GRANULARITY_LOCKED"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ProjectGranularityLockedResponse",
+        "description": "The 409 the PUT answers with once the project has cut something.",
+        "x-stability": "experimental"
+      },
+      "ProjectSettingsResponse": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "granularity_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GranularityLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bead_sec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bead Sec"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id"
+        ],
+        "title": "ProjectSettingsResponse",
+        "description": "The project's bead granularity, as every screen reads it.\n\nBoth values are nullable and mean different things when absent. A null\n``granularity_level`` is a project nobody has configured yet — the setup screen\nrenders that as \"not decided\", never as an error. A null ``bead_sec`` is a project\nthat has not cut anything yet, so no audio has a grid to agree with.\n\n``locked`` is derived, not stored: it says the project already has a session, which\nis what freezes the level. The client needs it to decide whether the settings screen\noffers a control or an explanation, and deriving it there from a session list would\nmake every screen fetch sessions to render one field.",
+        "x-stability": "experimental"
+      },
+      "ProjectSettingsUpdate": {
+        "properties": {
+          "granularity_level": {
+            "$ref": "#/components/schemas/GranularityLevel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "granularity_level"
+        ],
+        "title": "ProjectSettingsUpdate",
+        "description": "What a project admin decides: a LEVEL, and nothing else.\n\n``bead_sec`` is deliberately not settable. It is ``granularity_frames[level] *\nhop_sec`` off each audio's own acousteme (the O8 rule), so a client that sent one\nwould be asserting a grid rather than resolving it — and a wrong assertion here is\na corpus cut on two coordinate systems. The project's first session stamps it.",
+        "x-stability": "experimental"
       },
       "ResetPasswordRequest": {
         "properties": {

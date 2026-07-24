@@ -126,8 +126,10 @@ export class ColarApp {
   }
 
   /**
-   * Cria a sessão pelo Setup (§8.1): áudio do bucket + granularidade média + consentimento.
-   * Sem file-picker (só bucket). Devolve o id da sessão criada, lido da rota.
+   * Cria a sessão pelo Setup (§8.1): áudio do bucket + consentimento. A granularidade
+   * NÃO se escolhe aqui desde a ENG-352 — vem do projeto (a fixture abre em Média, que
+   * é o que dá o beadSec 0.5 do cenário). Sem file-picker (só bucket). Devolve o id da
+   * sessão criada, lido da rota.
    */
   async createSession(audioFilename: string = SCENARIO.audioFilename): Promise<string> {
     await this.page.getByRole('button', { name: 'Comece uma nova história' }).click();
@@ -136,7 +138,6 @@ export class ColarApp {
     await expect(this.page.locator('input[type="file"]')).toHaveCount(0);
 
     await this.page.getByText(audioFilename).click();
-    await this.page.getByRole('radio', { name: 'Média', exact: true }).click();
     await this.page.getByRole('checkbox').check();
     await this.page.getByRole('button', { name: 'Criar a sessão →' }).click();
 

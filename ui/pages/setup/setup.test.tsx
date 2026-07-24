@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vite
 import { AudioDecodeError, FixtureAudioEngine, type AudioEngine } from '../../../adapters/audio';
 import { FixtureBucketSource, type BucketSource } from '../../../adapters/bucket';
 import { AcoustemeGranularityResolver } from '../../../adapters/granularity';
+import { FixtureProjectSettings } from '../../../adapters/project-settings';
 import { FixtureSessionStore } from '../../../adapters/sessions';
 import { sessionStore } from '../../state';
 import { pt } from '../../i18n/pt';
@@ -27,6 +28,7 @@ interface Ports {
   resolver: AcoustemeGranularityResolver;
   audioEngine: AudioEngine;
   store: FixtureSessionStore;
+  projectSettings: FixtureProjectSettings;
   navigate: Mock<(to: string) => void>;
 }
 
@@ -36,6 +38,9 @@ function ports(over: Partial<Ports> = {}): Ports {
     resolver: new AcoustemeGranularityResolver(),
     audioEngine: new FixtureAudioEngine(),
     store: new FixtureSessionStore(),
+    // A granularidade é do PROJETO (ENG-352). Instância POR TESTE: o singleton do app
+    // guarda a grade carimbada, e um caso vazaria a guarda de divergência no seguinte.
+    projectSettings: new FixtureProjectSettings({ seed: { projeto: { level: 'medium' } } }),
     navigate: vi.fn<(to: string) => void>(),
     ...over,
   };
@@ -48,6 +53,7 @@ function renderSetup(p: Ports) {
       resolver={p.resolver}
       audioEngine={p.audioEngine}
       store={p.store}
+      projectSettings={p.projectSettings}
       navigate={p.navigate}
     />,
   );
@@ -280,24 +286,69 @@ describe('Setup — granularidade por nível, sem campo numérico (§8.1)', () =
     expect(container.querySelector('input[type="number"]')).toBeNull();
   });
 
-  it('exatamente três cards de nível, navegáveis por teclado', async () => {
+  /**
+   * A granularidade deixou de ser escolha do Setup (ENG-352): é do PROJETO. A tela a
+   * EXIBE — oferecer os três níveis aqui deixaria dois áudios do mesmo projeto caírem
+   * em grades incompatíveis, que é o que a mudança existe para impedir.
+   */
+  it('exibe o nível do projeto e NÃO oferece escolha de granularidade', async () => {
     renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
 
-    const group = screen.getByRole('radiogroup', { name: /tamanho da conta/i });
-    expect(within(group).getAllByRole('radio')).toHaveLength(3);
+    expect(screen.queryByRole('radiogroup', { name: /tamanho da conta/i })).toBeNull();
+    expect(screen.getByText(pt.setup.levelMediaTitle)).toBeTruthy();
+    expect(screen.getByText(pt.setup.granFromProject)).toBeTruthy();
+  });
 
-    const media = within(group).getByRole('radio', { name: 'Média' });
-    expect(media.getAttribute('aria-checked')).toBe('true'); // média é o default
-    await userEvent.click(media); // foca o item marcado (roving)
-    await userEvent.keyboard('{ArrowRight}'); // seta move o foco para Grande
-    expect(within(group).getByRole('radio', { name: 'Grande' })).toBe(document.activeElement);
-    await userEvent.keyboard(' '); // espaço confirma a seleção do item focado
-    await waitFor(() =>
-      expect(
-        within(group).getByRole('radio', { name: 'Grande' }).getAttribute('aria-checked'),
-      ).toBe('true'),
-    );
+  it('projeto sem nível manda configurar em vez de assumir um default', async () => {
+    const p = ports({ projectSettings: new FixtureProjectSettings() });
+    const createSpy = vi.spyOn(p.store, 'create');
+    renderSetup(p);
+    await pickAudio('conto-do-boto.wav');
+    await confirmConsent();
+
+    await screen.findByText(pt.setup.granUnset);
+    await userEvent.click(screen.getByRole('button', { name: /criar a sessão/i }));
+
+    await waitFor(() => expect(screen.getAllByText(pt.setup.granUnset).length).toBeGreaterThan(0));
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(p.navigate).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A guarda de divergência. O nível é do projeto, mas a DURAÇÃO sai do acousteme de
+   * cada áudio — um áudio que resolva para outra grade partiria o corpus do projeto em
+   * dois sistemas de coordenadas. Recusa: normalizar quebraria a regra O8.
+   */
+  it('recusa um áudio cujo acousteme cairia noutra grade', async () => {
+    const settings = new FixtureProjectSettings({ seed: { projeto: { level: 'medium' } } });
+    // o projeto já cortou a 0,25 s; este áudio resolve a 0,5 s (Média = 25 × 20 ms)
+    settings.noteSessionCreated('projeto', 'medium', 0.25);
+    const p = ports({ projectSettings: settings });
+    const createSpy = vi.spyOn(p.store, 'create');
+    renderSetup(p);
+    await pickAudio('conto-do-boto.wav');
+    await confirmConsent();
+
+    await userEvent.click(screen.getByRole('button', { name: /criar a sessão/i }));
+
+    await screen.findByText(pt.setup.granMismatch);
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(p.navigate).not.toHaveBeenCalled();
+  });
+
+  it('a mesma grade em milissegundos não é divergência (ruído de float não reprova)', async () => {
+    const settings = new FixtureProjectSettings({ seed: { projeto: { level: 'medium' } } });
+    settings.noteSessionCreated('projeto', 'medium', 0.1 + 0.2 + 0.2); // 0.5000000000000001
+    const p = ports({ projectSettings: settings });
+    renderSetup(p);
+    await pickAudio('conto-do-boto.wav');
+    await confirmConsent();
+
+    await userEvent.click(screen.getByRole('button', { name: /criar a sessão/i }));
+
+    await waitFor(() => expect(p.navigate).toHaveBeenCalled());
+    expect(screen.queryByText(pt.setup.granMismatch)).toBeNull();
   });
 });
 
@@ -306,7 +357,9 @@ describe('Setup — cópias fixadas (§8.1/O7)', () => {
     renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
     expect(screen.getByText(pt.setup.trustLine)).toBeTruthy();
-    expect(screen.getByText(pt.setup.gridWarning)).toBeTruthy();
+    // A trava da conta deixou de ser aviso do Setup: a granularidade é do projeto e
+    // esta tela diz de onde ela vem (ENG-352).
+    expect(screen.getByText(pt.setup.granFromProject)).toBeTruthy();
   });
 
   it('divulga que a voz do guia é sintética (§12; exigência da policy da ElevenLabs)', async () => {
