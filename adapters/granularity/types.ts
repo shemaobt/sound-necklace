@@ -1,7 +1,7 @@
 /**
  * Porta GranularityResolver — o usuário escolhe um NÍVEL (Pequena/Média/Grande,
  * §8.1) e o sistema resolve para UM beadSec uniforme (§6.1). A regra de derivação
- * (acousteme → beadSec) vive fora do app (§15.2 O8, owner: pipeline) — daí a porta:
+ * (acousteme → beadSec) vive fora do app (§15.1 O8, owner: pipeline) — daí a porta:
  * o app nunca inventa a regra, apenas consome `resolve`. Implementação:
  * AcoustemeGranularityResolver (regra O8, beadSec = frames × hop_sec).
  */

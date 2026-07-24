@@ -49,7 +49,7 @@ The v1 prototype already validated the **classification flow** in the field. Wha
 | Trust copy | §5 | "Seus áudios e respostas ficam guardados com segurança no seu projeto. Só a sua equipe tem acesso." |
 
 ### 2.4 O8 — CLOSED
-The **acousteme → bead-duration derivation rule** and the acousteme payload shape (§15.2 O8) landed in ENG-242 / tripod-api PR #100: `beadSec = granularity_frames[level] × hop_sec`, with the tokenizer's fixed grid (hop 20 ms, 10/25/50 frames) for audios lacking acousteme data. Nothing is blocked on it. What remains is a pipeline **obligation**, not a gap: the acousteme params must be uniform per project so every audio resolves to the same `beadSec` (ENG-352) — the SPA refuses a divergent audio rather than cutting it on a second grid.
+The **acousteme → bead-duration derivation rule** and the acousteme payload shape (§15.1 O8) landed in ENG-242 / tripod-api PR #100: `beadSec = granularity_frames[level] × hop_sec`, with the tokenizer's fixed grid (hop 20 ms, 10/25/50 frames) for audios lacking acousteme data. Nothing is blocked on it. What remains is a pipeline **obligation**, not a gap: the acousteme params must be uniform per project so every audio resolves to the same `beadSec` (ENG-352) — the SPA refuses a divergent audio rather than cutting it on a second grid.
 
 ### 2.4b API workstream (parallel track — on the radar, to be scoped)
 
