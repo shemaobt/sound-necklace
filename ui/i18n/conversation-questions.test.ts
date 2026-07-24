@@ -5,11 +5,12 @@ import { questionNoteFor, questionTextFor } from './conversation-questions';
 
 /**
  * A pergunta EXIBIDA da conversa segue o idioma da UI (ENG-279, decisão de produto:
- * "a entrevista segue a UI"). O artefato NÃO segue: o relatório .md continua
- * serializando o PT-BR do `domain/conversation-scripts` — o golden prova isso.
+ * "a entrevista segue a UI"). Em EN ela é EXATAMENTE o `q_en` do domínio — a mesma
+ * frase que o relatório .md serializa (`contracts/relatorio.ts`), não uma segunda
+ * tradução (ENG-345).
  *
- * A chave `k` se repete entre níveis (`quem`/`onde`/`ausencia`), então o mapa EN é
- * endereçado por NÍVEL + k.
+ * A chave `k` se repete entre níveis (`quem`/`onde`/`ausencia`), então o mapa de
+ * notas EN é endereçado por NÍVEL + k.
  */
 function slotL1(k: string): QuestionSlot {
   return { level: 1, k, question: L1_Q.find((q) => q.k === k)! };
@@ -34,9 +35,26 @@ describe('questionTextFor (ENG-279)', () => {
 
   it('desambigua a mesma chave em níveis diferentes (quem: cena vs frase)', () => {
     expect(questionTextFor(slotL2('quem'), 'en')).toBe(
-      'Who appears in this stretch? People, animals, a group, someone spoken about?',
+      'Who appears in this stretch? People, animals, a group, someone who is spoken about?',
     );
     expect(questionTextFor(slotL3('quem'), 'en')).toBe('Who?');
+  });
+
+  /**
+   * ENG-345: a tela em EN e o relatório .md diziam DUAS traduções diferentes da
+   * mesma pergunta (7 das 21 divergiam — "the one who listens" na tela vs.
+   * "whoever listens" no artefato). Uma frase por pergunta: `q_en`.
+   */
+  it('em en devolve o q_en do domínio — a mesma frase que o relatório .md', () => {
+    const slots: QuestionSlot[] = [
+      ...L1_Q.map((q) => slotL1(q.k)),
+      ...L2_Q.map((q) => slotL2(q.k)),
+      ...L3_Q.map((q) => slotL3(q.k)),
+    ];
+    expect(slots).toHaveLength(21);
+    for (const slot of slots) {
+      expect(questionTextFor(slot, 'en'), `L${slot.level}.${slot.k}`).toBe(slot.question.q_en);
+    }
   });
 });
 

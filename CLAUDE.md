@@ -49,7 +49,7 @@ Since ENG-356 the report `.md` is English while the reference emits PT-BR. The `
 - `scene_kind` values are **English** (27 kinds, generated list — never hand-edit); PT-BR labels display-only.
 - **Artifacts are English** (ENG-326/ENG-356): every human-readable value and field name in `manifesto-contas.json`, `retorno-ancoragem.json` and the report `.md` is English. PT-BR survives only as UI copy and as story data (slug, filename, proper names inside answers).
 - Confidence stored as `high`/`medium`/`low`; tag states `pending`/`tagged`/`none_fit`. The legacy PT-BR confidence values are rejected by the schema, never coerced.
-- Interview questions carry two frozen strings: `q` (PT-BR — screen + voice, byte-identical to the reference) and `q_en` (English — the report `.md`). Never machine-translated at runtime.
+- Interview questions carry two frozen strings: `q` (PT-BR — screen + voice under a PT UI, byte-identical to the reference) and `q_en` (English — the report `.md`, and screen + voice under an EN UI). Never machine-translated at runtime, and never a second English wording in `ui/i18n` (ENG-345).
 - The report cell is **text only**: a voice recording is provenance (bucket + `meta.voice`), never artifact content; audio-only answers read `_(no answer)_`.
 - Frontier: sequential locking; reopening item *i* unlocks *i* and everything after; first phrase may back-reach to previous scene's start; seam-move threshold `max(3, 25% of scene)`; two-productive-scenes escalation.
 - Gates: whole story → scenes → (all triaged + ≥1 productive) → segmentação → (+ ≥1 phrase) → mapeamento. All-none-fit locks downstream.
