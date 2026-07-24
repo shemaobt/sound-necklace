@@ -87,6 +87,24 @@ describe('FixtureProjectSettings', () => {
     await expect(store.get('proj-1')).resolves.toMatchObject({ bead_sec: 0.5 });
   });
 
+  /**
+   * O aviso é do que ACONTECEU, não um pedido: o nível já carimbado não se move nem
+   * quando o aviso chega com outro. Quem recusa a sessão divergente é o backend (e o
+   * preflight do Setup antes dele) — a fixture só não pode reescrever a grade por baixo,
+   * que é a coisa que a linha existe para impedir.
+   */
+  it('aviso com outro nível não reescreve o que já está carimbado', async () => {
+    const store = new FixtureProjectSettings({ now: NOW });
+    store.noteSessionCreated('proj-1', 'medium', 0.5);
+
+    store.noteSessionCreated('proj-1', 'large', 1);
+
+    await expect(store.get('proj-1')).resolves.toMatchObject({
+      granularity_level: 'medium',
+      bead_sec: 0.5,
+    });
+  });
+
   it('projetos não se contaminam', async () => {
     const store = new FixtureProjectSettings({ now: NOW });
     await store.setLevel('proj-1', 'small');

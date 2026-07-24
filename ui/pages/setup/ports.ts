@@ -16,6 +16,7 @@ import {
   type GranularityResolver,
 } from '../../../adapters/granularity';
 import type { ProjectSettingsStore } from '../../../adapters/project-settings';
+import { FIXTURE_PROJECT_ID } from '../../../adapters/project-settings/register';
 import type { SessionStore } from '../../../adapters/sessions';
 import { API_MODE } from '../../app/api-config';
 import { appBucket, resolveProjectId } from '../../app/bucket-adapter';
@@ -53,5 +54,5 @@ export function defaultProjectSettings(): ProjectSettingsStore {
  * sessão); na fixture, o id sintético de sempre.
  */
 export function defaultProjectId(): Promise<string> {
-  return API_MODE === 'real' ? resolveProjectId() : Promise.resolve('projeto');
+  return API_MODE === 'real' ? resolveProjectId() : Promise.resolve(FIXTURE_PROJECT_ID);
 }

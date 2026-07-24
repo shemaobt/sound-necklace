@@ -316,6 +316,21 @@ describe('Setup — granularidade por nível, sem campo numérico (§8.1)', () =
   });
 
   /**
+   * O convite a configurar passa pelo router. Um `href` recarregaria a página e levaria
+   * junto o título já digitado e o áudio já escolhido — quem sai para decidir o nível
+   * voltaria para um formulário em branco, e a tela teria cobrado duas vezes o mesmo
+   * trabalho por causa de uma tag.
+   */
+  it('o convite a configurar navega sem recarregar a página', async () => {
+    const p = ports({ projectSettings: new FixtureProjectSettings() });
+    renderSetup(p);
+
+    await userEvent.click(await screen.findByRole('button', { name: pt.setup.granConfigureLink }));
+
+    expect(p.navigate).toHaveBeenCalledWith('/settings');
+  });
+
+  /**
    * A guarda de divergência. O nível é do projeto, mas a DURAÇÃO sai do acousteme de
    * cada áudio — um áudio que resolva para outra grade partiria o corpus do projeto em
    * dois sistemas de coordenadas. Recusa: normalizar quebraria a regra O8.

@@ -327,3 +327,15 @@
 .cds-setup-audio-skeleton {
   gap: 8px;
 }
+
+/* O "configurar" do aviso de granularidade: um botão porque navega pelo router
+   (um href recarregaria a página e jogaria fora o formulário), com cara de link. */
+.cds-setup-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--cds-telha);
+  text-decoration: underline;
+  cursor: pointer;
+}

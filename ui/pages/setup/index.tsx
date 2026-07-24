@@ -84,12 +84,24 @@ const LEVEL_TITLE_KEY: Record<GranularityLevel, string> = {
  * de deixá-la decidir no meio de uma criação — um default aqui elegeria o sistema de
  * coordenadas do corpus por omissão.
  */
-function ProjectGranularity({ level }: { level: GranularityLevel | null }) {
+function ProjectGranularity({
+  level,
+  navigate,
+}: {
+  level: GranularityLevel | null;
+  navigate: (to: string) => void;
+}) {
   const { t } = useTranslation();
   if (level === null) {
     return (
       <p className="cds-setup-note" data-role="warning" role="note">
-        {t('setup.granUnset')} <a href="/settings">{t('setup.granConfigureLink')}</a>
+        {t('setup.granUnset')}{' '}
+        {/* `navigate`, não href: um href recarrega a página inteira e joga fora o título
+            já digitado e o áudio já escolhido — quem vem configurar o nível volta para
+            um formulário em branco. Toda navegação do app passa pelo router. */}
+        <button type="button" className="cds-setup-link" onClick={() => navigate('/settings')}>
+          {t('setup.granConfigureLink')}
+        </button>
       </p>
     );
   }
@@ -179,7 +191,14 @@ export function Setup({
   const level = settings?.granularity_level ?? null;
   const [title, setTitle] = useState('');
   const [consent, setConsent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /**
+   * A CHAVE do erro (e o detalhe que uma delas interpola), não o texto pronto: guardar o
+   * traduzido obrigaria `t` a entrar nas dependências dos efeitos de leitura, e cada
+   * troca de idioma refaria a listagem do bucket e a leitura da granularidade. De quebra,
+   * o aviso passa a acompanhar a troca de idioma em vez de congelar no idioma em que
+   * aconteceu.
+   */
+  const [error, setError] = useState<{ key: string; detail?: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -194,13 +213,13 @@ export function Setup({
         // em vez de deixar a promise escapar e a tela presa em "carregando"
         if (alive) {
           setAudios([]);
-          setError(t('setup.bucketError'));
+          setError({ key: 'setup.bucketError' });
         }
       });
     return () => {
       alive = false;
     };
-  }, [bucket, t]);
+  }, [bucket]);
 
   // A granularidade do projeto (ENG-352). Falha de leitura não é fatal: a criação
   // barra sozinha logo abaixo (sem nível não há grade), então basta o aviso.
@@ -212,20 +231,20 @@ export function Setup({
         const read = await projectSettings.get(id);
         if (alive) setSettings(read);
       } catch {
-        if (alive) setError(t('setup.granReadError'));
+        if (alive) setError({ key: 'setup.granReadError' });
       }
     })();
     return () => {
       alive = false;
     };
-  }, [projectSettings, projectId, t]);
+  }, [projectSettings, projectId]);
 
   const create = async (): Promise<void> => {
     setError(null);
     const audio = audios?.find((a) => a.id === audioId) ?? null;
     const check = preflight({ audio, level, consent, settings, resolver });
     if ('errorKey' in check) {
-      setError(t(check.errorKey));
+      setError({ key: check.errorKey });
       return;
     }
     const { audio: chosen, level: projectLevel, beadSec } = check;
@@ -282,8 +301,8 @@ export function Setup({
     } catch (e) {
       setError(
         e instanceof AudioDecodeError
-          ? t('setup.decodeError', { detail: e instanceof Error ? e.message : String(e) })
-          : t('setup.createFailed'),
+          ? { key: 'setup.decodeError', detail: e.message }
+          : { key: 'setup.createFailed' },
       );
     } finally {
       setBusy(false);
@@ -394,7 +413,7 @@ export function Setup({
               <h2 id="cds-setup-gran-label" className="cds-setup-heading">
                 {t('setup.granHeading')}
               </h2>
-              <ProjectGranularity level={level} />
+              <ProjectGranularity level={level} navigate={navigate} />
 
               <label className="cds-setup-field">
                 <span>{t('setup.titleField')}</span>
@@ -419,7 +438,7 @@ export function Setup({
 
           {error ? (
             <p className="cds-setup-error" role="alert">
-              {error}
+              {t(error.key, { detail: error.detail })}
             </p>
           ) : null}
 

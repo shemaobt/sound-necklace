@@ -12,8 +12,12 @@ import { FixtureProjectSettings } from './fixture';
 import { HttpProjectSettings, type HttpProjectSettingsOptions } from './http';
 import type { ProjectSettingsStore } from './types';
 
-/** O projeto sintético do modo fixture (o mesmo de `ui/pages/setup/ports.ts`). */
-const FIXTURE_PROJECT_ID = 'projeto';
+/**
+ * O projeto sintético do modo fixture. Exportado porque `ui/pages/setup/ports.ts`
+ * precisa do MESMO id: se os dois divergirem, o Setup lista os áudios de um projeto e
+ * lê a granularidade de outro — e o desencontro é silencioso.
+ */
+export const FIXTURE_PROJECT_ID = 'projeto';
 
 export type RealProjectSettingsWiring = Partial<HttpProjectSettingsOptions>;
 
