@@ -48,8 +48,8 @@ The v1 prototype already validated the **classification flow** in the field. Wha
 | Security baseline | §12 | Project-scoped access enforced server-side; TLS + encryption at rest; consent (pipeline-use consent at session start; collection consent read from the bucket audio's metadata where present); **access/download audit logging**; no voice data used beyond the pipeline; no listener telemetry |
 | Trust copy | §5 | "Seus áudios e respostas ficam guardados com segurança no seu projeto. Só a sua equipe tem acesso." |
 
-### 2.4 In scope, but blocked until O8 closes
-The **acousteme → bead-duration derivation rule** and the acousteme payload shape in the bucket (§15.2 O8, owner: pipeline/API team; fallback durations now matter only for audios that lack acousteme data). Blocks only the setup granularity control; everything else proceeds. *First action of the plan: close O8.*
+### 2.4 O8 — CLOSED
+The **acousteme → bead-duration derivation rule** and the acousteme payload shape (§15.2 O8) landed in ENG-242 / tripod-api PR #100: `beadSec = granularity_frames[level] × hop_sec`, with the tokenizer's fixed grid (hop 20 ms, 10/25/50 frames) for audios lacking acousteme data. Nothing is blocked on it. What remains is a pipeline **obligation**, not a gap: the acousteme params must be uniform per project so every audio resolves to the same `beadSec` (ENG-352) — the SPA refuses a divergent audio rather than cutting it on a second grid.
 
 ### 2.4b API workstream (parallel track — on the radar, to be scoped)
 
@@ -108,7 +108,7 @@ Items here must not leak into the MVP without re-cutting this plan; conversely, 
 
 | Dependency / risk | Impact | Mitigation |
 |---|---|---|
-| **O8 undefined** (acousteme rule + bucket payload shape) | Blocks the setup granularity control | Close with the pipeline/API team first; everything else proceeds in parallel |
+| ~~**O8 undefined**~~ (acousteme rule + bucket payload shape) | CLOSED by ENG-242 | Residual risk: acousteme params that differ between audios of one project. Refused at Setup (ENG-352), never normalized |
 | Shared API documentation (auth, bucket, session storage) | Blocks platform integration | §15.2 external dependency; request early |
 | Contract regressions in the from-scratch build | Breaks the pipeline silently | The §3.2 identity check against the prototype becomes a permanent automated comparison, run on every change |
 | Redesign completeness (all questions, human figure) | Mapeamento validation invalid if partial | §2.2 items are MVP scope, not polish; verify against the scripts in §10.4 of the PRD |

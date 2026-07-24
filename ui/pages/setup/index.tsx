@@ -5,8 +5,14 @@ import * as RadioGroup from '@radix-ui/react-radio-group';
 import { AudioDecodeError, type AudioEngine } from '../../../adapters/audio';
 import type { BucketSource } from '../../../adapters/bucket';
 import type { GranularityResolver } from '../../../adapters/granularity';
+import type { ProjectSettingsStore } from '../../../adapters/project-settings';
 import type { SessionStore } from '../../../adapters/sessions';
-import { type BucketAudio, type GranularityLevel, toSessionDto } from '../../../contracts';
+import {
+  type BucketAudio,
+  type GranularityLevel,
+  type ProjectSettings,
+  toSessionDto,
+} from '../../../contracts';
 import { Skeleton } from '../../atoms';
 import { PreparingSession } from '../../organisms';
 import { ShemaIcon } from '../../tokens';
@@ -17,6 +23,7 @@ import {
   defaultAudioEngine,
   defaultBucket,
   defaultProjectId,
+  defaultProjectSettings,
   defaultResolver,
   defaultSessionStore,
 } from './ports';
@@ -25,15 +32,18 @@ import './setup.css';
 /**
  * Estação Setup (PRD v2 §8.1, redesign §6.1): a criação de sessão. Superfície de
  * FACILITADORA (§7.2, texto mais denso permitido). Escolhe um áudio do bucket (§7.4,
- * com o indicador de consentimento de coleta §12/O6), um NÍVEL de granularidade
- * (Pequena/Média/Grande — sem campo numérico de segundos, §6.1/§8.1), nomeia a
- * história (fallback = nome do arquivo) e confirma o consentimento de uso no
- * pipeline. Ao criar: decode → grade + manifest_id client-side → SessionStore.create
- * → persiste o estado inicial → carrega a sessão viva → Escuta 1 (`mode='escuta'`).
+ * com o indicador de consentimento de coleta §12/O6), nomeia a história (fallback =
+ * nome do arquivo) e confirma o consentimento de uso no pipeline. Ao criar: decode →
+ * grade + manifest_id client-side → SessionStore.create → persiste o estado inicial →
+ * carrega a sessão viva → Escuta 1 (`mode='escuta'`).
  *
- * As três portas de entrada (§8.9) e os três cards de nível usam Radix radio-group
- * (foco em roteta + ARIA de graça); o visual são os tokens Shemá. As duas portas de
- * importação levam à estação de arquivos do pipeline (ENG-248).
+ * A granularidade NÃO se escolhe aqui desde a ENG-352: o nível é do PROJETO (definido
+ * em ui/pages/project-settings) e esta tela o EXIBE. Sem campo numérico de segundos
+ * (§6.1/§8.1) e sem default — projeto sem nível manda configurar.
+ *
+ * As três portas de entrada (§8.9) usam Radix radio-group (foco em roleta + ARIA de
+ * graça); o visual são os tokens Shemá. As duas portas de importação levam à estação
+ * de arquivos do pipeline (ENG-248).
  *
  * Camada de wiring: as portas chegam por prop nos testes; em produção resolvem os
  * singletons fixture (ports.ts). O `navigate` é injetável para o teste observar a
@@ -61,17 +71,91 @@ const DOORS: readonly { value: Door; titleKey: string; descKey: string; disabled
   },
 ];
 
-const LEVELS: readonly { value: GranularityLevel; titleKey: string; descKey: string }[] = [
-  { value: 'small', titleKey: 'setup.levelPequenaTitle', descKey: 'setup.levelPequenaDesc' },
-  { value: 'medium', titleKey: 'setup.levelMediaTitle', descKey: 'setup.levelMediaDesc' },
-  { value: 'large', titleKey: 'setup.levelGrandeTitle', descKey: 'setup.levelGrandeDesc' },
-];
+/** Rótulo de cada nível. O Setup só EXIBE — quem escolhe é a tela de configuração. */
+const LEVEL_TITLE_KEY: Record<GranularityLevel, string> = {
+  small: 'setup.levelPequenaTitle',
+  medium: 'setup.levelMediaTitle',
+  large: 'setup.levelGrandeTitle',
+};
+
+/**
+ * A granularidade do projeto, como o Setup a mostra (ENG-352): aqui ela se LÊ, não se
+ * escolhe. Projeto ainda sem nível manda a facilitadora à tela de configuração em vez
+ * de deixá-la decidir no meio de uma criação — um default aqui elegeria o sistema de
+ * coordenadas do corpus por omissão.
+ */
+function ProjectGranularity({ level }: { level: GranularityLevel | null }) {
+  const { t } = useTranslation();
+  if (level === null) {
+    return (
+      <p className="cds-setup-note" data-role="warning" role="note">
+        {t('setup.granUnset')} <a href="/project-settings">{t('setup.granConfigureLink')}</a>
+      </p>
+    );
+  }
+  return (
+    <div className="cds-setup-gran" aria-labelledby="cds-setup-gran-label">
+      <p className="cds-setup-gran-value">{t(LEVEL_TITLE_KEY[level])}</p>
+      <p className="cds-setup-note" role="note">
+        {t('setup.granFromProject')}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Mesma grade = mesmo bead em MILISSEGUNDOS. É a precisão que o artefato guarda — o
+ * `manifest_id` mistura `round(beadSec × 1000)` (`domain/hash.ts`) —, então duas
+ * durações que arredondam para o mesmo milissegundo produzem a mesma grade e o mesmo
+ * hash. Comparar os floats crus reprovaria áudios idênticos por ruído de ponto
+ * flutuante, e recusar uma criação legítima é tão ruim quanto aceitar uma divergente.
+ */
+function sameGrid(a: number, b: number): boolean {
+  return Math.round(a * 1000) === Math.round(b * 1000);
+}
+
+interface PreflightInput {
+  audio: BucketAudio | null;
+  level: GranularityLevel | null;
+  consent: boolean;
+  settings: ProjectSettings | null;
+  resolver: GranularityResolver;
+}
+
+type PreflightResult =
+  { errorKey: string } | { audio: BucketAudio; level: GranularityLevel; beadSec: number };
+
+/**
+ * Tudo o que precisa ser verdade antes de tocar em IO — puro, e por isso testável
+ * sem montar a tela. Devolve a CHAVE i18n da recusa (a cópia é da tela) ou os três
+ * valores que a criação usa, já estreitados.
+ *
+ * As duas guardas de grade (ENG-352) são o motivo desta função existir: sem nível de
+ * projeto não há grade a resolver, e criar com um default escolheria o sistema de
+ * coordenadas do corpus por omissão; com nível, um áudio cujo acousteme resolva para
+ * outra grade partiria o projeto em dois sistemas. Recusa e explica — normalizar para
+ * a grade guardada quebraria a regra O8.
+ */
+function preflight({ audio, level, consent, settings, resolver }: PreflightInput): PreflightResult {
+  if (!audio) return { errorKey: 'setup.noAudio' };
+  if (!level) return { errorKey: 'setup.granUnset' };
+  if (!consent) return { errorKey: 'setup.noConsent' };
+
+  const { beadSec } = resolver.resolve(level, audio.acousteme ?? null);
+  if (!(beadSec > 0)) return { errorKey: 'setup.noBeadSec' };
+  if (settings?.bead_sec != null && !sameGrid(beadSec, settings.bead_sec)) {
+    return { errorKey: 'setup.granMismatch' };
+  }
+  return { audio, level, beadSec };
+}
 
 export interface SetupProps {
   bucket?: BucketSource;
   resolver?: GranularityResolver;
   audioEngine?: AudioEngine;
   store?: SessionStore;
+  /** A granularidade do projeto (§6.1/§8.1, ENG-352) — o Setup lê, não decide. */
+  projectSettings?: ProjectSettingsStore;
   /** Projeto dono da sessão; sem prop, resolve por `defaultProjectId()` ao criar. */
   projectId?: string;
   navigate?: (to: string) => void;
@@ -82,6 +166,7 @@ export function Setup({
   resolver = defaultResolver(),
   audioEngine = defaultAudioEngine(),
   store = defaultSessionStore(),
+  projectSettings = defaultProjectSettings(),
   projectId,
   navigate = routerNavigate,
 }: SetupProps) {
@@ -89,7 +174,9 @@ export function Setup({
   const [audios, setAudios] = useState<BucketAudio[] | null>(null);
   const [door, setDoor] = useState<Door>('zero');
   const [audioId, setAudioId] = useState<string | null>(null);
-  const [level, setLevel] = useState<GranularityLevel>('medium');
+  // A granularidade vem do PROJETO (ENG-352). `null` = ninguém decidiu ainda.
+  const [settings, setSettings] = useState<ProjectSettings | null>(null);
+  const level = settings?.granularity_level ?? null;
   const [title, setTitle] = useState('');
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,17 +202,33 @@ export function Setup({
     };
   }, [bucket, t]);
 
+  // A granularidade do projeto (ENG-352). Falha de leitura não é fatal: a criação
+  // barra sozinha logo abaixo (sem nível não há grade), então basta o aviso.
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const id = projectId ?? (await defaultProjectId());
+        const read = await projectSettings.get(id);
+        if (alive) setSettings(read);
+      } catch {
+        if (alive) setError(t('setup.granReadError'));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [projectSettings, projectId, t]);
+
   const create = async (): Promise<void> => {
     setError(null);
     const audio = audios?.find((a) => a.id === audioId) ?? null;
-    if (!audio) {
-      setError(t('setup.noAudio'));
+    const check = preflight({ audio, level, consent, settings, resolver });
+    if ('errorKey' in check) {
+      setError(t(check.errorKey));
       return;
     }
-    if (!consent) {
-      setError(t('setup.noConsent'));
-      return;
-    }
+    const { audio: chosen, level: projectLevel, beadSec } = check;
     // Fronteira da AÇÃO do usuário: uma criação orquestra várias portas de IO
     // (fetch/decode/create/flush). O try/catch/finally aqui garante que `busy`
     // SEMPRE reabilita o botão; a falha esperada e tipada do decode vira a cópia
@@ -133,44 +236,42 @@ export function Setup({
     // trava silenciosa). Grade/hash/createSession são puros — não lançam aqui.
     setBusy(true);
     try {
-      const { beadSec } = resolver.resolve(level, audio.acousteme ?? null);
-      if (!(beadSec > 0)) {
-        setError(t('setup.noBeadSec'));
-        return;
-      }
-
-      const bytes = await bucket.fetchBytes(audio.id);
+      const bytes = await bucket.fetchBytes(chosen.id);
       const decoded = await audioEngine.decode(bytes);
 
       const beads = buildBeads(decoded.duration, beadSec);
       const manifestId = hashPCM(decoded.pcm, beadSec);
-      const name = title.trim() || audio.filename.replace(/\.[^.]+$/, '') || 'colar';
+      const name = title.trim() || chosen.filename.replace(/\.[^.]+$/, '') || 'colar';
 
+      const ownerProjectId = projectId ?? (await defaultProjectId());
       const summary = await store.create({
-        projectId: projectId ?? (await defaultProjectId()),
+        projectId: ownerProjectId,
         storyName: name,
         storySlug: name,
-        audioId: audio.id,
-        granularityLevel: level,
+        audioId: chosen.id,
+        granularityLevel: projectLevel,
         beadSec,
         manifestId,
         pipelineConsent: consent,
       });
+      // O projeto passou a ter uma grade: no modo real a API já carimbou na mesma
+      // transação e isto é no-op; na fixture é o que congela o nível daqui em diante.
+      projectSettings.noteSessionCreated(ownerProjectId, projectLevel, beadSec);
 
       const state = createSession({
         durationSec: decoded.duration,
         beadSec,
         beads,
         manifestId,
-        audioFilename: audio.filename,
+        audioFilename: chosen.filename,
         slug: name,
       });
       sessionStore.getState().load(state);
       store.autosave(
         summary.id,
         toSessionDto(state, {
-          granularityLevel: level,
-          bucketAudioId: audio.id,
+          granularityLevel: projectLevel,
+          bucketAudioId: chosen.id,
           voice: [],
           pipelineConsent: consent,
         }),
@@ -293,27 +394,7 @@ export function Setup({
               <h2 id="cds-setup-gran-label" className="cds-setup-heading">
                 {t('setup.granHeading')}
               </h2>
-              <RadioGroup.Root
-                className="cds-setup-levels"
-                aria-labelledby="cds-setup-gran-label"
-                value={level}
-                onValueChange={(v) => setLevel(v as GranularityLevel)}
-              >
-                {LEVELS.map((l) => (
-                  <RadioGroup.Item
-                    key={l.value}
-                    value={l.value}
-                    aria-label={t(l.titleKey)}
-                    className="cds-setup-level"
-                  >
-                    <span className="cds-setup-level-title">{t(l.titleKey)}</span>
-                    <span className="cds-setup-level-desc">{t(l.descKey)}</span>
-                  </RadioGroup.Item>
-                ))}
-              </RadioGroup.Root>
-              <p className="cds-setup-note" role="note">
-                {t('setup.gridWarning')}
-              </p>
+              <ProjectGranularity level={level} />
 
               <label className="cds-setup-field">
                 <span>{t('setup.titleField')}</span>

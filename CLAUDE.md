@@ -33,7 +33,7 @@ We follow a **clean architecture in the general sense** — dependencies always 
   - `ui/i18n/` — the language layer (PT default + EN): i18next init, the two dictionaries, and the display translators for scene-kind labels and the interview questions. Chrome only — see the UI rules below.
   - Dependency rule inside ui/: atoms and molecules are **purely presentational** (props in, events out — no domain, adapter or i18n imports — copy arrives as props); organisms may consume domain state via props/hooks and may pull copy from `ui/i18n`; only pages/templates/`ui/app` (the wiring layer / composition root) wire adapters. `ui/` may be merged autonomously when tests pass.
 
-Stubs behind interfaces (do not hardcode): `GranularityResolver` (acousteme → bead duration; rule pending O8 — use fixture values, medium ≈ 0.25 s), auth mechanism (follows the shared API standard), bucket access.
+Stubs behind interfaces (do not hardcode): `GranularityResolver` (acousteme → bead duration; the real O8 rule landed in ENG-242 — `granularity_frames[level] × hop_sec`, fallback grid hop 20 ms / 10-25-50 frames), auth mechanism (follows the shared API standard), bucket access. The LEVEL fed to that resolver is a **project** setting since ENG-352, read from the API — never a per-session pick.
 
 ## The golden harness (merge gate)
 

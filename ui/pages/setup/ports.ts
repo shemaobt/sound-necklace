@@ -15,9 +15,11 @@ import {
   AcoustemeGranularityResolver,
   type GranularityResolver,
 } from '../../../adapters/granularity';
+import type { ProjectSettingsStore } from '../../../adapters/project-settings';
 import type { SessionStore } from '../../../adapters/sessions';
 import { API_MODE } from '../../app/api-config';
 import { appBucket, resolveProjectId } from '../../app/bucket-adapter';
+import { appProjectSettings } from '../../app/project-settings-adapter';
 import { appSessionStore } from '../../app/session-adapter';
 
 export function defaultBucket(): BucketSource {
@@ -38,6 +40,11 @@ export function defaultAudioEngine(): AudioEngine {
 
 export function defaultSessionStore(): SessionStore {
   return appSessionStore();
+}
+
+/** A granularidade do projeto (ENG-352) — o mesmo singleton que a tela de config usa. */
+export function defaultProjectSettings(): ProjectSettingsStore {
+  return appProjectSettings();
 }
 
 /**

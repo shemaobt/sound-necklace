@@ -67,8 +67,11 @@ docs/        specs (PRDs, plano, this file) + reference/index.html (UNTOUCHABLE)
 Defined by their owning adapter issues; signatures the app codes against:
 
 ```ts
-// adapters/granularity — REAL RULE PENDING O8 (PRD §15.2). Stub uses fixture
-// values; medium ≈ 0.25 s. Never invent the acousteme→duration derivation.
+// adapters/granularity — the real O8 rule (PRD §15.2), landed in ENG-242:
+// beadSec = granularity_frames[level] × hop_sec off the audio's envelope; the
+// tokenizer's fixed grid (hop 20 ms, 10/25/50 frames) when there is none.
+// Never invent the derivation. The LEVEL is the PROJECT's (ENG-352), read from
+// adapters/project-settings — the resolver still runs per audio.
 interface GranularityResolver {
   resolve(
     level: 'small' | 'medium' | 'large',
