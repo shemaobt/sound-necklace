@@ -4,7 +4,7 @@ Path: @/adapters
 
 ### Overview
 
-- Every outer dependency of the app lives here behind a **port**: an interface + a real implementation + a **fixture implementation that is the default**. The port set covers audio decode/playback, connectivity, API/auth, sessions, bucket audio, granularity, voice recording, TTS, and speech-to-text/translation drafts.
+- Every outer dependency of the app lives here behind a **port**: an interface + a real implementation + a **fixture implementation that is the default**. The port set covers audio decode/playback, connectivity, API/auth, sessions, bucket audio, granularity, **project settings**, voice recording, TTS, and speech-to-text/translation drafts.
 - First concrete adapter landed: @/adapters/audio (see @/adapters/audio/docs.md) — the `AudioEngine` port with real Web Audio and headless fixture modes. Each remaining adapter issue adds its own subfolder following the same shape (convention README: @/adapters/README.md).
 - Exists so the full app — and every UI/E2E test — runs with **no real API at all**; the real mode is selected per adapter by the composition root under `VITE_API_MODE=real` (ENG-247, @/ui/app/api-config.ts) — fixture stays the default.
 

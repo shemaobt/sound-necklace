@@ -251,3 +251,38 @@ export const ResourceUrlResponseSchema = z.strictObject({
   url: z.string(),
 });
 export type ResourceUrlResponse = z.infer<typeof ResourceUrlResponseSchema>;
+
+// ── Project settings (§6.1/§8.1 — ENG-352) ──
+
+/**
+ * A granularidade do PROJETO (`GET/PUT /sound-necklace/projects/{id}/settings`).
+ *
+ * `beadSec` define a grade de contas e entra no `manifest_id`, então é o sistema de
+ * coordenadas em que o pipeline e o dado de treino são construídos. Escolhê-la por
+ * sessão — como o Setup fazia — deixava dois áudios do mesmo projeto caírem em duas
+ * grades incompatíveis. A decisão é do projeto.
+ *
+ * Os dois nulos dizem coisas diferentes: `granularity_level` nulo é projeto que
+ * ninguém configurou (a tela renderiza "não decidido", não um erro); `bead_sec` nulo
+ * é projeto que ainda não cortou nada, então nenhum áudio tem grade com que concordar.
+ * `locked` é derivado — o projeto já tem sessão, e é isso que congela o nível.
+ */
+export const ProjectSettingsSchema = z.strictObject({
+  project_id: z.string(),
+  granularity_level: GranularityLevelSchema.nullable(),
+  bead_sec: z.number().positive().nullable(),
+  locked: z.boolean(),
+  updated_at: z.string().nullable(),
+});
+export type ProjectSettings = z.infer<typeof ProjectSettingsSchema>;
+
+/**
+ * O que uma admin de projeto decide: um NÍVEL, e nada mais. `bead_sec` não é
+ * enviável de propósito — é `granularity_frames[nível] × hop_sec` do acousteme de
+ * cada áudio (regra O8), então um cliente que o mandasse estaria AFIRMANDO uma grade
+ * em vez de resolvê-la. A primeira sessão do projeto o carimba.
+ */
+export const ProjectSettingsUpdateSchema = z.strictObject({
+  granularity_level: GranularityLevelSchema,
+});
+export type ProjectSettingsUpdate = z.infer<typeof ProjectSettingsUpdateSchema>;

@@ -38,6 +38,44 @@ export const pt = {
     busy: 'Entrando…',
     refused: 'Não foi possível entrar. Confira o usuário e a senha.',
   },
+  settings: {
+    eyebrow: 'Projeto',
+    title: 'Configurações',
+    lead: 'Valem para o projeto inteiro, fora da criação das histórias.',
+    loading: 'Carregando…',
+    readError: 'Não foi possível ler as configurações do projeto. Recarregue a página.',
+    langHeading: 'Idioma da interface',
+    langLead:
+      'Muda só os textos da ferramenta. O áudio, os nomes das histórias e as decisões de vocês não mudam.',
+    langPtName: 'Português',
+    langPtRegion: 'Brasil',
+    langEnName: 'English',
+    langEnRegion: 'Global',
+    granEyebrow: 'Granularidade do cordão',
+    granTitle: 'De que tamanho serão as contas deste cordão?',
+    granLead:
+      'A conta é o menor pedaço do áudio — a unidade de todo corte do projeto. Escolha o tamanho: ele vale para todas as histórias e não muda depois.',
+    granTitleConfirmed: 'As contas deste cordão já têm tamanho.',
+    granLeadConfirmed:
+      'Foi escolhido para o projeto inteiro e não muda mais. Mudá-lo agora mudaria a referência de tudo o que já foi cortado e exportado.',
+    granConfirm: 'Confirmar — isto não muda depois',
+    granConfirming: 'Confirmando…',
+    granAskAdmin: 'Peça a quem administra o projeto para escolher o tamanho da conta.',
+    granForbidden: 'Só quem administra o projeto pode escolher o tamanho da conta.',
+    granAlreadyConfirmed: 'O tamanho da conta deste projeto já foi confirmado e não muda mais.',
+    granSaveError: 'Não foi possível confirmar. Tente de novo.',
+    level: {
+      small: 'Pequeno',
+      medium: 'Médio',
+      large: 'Grande',
+    },
+    levelDesc: {
+      small: 'Contas curtas, corte mais fino. Serve a histórias densas, em que cada palavra pesa.',
+      medium:
+        'O equilíbrio recomendado entre precisão e leveza. Serve à grande maioria das histórias.',
+      large: 'Contas longas, cordão mais leve. Serve a histórias corridas, de fôlego largo.',
+    },
+  },
   setup: {
     eyebrow: 'Preparação',
     title: 'Nova sessão',
@@ -72,6 +110,12 @@ export const pt = {
     consentWarn: 'Sem registro de consentimento de coleta.',
     consentWarnShort: 'sem consentimento',
     audioReady: 'Áudio pronto',
+    granFromProject: 'Definido para o projeto inteiro. Todos os áudios cortam nesta grade.',
+    granUnset: 'Este projeto ainda não tem um tamanho de conta definido.',
+    granConfigureLink: 'Definir agora',
+    granReadError: 'Não foi possível ler o tamanho da conta do projeto. Recarregue a página.',
+    granMismatch:
+      'Este áudio cairia numa grade diferente da do resto do projeto. Cortá-lo aqui partiria o projeto em dois sistemas de coordenadas — fale com quem cuida do pipeline antes de seguir.',
     granHeading: 'Tamanho da conta',
     titleField: 'Título / nome curto do colar',
     titlePlaceholder: 'ex.: jesus-mienoi',

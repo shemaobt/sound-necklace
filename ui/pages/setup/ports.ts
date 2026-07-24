@@ -15,9 +15,12 @@ import {
   AcoustemeGranularityResolver,
   type GranularityResolver,
 } from '../../../adapters/granularity';
+import type { ProjectSettingsStore } from '../../../adapters/project-settings';
+import { FIXTURE_PROJECT_ID } from '../../../adapters/project-settings/register';
 import type { SessionStore } from '../../../adapters/sessions';
 import { API_MODE } from '../../app/api-config';
 import { appBucket, resolveProjectId } from '../../app/bucket-adapter';
+import { appProjectSettings } from '../../app/project-settings-adapter';
 import { appSessionStore } from '../../app/session-adapter';
 
 export function defaultBucket(): BucketSource {
@@ -40,11 +43,16 @@ export function defaultSessionStore(): SessionStore {
   return appSessionStore();
 }
 
+/** A granularidade do projeto (ENG-352) — o mesmo singleton que a tela de config usa. */
+export function defaultProjectSettings(): ProjectSettingsStore {
+  return appProjectSettings();
+}
+
 /**
  * Projeto dono da sessão nova (§8.1): no modo real vem de `my-project-roles` (o
  * mesmo cache do bucket — o projeto cujos áudios o Setup lista é o projeto da
  * sessão); na fixture, o id sintético de sempre.
  */
 export function defaultProjectId(): Promise<string> {
-  return API_MODE === 'real' ? resolveProjectId() : Promise.resolve('projeto');
+  return API_MODE === 'real' ? resolveProjectId() : Promise.resolve(FIXTURE_PROJECT_ID);
 }
