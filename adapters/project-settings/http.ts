@@ -12,7 +12,7 @@ import {
   type GranularityLevel,
   type ProjectSettings,
 } from '../../contracts';
-import { GranularityLockedError, type ProjectSettingsStore } from './types';
+import { ForbiddenError, GranularityLockedError, type ProjectSettingsStore } from './types';
 
 /** O `code` que separa "já cortado" de qualquer outro 409 (contrato da ENG-361). */
 const LOCKED_CODE = 'PROJECT_GRANULARITY_LOCKED';
@@ -44,6 +44,7 @@ export class HttpProjectSettings implements ProjectSettingsStore {
 
   async setLevel(projectId: string, level: GranularityLevel): Promise<ProjectSettings> {
     const res = await this.#send(projectId, 'PUT', { granularity_level: level });
+    if (res.status === 403) throw new ForbiddenError(projectId);
     if (res.status === 409) {
       // Só o `code` distingue: um 409 sem ele não é esta recusa, e tratar todos como
       // "congelado" esconderia um conflito real atrás de uma explicação errada.

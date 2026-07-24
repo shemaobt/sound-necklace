@@ -25,6 +25,19 @@ export class GranularityLockedError extends Error {
   }
 }
 
+/**
+ * O PUT foi recusado por PAPEL: ler é de qualquer papel com acesso, decidir é de
+ * `project_admin`. Tipado pelo mesmo motivo que o de cima — a tela diz "fale com quem
+ * administra", que é cópia diferente de "não deu, tente de novo". Farejar `'403'` na
+ * mensagem classificaria como permissão qualquer erro de rede que trouxesse o número.
+ */
+export class ForbiddenError extends Error {
+  constructor(readonly projectId: string) {
+    super(`Sem permissão para decidir a granularidade do projeto ${projectId}`);
+    this.name = 'ForbiddenError';
+  }
+}
+
 export interface ProjectSettingsStore {
   /** A granularidade do projeto. Nível nulo = ninguém decidiu ainda. */
   get(projectId: string): Promise<ProjectSettings>;

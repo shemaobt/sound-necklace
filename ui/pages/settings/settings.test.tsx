@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   FixtureProjectSettings,
+  ForbiddenError,
   GranularityLockedError,
   type ProjectSettingsStore,
 } from '../../../adapters/project-settings';
@@ -74,10 +75,46 @@ describe('Configurações — granularidade', () => {
     expect(screen.queryByRole('button', { name: new RegExp(pt.settings.granConfirm) })).toBeNull();
   });
 
-  /** Corrida real: outra pessoa confirmou entre a leitura desta tela e o clique. */
-  it('confirmado por outra pessoa no meio do caminho vira explicação, não erro genérico', async () => {
+  /**
+   * Corrida real: outra pessoa confirmou entre a leitura desta tela e o clique. A tela
+   * explica em vez de dar erro genérico — e mostra o nível que GANHOU, não o que esta
+   * pessoa tinha selecionado. Dizer "confirmado permanentemente" ao lado da escolha que
+   * acabou de ser recusada é a pior mentira que esta tela pode contar: a decisão é
+   * irreversível e vale para o projeto inteiro, então a pessoa iria embora com a grade
+   * errada na cabeça, e sem nada na tela que a desminta.
+   */
+  it('a corrida perdida explica e mostra o nível que venceu, não o que esta pessoa escolheu', async () => {
     const store = new FixtureProjectSettings();
+    vi.spyOn(store, 'setLevel').mockImplementation(() => {
+      // quem venceu gravou `small` no servidor enquanto esta tela ainda lia null
+      store.noteSessionCreated('proj-1', 'small', 0.2);
+      return Promise.reject(new GranularityLockedError('proj-1'));
+    });
+    renderPage(store);
+
+    const group = await screen.findByRole('radiogroup', { name: pt.settings.granEyebrow });
+    await userEvent.click(within(group).getByRole('radio', { name: pt.settings.level.large }));
+    await userEvent.click(await confirmButton());
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      pt.settings.granAlreadyConfirmed,
+    );
+    expect(await screen.findByText(pt.settings.level.small)).toBeTruthy();
+    expect(screen.queryByText(pt.settings.level.large)).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole('radiogroup', { name: pt.settings.granEyebrow })).toBeNull(),
+    );
+  });
+
+  /**
+   * O caso duplo: o PUT recusa e a releitura também falha. Sem saber qual nível venceu,
+   * a tela não afirma nenhum — cair de volta na escolha local a apresentaria como a
+   * decisão do projeto, que é exatamente o que o teste acima proíbe.
+   */
+  it('recusa sem releitura possível trava sem afirmar tamanho nenhum', async () => {
+    const store = new FixtureProjectSettings({ seed: { 'proj-1': {} } });
     vi.spyOn(store, 'setLevel').mockRejectedValue(new GranularityLockedError('proj-1'));
+    vi.spyOn(store, 'get').mockRejectedValueOnce(new Error('HTTP 500'));
     renderPage(store);
 
     await userEvent.click(await confirmButton());
@@ -85,14 +122,32 @@ describe('Configurações — granularidade', () => {
     expect((await screen.findByRole('alert')).textContent).toContain(
       pt.settings.granAlreadyConfirmed,
     );
-    await waitFor(() =>
-      expect(screen.queryByRole('radiogroup', { name: pt.settings.granEyebrow })).toBeNull(),
-    );
+    for (const level of ['small', 'medium', 'large'] as const) {
+      expect(screen.queryByText(pt.settings.level[level])).toBeNull();
+    }
+  });
+
+  /**
+   * Trocar de idioma não é recarregar a tela. O efeito de leitura depende de `t`, então
+   * cada troca refazia `defaultProjectId` + `get` + `defaultCanEdit` — três idas à rede
+   * para buscar exatamente o mesmo dado.
+   */
+  it('trocar o idioma não relê as configurações do servidor', async () => {
+    const store = new FixtureProjectSettings();
+    const spy = vi.spyOn(store, 'get');
+    renderPage(store);
+
+    const langs = await screen.findByRole('radiogroup', { name: pt.settings.langHeading });
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+    await userEvent.click(within(langs).getByRole('radio', { name: 'English' }));
+
+    expect(await screen.findByText('Settings')).toBeTruthy();
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('403 diz que só quem administra o projeto decide', async () => {
     const store = new FixtureProjectSettings();
-    vi.spyOn(store, 'setLevel').mockRejectedValue(new Error('HTTP 403 ao gravar'));
+    vi.spyOn(store, 'setLevel').mockRejectedValue(new ForbiddenError('proj-1'));
     renderPage(store);
 
     await userEvent.click(await confirmButton());

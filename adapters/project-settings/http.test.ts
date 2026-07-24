@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { HttpProjectSettings } from './http';
-import { GranularityLockedError } from './types';
+import { ForbiddenError, GranularityLockedError } from './types';
 
 /**
  * O modo REAL contra o contrato da ENG-361. `fetch` é injetado — nada aqui toca a
@@ -115,9 +115,16 @@ describe('HttpProjectSettings.setLevel', () => {
     await expect(failure).rejects.not.toBeInstanceOf(GranularityLockedError);
   });
 
-  it('403 (não é admin do projeto) sobe como erro', async () => {
+  /**
+   * Tipado, não farejado: a tela responde a ISTO com "fale com quem administra", que é
+   * cópia diferente de "não deu, tente de novo". Procurar `'403'` na mensagem
+   * classificaria como permissão qualquer erro de rede que carregasse o número.
+   */
+  it('403 (não é admin do projeto) sobe como ForbiddenError', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('', { status: 403 }));
 
-    await expect(store(fetchMock).setLevel('proj-1', 'small')).rejects.toThrow('HTTP 403');
+    await expect(store(fetchMock).setLevel('proj-1', 'small')).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
   });
 });

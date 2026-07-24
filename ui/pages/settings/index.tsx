@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 
 import {
+  ForbiddenError,
   GranularityLockedError,
   type ProjectSettingsStore,
 } from '../../../adapters/project-settings';
@@ -63,6 +64,12 @@ export function Settings({ store = defaultProjectSettings(), projectId, canEdit 
   const [chosen, setChosen] = useState<GranularityLevel>('medium');
   const [admin, setAdmin] = useState(canEdit ?? false);
   const [status, setStatus] = useState<'loading' | 'idle' | 'saving'>('loading');
+  /**
+   * A CHAVE do erro, não o texto: guardar o traduzido obrigaria `t` a entrar nas
+   * dependências do efeito de leitura, e cada troca de idioma refaria as três chamadas
+   * de rede que montam esta tela. De quebra, um erro na tela passa a acompanhar a troca
+   * de idioma em vez de ficar congelado no idioma em que aconteceu.
+   */
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,14 +88,14 @@ export function Settings({ store = defaultProjectSettings(), projectId, canEdit 
         setStatus('idle');
       } catch {
         if (!alive) return;
-        setError(t('settings.readError'));
+        setError('settings.readError');
         setStatus('idle');
       }
     })();
     return () => {
       alive = false;
     };
-  }, [store, projectId, canEdit, t]);
+  }, [store, projectId, canEdit]);
 
   const confirm = async (): Promise<void> => {
     setError(null);
@@ -102,20 +109,30 @@ export function Settings({ store = defaultProjectSettings(), projectId, canEdit 
     } catch (e) {
       setStatus('idle');
       if (e instanceof GranularityLockedError) {
-        setSettings((s) => (s ? { ...s, locked: true } : s));
-        setError(t('settings.granAlreadyConfirmed'));
+        // Relê antes de dizer "confirmado": o nível que vale é o de quem VENCEU a
+        // corrida, e o que esta tela tem em mãos é a escolha que acabou de ser recusada.
+        // Mostrá-la sob a frase "não muda mais" mandaria a pessoa embora convencida de
+        // uma grade que o projeto não tem. Se a releitura também falhar, sobra a trava
+        // local — dizer que travou é verdade mesmo sem saber em quê.
+        try {
+          setSettings(await store.get(projectId ?? (await defaultProjectId())));
+        } catch {
+          setSettings((s) => (s ? { ...s, locked: true } : s));
+        }
+        setError('settings.granAlreadyConfirmed');
         return;
       }
-      setError(
-        e instanceof Error && e.message.includes('403')
-          ? t('settings.granForbidden')
-          : t('settings.granSaveError'),
-      );
+      setError(e instanceof ForbiddenError ? 'settings.granForbidden' : 'settings.granSaveError');
     }
   };
 
   const confirmed = settings?.locked ?? false;
-  const shown = confirmed ? (settings?.granularity_level ?? chosen) : chosen;
+  /**
+   * Confirmado, o valor é o do SERVIDOR — e `null` quando nem a releitura o trouxe.
+   * Cair de volta em `chosen` aqui apresentaria a escolha desta pessoa como a decisão
+   * do projeto; melhor não afirmar tamanho nenhum e deixar o alerta explicar.
+   */
+  const shown: GranularityLevel | null = confirmed ? (settings?.granularity_level ?? null) : chosen;
 
   return (
     <section className="cds-settings">
@@ -189,14 +206,17 @@ function GranularityCard({
   onConfirm,
 }: {
   confirmed: boolean;
-  shown: GranularityLevel;
+  shown: GranularityLevel | null;
   admin: boolean;
   status: 'loading' | 'idle' | 'saving';
+  /** Chave do dicionário, traduzida aqui — ver o estado `error` em `Settings`. */
   error: string | null;
   onChoose: (level: GranularityLevel) => void;
   onConfirm: () => void;
 }) {
   const { t } = useTranslation();
+  /** O cordão é decoração (`aria-hidden`), então um tamanho de desenho não afirma nada. */
+  const preview = PREVIEW[shown ?? 'medium'];
 
   return (
     <section className="cds-settings-gran" aria-labelledby="cds-settings-gran-title">
@@ -216,18 +236,20 @@ function GranularityCard({
       ) : (
         <>
           <div className="cds-settings-cord" aria-hidden="true">
-            {Array.from({ length: PREVIEW[shown].count }, (_, i) => (
-              <Pearl key={i} state="lit" tint={CORD_TINT} size={PREVIEW[shown].size} />
+            {Array.from({ length: preview.count }, (_, i) => (
+              <Pearl key={i} state="lit" tint={CORD_TINT} size={preview.size} />
             ))}
           </div>
 
           {confirmed ? (
-            <p className="cds-settings-gran-value">{t(`settings.level.${shown}`)}</p>
+            shown ? (
+              <p className="cds-settings-gran-value">{t(`settings.level.${shown}`)}</p>
+            ) : null
           ) : (
             <RadioGroup.Root
               className="cds-settings-levels"
               aria-label={t('settings.granEyebrow')}
-              value={shown}
+              value={shown ?? undefined}
               onValueChange={(v) => onChoose(v as GranularityLevel)}
               disabled={!admin}
             >
@@ -239,7 +261,9 @@ function GranularityCard({
             </RadioGroup.Root>
           )}
 
-          <p className="cds-settings-gran-note">{t(`settings.levelDesc.${shown}`)}</p>
+          {shown ? (
+            <p className="cds-settings-gran-note">{t(`settings.levelDesc.${shown}`)}</p>
+          ) : null}
 
           <ConfirmAction
             confirmed={confirmed}
@@ -252,7 +276,7 @@ function GranularityCard({
 
       {error ? (
         <p className="cds-settings-error" role="alert">
-          {error}
+          {t(error)}
         </p>
       ) : null}
     </section>
