@@ -1,0 +1,274 @@
+/* Configurações (ENG-352, referência do dono 2026-07-24): coluna única centrada sobre o
+   creme, com DOIS pesos de cartão. O idioma é preferência reversível → cartão branco
+   comum. A granularidade é a decisão irreversível do projeto → cartão cerimonial oliva,
+   a mesma linguagem escura que as estações do ouvinte usam nos momentos que pesam. */
+
+.cds-settings {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  min-height: 72vh;
+  padding: 40px clamp(1rem, 5vw, 3rem) 56px;
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+}
+
+.cds-settings-header {
+  width: min(840px, 100%);
+}
+
+.cds-settings-eyebrow {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cds-ink-subtle);
+}
+
+.cds-settings-title {
+  margin: 0.15rem 0 0.4rem;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  font-weight: 700;
+}
+
+.cds-settings-lead {
+  margin: 0;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--cds-ink-subtle);
+}
+
+/* ── cartão claro: idioma ─────────────────────────────────────────────── */
+
+.cds-settings-card {
+  width: min(840px, 100%);
+  padding: 26px 32px 30px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--cds-shadow-card);
+}
+
+.cds-settings-card-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.cds-settings-card-lead {
+  margin: 0 0 1.1rem;
+  font-style: italic;
+  font-size: 0.88rem;
+  color: var(--cds-ink-subtle);
+}
+
+.cds-settings-langs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.cds-settings-lang {
+  position: relative;
+  flex: 1 1 12rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+  padding: 16px 44px 16px 20px;
+  border: 1px solid rgba(63, 62, 32, 0.16);
+  border-radius: 14px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+
+.cds-settings-lang:hover {
+  border-color: var(--cds-telha);
+}
+
+.cds-settings-lang[data-state='checked'] {
+  border-color: var(--cds-telha);
+  background: color-mix(in srgb, var(--cds-telha) 6%, white);
+  color: var(--cds-telha-deep);
+}
+
+.cds-settings-lang-name {
+  font-weight: 700;
+}
+
+.cds-settings-lang-region {
+  font-size: 0.82rem;
+  color: var(--cds-ink-subtle);
+}
+
+.cds-settings-lang-check {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 22px;
+  height: 22px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--cds-telha);
+}
+
+.cds-settings-lang-check::after {
+  content: '✓';
+  display: block;
+  color: #fff;
+  font-size: 13px;
+  line-height: 22px;
+  text-align: center;
+}
+
+/* ── cartão cerimonial: granularidade ─────────────────────────────────── */
+
+.cds-settings-gran {
+  position: relative;
+  width: min(840px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 34px clamp(1.25rem, 4vw, 3.5rem) 40px;
+  border-radius: 18px;
+  background: var(--cds-olive);
+  color: var(--cds-cream);
+  text-align: center;
+  overflow: hidden;
+}
+
+.cds-settings-gran-watermark {
+  position: absolute;
+  right: -120px;
+  bottom: -150px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.cds-settings-gran-eyebrow {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.cds-settings-gran-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  font-style: italic;
+  font-weight: 700;
+}
+
+.cds-settings-gran-lead {
+  max-width: 46ch;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  opacity: 0.82;
+}
+
+.cds-settings-cord {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 10px 0 6px;
+  min-height: 34px;
+}
+
+.cds-settings-levels {
+  display: inline-flex;
+  padding: 5px;
+  border-radius: var(--cds-radius-pill);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.cds-settings-level {
+  padding: 9px 26px;
+  border: none;
+  border-radius: var(--cds-radius-pill);
+  background: none;
+  color: var(--cds-cream);
+  font: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+
+.cds-settings-level:hover:not([data-state='checked']) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.cds-settings-level[data-state='checked'] {
+  background: var(--cds-cream);
+  color: var(--cds-olive);
+  font-weight: 600;
+}
+
+.cds-settings-level:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.cds-settings-gran-value {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.cds-settings-gran-note {
+  max-width: 44ch;
+  margin: 0;
+  font-style: italic;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  opacity: 0.8;
+}
+
+.cds-settings-gran-note[data-role='warning'] {
+  font-style: normal;
+  opacity: 1;
+}
+
+.cds-settings-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 8px;
+  padding: 15px 34px;
+  border: none;
+  border-radius: var(--cds-radius-pill);
+  background: var(--cds-telha);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.14s;
+}
+
+.cds-settings-confirm:hover:not(:disabled) {
+  background: var(--cds-telha-deep);
+}
+
+.cds-settings-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cds-settings-error {
+  max-width: 60ch;
+  margin: 6px 0 0;
+  padding: 10px 20px;
+  border-radius: var(--cds-radius-pill);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}

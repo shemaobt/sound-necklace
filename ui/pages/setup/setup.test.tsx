@@ -5,9 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vite
 import { AudioDecodeError, FixtureAudioEngine, type AudioEngine } from '../../../adapters/audio';
 import { FixtureBucketSource, type BucketSource } from '../../../adapters/bucket';
 import { AcoustemeGranularityResolver } from '../../../adapters/granularity';
+import { FixtureProjectSettings } from '../../../adapters/project-settings';
 import { FixtureSessionStore } from '../../../adapters/sessions';
 import { sessionStore } from '../../state';
 import { pt } from '../../i18n/pt';
+import lockCss from './granularity-lock.css?raw';
 import setupCss from './setup.css?raw';
 import Setup from './index';
 
@@ -27,6 +29,9 @@ interface Ports {
   resolver: AcoustemeGranularityResolver;
   audioEngine: AudioEngine;
   store: FixtureSessionStore;
+  projectSettings: FixtureProjectSettings;
+  /** Quem pode decidir a granularidade (ENG-363) — decide a variante da trava. */
+  canEdit: (projectId: string) => Promise<boolean>;
   navigate: Mock<(to: string) => void>;
 }
 
@@ -36,6 +41,10 @@ function ports(over: Partial<Ports> = {}): Ports {
     resolver: new AcoustemeGranularityResolver(),
     audioEngine: new FixtureAudioEngine(),
     store: new FixtureSessionStore(),
+    // A granularidade é do PROJETO (ENG-352). Instância POR TESTE: o singleton do app
+    // guarda a grade carimbada, e um caso vazaria a guarda de divergência no seguinte.
+    projectSettings: new FixtureProjectSettings({ seed: { projeto: { level: 'medium' } } }),
+    canEdit: async () => true,
     navigate: vi.fn<(to: string) => void>(),
     ...over,
   };
@@ -48,6 +57,8 @@ function renderSetup(p: Ports) {
       resolver={p.resolver}
       audioEngine={p.audioEngine}
       store={p.store}
+      projectSettings={p.projectSettings}
+      canEdit={p.canEdit}
       navigate={p.navigate}
     />,
   );
@@ -280,24 +291,118 @@ describe('Setup — granularidade por nível, sem campo numérico (§8.1)', () =
     expect(container.querySelector('input[type="number"]')).toBeNull();
   });
 
-  it('exatamente três cards de nível, navegáveis por teclado', async () => {
+  /**
+   * A granularidade deixou de ser escolha do Setup (ENG-352): é do PROJETO. A tela a
+   * EXIBE — oferecer os três níveis aqui deixaria dois áudios do mesmo projeto caírem
+   * em grades incompatíveis, que é o que a mudança existe para impedir.
+   */
+  it('exibe o nível do projeto e NÃO oferece escolha de granularidade', async () => {
     renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
 
-    const group = screen.getByRole('radiogroup', { name: /tamanho da conta/i });
-    expect(within(group).getAllByRole('radio')).toHaveLength(3);
+    expect(screen.queryByRole('radiogroup', { name: /tamanho da conta/i })).toBeNull();
+    expect(screen.getByText(pt.setup.levelMediaTitle)).toBeTruthy();
+    expect(screen.getByText(pt.setup.granFromProject)).toBeTruthy();
+  });
 
-    const media = within(group).getByRole('radio', { name: 'Média' });
-    expect(media.getAttribute('aria-checked')).toBe('true'); // média é o default
-    await userEvent.click(media); // foca o item marcado (roving)
-    await userEvent.keyboard('{ArrowRight}'); // seta move o foco para Grande
-    expect(within(group).getByRole('radio', { name: 'Grande' })).toBe(document.activeElement);
-    await userEvent.keyboard(' '); // espaço confirma a seleção do item focado
-    await waitFor(() =>
-      expect(
-        within(group).getByRole('radio', { name: 'Grande' }).getAttribute('aria-checked'),
-      ).toBe('true'),
-    );
+  /**
+   * A trava (ENG-363). Enquanto o projeto não tem tamanho de conta, o Setup inteiro
+   * fica atrás do modal: escolher áudio ou marcar consentimento por trás dele seria
+   * trabalho jogado fora, e a linha discreta de antes era fácil demais de ignorar.
+   */
+  it('projeto sem nível bloqueia o formulário atrás da trava', async () => {
+    const p = ports({ projectSettings: new FixtureProjectSettings() });
+    renderSetup(p);
+
+    await screen.findByRole('dialog');
+    expect(screen.getByText(pt.setup.lock.title)).toBeTruthy();
+    // o formulário existe no DOM, mas o modal o esconde da árvore acessível
+    expect(screen.queryByRole('radio', { name: /conto-do-boto/ })).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByRole('button', { name: /criar a sessão/i })).toBeNull();
+  });
+
+  it('a trava não se descarta: Esc não fecha', async () => {
+    const p = ports({ projectSettings: new FixtureProjectSettings() });
+    renderSetup(p);
+    await screen.findByRole('dialog');
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  /**
+   * A saída passa pelo router. Um `href` recarregaria a página e levaria junto o
+   * formulário — e quem sai para decidir o nível voltaria para o zero por causa de
+   * uma tag.
+   */
+  it('quem administra é levado à tela de configurações, sem recarregar a página', async () => {
+    const p = ports({ projectSettings: new FixtureProjectSettings() });
+    renderSetup(p);
+
+    await userEvent.click(await screen.findByRole('button', { name: pt.setup.lock.primary }));
+
+    expect(p.navigate).toHaveBeenCalledWith('/settings');
+  });
+
+  /**
+   * Quem não administra não vê controle morto (§9.5): nada de botão desabilitado de
+   * confirmar. Vê a quem pedir — e uma saída, porque a trava nunca é beco sem saída.
+   */
+  it('quem não administra vê a quem pedir e a saída para o painel', async () => {
+    const p = ports({ projectSettings: new FixtureProjectSettings(), canEdit: async () => false });
+    renderSetup(p);
+
+    await screen.findByRole('dialog');
+    expect(screen.getByText(pt.setup.lock.titleMember)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: pt.setup.lock.primary })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: pt.setup.lock.primaryMember }));
+    expect(p.navigate).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('projeto COM nível não mostra trava nenhuma', async () => {
+    renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  /**
+   * A guarda de divergência. O nível é do projeto, mas a DURAÇÃO sai do acousteme de
+   * cada áudio — um áudio que resolva para outra grade partiria o corpus do projeto em
+   * dois sistemas de coordenadas. Recusa: normalizar quebraria a regra O8.
+   */
+  it('recusa um áudio cujo acousteme cairia noutra grade', async () => {
+    const settings = new FixtureProjectSettings({ seed: { projeto: { level: 'medium' } } });
+    // o projeto já cortou a 0,25 s; este áudio resolve a 0,5 s (Média = 25 × 20 ms)
+    settings.noteSessionCreated('projeto', 'medium', 0.25);
+    const p = ports({ projectSettings: settings });
+    const createSpy = vi.spyOn(p.store, 'create');
+    renderSetup(p);
+    await pickAudio('conto-do-boto.wav');
+    await confirmConsent();
+
+    await userEvent.click(screen.getByRole('button', { name: /criar a sessão/i }));
+
+    await screen.findByText(pt.setup.granMismatch);
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(p.navigate).not.toHaveBeenCalled();
+  });
+
+  it('a mesma grade em milissegundos não é divergência (ruído de float não reprova)', async () => {
+    const settings = new FixtureProjectSettings({ seed: { projeto: { level: 'medium' } } });
+    settings.noteSessionCreated('projeto', 'medium', 0.1 + 0.2 + 0.2); // 0.5000000000000001
+    const p = ports({ projectSettings: settings });
+    renderSetup(p);
+    await pickAudio('conto-do-boto.wav');
+    await confirmConsent();
+
+    await userEvent.click(screen.getByRole('button', { name: /criar a sessão/i }));
+
+    await waitFor(() => expect(p.navigate).toHaveBeenCalled());
+    expect(screen.queryByText(pt.setup.granMismatch)).toBeNull();
   });
 });
 
@@ -306,7 +411,9 @@ describe('Setup — cópias fixadas (§8.1/O7)', () => {
     renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
     expect(screen.getByText(pt.setup.trustLine)).toBeTruthy();
-    expect(screen.getByText(pt.setup.gridWarning)).toBeTruthy();
+    // A trava da conta deixou de ser aviso do Setup: a granularidade é do projeto e
+    // esta tela diz de onde ela vem (ENG-352).
+    expect(screen.getByText(pt.setup.granFromProject)).toBeTruthy();
   });
 
   it('divulga que a voz do guia é sintética (§12; exigência da policy da ElevenLabs)', async () => {
@@ -321,6 +428,22 @@ describe('Setup — grid compacto de áudios (ENG-310)', () => {
     const rule = /\.cds-setup-audios\s*{[^}]*}/.exec(setupCss)?.[0] ?? '';
     expect(rule).toContain('display: grid');
     expect(rule).toContain('auto-fill');
+  });
+});
+
+/**
+ * Um cartão centrado por `transform` numa janela baixa (celular deitado) empurra a
+ * saída para fora da tela, e o diálogo trava o scroll do documento — a trava viraria
+ * o beco sem saída que ela existe para não ser. Quem rola tem de ser o véu, com o
+ * cartão em `margin:auto`. jsdom não tem layout: a regra se fixa no CSS.
+ */
+describe('Setup — a trava cabe em janela baixa (ENG-363)', () => {
+  it('quem rola é o véu, e o cartão não se centra por posicionamento fixo', () => {
+    const veil = /\.cds-gran-lock-overlay\s*{[^}]*}/.exec(lockCss)?.[0] ?? '';
+    const card = /\.cds-gran-lock\s*{[^}]*}/.exec(lockCss)?.[0] ?? '';
+    expect(veil).toContain('overflow: auto');
+    expect(card).toContain('margin: auto');
+    expect(card).not.toContain('position: fixed');
   });
 });
 

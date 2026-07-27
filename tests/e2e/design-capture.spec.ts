@@ -32,7 +32,6 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
 
   // mesmo preenchimento do ColarApp.createSession, com foto do estado preenchido
   await page.getByText(SCENARIO.audioFilename).click();
-  await page.getByRole('radio', { name: 'Média', exact: true }).click();
   await page.getByRole('checkbox').check();
   await shot('04-setup-preenchido');
   await page.getByRole('button', { name: 'Criar a sessão →' }).click();
