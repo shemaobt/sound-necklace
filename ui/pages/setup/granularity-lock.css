@@ -4,10 +4,20 @@
    no container do Setup — quem o esconde do teclado e do leitor de tela é o
    Radix dialog. */
 
+/* Quem rola é o VÉU, não o cartão (como no protótipo): numa janela baixa — um
+   celular deitado — um cartão centrado por transform empurraria a saída para
+   fora da tela, e o scroll do documento está travado pelo diálogo. `margin:auto`
+   com `align-items:flex-start` centra enquanto cabe e encosta no topo quando não
+   cabe, que é o único jeito de o topo continuar alcançável. */
 .cds-gran-lock-overlay {
   position: fixed;
   inset: 0;
   z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+  overflow: auto;
   background: rgba(63, 62, 32, 0.42);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
@@ -15,12 +25,10 @@
 }
 
 .cds-gran-lock {
-  position: fixed;
-  z-index: 41;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(520px, calc(100vw - 40px));
+  position: relative;
+  margin: auto;
+  flex: none;
+  width: min(520px, 100%);
   /* corta a marca d'água, que sangra de propósito para fora do canto */
   overflow: hidden;
   padding: 42px 46px 44px;
@@ -107,11 +115,11 @@
 @keyframes cds-gran-lock-card-in {
   from {
     opacity: 0;
-    transform: translate(-50%, calc(-50% + 10px));
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%);
+    transform: none;
   }
 }
 

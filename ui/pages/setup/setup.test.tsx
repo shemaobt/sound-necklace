@@ -9,6 +9,7 @@ import { FixtureProjectSettings } from '../../../adapters/project-settings';
 import { FixtureSessionStore } from '../../../adapters/sessions';
 import { sessionStore } from '../../state';
 import { pt } from '../../i18n/pt';
+import lockCss from './granularity-lock.css?raw';
 import setupCss from './setup.css?raw';
 import Setup from './index';
 
@@ -427,6 +428,22 @@ describe('Setup — grid compacto de áudios (ENG-310)', () => {
     const rule = /\.cds-setup-audios\s*{[^}]*}/.exec(setupCss)?.[0] ?? '';
     expect(rule).toContain('display: grid');
     expect(rule).toContain('auto-fill');
+  });
+});
+
+/**
+ * Um cartão centrado por `transform` numa janela baixa (celular deitado) empurra a
+ * saída para fora da tela, e o diálogo trava o scroll do documento — a trava viraria
+ * o beco sem saída que ela existe para não ser. Quem rola tem de ser o véu, com o
+ * cartão em `margin:auto`. jsdom não tem layout: a regra se fixa no CSS.
+ */
+describe('Setup — a trava cabe em janela baixa (ENG-363)', () => {
+  it('quem rola é o véu, e o cartão não se centra por posicionamento fixo', () => {
+    const veil = /\.cds-gran-lock-overlay\s*{[^}]*}/.exec(lockCss)?.[0] ?? '';
+    const card = /\.cds-gran-lock\s*{[^}]*}/.exec(lockCss)?.[0] ?? '';
+    expect(veil).toContain('overflow: auto');
+    expect(card).toContain('margin: auto');
+    expect(card).not.toContain('position: fixed');
   });
 });
 

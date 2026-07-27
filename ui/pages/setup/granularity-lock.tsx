@@ -42,44 +42,47 @@ export function GranularityLock({
   return (
     <Dialog.Root open>
       <Dialog.Portal>
-        <Dialog.Overlay className="cds-gran-lock-overlay" />
-        <Dialog.Content
-          className="cds-gran-lock"
-          onEscapeKeyDown={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-        >
-          <span className="cds-gran-lock-watermark" aria-hidden="true">
-            <ShemaIcon colorway="telha" size={150} />
-          </span>
-          <span className="cds-gran-lock-pearls" aria-hidden="true">
-            {PEARLS.map((size, i) => (
-              <Pearl key={i} state="lit" tint={CORD_TINT} size={size} />
-            ))}
-          </span>
-          <div className="cds-gran-lock-head">
-            <p className="cds-gran-lock-eyebrow">{t('setup.lock.eyebrow')}</p>
-            <Dialog.Title className="cds-gran-lock-title">
-              {t(canConfirm ? 'setup.lock.title' : 'setup.lock.titleMember')}
-            </Dialog.Title>
-            <Dialog.Description className="cds-gran-lock-body">
-              {t(canConfirm ? 'setup.lock.body' : 'setup.lock.bodyMember')}
-            </Dialog.Description>
-          </div>
-          <div className="cds-gran-lock-actions">
-            {canConfirm ? (
-              <>
-                <Button onClick={onSetSize}>{t('setup.lock.primary')}</Button>
-                <Button variant="ghost" size="sm" onClick={onBackToDashboard}>
-                  {t('setup.lock.secondary')}
-                </Button>
-              </>
-            ) : (
-              // nada de controle desabilitado para quem não pode confirmar: um botão
-              // morto oferece uma decisão que a pessoa não tem como tomar
-              <Button onClick={onBackToDashboard}>{t('setup.lock.primaryMember')}</Button>
-            )}
-          </div>
-        </Dialog.Content>
+        {/* o cartão vive DENTRO do véu: é o véu que rola quando a janela é baixa
+            demais para ele, e sem isso a saída fica fora da tela */}
+        <Dialog.Overlay className="cds-gran-lock-overlay">
+          <Dialog.Content
+            className="cds-gran-lock"
+            onEscapeKeyDown={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
+            <span className="cds-gran-lock-watermark" aria-hidden="true">
+              <ShemaIcon colorway="telha" size={150} />
+            </span>
+            <span className="cds-gran-lock-pearls" aria-hidden="true">
+              {PEARLS.map((size, i) => (
+                <Pearl key={i} state="lit" tint={CORD_TINT} size={size} />
+              ))}
+            </span>
+            <div className="cds-gran-lock-head">
+              <p className="cds-gran-lock-eyebrow">{t('setup.lock.eyebrow')}</p>
+              <Dialog.Title className="cds-gran-lock-title">
+                {t(canConfirm ? 'setup.lock.title' : 'setup.lock.titleMember')}
+              </Dialog.Title>
+              <Dialog.Description className="cds-gran-lock-body">
+                {t(canConfirm ? 'setup.lock.body' : 'setup.lock.bodyMember')}
+              </Dialog.Description>
+            </div>
+            <div className="cds-gran-lock-actions">
+              {canConfirm ? (
+                <>
+                  <Button onClick={onSetSize}>{t('setup.lock.primary')}</Button>
+                  <Button variant="ghost" size="sm" onClick={onBackToDashboard}>
+                    {t('setup.lock.secondary')}
+                  </Button>
+                </>
+              ) : (
+                // nada de controle desabilitado para quem não pode confirmar: um botão
+                // morto oferece uma decisão que a pessoa não tem como tomar
+                <Button onClick={onBackToDashboard}>{t('setup.lock.primaryMember')}</Button>
+              )}
+            </div>
+          </Dialog.Content>
+        </Dialog.Overlay>
       </Dialog.Portal>
     </Dialog.Root>
   );
