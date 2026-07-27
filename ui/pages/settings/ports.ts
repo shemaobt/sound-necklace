@@ -8,20 +8,12 @@
  */
 
 import type { ProjectSettingsStore } from '../../../adapters/project-settings';
-import { API_MODE } from '../../app/api-config';
-import { canEditProjectGranularity } from '../../app/bucket-adapter';
 import { appProjectSettings } from '../../app/project-settings-adapter';
 
-export { defaultProjectId } from '../setup/ports';
+// O papel é o mesmo nas duas telas: a trava do Setup (ENG-363) o lê para escolher a
+// variante, esta tela para oferecer ou não a confirmação. Uma definição só.
+export { defaultCanEdit, defaultProjectId } from '../setup/ports';
 
 export function defaultProjectSettings(): ProjectSettingsStore {
   return appProjectSettings();
-}
-
-/**
- * Quem pode confirmar a granularidade: no modo real o papel vem de `my-project-roles`;
- * na fixture pode sempre, senão o app sem API não passaria da primeira tela.
- */
-export function defaultCanEdit(projectId: string): Promise<boolean> {
-  return API_MODE === 'real' ? canEditProjectGranularity(projectId) : Promise.resolve(true);
 }

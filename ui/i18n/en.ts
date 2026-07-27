@@ -106,8 +106,18 @@ export const en: Dict = {
     audioReady: 'Audio ready',
     granFromProject: 'Set for the whole project. Every audio is cut on this grid.',
     granUnset: 'This project has no bead size set yet.',
-    granConfigureLink: 'Set it now',
     granReadError: "Could not read the project's bead size. Reload the page.",
+    lock: {
+      eyebrow: 'Bead granularity',
+      title: 'How big will the beads of this cord be?',
+      body: 'The bead is the smallest piece of the audio — the unit of every cut in the project. It applies to every story and does not change afterwards. Choose it before creating the first session.',
+      primary: 'Set the bead size',
+      secondary: 'Back to dashboard',
+      titleMember: "This project's beads do not have a size yet.",
+      bodyMember:
+        'Ask whoever administers the project to choose the bead size. Sessions can only start after that.',
+      primaryMember: 'Back to dashboard',
+    },
     granMismatch:
       'This audio would land on a different grid from the rest of the project. Cutting it here would split the project across two coordinate systems — talk to whoever runs the pipeline before going on.',
     granHeading: 'Bead size',

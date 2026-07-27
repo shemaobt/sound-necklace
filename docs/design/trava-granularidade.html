@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trava de granularidade — componente</title>
+
+<!-- =========================================================================
+     CDS — Trava de granularidade da conta (bead granularity lock)
+     Componente autocontido: CSS + markup + JS sem dependências.
+     Copie os três blocos marcados [1] CSS, [2] TEMPLATE, [3] JS.
+     ========================================================================= -->
+
+<!-- [1] CSS ================================================================ -->
+<style>
+/* Fontes: o app já carrega Montserrat (400/600/700) e Merriweather (italic).
+   Se não carregar, troque as duas var(--cds-font-*) abaixo. */
+.cds-lock,.cds-lock *,.cds-lock *::before,.cds-lock *::after{box-sizing:border-box}
+.cds-lock{
+  --cds-cream:#f6f5eb;
+  --cds-ink:#3f3e20;
+  --cds-ink-strong:#0a0703;
+  --cds-ink-muted:#6d6c56;
+  --cds-ink-faint:#8a8970;
+  --cds-accent:#be4a01;
+  --cds-accent-deep:#8f3701;
+  --cds-hairline:rgba(63,62,32,.14);
+  --cds-font-ui:'Montserrat',system-ui,sans-serif;
+  --cds-font-voice:'Merriweather',Georgia,serif;
+  position:fixed;inset:0;z-index:1000;
+  display:flex;align-items:flex-start;justify-content:center;
+  padding:36px;overflow:auto;
+  font-family:var(--cds-font-ui);color:var(--cds-ink);
+}
+.cds-lock__veil{
+  position:fixed;inset:0;
+  background:rgba(63,62,32,.42);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  animation:cds-veil-in .2s linear both;
+}
+.cds-lock__card{
+  position:relative;margin:auto;width:100%;max-width:520px;flex:none;
+  background:var(--cds-cream);border-radius:26px;overflow:hidden;
+  padding:42px 46px 44px;
+  box-shadow:0 28px 70px -22px rgba(10,7,3,.6),0 2px 8px rgba(10,7,3,.16);
+  display:flex;flex-direction:column;align-items:center;gap:22px;
+  animation:cds-card-in .26s ease-out both;
+}
+.cds-lock--inline .cds-lock__card{max-width:620px;padding:38px 44px 40px}
+/* marca d'água: aponte para o ícone Shemá em telha */
+.cds-lock__mark{
+  position:absolute;right:-58px;bottom:-70px;height:280px;
+  opacity:.06;pointer-events:none;user-select:none;
+}
+/* cordão decorativo */
+.cds-lock__pearls{display:flex;align-items:center;gap:7px;height:16px}
+.cds-pearl{
+  flex:none;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#e8813e 0%,var(--cds-accent) 70%);
+  box-shadow:0 1px 3px rgba(10,7,3,.2);
+}
+.cds-lock__head{display:flex;flex-direction:column;gap:12px;text-align:center;max-width:46ch}
+.cds-lock__eyebrow{
+  font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--cds-ink-faint);
+}
+.cds-lock__title{
+  font-family:var(--cds-font-voice);font-style:italic;font-weight:400;
+  font-size:28px;line-height:1.22;color:var(--cds-ink-strong);
+  text-wrap:pretty;margin:0;
+}
+.cds-lock__body{font-size:13.5px;line-height:1.65;color:var(--cds-ink-muted);text-wrap:pretty;margin:0}
+
+/* --- cartão de granularidade embutido (só admin, modo inline) --- */
+.cds-lock__picker{
+  width:100%;display:flex;flex-direction:column;align-items:center;gap:20px;
+  padding:24px 0 4px;border-top:1px solid var(--cds-hairline);
+}
+.cds-lock__cord{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  height:44px;width:100%;
+}
+.cds-lock__cord::before{
+  content:"";position:absolute;left:0;right:0;top:50%;height:2px;
+  transform:translateY(-50%);background:rgba(63,62,32,.16);
+}
+.cds-lock__cord-beads{position:relative;display:flex;align-items:center;justify-content:center;margin:0 auto}
+.cds-lock__sizes{display:flex;gap:10px;width:100%}
+.cds-size{
+  flex:1;padding:13px 10px;border-radius:999px;cursor:pointer;
+  font-family:var(--cds-font-ui);font-size:14px;font-weight:700;
+  color:#5a5a3e;background:rgba(63,62,32,.06);border:2px solid var(--cds-hairline);
+  transition:background .18s ease-out,color .18s ease-out,border-color .18s ease-out;
+}
+.cds-size:hover{border-color:rgba(190,74,1,.4)}
+.cds-size[aria-checked="true"]{color:var(--cds-cream);background:var(--cds-accent);border-color:var(--cds-accent)}
+.cds-lock__meaning{
+  font-family:var(--cds-font-voice);font-style:italic;font-size:14px;line-height:1.55;
+  color:#5a5a3e;text-align:center;max-width:48ch;min-height:3.1em;text-wrap:pretty;margin:0;
+}
+
+/* --- ações --- */
+.cds-lock__actions{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.cds-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  font-family:var(--cds-font-ui);font-size:15px;font-weight:700;
+  padding:15px 32px;border-radius:999px;border:none;cursor:pointer;
+  background:var(--cds-accent);color:var(--cds-cream);
+  box-shadow:0 4px 16px rgba(190,74,1,.32);
+  transition:background .2s ease-out,transform .09s ease-out;
+}
+.cds-btn:hover{background:var(--cds-accent-deep)}
+.cds-btn:active{background:var(--cds-accent-deep);transform:scale(.985)}
+.cds-lock--inline .cds-btn--primary{width:100%}
+.cds-btn--ghost{
+  background:none;box-shadow:none;color:var(--cds-ink-muted);
+  font-size:13.5px;font-weight:600;padding:8px 14px;
+}
+.cds-btn--ghost:hover{background:none;color:var(--cds-accent-deep)}
+
+/* foco visível: 3px terracota, sempre */
+.cds-lock :focus-visible{outline:3px solid var(--cds-accent);outline-offset:3px}
+.cds-btn--primary:focus-visible{outline-offset:4px}
+
+/* fundo bloqueado: aplique no container da tela de Setup */
+.cds-lock-blocked{filter:blur(1.5px);pointer-events:none;user-select:none}
+
+@keyframes cds-veil-in{from{opacity:0}to{opacity:1}}
+@keyframes cds-card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .cds-lock__veil,.cds-lock__card{animation:none}
+  .cds-btn,.cds-size{transition:none}
+}
+@media (max-width:640px){
+  .cds-lock{padding:20px}
+  .cds-lock__card,.cds-lock--inline .cds-lock__card{padding:32px 24px 34px}
+  .cds-lock__title{font-size:24px}
+  .cds-lock__sizes{flex-direction:column}
+}
+</style>
+</head>
+<body style="margin:0;background:#edebe0;font-family:'Montserrat',system-ui,sans-serif;color:#3f3e20">
+
+<!-- [2] TEMPLATE ===========================================================
+     O JS gera este markup. Guardado aqui como referência de estrutura /
+     para quem preferir renderizar no servidor ou em JSX.
+
+<div class="cds-lock cds-lock--inline" role="dialog" aria-modal="true"
+     aria-labelledby="cds-lock-title" aria-describedby="cds-lock-body">
+  <div class="cds-lock__veil"></div>
+  <div class="cds-lock__card">
+    <img class="cds-lock__mark" src="/assets/icon-telha.svg" alt="">
+    <div class="cds-lock__pearls" aria-hidden="true">…7 .cds-pearl…</div>
+    <div class="cds-lock__head">
+      <p class="cds-lock__eyebrow">Granularidade do cordão</p>
+      <h2 class="cds-lock__title" id="cds-lock-title">De que tamanho serão as contas deste cordão?</h2>
+      <p class="cds-lock__body" id="cds-lock-body">A conta é o menor pedaço do áudio…</p>
+    </div>
+    <div class="cds-lock__picker">                        (só admin + mode:"inline")
+      <div class="cds-lock__cord"><div class="cds-lock__cord-beads">…</div></div>
+      <div class="cds-lock__sizes" role="radiogroup" aria-labelledby="cds-lock-title">
+        <button class="cds-size" role="radio" aria-checked="true" data-size="m">Média</button>
+      </div>
+      <p class="cds-lock__meaning" aria-live="polite">O equilíbrio recomendado…</p>
+    </div>
+    <div class="cds-lock__actions">
+      <button class="cds-btn cds-btn--primary">Confirmar — isto não muda depois</button>
+      <button class="cds-btn cds-btn--ghost">Voltar ao painel</button>   (só admin)
+    </div>
+  </div>
+</div>
+========================================================================== -->
+
+<!-- [3] JS ================================================================= -->
+<script>
+(function (root) {
+  'use strict';
+
+  var STRINGS = {
+    pt: {
+      eyebrow: 'Granularidade do cordão',
+      titleAdmin: 'De que tamanho serão as contas deste cordão?',
+      bodyAdmin: 'A conta é o menor pedaço do áudio — a unidade de todo corte do projeto. Ela vale para todas as histórias e não muda depois. Escolha antes de criar a primeira sessão.',
+      primaryRedirect: 'Definir o tamanho da conta',
+      primaryConfirm: 'Confirmar — isto não muda depois',
+      secondary: 'Voltar ao painel',
+      titleMember: 'As contas deste projeto ainda não têm tamanho.',
+      bodyMember: 'Peça a quem administra o projeto para escolher o tamanho da conta. As sessões só começam depois disso.',
+      primaryMember: 'Voltar ao painel',
+      names: { p: 'Pequena', m: 'Média', g: 'Grande' },
+      meanings: {
+        p: 'Contas curtas, um corte mais fino. Para histórias densas, onde cada palavra pesa.',
+        m: 'O equilíbrio recomendado entre precisão e leveza. Serve à maioria das histórias.',
+        g: 'Contas longas, um cordão mais leve. Para histórias corridas, de respiração larga.'
+      }
+    },
+    en: {
+      eyebrow: 'Bead granularity',
+      titleAdmin: 'How big will the beads of this cord be?',
+      bodyAdmin: 'The bead is the smallest piece of the audio — the unit of every cut in the project. It applies to every story and does not change afterwards. Choose it before creating the first session.',
+      primaryRedirect: 'Set the bead size',
+      primaryConfirm: 'Confirm — this does not change afterwards',
+      secondary: 'Back to dashboard',
+      titleMember: "This project's beads do not have a size yet.",
+      bodyMember: 'Ask whoever administers the project to choose the bead size. Sessions can only start after that.',
+      primaryMember: 'Back to dashboard',
+      names: { p: 'Small', m: 'Medium', g: 'Large' },
+      meanings: {
+        p: 'Short beads, a finer cut. For dense stories, where every word carries weight.',
+        m: 'The recommended balance between precision and lightness. For most stories.',
+        g: 'Long beads, a lighter cord. For flowing stories with a wide breath.'
+      }
+    }
+  };
+
+  // densidade do cordão por tamanho: [nº de contas, diâmetro px, gap px]
+  var CORD = { p: [30, 9, 4], m: [17, 15, 8], g: [10, 23, 13] };
+  var PEARLS = [8, 11, 14, 16, 14, 11, 8];
+  var FOCUSABLE = 'button:not([disabled]),[href],input,select,textarea,[tabindex]:not([tabindex="-1"])';
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function pearl(size) {
+    var n = el('div', 'cds-pearl');
+    n.style.width = n.style.height = size + 'px';
+    return n;
+  }
+
+  function BeadGranularityLock(opts) {
+    opts = opts || {};
+    this.o = {
+      role: opts.role === 'admin' ? 'admin' : 'member',
+      lang: opts.lang === 'en' ? 'en' : 'pt',
+      mode: opts.mode === 'inline' ? 'inline' : 'redirect',
+      size: CORD[opts.size] ? opts.size : 'm',
+      iconSrc: opts.iconSrc || '',
+      blockSelector: opts.blockSelector || null,
+      container: opts.container || document.body,
+      onSetSize: opts.onSetSize || function () {},
+      onConfirm: opts.onConfirm || function () {},
+      onBackToDashboard: opts.onBackToDashboard || function () {}
+    };
+    this.size = this.o.size;
+    this._render();
+  }
+
+  BeadGranularityLock.prototype._render = function () {
+    var self = this, o = this.o, t = STRINGS[o.lang];
+    var admin = o.role === 'admin', inline = admin && o.mode === 'inline';
+
+    var rootEl = el('div', 'cds-lock' + (inline ? ' cds-lock--inline' : ''));
+    rootEl.setAttribute('role', 'dialog');
+    rootEl.setAttribute('aria-modal', 'true');
+    rootEl.setAttribute('aria-labelledby', 'cds-lock-title');
+    rootEl.setAttribute('aria-describedby', 'cds-lock-body');
+    rootEl.appendChild(el('div', 'cds-lock__veil'));
+
+    var card = el('div', 'cds-lock__card');
+    rootEl.appendChild(card);
+
+    if (o.iconSrc) {
+      var mark = document.createElement('img');
+      mark.className = 'cds-lock__mark';
+      mark.src = o.iconSrc;
+      mark.alt = '';
+      card.appendChild(mark);
+    }
+
+    var pearls = el('div', 'cds-lock__pearls');
+    pearls.setAttribute('aria-hidden', 'true');
+    PEARLS.forEach(function (s) { pearls.appendChild(pearl(s)); });
+    card.appendChild(pearls);
+
+    var head = el('div', 'cds-lock__head');
+    head.appendChild(el('p', 'cds-lock__eyebrow', t.eyebrow));
+    var title = el('h2', 'cds-lock__title', admin ? t.titleAdmin : t.titleMember);
+    title.id = 'cds-lock-title';
+    var body = el('p', 'cds-lock__body', admin ? t.bodyAdmin : t.bodyMember);
+    body.id = 'cds-lock-body';
+    head.appendChild(title);
+    head.appendChild(body);
+    card.appendChild(head);
+
+    if (inline) {
+      var picker = el('div', 'cds-lock__picker');
+      var cord = el('div', 'cds-lock__cord');
+      this._beads = el('div', 'cds-lock__cord-beads');
+      cord.appendChild(this._beads);
+      picker.appendChild(cord);
+
+      var group = el('div', 'cds-lock__sizes');
+      group.setAttribute('role', 'radiogroup');
+      group.setAttribute('aria-labelledby', 'cds-lock-title');
+      this._radios = {};
+      ['p', 'm', 'g'].forEach(function (k) {
+        var b = el('button', 'cds-size', t.names[k]);
+        b.type = 'button';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('data-size', k);
+        b.addEventListener('click', function () { self.setSize(k); });
+        self._radios[k] = b;
+        group.appendChild(b);
+      });
+      picker.appendChild(group);
+
+      this._meaning = el('p', 'cds-lock__meaning');
+      this._meaning.setAttribute('aria-live', 'polite');
+      picker.appendChild(this._meaning);
+      card.appendChild(picker);
+    }
+
+    var actions = el('div', 'cds-lock__actions');
+    var primary = el('button', 'cds-btn cds-btn--primary');
+    primary.type = 'button';
+    if (inline) primary.appendChild(this._lockIcon());
+    primary.appendChild(document.createTextNode(
+      admin ? (inline ? t.primaryConfirm : t.primaryRedirect) : t.primaryMember
+    ));
+    primary.addEventListener('click', function () {
+      if (!admin) return o.onBackToDashboard();
+      if (inline) return o.onConfirm(self.size);
+      o.onSetSize();
+    });
+    actions.appendChild(primary);
+
+    if (admin) {
+      var ghost = el('button', 'cds-btn cds-btn--ghost', t.secondary);
+      ghost.type = 'button';
+      ghost.addEventListener('click', function () { o.onBackToDashboard(); });
+      actions.appendChild(ghost);
+    }
+    card.appendChild(actions);
+
+    this.el = rootEl;
+    this._primary = primary;
+    if (inline) this._paint();
+
+    // bloqueia o fundo
+    this._blocked = o.blockSelector ? document.querySelector(o.blockSelector) : null;
+    if (this._blocked) {
+      this._blocked.classList.add('cds-lock-blocked');
+      this._blocked.setAttribute('aria-hidden', 'true');
+      if ('inert' in this._blocked) this._blocked.inert = true;
+    }
+    this._prevFocus = document.activeElement;
+    o.container.appendChild(rootEl);
+
+    // não descartável: Esc e clique no veil não fecham. Tab fica preso.
+    this._onKey = function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); return; }
+      if (e.key !== 'Tab') return;
+      var f = Array.prototype.filter.call(rootEl.querySelectorAll(FOCUSABLE), function (n) {
+        return n.offsetParent !== null;
+      });
+      if (!f.length) { e.preventDefault(); return; }
+      var first = f[0], last = f[f.length - 1], a = document.activeElement;
+      if (!rootEl.contains(a)) { e.preventDefault(); first.focus(); return; }
+      if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', this._onKey, true);
+    this._prevOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    primary.focus({ preventScroll: true });
+    rootEl.scrollTop = 0;
+  };
+
+  BeadGranularityLock.prototype._lockIcon = function () {
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('width', '17'); svg.setAttribute('height', '17');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2.4');
+    svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('aria-hidden', 'true');
+    var r = document.createElementNS(ns, 'rect');
+    r.setAttribute('x', '4'); r.setAttribute('y', '11');
+    r.setAttribute('width', '16'); r.setAttribute('height', '10'); r.setAttribute('rx', '2');
+    var p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', 'M8 11V7a4 4 0 0 1 8 0v4');
+    svg.appendChild(r); svg.appendChild(p);
+    return svg;
+  };
+
+  BeadGranularityLock.prototype._paint = function () {
+    var t = STRINGS[this.o.lang], c = CORD[this.size], k = this.size;
+    this._beads.style.gap = c[2] + 'px';
+    this._beads.textContent = '';
+    for (var i = 0; i < c[0]; i++) this._beads.appendChild(pearl(c[1]));
+    this._meaning.textContent = t.meanings[k];
+    for (var key in this._radios) {
+      this._radios[key].setAttribute('aria-checked', key === k ? 'true' : 'false');
+    }
+  };
+
+  BeadGranularityLock.prototype.setSize = function (k) {
+    if (!CORD[k] || !this._radios) return;
+    this.size = k;
+    this._paint();
+  };
+
+  BeadGranularityLock.prototype.destroy = function () {
+    document.removeEventListener('keydown', this._onKey, true);
+    document.documentElement.style.overflow = this._prevOverflow || '';
+    if (this._blocked) {
+      this._blocked.classList.remove('cds-lock-blocked');
+      this._blocked.removeAttribute('aria-hidden');
+      if ('inert' in this._blocked) this._blocked.inert = false;
+    }
+    if (this.el && this.el.parentNode) this.el.parentNode.removeChild(this.el);
+    if (this._prevFocus && this._prevFocus.focus) this._prevFocus.focus();
+  };
+
+  BeadGranularityLock.mount = function (opts) { return new BeadGranularityLock(opts); };
+  BeadGranularityLock.strings = STRINGS;
+
+  root.BeadGranularityLock = BeadGranularityLock;
+}(window));
+</script>
+
+<!-- ===================== demo (não copie esta parte) ===================== -->
+<style>
+.demo-btn{font-family:'Montserrat',system-ui,sans-serif;font-size:14px;font-weight:700;padding:13px 26px;border-radius:999px;border:none;cursor:pointer;background:#be4a01;color:#f6f5eb;box-shadow:0 4px 16px rgba(190,74,1,.28)}
+.demo-btn:hover{background:#8f3701}
+.demo-btn:focus-visible{outline:3px solid #be4a01;outline-offset:3px}
+</style>
+<main id="setup" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:60px 24px;background:#f6f5eb">
+  <p style="font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#8a8970;margin:0">Demo · tela de Setup (fundo)</p>
+  <h1 style="font-size:38px;font-weight:700;color:#0a0703;margin:0;letter-spacing:-.015em">Carregue o áudio</h1>
+  <p style="font-family:'Merriweather',Georgia,serif;font-style:italic;font-size:17px;color:#5a5a3e;margin:0">Uma história contada em voz alta vira um colar de contas.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px">
+    <button type="button" data-demo="admin-redirect" class="demo-btn">Admin · só direciona</button>
+    <button type="button" data-demo="admin-inline" class="demo-btn">Admin · com o cartão</button>
+    <button type="button" data-demo="member" class="demo-btn">Não-admin</button>
+    <button type="button" data-demo="admin-inline-en" class="demo-btn">Admin · cartão · EN</button>
+  </div>
+</main>
+<script>
+(function () {
+  var current = null;
+  var base = {
+    iconSrc: '../assets/icon-telha.svg',
+    blockSelector: '#setup',
+    onSetSize: function () { alert('→ navegar para Configurações do projeto'); },
+    onConfirm: function (size) { current.destroy(); current = null; alert('conta confirmada: ' + size); },
+    onBackToDashboard: function () { current.destroy(); current = null; }
+  };
+  var variants = {
+    'admin-redirect': { role: 'admin', mode: 'redirect' },
+    'admin-inline': { role: 'admin', mode: 'inline' },
+    'member': { role: 'member' },
+    'admin-inline-en': { role: 'admin', mode: 'inline', lang: 'en' }
+  };
+  document.querySelectorAll('[data-demo]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (current) current.destroy();
+      var o = Object.assign({}, base, variants[b.dataset.demo]);
+      current = BeadGranularityLock.mount(o);
+    });
+  });
+}());
+</script>
+</body>
+</html>

@@ -29,6 +29,8 @@ interface Ports {
   audioEngine: AudioEngine;
   store: FixtureSessionStore;
   projectSettings: FixtureProjectSettings;
+  /** Quem pode decidir a granularidade (ENG-363) — decide a variante da trava. */
+  canEdit: (projectId: string) => Promise<boolean>;
   navigate: Mock<(to: string) => void>;
 }
 
@@ -41,6 +43,7 @@ function ports(over: Partial<Ports> = {}): Ports {
     // A granularidade é do PROJETO (ENG-352). Instância POR TESTE: o singleton do app
     // guarda a grade carimbada, e um caso vazaria a guarda de divergência no seguinte.
     projectSettings: new FixtureProjectSettings({ seed: { projeto: { level: 'medium' } } }),
+    canEdit: async () => true,
     navigate: vi.fn<(to: string) => void>(),
     ...over,
   };
@@ -54,6 +57,7 @@ function renderSetup(p: Ports) {
       audioEngine={p.audioEngine}
       store={p.store}
       projectSettings={p.projectSettings}
+      canEdit={p.canEdit}
       navigate={p.navigate}
     />,
   );
@@ -300,34 +304,68 @@ describe('Setup — granularidade por nível, sem campo numérico (§8.1)', () =
     expect(screen.getByText(pt.setup.granFromProject)).toBeTruthy();
   });
 
-  it('projeto sem nível manda configurar em vez de assumir um default', async () => {
+  /**
+   * A trava (ENG-363). Enquanto o projeto não tem tamanho de conta, o Setup inteiro
+   * fica atrás do modal: escolher áudio ou marcar consentimento por trás dele seria
+   * trabalho jogado fora, e a linha discreta de antes era fácil demais de ignorar.
+   */
+  it('projeto sem nível bloqueia o formulário atrás da trava', async () => {
     const p = ports({ projectSettings: new FixtureProjectSettings() });
-    const createSpy = vi.spyOn(p.store, 'create');
     renderSetup(p);
-    await pickAudio('conto-do-boto.wav');
-    await confirmConsent();
 
-    await screen.findByText(pt.setup.granUnset);
-    await userEvent.click(screen.getByRole('button', { name: /criar a sessão/i }));
+    await screen.findByRole('dialog');
+    expect(screen.getByText(pt.setup.lock.title)).toBeTruthy();
+    // o formulário existe no DOM, mas o modal o esconde da árvore acessível
+    expect(screen.queryByRole('radio', { name: /conto-do-boto/ })).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByRole('button', { name: /criar a sessão/i })).toBeNull();
+  });
 
-    await waitFor(() => expect(screen.getAllByText(pt.setup.granUnset).length).toBeGreaterThan(0));
-    expect(createSpy).not.toHaveBeenCalled();
-    expect(p.navigate).not.toHaveBeenCalled();
+  it('a trava não se descarta: Esc não fecha', async () => {
+    const p = ports({ projectSettings: new FixtureProjectSettings() });
+    renderSetup(p);
+    await screen.findByRole('dialog');
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
   /**
-   * O convite a configurar passa pelo router. Um `href` recarregaria a página e levaria
-   * junto o título já digitado e o áudio já escolhido — quem sai para decidir o nível
-   * voltaria para um formulário em branco, e a tela teria cobrado duas vezes o mesmo
-   * trabalho por causa de uma tag.
+   * A saída passa pelo router. Um `href` recarregaria a página e levaria junto o
+   * formulário — e quem sai para decidir o nível voltaria para o zero por causa de
+   * uma tag.
    */
-  it('o convite a configurar navega sem recarregar a página', async () => {
+  it('quem administra é levado à tela de configurações, sem recarregar a página', async () => {
     const p = ports({ projectSettings: new FixtureProjectSettings() });
     renderSetup(p);
 
-    await userEvent.click(await screen.findByRole('button', { name: pt.setup.granConfigureLink }));
+    await userEvent.click(await screen.findByRole('button', { name: pt.setup.lock.primary }));
 
     expect(p.navigate).toHaveBeenCalledWith('/settings');
+  });
+
+  /**
+   * Quem não administra não vê controle morto (§9.5): nada de botão desabilitado de
+   * confirmar. Vê a quem pedir — e uma saída, porque a trava nunca é beco sem saída.
+   */
+  it('quem não administra vê a quem pedir e a saída para o painel', async () => {
+    const p = ports({ projectSettings: new FixtureProjectSettings(), canEdit: async () => false });
+    renderSetup(p);
+
+    await screen.findByRole('dialog');
+    expect(screen.getByText(pt.setup.lock.titleMember)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: pt.setup.lock.primary })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: pt.setup.lock.primaryMember }));
+    expect(p.navigate).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('projeto COM nível não mostra trava nenhuma', async () => {
+    renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   /**
