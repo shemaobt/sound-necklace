@@ -19,7 +19,7 @@ import type { ProjectSettingsStore } from '../../../adapters/project-settings';
 import { FIXTURE_PROJECT_ID } from '../../../adapters/project-settings/register';
 import type { SessionStore } from '../../../adapters/sessions';
 import { API_MODE } from '../../app/api-config';
-import { appBucket, resolveProjectId } from '../../app/bucket-adapter';
+import { appBucket, canEditProjectGranularity, resolveProjectId } from '../../app/bucket-adapter';
 import { appProjectSettings } from '../../app/project-settings-adapter';
 import { appSessionStore } from '../../app/session-adapter';
 
@@ -55,4 +55,13 @@ export function defaultProjectSettings(): ProjectSettingsStore {
  */
 export function defaultProjectId(): Promise<string> {
   return API_MODE === 'real' ? resolveProjectId() : Promise.resolve(FIXTURE_PROJECT_ID);
+}
+
+/**
+ * Quem pode confirmar a granularidade: no modo real o papel vem de `my-project-roles`;
+ * na fixture pode sempre, senão o app sem API não passaria da primeira tela. É o que
+ * decide a variante da trava (ENG-363) e o que a tela de configuração oferece.
+ */
+export function defaultCanEdit(projectId: string): Promise<boolean> {
+  return API_MODE === 'real' ? canEditProjectGranularity(projectId) : Promise.resolve(true);
 }

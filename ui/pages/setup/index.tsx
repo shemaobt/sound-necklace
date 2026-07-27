@@ -19,9 +19,11 @@ import { ShemaIcon } from '../../tokens';
 import { buildBeads, createSession, hashPCM } from '../../../domain';
 import { navigate as routerNavigate } from '../../app/router';
 import { sessionStore } from '../../state';
+import { GranularityLock } from './granularity-lock';
 import {
   defaultAudioEngine,
   defaultBucket,
+  defaultCanEdit,
   defaultProjectId,
   defaultProjectSettings,
   defaultResolver,
@@ -80,31 +82,12 @@ const LEVEL_TITLE_KEY: Record<GranularityLevel, string> = {
 
 /**
  * A granularidade do projeto, como o Setup a mostra (ENG-352): aqui ela se LÊ, não se
- * escolhe. Projeto ainda sem nível manda a facilitadora à tela de configuração em vez
- * de deixá-la decidir no meio de uma criação — um default aqui elegeria o sistema de
- * coordenadas do corpus por omissão.
+ * escolhe. Projeto ainda sem nível não chega a esta linha — a trava (ENG-363) o
+ * interrompe antes, porque um default aqui elegeria o sistema de coordenadas do
+ * corpus por omissão.
  */
-function ProjectGranularity({
-  level,
-  navigate,
-}: {
-  level: GranularityLevel | null;
-  navigate: (to: string) => void;
-}) {
+function ProjectGranularity({ level }: { level: GranularityLevel }) {
   const { t } = useTranslation();
-  if (level === null) {
-    return (
-      <p className="cds-setup-note" data-role="warning" role="note">
-        {t('setup.granUnset')}{' '}
-        {/* `navigate`, não href: um href recarrega a página inteira e joga fora o título
-            já digitado e o áudio já escolhido — quem vem configurar o nível volta para
-            um formulário em branco. Toda navegação do app passa pelo router. */}
-        <button type="button" className="cds-setup-link" onClick={() => navigate('/settings')}>
-          {t('setup.granConfigureLink')}
-        </button>
-      </p>
-    );
-  }
   return (
     <div className="cds-setup-gran" aria-labelledby="cds-setup-gran-label">
       <p className="cds-setup-gran-value">{t(LEVEL_TITLE_KEY[level])}</p>
@@ -168,6 +151,8 @@ export interface SetupProps {
   store?: SessionStore;
   /** A granularidade do projeto (§6.1/§8.1, ENG-352) — o Setup lê, não decide. */
   projectSettings?: ProjectSettingsStore;
+  /** Quem pode decidir a granularidade: escolhe a variante da trava (ENG-363). */
+  canEdit?: (projectId: string) => Promise<boolean>;
   /** Projeto dono da sessão; sem prop, resolve por `defaultProjectId()` ao criar. */
   projectId?: string;
   navigate?: (to: string) => void;
@@ -179,6 +164,7 @@ export function Setup({
   audioEngine = defaultAudioEngine(),
   store = defaultSessionStore(),
   projectSettings = defaultProjectSettings(),
+  canEdit = defaultCanEdit,
   projectId,
   navigate = routerNavigate,
 }: SetupProps) {
@@ -189,6 +175,12 @@ export function Setup({
   // A granularidade vem do PROJETO (ENG-352). `null` = ninguém decidiu ainda.
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const level = settings?.granularity_level ?? null;
+  /**
+   * Papel de quem está na tela, só consultado quando falta o nível (ENG-363).
+   * `null` = ainda não se sabe: a trava espera, em vez de abrir como "peça a quem
+   * administra" e trocar o texto debaixo dos olhos de quem administra.
+   */
+  const [canConfirm, setCanConfirm] = useState<boolean | null>(null);
   const [title, setTitle] = useState('');
   const [consent, setConsent] = useState(false);
   /**
@@ -229,7 +221,14 @@ export function Setup({
       try {
         const id = projectId ?? (await defaultProjectId());
         const read = await projectSettings.get(id);
-        if (alive) setSettings(read);
+        if (!alive) return;
+        setSettings(read);
+        // o papel só importa quando falta o nível: é ele que escolhe a variante da
+        // trava. Ler sempre seria uma chamada a mais em todo Setup, por nada.
+        if (read.granularity_level === null) {
+          const admin = await canEdit(id).catch(() => false);
+          if (alive) setCanConfirm(admin);
+        }
       } catch {
         if (alive) setError({ key: 'setup.granReadError' });
       }
@@ -237,7 +236,7 @@ export function Setup({
     return () => {
       alive = false;
     };
-  }, [projectSettings, projectId]);
+  }, [projectSettings, projectId, canEdit]);
 
   const create = async (): Promise<void> => {
     setError(null);
@@ -413,7 +412,7 @@ export function Setup({
               <h2 id="cds-setup-gran-label" className="cds-setup-heading">
                 {t('setup.granHeading')}
               </h2>
-              <ProjectGranularity level={level} navigate={navigate} />
+              {level === null ? null : <ProjectGranularity level={level} />}
 
               <label className="cds-setup-field">
                 <span>{t('setup.titleField')}</span>
@@ -468,6 +467,17 @@ export function Setup({
         <p role="note">{t('setup.trustLine')}</p>
         <p role="note">{t('setup.aiVoiceNotice')}</p>
       </footer>
+
+      {/* Projeto sem tamanho de conta não cria sessão nenhuma (ENG-363): a trava
+          fecha a tela até alguém decidir. Espera o papel para não abrir com o texto
+          errado e trocá-lo em seguida. */}
+      {level === null && canConfirm !== null ? (
+        <GranularityLock
+          canConfirm={canConfirm}
+          onSetSize={() => navigate('/settings')}
+          onBackToDashboard={() => navigate('/dashboard')}
+        />
+      ) : null}
     </section>
   );
 }

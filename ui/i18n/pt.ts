@@ -112,8 +112,20 @@ export const pt = {
     audioReady: 'Áudio pronto',
     granFromProject: 'Definido para o projeto inteiro. Todos os áudios cortam nesta grade.',
     granUnset: 'Este projeto ainda não tem um tamanho de conta definido.',
-    granConfigureLink: 'Definir agora',
     granReadError: 'Não foi possível ler o tamanho da conta do projeto. Recarregue a página.',
+    /* A trava de granularidade (ENG-363): cópia do protótipo do dono,
+       docs/design/trava-granularidade.html. */
+    lock: {
+      eyebrow: 'Granularidade do cordão',
+      title: 'De que tamanho serão as contas deste cordão?',
+      body: 'A conta é o menor pedaço do áudio — a unidade de todo corte do projeto. Ela vale para todas as histórias e não muda depois. Escolha antes de criar a primeira sessão.',
+      primary: 'Definir o tamanho da conta',
+      secondary: 'Voltar ao painel',
+      titleMember: 'As contas deste projeto ainda não têm tamanho.',
+      bodyMember:
+        'Peça a quem administra o projeto para escolher o tamanho da conta. As sessões só começam depois disso.',
+      primaryMember: 'Voltar ao painel',
+    },
     granMismatch:
       'Este áudio cairia numa grade diferente da do resto do projeto. Cortá-lo aqui partiria o projeto em dois sistemas de coordenadas — fale com quem cuida do pipeline antes de seguir.',
     granHeading: 'Tamanho da conta',
