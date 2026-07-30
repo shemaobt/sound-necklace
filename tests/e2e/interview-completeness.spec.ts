@@ -127,12 +127,12 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
   // As respostas SÓ-VOZ chegam com um rascunho de transcrição+tradução (ENG-327).
   // Confirmar o inglês é o que as transforma em texto — e é REQUISITO para exportar:
   // sem isso, `completeSession()` abaixo seria recusada.
-  const confirmedEn = new Map<number, string>();
+  const confirmedSrc = new Map<number, string>();
   for (let i = 0; i < EXPECTED_WORDINGS.length; i++) {
     const { voice, typed } = plan(i);
-    if (voice && !typed) confirmedEn.set(i, await app.confirmDraftInReport(i));
+    if (voice && !typed) confirmedSrc.set(i, await app.confirmDraftInReport(i));
   }
-  expect(confirmedEn.size).toBe(11);
+  expect(confirmedSrc.size).toBe(11);
 
   // ——— conclui e guarda os documentos ———
   await app.completeSession();
@@ -179,9 +179,11 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
       expect(storedTyped).toBe(typedText(i)); // texto na chave level{1,2,3} exata
       expect(md).toContain(typedText(i)); // e refletido na célula
     } else if (voice) {
-      // só-voz: o inglês CONFIRMADO virou a resposta, pela mesma chave de sempre
-      expect(storedTyped).toBe(confirmedEn.get(i));
-      expect(md).toContain(confirmedEn.get(i)!);
+      // ENG-370: a TRANSCRIÇÃO confirmada virou a resposta (a tela fica na língua
+      // falada), e o `.md` sai com o inglês que viajou ao lado dela
+      expect(storedTyped).toBe(confirmedSrc.get(i));
+      expect(md).not.toContain(confirmedSrc.get(i)!);
+      expect(md).toContain(`[fixture translation] answer for ${slot.k}`);
     } else {
       expect(storedTyped).toBe(''); // sem gravação e sem texto: nada
     }

@@ -6,7 +6,7 @@ Path: @/ui/pages/report
 
 - The report station (ENG-250): the consolidated, **editable** mapping report (PRD v2 §8.7 "The report", redesign §6.6). One card per question, in the exact order the domain produces (`questionSequence`), each numbered `Q<n>` by its position in the conversation. **Downloading is the NEXT screen's job** — the footer's single action is "Guardar os documentos →".
 - A wiring component: it reads the pure @/domain session through the @/ui/state session store, renders an editable card per question, dispatches text writes through the domain answer store, plays voice answers through the injected `VoiceRecorder` port, and — since ENG-327 — hosts the **review of machine drafts** (transcription + PT→EN translation) coming from the `Transcriber` port (@/adapters/stt).
-- **This is where a recorded answer becomes text.** The recording never reaches the artifact; the confirmed English does. That makes this station a required stop, not a nicety: @/contracts `reportExportStatus` blocks the export while any recorded answer still has no confirmed text.
+- **This is where a recorded answer becomes text.** The recording never reaches the artifact. Since ENG-370 the human confirms the TRANSCRIPT, in the language it was spoken, and that is what the review shows; the English rides along under `EN_ANSWER_PREFIX` and is what @/contracts serializes. That makes this station a required stop, not a nicety: @/contracts `reportExportStatus` blocks the export while any recorded answer still has no confirmed text.
 - Facilitator surface (§7.2): unlike the listener screens, digits/IDs are allowed here — the report lists scenes and phrases with numbers, kinds and section headers.
 
 ### How it fits into the larger codebase

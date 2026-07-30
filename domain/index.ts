@@ -102,6 +102,7 @@ export {
   productiveFrases,
   questionSequence,
   setAnswer,
+  EN_ANSWER_PREFIX,
   voiceAnswerPath,
   type AnswerSlot,
   type ProductiveFrase,

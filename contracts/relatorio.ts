@@ -24,6 +24,7 @@
  */
 
 import {
+  EN_ANSWER_PREFIX,
   L1_Q,
   L2_Q,
   L3_Q,
@@ -39,9 +40,27 @@ const EMPTY_MAPPING: Mapping = { level1: {}, level2: {}, level3: {} };
 
 const NO_ANSWER = '_(no answer)_';
 
-/** A célula da resposta: o texto confirmado (inglês) ou o marcador de ausência. */
-function answerCell(raw: string | undefined): string {
-  return (raw ?? '').trim() || NO_ANSWER;
+/**
+ * A célula da resposta: o INGLÊS, ou o marcador de ausência.
+ *
+ * ENG-370: a célula de resposta na tela passou a guardar o transcript na língua em que
+ * foi falado — quem revisa confere o que foi dito, não uma tradução. O artefato continua
+ * inglês (ENG-326/ENG-356), então ele lê a chave reservada `en__<k>`, que a transcrição
+ * produz e ninguém confirma (decisão do dono: só a TRANSCRIÇÃO se confirma).
+ *
+ * O fallback para a célula não é zelo: é o que mantém honesta a resposta DIGITADA, que
+ * nunca teve tradução e para a qual a célula é tudo o que existe — e é também por ele
+ * que o golden segue byte-idêntico, já que todos os casos do golden são digitados e a
+ * referência não conhece `en__`. Um inglês em branco cai no mesmo caminho: apagar a
+ * resposta seria pior que emiti-la na língua de origem.
+ */
+function answerCell(bucket: Record<string, string> | undefined, k: string): string {
+  // A CÉLULA é que diz se existe resposta: ela só se preenche quando um humano confirma
+  // o transcript. Enquanto estiver vazia, um `en__` já semeado é rascunho não confirmado
+  // e NÃO sai — a regra continua valendo por construção, não por lembrança.
+  const cell = (bucket?.[k] ?? '').trim();
+  if (!cell) return NO_ANSWER;
+  return (bucket?.[EN_ANSWER_PREFIX + k] ?? '').trim() || cell;
 }
 
 /** Serializa o relatório de mapeamento em Markdown (inglês, §10.4). */
@@ -66,7 +85,7 @@ export function buildMapReport(state: SessionState): string {
   L.push('## Level 1 — the whole story');
   for (const q of L1_Q) {
     L.push('- **' + q.q_en + '**' + (q.field ? ' _(' + q.field + ')_' : ''));
-    L.push('  ' + answerCell(m.level1[q.k]));
+    L.push('  ' + answerCell(m.level1, q.k));
   }
 
   L.push('');
@@ -83,7 +102,7 @@ export function buildMapReport(state: SessionState): string {
         (p.tag_state === 'none_fit' ? ' [none_fit]' : ''),
     );
     for (const q of L2_Q) {
-      L.push('- **' + q.q_en + '** ' + answerCell(m.level2[p.part_id]?.[q.k]));
+      L.push('- **' + q.q_en + '** ' + answerCell(m.level2[p.part_id], q.k));
     }
   }
 
@@ -101,7 +120,7 @@ export function buildMapReport(state: SessionState): string {
         '**Phrase ' + idx + ' (' + fr.prop_id + ') — beads ' + fr.span.s + '–' + fr.span.e + ':**',
       );
       for (const q of L3_Q) {
-        L.push('- ' + q.q_en + ' ' + answerCell(m.level3[fr.prop_id]?.[q.k]));
+        L.push('- ' + q.q_en + ' ' + answerCell(m.level3[fr.prop_id], q.k));
       }
     }
   }
