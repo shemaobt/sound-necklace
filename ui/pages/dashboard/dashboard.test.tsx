@@ -165,17 +165,21 @@ describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
     await screen.findByRole('list', { name: 'histórias' });
   });
 
-  it('a casa troca o idioma sem abrir sessão (ENG-340)', async () => {
+  /**
+   * ENG-340 punha o idioma na casa, para ser decidido antes de abrir sessão. A decisão
+   * segue sendo de casa; o que mudou na ENG-371 é o gesto: em vez de alternar em um
+   * clique — fácil de trocar sem querer no meio do trabalho, e o idioma governa a voz da
+   * entrevista — a casa LEVA a Configurações, onde a escolha mora ao lado da granularidade.
+   */
+  it('a casa leva às Configurações, onde o idioma se decide (ENG-340/ENG-371)', async () => {
     const store = new FixtureSessionStore();
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
     await screen.findByRole('list', { name: 'histórias' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mudar para inglês' }));
-    expect(screen.getByRole('heading', { name: 'Your stories' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Mudar para inglês' })).toBeNull();
 
-    // devolve o idioma para não vazar aos demais testes
-    await userEvent.click(screen.getByRole('button', { name: 'Switch to Portuguese' }));
-    expect(screen.getByRole('heading', { name: 'Suas histórias' })).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+    await waitFor(() => expect(window.location.pathname).toBe('/settings'));
   });
 
   it('“Sair” encerra a sessão e volta ao login', async () => {

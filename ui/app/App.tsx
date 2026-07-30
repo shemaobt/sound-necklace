@@ -540,6 +540,7 @@ export function App() {
       muted={muted}
       onToggleMuted={() => appStore.getState().toggleMuted()}
       onBack={() => navigate('/dashboard')}
+      onSettings={() => navigate('/settings')}
       // o booster só faz sentido com uma sessão tocável aberta (ENG-314)
       volume={storyVolume}
       onVolume={route.name === 'session' ? onStoryVolume : undefined}

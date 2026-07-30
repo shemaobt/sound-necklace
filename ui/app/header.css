@@ -70,7 +70,7 @@
   gap: 10px;
 }
 
-.cds-header-lang {
+.cds-header-settings {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -84,6 +84,7 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
+  cursor: pointer;
 }
 
 .cds-header-sound {

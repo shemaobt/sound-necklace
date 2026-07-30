@@ -42,7 +42,8 @@
   color: var(--cds-ink, #0a0703);
 }
 
-/* o toggle PT/EN da casa (ENG-340) — o mesmo gesto do cds-header-lang do shell */
+/* a entrada para Configurações na casa — o mesmo destino que o cabeçalho do
+   shell oferece (ENG-371; era o toggle PT/EN da ENG-340) */
 .cds-dashboard-lang {
   padding: 6px 10px;
   border: 1px solid var(--cds-hairline);

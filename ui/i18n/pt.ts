@@ -17,7 +17,7 @@ export const pt = {
     soundMenu: 'som e volume',
     storyVolume: 'volume da história',
     unmute: 'Ligar o som da interface',
-    switchLanguage: 'Mudar para inglês',
+    settings: 'Configurações',
   },
   autosave: {
     saving: 'Salvando…',
