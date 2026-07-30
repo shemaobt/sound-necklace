@@ -401,52 +401,56 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
 
     finish();
-    const en = await screen.findByDisplayValue('He told of the dolphin.');
+    // o que se revisa é o TRANSCRIPT, na língua falada (ENG-370)
+    const src = await screen.findByDisplayValue('Ele contou do boto.');
 
-    const card = en.closest('.cds-report-card') as HTMLElement;
-    expect(within(card).getByText('Ele contou do boto.')).toBeTruthy();
+    const card = src.closest('.cds-report-card') as HTMLElement;
     expect(within(card).getByText(/sugestão/i)).toBeTruthy();
-    // o rascunho NÃO virou resposta: o .md continua sem ele
-    expect(buildMapReport(sessionStore.getState().session!)).not.toContain(
-      'He told of the dolphin.',
-    );
+    // nada disto virou resposta ainda: o .md não traz nem o transcript nem o inglês
+    const md = buildMapReport(sessionStore.getState().session!);
+    expect(md).not.toContain('He told of the dolphin.');
+    expect(md).not.toContain('Ele contou do boto.');
   });
 
-  it('confirmar põe o inglês na resposta — e é ele que sai no .md', async () => {
+  it('confirmar põe o TRANSCRIPT na resposta — e o .md sai em inglês (ENG-370)', async () => {
     const { stt, finish } = controllableStt(DRAFTS);
     load(report());
     render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
 
     finish();
-    const en = await screen.findByDisplayValue('He told of the dolphin.');
-    const card = en.closest('.cds-report-card') as HTMLElement;
+    const src = await screen.findByDisplayValue('Ele contou do boto.');
+    const card = src.closest('.cds-report-card') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: /confirmar/i }));
+
+    // a TELA fica na língua falada…
+    expect((within(card).getByLabelText('resposta') as HTMLTextAreaElement).value).toBe(
+      'Ele contou do boto.',
+    );
+    // …e o ARTEFATO, em inglês
+    const md = buildMapReport(sessionStore.getState().session!);
+    expect(md).toContain('He told of the dolphin.');
+    expect(md).not.toContain('Ele contou do boto.');
+  });
+
+  it('corrigir o transcript antes de confirmar guarda o texto corrigido', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    finish();
+    const src = await screen.findByDisplayValue('Ele contou do boto.');
+    await userEvent.clear(src);
+    await userEvent.type(src, 'Ele falou do boto-cor-de-rosa.');
+
+    const card = src.closest('.cds-report-card') as HTMLElement;
     await userEvent.click(within(card).getByRole('button', { name: /confirmar/i }));
 
     expect((within(card).getByLabelText('resposta') as HTMLTextAreaElement).value).toBe(
-      'He told of the dolphin.',
+      'Ele falou do boto-cor-de-rosa.',
     );
-    expect(buildMapReport(sessionStore.getState().session!)).toContain('He told of the dolphin.');
   });
 
-  it('editar o inglês antes de confirmar guarda o texto editado, não o rascunho', async () => {
-    const { stt, finish } = controllableStt(DRAFTS);
-    load(report());
-    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
-
-    finish();
-    const en = await screen.findByDisplayValue('He told of the dolphin.');
-    await userEvent.clear(en);
-    await userEvent.type(en, 'He spoke about the river dolphin.');
-
-    const card = en.closest('.cds-report-card') as HTMLElement;
-    await userEvent.click(within(card).getByRole('button', { name: /confirmar/i }));
-
-    const md = buildMapReport(sessionStore.getState().session!);
-    expect(md).toContain('He spoke about the river dolphin.');
-    expect(md).not.toContain('He told of the dolphin.');
-  });
-
-  it('apagar o inglês de propósito o mantém apagado ao remontar', async () => {
+  it('apagar o transcript de propósito o mantém apagado ao remontar', async () => {
     const { stt, finish } = controllableStt(DRAFTS);
     load(report());
     const view = render(
@@ -454,8 +458,8 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     );
 
     finish();
-    const en = await screen.findByDisplayValue('He told of the dolphin.');
-    await userEvent.clear(en);
+    const src = await screen.findByDisplayValue('Ele contou do boto.');
+    await userEvent.clear(src);
 
     view.unmount();
     const again = controllableStt(DRAFTS);
@@ -466,8 +470,8 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
 
     // o rascunho NÃO ressuscita: a pessoa já o recusou
     const scope = within(remount.container);
-    await scope.findByText('Ele contou do boto.'); // a origem chegou de novo…
-    expect((scope.getByLabelText(/em inglês/i) as HTMLTextAreaElement).value).toBe('');
+    const field = (await scope.findByLabelText(/o que se ouviu/i)) as HTMLTextAreaElement;
+    expect(field.value).toBe(''); // o rascunho NÃO ressuscita: a pessoa já o recusou
   });
 
   it('regravar a resposta substitui o rascunho obsoleto', async () => {
@@ -482,7 +486,7 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
       />,
     );
     finish();
-    await screen.findByDisplayValue('He told of the dolphin.');
+    await screen.findByDisplayValue('Ele contou do boto.');
     view.unmount();
 
     // a pessoa voltou, regravou (versão 2) e o job devolve outra tradução
@@ -499,9 +503,9 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
       />,
     );
 
-    // confirmar não pode escrever a tradução de um áudio descartado
-    await screen.findByDisplayValue('He told it again.');
-    expect(screen.queryByDisplayValue('He told of the dolphin.')).toBeNull();
+    // confirmar não pode escrever o transcript de um áudio descartado
+    await screen.findByDisplayValue('Ele contou de novo.');
+    expect(screen.queryByDisplayValue('Ele contou do boto.')).toBeNull();
   });
 
   it('uma pergunta sem gravação nunca ganha rascunho', async () => {
@@ -511,7 +515,7 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
 
     finish();
-    await screen.findByDisplayValue('He told of the dolphin.');
+    await screen.findByDisplayValue('Ele contou do boto.');
 
     const card = cardFor(outra.q);
     expect(within(card).queryByText(/sugestão/i)).toBeNull();
@@ -537,7 +541,7 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     expect(region.textContent).toBe('');
 
     finish();
-    await screen.findByDisplayValue('He told of the dolphin.');
+    await screen.findByDisplayValue('Ele contou do boto.');
     // e o que se anuncia é o RESUMO, não o rascunho inteiro
     expect(region.textContent).toMatch(/1 resposta para revisar/i);
     expect(region.textContent).not.toContain('He told of the dolphin.');

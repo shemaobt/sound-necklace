@@ -295,3 +295,87 @@ describe('relatorioFilename', () => {
     expect(relatorioFilename('')).toBe('story-mapping-report.md');
   });
 });
+
+/**
+ * ENG-370: a célula de resposta na TELA passa a guardar o transcript na língua falada;
+ * o artefato continua em inglês. O texto inglês vive na chave reservada `en__<k>`, que a
+ * gravação produz e ninguém confirma (decisão do dono, 2026-07-30 — só a TRANSCRIÇÃO se
+ * confirma). Sem essa chave — resposta digitada, ou tradução que falhou — a célula é a
+ * única coisa que existe, e é ela que sai. É esse fallback que mantém o golden intacto:
+ * os casos do golden são todos digitados e não conhecem `en__`.
+ */
+describe('buildMapReport — o artefato lê o inglês, a tela lê a língua falada (ENG-370)', () => {
+  it('havendo inglês na chave reservada, é ele que sai — não a célula', () => {
+    const md = buildMapReport(
+      baseState({
+        mapping: {
+          ...emptyMapping(),
+          level1: {
+            recontar: 'A moça respigou no campo.',
+            en__recontar: 'She gleaned in the field.',
+          },
+        },
+      }),
+    );
+
+    expect(md).toContain('She gleaned in the field.');
+    expect(md).not.toContain('A moça respigou no campo.');
+  });
+
+  it('sem inglês, a célula sai como sempre — é o que segura o golden', () => {
+    const md = buildMapReport(
+      baseState({
+        mapping: { ...emptyMapping(), level1: { recontar: 'A story about gleaning.' } },
+      }),
+    );
+
+    expect(md).toContain('A story about gleaning.');
+  });
+
+  it('inglês em branco não apaga a resposta: cai na célula', () => {
+    const md = buildMapReport(
+      baseState({
+        mapping: {
+          ...emptyMapping(),
+          level1: { recontar: 'Ficou só o transcript.', en__recontar: '   ' },
+        },
+      }),
+    );
+
+    expect(md).toContain('Ficou só o transcript.');
+  });
+
+  it('vale nos três níveis, não só no level 1', () => {
+    const md = buildMapReport(
+      baseState({
+        parts: [part({})],
+        frases: [frase({})],
+        mapping: {
+          level1: {},
+          level2: { PT1: { quem: 'as duas mulheres', en__quem: 'the two women' } },
+          level3: { P1: { oque: 'ela chegou', en__oque: 'she arrived' } },
+        },
+      }),
+    );
+
+    expect(md).toContain('the two women');
+    expect(md).toContain('she arrived');
+    expect(md).not.toContain('as duas mulheres');
+    expect(md).not.toContain('ela chegou');
+  });
+});
+
+describe('buildMapReport — rascunho não confirmado não entra no artefato (ENG-370)', () => {
+  it('inglês semeado com a célula ainda vazia NÃO sai — sai "_(no answer)_"', () => {
+    // o inglês é semeado assim que a transcrição chega, ANTES de alguém confirmar;
+    // é a célula, preenchida só na confirmação, que autoriza a linha a existir
+    const md = buildMapReport(
+      baseState({
+        mapping: { ...emptyMapping(), level1: { en__recontar: 'She gleaned in the field.' } },
+      }),
+    );
+
+    expect(md).not.toContain('She gleaned in the field.');
+    expect(md).toContain('_(no answer)_');
+  });
+});

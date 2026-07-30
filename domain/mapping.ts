@@ -79,6 +79,20 @@ export function setAnswer(state: SessionState, slot: AnswerSlot, text: string): 
   };
 }
 
+/**
+ * Prefixo da chave reservada onde vive o INGLÊS de uma resposta (ENG-327/ENG-370).
+ *
+ * Mora aqui, e não na tela, porque desde a ENG-370 dois lados dependem dele: a UI o
+ * ESCREVE (a tradução que a transcrição produziu) e `contracts/relatorio` o LÊ (o
+ * artefato é inglês, a tela é a língua falada). Duas definições virariam duas
+ * convenções, e a que divergisse esvaziaria células do relatório em silêncio.
+ *
+ * A chave convive no mesmo balde das respostas de verdade — nada enumera esse balde,
+ * tudo o lê por chave de pergunta conhecida, então uma chave reservada é invisível
+ * para quem não a procura. Mesmo desenho de `nota__<k>`.
+ */
+export const EN_ANSWER_PREFIX = 'en__';
+
 /** Caminho do recurso de voz de uma resposta (PRD §10.4 / O5). */
 export function voiceAnswerPath(slot: AnswerSlot): string {
   switch (slot.level) {

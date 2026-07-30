@@ -1,7 +1,7 @@
 /**
  * Dispara o job de transcrição+tradução ao ABRIR o relatório e acompanha até
  * terminar (PRD v2 §8.7, emenda ENG-326). O rascunho que volta é sugestão: fica
- * no cartão até um humano confirmar o inglês — este hook nunca escreve resposta.
+ * no cartão até um humano confirmar a transcrição — este hook nunca escreve resposta.
  *
  * Consulta em `setTimeout` recursivo, não `setInterval`: com `setInterval` uma
  * consulta lenta não segura a próxima e elas se empilham. Pausa com a aba
