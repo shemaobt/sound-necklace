@@ -285,6 +285,22 @@ describe('Relatório — renderização por tipo de resposta (redesign §6.6)', 
     const ledCard = cardFor(ledQ.q);
     expect(within(ledCard).getByRole('img', { name: 'conduzida pela facilitadora' })).toBeTruthy();
   });
+
+  it('a gravação continua audível depois que a resposta tem texto (ENG-368)', async () => {
+    const q = L1_Q[1]!; // arco_inicio_fim
+    const recorder = new FixtureVoiceRecorder();
+    await seedVoice(recorder, voiceAnswerPath({ level: 1, k: q.k }));
+
+    // texto confirmado E gravação: a voz é a PROCEDÊNCIA da célula, e é justamente ao
+    // conferir o texto que se quer reouvir. Some o player, some o único jeito de checar.
+    load(setAnswer(report(), { level: 1, k: q.k }, 'era uma vez'));
+    render(<Report recorder={recorder} />);
+
+    const card = cardFor(q.q);
+    expect(await within(card).findByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+    expect(card.querySelectorAll('.cds-waveform-bar').length).toBeGreaterThan(0);
+    expect((within(card).getByRole('textbox') as HTMLTextAreaElement).value).toBe('era uma vez');
+  });
 });
 
 describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)', () => {

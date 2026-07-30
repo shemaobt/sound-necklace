@@ -376,7 +376,10 @@ function ReportCard({
         ) : null}
       </div>
 
-      {voiceOnly ? (
+      {/* A gravação fica enquanto existir, não só enquanto for a única resposta (ENG-368):
+          ela é a PROCEDÊNCIA da célula, e confirmar o texto é justamente quando se quer
+          reouvir para conferir. Antes o player sumia no instante da confirmação. */}
+      {hasVoice ? (
         <div className="cds-report-voice">
           <Button
             variant="ghost"
