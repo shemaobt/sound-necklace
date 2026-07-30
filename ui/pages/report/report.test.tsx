@@ -1,4 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react';
+import baseCss from '../../tokens/base.css?raw';
+import reportCss from './report.css?raw';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -285,6 +287,22 @@ describe('Relatório — renderização por tipo de resposta (redesign §6.6)', 
     const ledCard = cardFor(ledQ.q);
     expect(within(ledCard).getByRole('img', { name: 'conduzida pela facilitadora' })).toBeTruthy();
   });
+
+  it('a gravação continua audível depois que a resposta tem texto (ENG-368)', async () => {
+    const q = L1_Q[1]!; // arco_inicio_fim
+    const recorder = new FixtureVoiceRecorder();
+    await seedVoice(recorder, voiceAnswerPath({ level: 1, k: q.k }));
+
+    // texto confirmado E gravação: a voz é a PROCEDÊNCIA da célula, e é justamente ao
+    // conferir o texto que se quer reouvir. Some o player, some o único jeito de checar.
+    load(setAnswer(report(), { level: 1, k: q.k }, 'era uma vez'));
+    render(<Report recorder={recorder} />);
+
+    const card = cardFor(q.q);
+    expect(await within(card).findByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+    expect(card.querySelectorAll('.cds-waveform-bar').length).toBeGreaterThan(0);
+    expect((within(card).getByRole('textbox') as HTMLTextAreaElement).value).toBe('era uma vez');
+  });
 });
 
 describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)', () => {
@@ -523,5 +541,32 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     // e o que se anuncia é o RESUMO, não o rascunho inteiro
     expect(region.textContent).toMatch(/1 resposta para revisar/i);
     expect(region.textContent).not.toContain('He told of the dolphin.');
+  });
+});
+
+/**
+ * ENG-372: o foco global (base.css) desenha um retângulo telha de 3px afastado 3px.
+ * Num campo transparente de largura total isso vira uma caixa que briga com a linha
+ * quieta que o campo é. Aqui o indicador troca de FORMA, não de força — e o teste
+ * existe para que ninguém o apague junto com o outline.
+ */
+describe('Relatório — foco do campo de resposta (ENG-372)', () => {
+  const rule =
+    /\.cds-report-typed:focus-visible,\s*\.cds-report-note:focus-visible\s*{[^}]*}/.exec(
+      reportCss,
+    )?.[0] ?? '';
+
+  it('abre mão do retângulo global', () => {
+    expect(rule).toContain('outline: none');
+  });
+
+  it('mas mantém um indicador de foco visível — geometria E cor, não só cor', () => {
+    // o filete da esquerda engrossa E vira telha: quem não distingue cor ainda vê a mudança
+    expect(rule).toContain('border-left-width: 3px');
+    expect(rule).toContain('var(--cds-telha)');
+  });
+
+  it('não mexe na regra global de foco', () => {
+    expect(baseCss).toContain('outline: 3px solid var(--cds-telha)');
   });
 });

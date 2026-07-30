@@ -3,20 +3,25 @@ import * as Popover from '@radix-ui/react-popover';
 
 import { SaveChip, type SaveStatus } from '../molecules';
 import { ShemaIcon } from '../tokens';
-import { setLang, type Lang } from '../i18n';
 import './header.css';
 
 /**
  * Cabeçalho do app (Protótipo.dc.html, faixa de 64px): pill "← Histórias" + só o
- * ícone da marca à esquerda; toggle de idioma PT/EN (ENG-279, não existe no
- * protótipo mas fica, discreto) e o toggle de som à direita. Sem título — o nome
- * do app vive no dashboard. A variante escura (telas cerimoniais) é CSS puro:
- * `.cds-app:has(...)` troca as custom properties de chrome (app.css).
+ * ícone da marca à esquerda; entrada para Configurações e o toggle de som à
+ * direita. Sem título — o nome do app vive no dashboard. A variante escura (telas
+ * cerimoniais) é CSS puro: `.cds-app:has(...)` troca as custom properties de
+ * chrome (app.css).
+ *
+ * O idioma NÃO se troca daqui (ENG-371, decisão do dono): um botão PT/EN de um
+ * clique, ao lado do som, convidava a alternar no meio de uma sessão — e o idioma
+ * governa a voz da entrevista e o locale mandado ao STT. Agora mora em
+ * Configurações, junto das outras decisões do projeto, a um clique de distância.
  */
 export function Header({
   muted,
   onToggleMuted,
   onBack,
+  onSettings,
   volume = 1,
   onVolume,
   autosave,
@@ -24,6 +29,8 @@ export function Header({
   muted: boolean;
   onToggleMuted: () => void;
   onBack: () => void;
+  /** Abre Configurações (idioma da interface + granularidade do projeto). */
+  onSettings: () => void;
   /** Estado do autosave; presente numa sessão aberta, mostra o selo de salvamento. */
   autosave?: SaveStatus;
   /** Volume da história (0–2; 1 = neutro) — só faz sentido com sessão aberta. */
@@ -34,8 +41,7 @@ export function Header({
    */
   onVolume?: (value: number) => void;
 }) {
-  const { t, i18n } = useTranslation();
-  const other: Lang = i18n.language.startsWith('en') ? 'pt' : 'en';
+  const { t } = useTranslation();
 
   return (
     <header className="cds-header">
@@ -77,11 +83,25 @@ export function Header({
         ) : null}
         <button
           type="button"
-          className="cds-header-lang"
-          aria-label={t('header.switchLanguage')}
-          onClick={() => setLang(other)}
+          className="cds-header-settings"
+          aria-label={t('header.settings')}
+          onClick={onSettings}
         >
-          {other.toUpperCase()}
+          <svg
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.9}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
         </button>
         {onVolume ? (
           <Popover.Root>

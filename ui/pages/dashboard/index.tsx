@@ -12,7 +12,6 @@ import {
   type SessionSummary,
 } from '../../../contracts';
 import { Button, Skeleton } from '../../atoms';
-import { setLang, type Lang } from '../../i18n';
 import { ShemaIcon } from '../../tokens';
 import {
   type ArtifactDownloads,
@@ -192,7 +191,6 @@ export function Dashboard({
 }: DashboardProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.startsWith('en') ? 'en-US' : 'pt-BR';
-  const otherLang: Lang = i18n.language.startsWith('en') ? 'pt' : 'en';
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [listError, setListError] = useState(false);
   const [downloaded, setDownloaded] = useState<Set<string>>(new Set());
@@ -277,15 +275,15 @@ export function Dashboard({
         </div>
 
         <div className="cds-dashboard-user">
-          {/* trocar de idioma é decisão de casa, antes de abrir sessão (ENG-340) —
-              o mesmo gesto do cabeçalho do shell */}
+          {/* O idioma é decisão de casa, antes de abrir sessão (ENG-340), mas deixou
+              de ser um clique daqui (ENG-371): vive em Configurações, junto da
+              granularidade — o mesmo destino que o cabeçalho do shell oferece. */}
           <button
             type="button"
             className="cds-dashboard-lang"
-            aria-label={t('header.switchLanguage')}
-            onClick={() => setLang(otherLang)}
+            onClick={() => navigate('/settings')}
           >
-            {otherLang.toUpperCase()}
+            {t('header.settings')}
           </button>
           {user ? (
             <>
