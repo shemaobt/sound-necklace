@@ -153,6 +153,21 @@
   overflow: hidden;
 }
 
+/* O foco global (base.css) é um retângulo de 3px afastado 3px — desenhado em volta
+   de um campo transparente de largura total, vira uma caixa laranja que briga com a
+   linha quieta que o campo é (ENG-372). Aqui ele troca de FORMA, não de força: o
+   mesmo telha, na mesma espessura, promovendo o filete que já existe à esquerda, mais
+   um leve calor no fundo. Continua inconfundível — e continua sendo cor E geometria,
+   nunca só cor. A regra global fica intacta para todo o resto do app. */
+.cds-report-typed:focus-visible,
+.cds-report-note:focus-visible {
+  outline: none;
+  border-left-color: var(--cds-telha);
+  border-left-width: 3px;
+  padding-left: 13px; /* compensa o filete mais grosso: o texto não pula ao focar */
+  background: color-mix(in srgb, var(--cds-telha) 5%, transparent);
+}
+
 /* vazio, o campo LÊ-SE como a linha em itálico do protótipo (r.noAnswer) — quem
    não vai escrever não vê um formulário; quem vai, é só tocar e escrever */
 .cds-report-typed::placeholder {
