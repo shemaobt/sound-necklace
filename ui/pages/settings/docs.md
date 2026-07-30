@@ -12,7 +12,7 @@ Path: @/ui/pages/settings
 
 - Writes through @/adapters/project-settings → `PUT /api/sound-necklace/projects/{id}/settings` (tripod-api, ENG-361). The API gates the write on `project_admin`; this screen reads the same role up front (`defaultCanEdit` → `canEditProjectGranularity` in @/ui/app/bucket-adapter.ts) so it never offers a control that is going to 403.
 - @/ui/pages/setup is the reader: it displays the confirmed size and refuses an audio whose acousteme would resolve to a different grid. A project with no granularity yet links here.
-- The language card drives `setLang` from @/ui/i18n — the same singleton the header toggle uses, so the two never drift.
+- The language card drives `setLang` from @/ui/i18n. Since ENG-371 this is the ONLY surface that changes the UI language: the header and Dashboard toggles were removed, so there is nothing left to drift against. `/settings` needs no route entry — @/ui/app/registries builds the station registry by globbing `/ui/pages/*/index.tsx`, and an unmatched top-level path resolves by its first segment in @/ui/app/App.tsx.
 
 ### Things to Know
 

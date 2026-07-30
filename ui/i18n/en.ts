@@ -14,7 +14,7 @@ export const en: Dict = {
     soundMenu: 'sound and volume',
     storyVolume: 'story volume',
     unmute: 'Turn interface sound on',
-    switchLanguage: 'Switch to Portuguese',
+    settings: 'Settings',
   },
   autosave: {
     saving: 'Saving…',
