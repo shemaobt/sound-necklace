@@ -179,8 +179,15 @@ test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate co
 
   // Troca a UI para INGLÊS. De quebra isto é um smoke test do chrome EN: o fluxo só
   // avança daqui pra frente se os rótulos ingleses existirem de verdade.
-  await page.getByRole('button', { name: 'Mudar para inglês' }).click();
-  await expect(page.getByRole('button', { name: 'Switch to Portuguese' })).toBeVisible();
+  //
+  // O idioma mudou de casa na ENG-371: sai-se da sessão, escolhe-se em Configurações e
+  // volta-se. O desvio É o atrito pretendido — e de brinde este teste passa a provar que
+  // a sessão sobrevive a ele, que antes ninguém verificava.
+  const sessionUrl = page.url();
+  await page.getByRole('button', { name: 'Configurações' }).click();
+  await page.getByRole('radio', { name: 'English' }).click();
+  await page.goto(sessionUrl);
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
 
   // Conclui e baixa com a UI em inglês.
   await app.gotoStep('Save');
