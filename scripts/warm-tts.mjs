@@ -24,7 +24,7 @@ if (!TOKEN) {
 }
 
 const { L1_Q, L2_Q, L3_Q } = await import('../domain/mapeamento-scripts.ts');
-const { questionTextFor } = await import('../ui/i18n/mapeamento-questions.ts');
+const { questionTextFor } = await import('../ui/i18n/conversation-questions.ts');
 
 const jobs = [];
 for (const [level, questions] of [
