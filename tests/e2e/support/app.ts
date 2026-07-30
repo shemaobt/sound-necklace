@@ -236,6 +236,12 @@ export class ColarApp {
   /** A digitação vive no RELATÓRIO (a facilitadora escreve depois — §8.7). */
   async typeAnswerInReport(index: number, text: string): Promise<void> {
     await this.page.getByRole('textbox', { name: 'resposta' }).nth(index).fill(text);
+    // ENG-369: o texto fica em estado local até alguém aceitar
+    await this.page
+      .locator('.cds-report-card')
+      .nth(index)
+      .getByRole('button', { name: 'aceitar a edição' })
+      .click();
   }
 
   /**

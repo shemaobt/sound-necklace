@@ -306,15 +306,54 @@ describe('Relatório — renderização por tipo de resposta (redesign §6.6)', 
 });
 
 describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)', () => {
-  it('digitar atualiza o answer store do domínio', async () => {
+  /**
+   * ENG-369: digitar não chega mais ao answer store sozinho. O texto fica em estado
+   * local até alguém ACEITAR — é isso que dá a "descartar" algo a que voltar. Os três
+   * testes abaixo cobrem o caminho inteiro: escrever, desistir, e confirmar.
+   */
+  it('digitar sozinho NÃO toca o answer store — aceitar é que escreve', async () => {
     const q = L1_Q[0]!;
     load(report());
     render(<Report />);
 
-    const textarea = within(cardFor(q.q)).getByRole('textbox');
-    await userEvent.type(textarea, 'resposta nova');
+    const card = cardFor(q.q);
+    await userEvent.type(within(card).getByRole('textbox'), 'resposta nova');
+    expect(sessionStore.getState().session!.mapping?.level1[q.k] ?? '').toBe('');
 
+    await userEvent.click(within(card).getByRole('button', { name: 'aceitar a edição' }));
     expect(sessionStore.getState().session!.mapping!.level1[q.k]).toBe('resposta nova');
+  });
+
+  it('descartar devolve o campo ao que estava, sem tocar o store', async () => {
+    const q = L1_Q[0]!;
+    load(setAnswer(report(), { level: 1, k: q.k }, 'era uma vez'));
+    render(<Report />);
+
+    const card = cardFor(q.q);
+    const field = within(card).getByRole('textbox') as HTMLTextAreaElement;
+    await userEvent.clear(field);
+    await userEvent.type(field, 'texto que vou desistir');
+
+    await userEvent.click(within(card).getByRole('button', { name: 'descartar a edição' }));
+
+    expect((within(card).getByRole('textbox') as HTMLTextAreaElement).value).toBe('era uma vez');
+    expect(sessionStore.getState().session!.mapping!.level1[q.k]).toBe('era uma vez');
+  });
+
+  it('em repouso oferece o lápis; em edição, descartar e aceitar', async () => {
+    const q = L1_Q[0]!;
+    load(report());
+    render(<Report />);
+
+    const card = cardFor(q.q);
+    expect(within(card).getByRole('button', { name: 'editar a resposta' })).toBeTruthy();
+    expect(within(card).queryByRole('button', { name: 'aceitar a edição' })).toBeNull();
+
+    await userEvent.type(within(card).getByRole('textbox'), 'x');
+
+    expect(within(card).queryByRole('button', { name: 'editar a resposta' })).toBeNull();
+    expect(within(card).getByRole('button', { name: 'descartar a edição' })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'aceitar a edição' })).toBeTruthy();
   });
 
   it('a nota persiste no estado da sessão (relida no re-mount) e NÃO sai no .md exportado', async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AnswerDraft, Transcriber } from '../../../adapters/stt/types';
@@ -80,6 +80,46 @@ const NOTE_PREFIX = 'nota__';
 
 /** Alturas fixas das barras decorativas da linha de voz (px). */
 const WAVE_HEIGHTS = [6, 12, 20, 14, 22, 10, 16, 8];
+
+/** Lápis, xis e visto dos controles de edição da resposta (ENG-369). */
+function PencilGlyph() {
+  return (
+    <svg {...ACT_SVG}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </svg>
+  );
+}
+
+function CrossGlyph() {
+  return (
+    <svg {...ACT_SVG}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+function CheckGlyph() {
+  return (
+    <svg {...ACT_SVG}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+const ACT_SVG = {
+  width: 15,
+  height: 15,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': true,
+  focusable: false,
+} as const;
 
 /** m:ss para a linha de voz do relatório. */
 function formatDuration(sec: number): string {
@@ -365,6 +405,9 @@ function ReportCard({
 }: ReportCardProps) {
   const { t, i18n } = useTranslation();
   const [showNote, setShowNote] = useState(note !== '');
+  /** `null` = em repouso; string = edição em curso, ainda fora do answer store. */
+  const [editing, setEditing] = useState<string | null>(null);
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
   const facilitatorLed = slot.k === 'ausencia';
   const voiceOnly = hasVoice && !typed.trim();
   const pendingRow = voicePending && !hasVoice && !typed.trim();
@@ -444,18 +487,62 @@ function ReportCard({
         onRetry={onRetryDraft}
       />
 
-      {/* A digitação vive AQUI (decisão do dono: a entrevista é só-voz). Mas o campo
-          fica quieto: uma linha, sem caixa nem alça — vazio, lê-se como o
-          "ainda sem resposta gravada" em itálico do protótipo, e cresce ao escrever.
-          Uma caixa de 64px em cada um dos 41 cartões era um formulário, não um relato. */}
-      <textarea
-        className="cds-report-typed"
-        aria-label={t('report.answer')}
-        rows={1}
-        placeholder={voiceOnly || pendingRow ? t('report.writeAnswer') : t('report.noAnswerYet')}
-        value={typed}
-        onChange={(e) => onTyped(e.target.value)}
-      />
+      {/* A digitação vive AQUI (decisão do dono: a entrevista é só-voz). O campo segue
+          quieto: uma linha, sem caixa nem alça, que cresce ao escrever — uma caixa de
+          64px em cada um dos 41 cartões era um formulário, não um relato.
+          ENG-369: editar passou a ser um ato deliberado. O texto digitado vive em estado
+          LOCAL e só chega ao answer store quando alguém aceita — é isso que dá o que
+          descartar. Sem isso, "descartar" não teria a que voltar. */}
+      <div className="cds-report-answer">
+        <textarea
+          ref={fieldRef}
+          className="cds-report-typed"
+          aria-label={t('report.answer')}
+          rows={1}
+          placeholder={voiceOnly || pendingRow ? t('report.writeAnswer') : t('report.noAnswerYet')}
+          value={editing === null ? typed : editing}
+          onChange={(e) => setEditing(e.target.value)}
+        />
+        <div className="cds-report-answer-actions">
+          {editing === null ? (
+            /* o lápis diz que a linha É editável — sem ele, um campo sem caixa nem
+               alça não se anuncia. Focar o campo e escrever continua funcionando. */
+            <button
+              type="button"
+              className="cds-report-act"
+              aria-label={t('report.editAnswer')}
+              title={t('report.editAnswer')}
+              onClick={() => fieldRef.current?.focus()}
+            >
+              <PencilGlyph />
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="cds-report-act"
+                aria-label={t('report.discardEdit')}
+                title={t('report.discardEdit')}
+                onClick={() => setEditing(null)}
+              >
+                <CrossGlyph />
+              </button>
+              <button
+                type="button"
+                className="cds-report-act is-accept"
+                aria-label={t('report.acceptEdit')}
+                title={t('report.acceptEdit')}
+                onClick={() => {
+                  onTyped(editing);
+                  setEditing(null);
+                }}
+              >
+                <CheckGlyph />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
 
       {showNote ? (
         <textarea
