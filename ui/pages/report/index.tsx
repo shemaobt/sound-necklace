@@ -16,6 +16,7 @@ import {
 } from '../../../domain';
 import { questionTextFor } from '../../i18n/conversation-questions';
 import { Button, WaveformBar } from '../../atoms';
+import { PreparingSession } from '../../organisms';
 import type { PaletteEntry } from '../../tokens';
 import { type BlockLabels, blockEyebrow } from '../conversation/trechos';
 import { sessionStore, useSessionStore } from '../../state';
@@ -652,16 +653,33 @@ export function Report({
 
   // Quantas respostas gravadas ainda esperam confirmação — o número que o leitor
   // de tela ouve quando os rascunhos chegam.
+  /**
+   * ENG-367: enquanto a transcrição roda, a espera é a TELA — não uma palavra dentro de
+   * cada um dos 41 cartões. Chegar à revisão com tudo dizendo "transcrevendo" convida a
+   * mexer no que ainda vai mudar. Reusa o cometa de contas da espera de sessão (ENG-337),
+   * a mesma animação das outras esperas do fluxo.
+   *
+   * A troca é do MIOLO, não da tela: a região live fica montada nos dois estados, porque
+   * uma região criada junto com o conteúdo não é anunciada — trocar a árvore inteira
+   * perderia o aviso dos rascunhos em silêncio.
+   *
+   * 'failed' e o esgotamento do prazo não seguram ninguém: a revisão abre e cada cartão
+   * traz seu "tentar de novo", porque digitar à mão sempre resolve (§8.7 — sem beco).
+   */
+  const waiting = sttPhase === 'running';
+
   const toReview = sequence.filter(
     (s) => voiceSet.has(voiceAnswerPath(s)) && !readAnswer(mapped.mapping, s).trim(),
   ).length;
 
   return (
     <section className="cds-report">
-      <header className="cds-report-header">
-        <p className="cds-report-eyebrow">{t('report.eyebrow')}</p>
-        <p className="cds-report-headline">{t('report.headline')}</p>
-      </header>
+      {waiting ? null : (
+        <header className="cds-report-header">
+          <p className="cds-report-eyebrow">{t('report.eyebrow')}</p>
+          <p className="cds-report-headline">{t('report.headline')}</p>
+        </header>
+      )}
       {/* Registrada VAZIA desde o início: uma região live criada junto com o
           conteúdo não é anunciada. Anuncia o resumo, nunca os rascunhos inteiros,
           e não move o foco (WCAG 2.2 SC 4.1.3) — quem revisa chega quando quiser. */}
@@ -673,7 +691,13 @@ export function Report({
       >
         {sttPhase === 'done' && toReview > 0 ? t('report.draftsReady', { count: toReview }) : ''}
       </div>
-      {rows.map(({ slot, header, num }) => {
+      {waiting ? (
+        <PreparingSession
+          eyebrow={t('report.transcribingEyebrow')}
+          line={t('report.transcribing')}
+        />
+      ) : null}
+      {(waiting ? [] : rows).map(({ slot, header, num }) => {
         const path = voiceAnswerPath(slot);
         return (
           <div key={path}>
