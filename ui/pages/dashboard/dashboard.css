@@ -42,19 +42,26 @@
   color: var(--cds-ink, #0a0703);
 }
 
-/* a entrada para Configurações na casa — o mesmo destino que o cabeçalho do
-   shell oferece (ENG-371; era o toggle PT/EN da ENG-340) */
-.cds-dashboard-lang {
-  padding: 6px 10px;
+/* a engrenagem das Configurações — a CASA é o único caminho para lá (ENG-375;
+   era o toggle PT/EN da ENG-340, depois um botão de texto na ENG-371) */
+.cds-dashboard-settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   border: 1px solid var(--cds-hairline);
   border-radius: var(--cds-radius-pill);
   background: transparent;
   color: var(--cds-olive);
-  font-family: var(--cds-font-load-bearing);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
   cursor: pointer;
+  transition: all 0.14s;
+}
+
+.cds-dashboard-settings:hover {
+  border-color: var(--cds-telha);
+  color: var(--cds-telha);
 }
 
 .cds-dashboard-user {
