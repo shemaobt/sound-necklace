@@ -207,6 +207,34 @@
   opacity: 0.8;
 }
 
+/* A granularidade do projeto (ENG-352/ENG-365): fato JÁ decidido, não controle.
+   Mesma geometria do campo vizinho para alinhar o ritmo da coluna, mas superfície
+   fosca em vez do branco editável, e sem sombra — a diferença é o que diz "isto
+   não se muda aqui" sem precisar de um cadeado. */
+.cds-setup-gran {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--cds-hairline);
+  border-radius: var(--cds-radius-tile);
+  background: var(--cds-surface-muted);
+}
+
+.cds-setup-gran-value {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cds-ink);
+}
+
+.cds-setup-gran .cds-setup-note {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  opacity: 1;
+  color: var(--cds-ink-subtle);
+}
+
 .cds-setup-field {
   display: flex;
   flex-direction: column;
