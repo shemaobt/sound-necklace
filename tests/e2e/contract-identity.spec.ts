@@ -183,11 +183,14 @@ test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate co
   // O idioma mudou de casa na ENG-371: sai-se da sessão, escolhe-se em Configurações e
   // volta-se. O desvio É o atrito pretendido — e de brinde este teste passa a provar que
   // a sessão sobrevive a ele, que antes ninguém verificava.
+  // ENG-375: a engrenagem vive só na CASA — de dentro da sessão passa-se por ela
   const sessionUrl = page.url();
+  await page.getByRole('button', { name: 'Voltar às histórias' }).click();
   await page.getByRole('button', { name: 'Configurações' }).click();
   await page.getByRole('radio', { name: 'English' }).click();
   await page.goto(sessionUrl);
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  // a prova de que a UI virou inglês, agora que o cabeçalho não tem Configurações
+  await expect(page.getByRole('button', { name: 'Back to stories' })).toBeVisible();
 
   // Conclui e baixa com a UI em inglês.
   await app.gotoStep('Save');

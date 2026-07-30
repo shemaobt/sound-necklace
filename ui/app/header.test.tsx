@@ -4,8 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { Header } from './header';
 import headerCss from './header.css?raw';
 
-function noop() {}
-
 describe('Header — fixo durante o scroll das estações (ENG-315)', () => {
   it('a regra do header é sticky no topo (controles sempre à mão)', () => {
     const rule = /\.cds-header\s*{[^}]*}/.exec(headerCss)?.[0] ?? '';
@@ -17,7 +15,7 @@ describe('Header — fixo durante o scroll das estações (ENG-315)', () => {
 describe('Header', () => {
   it('não tem título — a marca é só o ícone', () => {
     const { container } = render(
-      <Header muted={false} onToggleMuted={() => {}} onBack={() => {}} onSettings={noop} />,
+      <Header muted={false} onToggleMuted={() => {}} onBack={() => {}} />,
     );
     expect(screen.queryByRole('heading')).toBeNull();
     expect(container.querySelector('.cds-header-icon svg')).not.toBeNull();
@@ -25,7 +23,7 @@ describe('Header', () => {
 
   it('o pill Histórias volta ao dashboard', () => {
     const onBack = vi.fn();
-    render(<Header muted={false} onToggleMuted={() => {}} onBack={onBack} onSettings={noop} />);
+    render(<Header muted={false} onToggleMuted={() => {}} onBack={onBack} />);
 
     const back = screen.getByRole('button', { name: 'Voltar às histórias' });
     expect(back.textContent).toContain('Histórias');
@@ -36,7 +34,7 @@ describe('Header', () => {
   it('o toggle de som reflete o estado e alterna ao clicar', () => {
     const onToggleMuted = vi.fn();
     const { rerender } = render(
-      <Header muted={false} onToggleMuted={onToggleMuted} onBack={() => {}} onSettings={noop} />,
+      <Header muted={false} onToggleMuted={onToggleMuted} onBack={() => {}} />,
     );
 
     const toggle = screen.getByRole('button', { name: 'Desligar o som da interface' });
@@ -44,9 +42,7 @@ describe('Header', () => {
     fireEvent.click(toggle);
     expect(onToggleMuted).toHaveBeenCalledTimes(1);
 
-    rerender(
-      <Header muted={true} onToggleMuted={onToggleMuted} onBack={() => {}} onSettings={noop} />,
-    );
+    rerender(<Header muted={true} onToggleMuted={onToggleMuted} onBack={() => {}} />);
     const pressed = screen.getByRole('button', { name: 'Ligar o som da interface' });
     expect(pressed.getAttribute('aria-pressed')).toBe('true');
   });
@@ -64,7 +60,6 @@ describe('Header — som e volume da sessão (ENG-314)', () => {
         onBack={() => {}}
         volume={1}
         onVolume={onVolume}
-        onSettings={noop}
       />,
     );
 
@@ -81,9 +76,7 @@ describe('Header — som e volume da sessão (ENG-314)', () => {
 
   it('sem onVolume, o botão segue o toggle simples de sempre', () => {
     const onToggleMuted = vi.fn();
-    render(
-      <Header muted={false} onToggleMuted={onToggleMuted} onBack={() => {}} onSettings={noop} />,
-    );
+    render(<Header muted={false} onToggleMuted={onToggleMuted} onBack={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: 'Desligar o som da interface' }));
     expect(onToggleMuted).toHaveBeenCalled();
   });
@@ -94,23 +87,27 @@ describe('Header — som e volume da sessão (ENG-314)', () => {
  * convidava a alternar no meio de uma sessão — e o idioma governa a voz da entrevista e o
  * locale mandado ao STT. O cabeçalho agora leva a Configurações, onde a escolha mora.
  */
-describe('Header — idioma saiu, Configurações entrou (ENG-371)', () => {
-  it('não oferece mais o atalho de trocar idioma', () => {
+describe('Header — nem idioma nem Configurações (ENG-371/ENG-375)', () => {
+  it('não oferece atalho para trocar idioma', () => {
     const { container } = render(
-      <Header muted={false} onToggleMuted={() => {}} onBack={() => {}} onSettings={noop} />,
+      <Header muted={false} onToggleMuted={() => {}} onBack={() => {}} />,
     );
 
     expect(container.querySelector('.cds-header-lang')).toBeNull();
     expect(screen.queryByRole('button', { name: /inglês|English/ })).toBeNull();
   });
 
-  it('o botão de configurações chama onSettings', () => {
-    const onSettings = vi.fn();
-    render(
-      <Header muted={false} onToggleMuted={() => {}} onBack={() => {}} onSettings={onSettings} />,
+  /**
+   * ENG-375: o cabeçalho está montado em TODA estação, então uma entrada para
+   * Configurações aqui seria alcançável no meio da sessão — desfazendo o atrito que a
+   * ENG-371 existia para criar. O caminho para lá é a casa.
+   */
+  it('não leva às Configurações a partir de uma estação', () => {
+    const { container } = render(
+      <Header muted={false} onToggleMuted={() => {}} onBack={() => {}} />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
-    expect(onSettings).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('.cds-header-settings')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Configurações' })).toBeNull();
   });
 });
