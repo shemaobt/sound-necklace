@@ -173,9 +173,7 @@ scripted anywhere in the organization; the siblings were set up by hand too.
 4. **GitHub secrets**: `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER` and
    `GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT` on this repository — the same three names
    `obt-mentor-companion` uses. No `GCP_SA_KEY`.
-5. **Custom domain — only AFTER the first deploy.** `gcloud beta run domain-mappings
-   create` fails with `Route sound-necklace does not exist` until the service exists, and
-   the service is created by the first deploy. So the order is: merge → deploy → map.
+5. **Custom domain — already created, and parked on purpose.** Running
 
    ```sh
    gcloud beta run domain-mappings create --service=sound-necklace \
@@ -183,7 +181,20 @@ scripted anywhere in the organization; the siblings were set up by hand too.
      --project=gen-lang-client-0886209230
    ```
 
-   Then create the DNS record it prints.
+   before the service exists **creates the mapping and then reports**
+   `ERROR: Route sound-necklace does not exist`. The error is about the target, not the
+   creation — the resource is there, in `Ready: False` with a `Retry: True` condition
+   ("System will retry"). It reconciles on its own once the first deploy creates the
+   service. Re-running it just says the mapping already exists, which is the expected
+   answer, not a problem. Done here on 2026-07-31.
+
+   The mapping lists no `resourceRecords` until it reconciles, but every sibling domain
+   (`oralcollector`, `console`, `meaningmap`, …) uses the same record, so it can be created
+   in advance:
+
+   ```
+   CNAME  soundnecklace  ->  ghs.googlehosted.com.
+   ```
 
 6. **GCS bucket CORS — after the domain, and it is hygiene, not a blocker.** Audio is
    downloaded straight from GCS via signed URLs (`adapters/sessions/http.ts`,
