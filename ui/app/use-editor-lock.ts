@@ -48,6 +48,24 @@ export const RENEW_DEADLINE_MS = 45_000;
  */
 const JITTER_FACTOR = 0.2;
 
+/**
+ * Primeira espera antes de tentar adquirir de novo (ENG-338). Um acquire falhado
+ * parqueava a sessão em revisão até um F5: um soluço de rede na entrada custava a
+ * sessão inteira, com o servidor saudável do outro lado.
+ *
+ * Mesma forma do backoff que `ui/pages/report/use-stt-drafts.ts` já usa — setTimeout
+ * recursivo que dobra a espera —, e não um `setInterval`: com a rede lenta as
+ * tentativas se empilhariam.
+ */
+export const ACQUIRE_RETRY_MS = 2_000;
+
+/**
+ * Teto da espera. Sem ele a espera dobraria para sempre e uma sessão parqueada nunca
+ * mais voltaria sozinha. 30 s deixa duas tentativas dentro do TTL de 60 s do lease, e
+ * segura uma sessão esquecida aberta em 2 requisições por minuto.
+ */
+export const ACQUIRE_MAX_RETRY_MS = 30_000;
+
 export function useEditorLock(routeId: string | null): void {
   useEffect(() => {
     if (routeId === null) return;
@@ -61,11 +79,15 @@ export function useEditorLock(routeId: string | null): void {
     let acting = false;
     let beatTimer: ReturnType<typeof setTimeout> | undefined;
     let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+    let acquireTimer: ReturnType<typeof setTimeout> | undefined;
+    /** Espera da PRÓXIMA tentativa de adquirir; dobra a cada falha, até o teto. */
+    let acquireDelay = ACQUIRE_RETRY_MS;
 
     const stopTimers = (): void => {
       if (beatTimer !== undefined) clearTimeout(beatTimer);
       if (deadlineTimer !== undefined) clearTimeout(deadlineTimer);
-      beatTimer = deadlineTimer = undefined;
+      if (acquireTimer !== undefined) clearTimeout(acquireTimer);
+      beatTimer = deadlineTimer = acquireTimer = undefined;
     };
 
     /** Quem detém a trava, se não formos nós. `null` = é nossa, ou está livre. */
@@ -148,13 +170,16 @@ export function useEditorLock(routeId: string | null): void {
     });
     channel?.postMessage({ tabId });
 
-    void (async () => {
+    const acquire = async (): Promise<void> => {
+      if (!alive || claimed) return;
       try {
         const status = await store.acquireLock(routeId);
         if (!alive || claimed) return; // outra aba reivindicou no meio do acquire
         const other = otherHolder(status);
         if (other !== null) {
-          sessionStore.getState().setLock({ holder: other }); // sessão em uso: revisão
+          // sessão em uso: revisão. NÃO é falha, então não se retenta — quem detém a
+          // trava a solta ou o TTL a solta, e reentrar na sessão pergunta de novo.
+          sessionStore.getState().setLock({ holder: other });
           return;
         }
         acting = true;
@@ -165,9 +190,19 @@ export function useEditorLock(routeId: string | null): void {
         // não deu para adquirir (rede caída, sessão inexistente): sem lease não se
         // edita — revisão com aviso de reconexão (holder desconhecido), como na
         // demissão por prazo. Editar sem lease abriria a janela de dois editores.
-        if (alive && !claimed) sessionStore.getState().setLock({ holder: null });
+        if (!alive || claimed) return;
+        sessionStore.getState().setLock({ holder: null });
+        // ...mas a revisão não é definitiva (ENG-338): enquanto a rota seguir montada
+        // tentamos de novo, e o primeiro sucesso promove como um acquire fresco.
+        acquireTimer = setTimeout(
+          () => void acquire(),
+          acquireDelay * (1 + Math.random() * JITTER_FACTOR),
+        );
+        acquireDelay = Math.min(acquireDelay * 2, ACQUIRE_MAX_RETRY_MS);
       }
-    })();
+    };
+
+    void acquire();
 
     // Fechar a aba não roda o cleanup do efeito. ponytail: é best-effort — um DELETE
     // disparado no pagehide costuma ser cortado com a página, e quem realmente cobre
