@@ -106,35 +106,44 @@ Built and run on 2026-07-30 against the live backend
 - Starting the container without `BACKEND_URL` exits immediately with a named error.
 - No error lines in the nginx log.
 
-Not verified: anything that requires GCP access — the deploy itself, Secret Manager, IAM,
-the domain mapping.
+Not verified by running it: the deploy itself. The GCP state in §5 was read with `gcloud`
+(read-only) on 2026-07-30.
 
 ## 5. One-time setup, before the first deploy
 
-None of this is scripted anywhere in the organization; the sibling repos were set up by
-hand too. All of it needs a human with GCP admin rights.
+The target project is **`gen-lang-client-0886209230` ("OBT Lab")**, number `718681737495`,
+region `us-central1` — where every sibling service already runs, including
+`tripod-backend` at `https://tripod-backend-f7ssqjozfq-uc.a.run.app`. None of this is
+scripted anywhere in the organization; the siblings were set up by hand too.
 
-1. **Artifact Registry**: create a Docker repository named `sound-necklace` in
-   `us-central1`, in the same project as the other services.
-2. **Secret Manager**: create `sound_necklace_backend_url` in project `shemaobt-secrets`,
-   holding the backend origin **without** the `/api` suffix — nginx appends the full
-   request URI, so a trailing `/api` would produce `/api/api/...`.
-3. **IAM**: grant the deploying service account (the one behind `GCP_SA_KEY`) read access
-   to that secret, plus the roles it already has for the other services (Artifact Registry
-   writer, Cloud Run admin, service account user).
-4. **GitHub secrets**: `GCP_PROJECT_ID` and `GCP_SA_KEY` on this repository — same values
-   as `tripod-console`.
-5. **GCS bucket CORS — this one will bite.** Audio is downloaded straight from GCS via
-   signed URLs (`adapters/sessions/http.ts`, `getResource`), so the bucket's CORS
-   allowlist has to contain the origin the SPA is served from. The config checked into
-   `tripod-api/sound-necklace-cors.json` lists only `http://localhost:5173`,
-   `http://localhost:3000` and `https://soundnecklace.shemaywam.com`. **The Cloud Run
-   default `*.run.app` origin is not in it**, so on a first deploy without the custom
-   domain, every audio playback fails with a CORS error while the rest of the app looks
-   fine. Either map the domain before the first real use, or add the `*.run.app` origin to
-   the bucket CORS temporarily.
+1. **Artifact Registry — already done.** The Docker repository `sound-necklace` exists in
+   `us-central1` in that project, and is empty. Nothing to do.
+2. **Service account** — one deployer per app is the house pattern
+   (`tripod-console-deployer`, `oral-collector-github-deployer`, …), and there is no
+   `sound-necklace` one yet. Create it and give it exactly the three roles
+   `tripod-console-deployer` holds: `roles/artifactregistry.writer`,
+   `roles/iam.serviceAccountUser`, `roles/run.admin`. Then a JSON key for `GCP_SA_KEY`.
+3. **Secret Manager**: create `sound_necklace_backend_url` in project `shemaobt-secrets`
+   holding `https://tripod-backend-f7ssqjozfq-uc.a.run.app` — the backend origin **without**
+   the `/api` suffix, since nginx appends the full request URI and `/api` in the value
+   would produce `/api/api/...`. Grant the new service account `secretAccessor` on it.
+   The value is not confidential (it is already in this repo's `.env.example`); the reason
+   it lives in Secret Manager is late binding — repointing the backend without a rebuild —
+   plus keeping this workflow byte-identical to the siblings'. Hardcoding it in
+   `deploy.yml` is a legitimate simplification if you would rather not add the secret.
+4. **GitHub secrets**: `GCP_PROJECT_ID` and `GCP_SA_KEY` on this repository.
+5. **GCS bucket CORS — currently fine, and worth keeping an eye on.** Audio is downloaded
+   straight from GCS via signed URLs (`adapters/sessions/http.ts`, `getResource`), so the
+   bucket's CORS allowlist has to contain the origin the SPA is served from. The live
+   config on `gs://sound-necklace-private` is `origin: ["*"]` for `GET, HEAD`, which covers
+   the Cloud Run `*.run.app` URL and any custom domain. **But `tripod-api` has a checked-in
+   `sound-necklace-cors.json` that does not match reality** — it lists only the two
+   localhosts and `https://soundnecklace.shemaywam.com`. Applying that file would narrow
+   the bucket and break audio on `*.run.app`. Either leave the bucket alone, or fix the
+   file before anyone applies it.
 6. **Custom domain**: map `soundnecklace.shemaywam.com` to the Cloud Run service and add
-   the DNS record. No sibling repo scripts this — it is console/`gcloud` work.
+   the DNS record. No sibling repo scripts this — it is console/`gcloud` work, and nothing
+   depends on it for a first deploy now that CORS is open.
 
 ## 6. Deviations from current external best practice, knowingly accepted
 
