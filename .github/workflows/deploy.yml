@@ -29,13 +29,21 @@ jobs:
       - name: Check required secrets
         run: |
           if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then echo "::error::GCP_PROJECT_ID is not set."; exit 1; fi
-          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then echo "::error::GCP_SA_KEY is not set."; exit 1; fi
+          if [ -z "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ]; then echo "::error::GCP_WORKLOAD_IDENTITY_PROVIDER is not set."; exit 1; fi
+          if [ -z "${{ secrets.GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT }}" ]; then echo "::error::GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT is not set."; exit 1; fi
           echo "Required secrets are set."
 
+      # Workload Identity Federation, não chave JSON: é o que o módulo
+      # `github_deployer` do shema-infra provisiona, o que a pool
+      # `github-actions-pool` já serve, e o que o obt-mentor-companion já usa.
+      # Os quatro repos mais antigos ainda mandam uma chave estática — este não
+      # nasce devendo essa migração.
       - name: Google Auth
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT }}
 
       - name: Setup Cloud SDK
         uses: google-github-actions/setup-gcloud@v2

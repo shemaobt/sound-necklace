@@ -8,6 +8,31 @@ The target is the same shape three sibling repositories already use — `tripod-
 and run it on Cloud Run in `us-central1`. This document explains what was copied, what was
 changed for this repo, and what a human still has to do in the GCP console.
 
+## 0. What "the org pattern" actually is
+
+There are three, and they do not fully agree. Worth knowing before reading the rest.
+
+1. **What is live in five app repos** (`tripod-api`, `tripod-console`, `meaning-map-ui`,
+   `oral-collector`, `obt-mentor-companion`): each repo builds its own image, pushes it to
+   Artifact Registry tagged with the commit SHA, and runs `gcloud run deploy` on push to
+   `main`. GCP resources themselves were created by hand.
+2. **Auth is mid-migration.** Four of those five authenticate with a static service-account
+   JSON key (`credentials_json: ${{ secrets.GCP_SA_KEY }}`). `obt-mentor-companion` uses
+   **Workload Identity Federation**, and the pool `github-actions-pool` is ACTIVE in the
+   project. WIF is the direction, not a proposal.
+3. **The written-down target is Terraform**, in the private `shemaobt/shema-infra` repo:
+   one `environments/<app>/` per app composing modules (`artifact_registry`,
+   `github_deployer`, `cloud_run_service`, `secret`, `domain_mapping`), applied by CI. Its
+   README is explicit that app-repo deploys — image build plus
+   `gcloud run deploy --image=` — stay in the app repos and are unaffected. **That repo is
+   stalled since 2026-04-28**: `environments/` never landed on `main`, and the plan/apply
+   workflows are still open PRs (#4, #5, #6).
+
+This PR does the app-repo half, which is identical under all three, and follows the WIF
+direction rather than the older key-based majority. The infra half — an
+`environments/sound_necklace/` in `shema-infra` — cannot be written yet: it would reference
+`data.terraform_remote_state.shared`, and the `shared` env is exactly what open PR #4 adds.
+
 ## 1. The decision
 
 **Cloud Run, serving the static build through nginx.** Not because it is the cheapest or
@@ -118,11 +143,14 @@ scripted anywhere in the organization; the siblings were set up by hand too.
 
 1. **Artifact Registry — already done.** The Docker repository `sound-necklace` exists in
    `us-central1` in that project, and is empty. Nothing to do.
-2. **Service account** — one deployer per app is the house pattern
-   (`tripod-console-deployer`, `oral-collector-github-deployer`, …), and there is no
-   `sound-necklace` one yet. Create it and give it exactly the three roles
-   `tripod-console-deployer` holds: `roles/artifactregistry.writer`,
-   `roles/iam.serviceAccountUser`, `roles/run.admin`. Then a JSON key for `GCP_SA_KEY`.
+2. **Service account** — one deployer per app is the house pattern, and there is no
+   `sound-necklace` one yet. The shape is defined by `shema-infra`'s `github_deployer`
+   module: an SA named `<app>-github-deployer`, project roles `roles/run.developer` +
+   `roles/artifactregistry.writer` + `roles/iam.serviceAccountTokenCreator`, and
+   `roles/iam.workloadIdentityUser` on the SA for
+   `principalSet://iam.googleapis.com/<pool>/attribute.repository/shemaobt/sound-necklace`.
+   **No JSON key** — that is the point of WIF. Note the live SAs drifted to `run.admin`
+   where the module says `run.developer`; follow the module.
 3. **Secret Manager**: create `sound_necklace_backend_url` in project `shemaobt-secrets`
    holding `https://tripod-backend-f7ssqjozfq-uc.a.run.app` — the backend origin **without**
    the `/api` suffix, since nginx appends the full request URI and `/api` in the value
@@ -131,7 +159,9 @@ scripted anywhere in the organization; the siblings were set up by hand too.
    it lives in Secret Manager is late binding — repointing the backend without a rebuild —
    plus keeping this workflow byte-identical to the siblings'. Hardcoding it in
    `deploy.yml` is a legitimate simplification if you would rather not add the secret.
-4. **GitHub secrets**: `GCP_PROJECT_ID` and `GCP_SA_KEY` on this repository.
+4. **GitHub secrets**: `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER` and
+   `GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT` on this repository — the same three names
+   `obt-mentor-companion` uses. No `GCP_SA_KEY`.
 5. **GCS bucket CORS — currently fine, and worth keeping an eye on.** Audio is downloaded
    straight from GCS via signed URLs (`adapters/sessions/http.ts`, `getResource`), so the
    bucket's CORS allowlist has to contain the origin the SPA is served from. The live
@@ -149,10 +179,6 @@ scripted anywhere in the organization; the siblings were set up by hand too.
 
 Worth revisiting, not worth blocking this on:
 
-- **Service-account JSON key instead of Workload Identity Federation.** WIF is Google's
-  current recommendation and key-based CI auth has been discouraged since 2023. All four
-  sibling repos use `credentials_json: ${{ secrets.GCP_SA_KEY }}`. Migrating one repo alone
-  would leave the org split across two auth models; migrating all four is its own task.
 - **`nginx:stable-alpine` running as root instead of `nginx-unprivileged`.** Copied from
   the siblings and proven there.
 - **No security headers** (HSTS, CSP, `X-Content-Type-Options`, `Referrer-Policy`).
@@ -160,3 +186,6 @@ Worth revisiting, not worth blocking this on:
   them here is a small, self-contained follow-up.
 - **No staging environment.** No sibling repo has one. Adding one is new design, not a
   pattern to copy.
+- **The four older repos still authenticate with a static JSON key.** This one does not,
+  which is the direction — but it does leave the org on two auth models until they migrate.
+  Worth doing, and it is a `shema-infra` job, not a per-repo one.
