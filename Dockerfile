@@ -24,8 +24,11 @@ RUN pnpm build
 
 FROM nginx:stable-alpine AS runtime
 
-# nginx.conf é TEMPLATE: ${BACKEND_URL} só é substituído no entrypoint
+# nginx.conf é TEMPLATE: ${BACKEND_URL} só é substituído no entrypoint. O
+# security-headers.conf NÃO é template — vai direto, e o nginx.conf o inclui por
+# location (o envsubst reescreveria os $ da CSP se passasse por ele).
 COPY nginx.conf /etc/nginx/nginx.conf.template
+COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

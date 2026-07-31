@@ -62,6 +62,7 @@ preemptively.
 | `Dockerfile` | Two stages: `node:22-alpine` + corepack pnpm builds `dist/`; `nginx:stable-alpine` serves it on 8080. |
 | `nginx.conf` | Template. `${BACKEND_URL}` is a placeholder, substituted at container start. |
 | `docker-entrypoint.sh` | `envsubst` the template, then `exec nginx`. Fails fast if `BACKEND_URL` is unset. |
+| `security-headers.conf` | CSP + HSTS + nosniff + Referrer-Policy, included per static location. |
 | `.dockerignore` | Keeps `node_modules/`, `dist/`, worktrees and env files out of the build context. |
 | `.github/workflows/deploy.yml` | Build → push → read the backend URL from Secret Manager → `gcloud run deploy`. |
 
@@ -131,6 +132,15 @@ Built and run on 2026-07-30 against the live backend
   until someone tries to log in.
 - Starting the container without `BACKEND_URL` exits immediately with a named error.
 - No error lines in the nginx log.
+- **The CSP does not break the app.** The five security headers are present on both the
+  HTML and the hashed assets, and the repo's own e2e suite was pointed at the running
+  container (a fixture-mode build of the same image, same nginx): **11 of 13 specs pass**,
+  covering the full cycle — necklace, segmentation, interview, voice recording. The two
+  that fail are `resilience.spec.ts`'s auth-expiry and foreign-lock cases, which call
+  `__cds.seedForeignLock` — a seam gated behind `import.meta.env.DEV` in
+  `ui/app/main.tsx` and therefore absent from a production bundle by design. Driving the
+  app separately with a console listener recorded zero CSP violations and zero page
+  errors, with 45 fonts loaded and the stylesheet applied.
 
 Not verified by running it: the deploy itself. The GCP state in §5 was read with `gcloud`
 (read-only) on 2026-07-30.
@@ -163,18 +173,44 @@ scripted anywhere in the organization; the siblings were set up by hand too.
 4. **GitHub secrets**: `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER` and
    `GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT` on this repository — the same three names
    `obt-mentor-companion` uses. No `GCP_SA_KEY`.
-5. **GCS bucket CORS — currently fine, and worth keeping an eye on.** Audio is downloaded
-   straight from GCS via signed URLs (`adapters/sessions/http.ts`, `getResource`), so the
-   bucket's CORS allowlist has to contain the origin the SPA is served from. The live
-   config on `gs://sound-necklace-private` is `origin: ["*"]` for `GET, HEAD`, which covers
-   the Cloud Run `*.run.app` URL and any custom domain. **But `tripod-api` has a checked-in
-   `sound-necklace-cors.json` that does not match reality** — it lists only the two
-   localhosts and `https://soundnecklace.shemaywam.com`. Applying that file would narrow
-   the bucket and break audio on `*.run.app`. Either leave the bucket alone, or fix the
-   file before anyone applies it.
-6. **Custom domain**: map `soundnecklace.shemaywam.com` to the Cloud Run service and add
-   the DNS record. No sibling repo scripts this — it is console/`gcloud` work, and nothing
-   depends on it for a first deploy now that CORS is open.
+5. **Custom domain — only AFTER the first deploy.** `gcloud beta run domain-mappings
+   create` fails with `Route sound-necklace does not exist` until the service exists, and
+   the service is created by the first deploy. So the order is: merge → deploy → map.
+
+   ```sh
+   gcloud beta run domain-mappings create --service=sound-necklace \
+     --domain=soundnecklace.shemaywam.com --region=us-central1 \
+     --project=gen-lang-client-0886209230
+   ```
+
+   Then create the DNS record it prints.
+
+6. **GCS bucket CORS — after the domain, and it is hygiene, not a blocker.** Audio is
+   downloaded straight from GCS via signed URLs (`adapters/sessions/http.ts`,
+   `getResource`), so the bucket's CORS allowlist must contain the origin the SPA is served
+   from. The live config on `gs://sound-necklace-private` is `origin: ["*"]` for
+   `GET, HEAD`, which already covers the Cloud Run URL and any custom domain — and with
+   signed URLs the signature is the credential, so `*` is not an access hole. Narrowing is
+   still better once the final origins are known:
+
+   ```sh
+   cat > /tmp/sn-cors.json <<'JSON'
+   [{"origin":["http://localhost:5173","https://soundnecklace.shemaywam.com","https://<a URL do Cloud Run>"],
+     "method":["GET","HEAD"],"maxAgeSeconds":3600,
+     "responseHeader":["Content-Type","Content-Length","Content-Range","Range"]}]
+   JSON
+   gcloud storage buckets update gs://sound-necklace-private --cors-file=/tmp/sn-cors.json
+   ```
+
+   `OPTIONS` does not belong in `method` — that list is the allowed *request* methods, and
+   the preflight is implied. `Range` must stay in `responseHeader`: it is not a
+   CORS-safelisted request header, so seeking in a long recording preflights.
+
+   **`tripod-api` has a checked-in `sound-necklace-cors.json` that does not match the live
+   bucket** — it lists only the two localhosts and `https://soundnecklace.shemaywam.com`,
+   with `PUT` and `OPTIONS` this app never issues against GCS. Nothing applies it
+   automatically, but applying it by hand would narrow the bucket and break audio on the
+   `*.run.app` URL. Fix or delete it.
 
 ## 6. Deviations from current external best practice, knowingly accepted
 
@@ -182,9 +218,8 @@ Worth revisiting, not worth blocking this on:
 
 - **`nginx:stable-alpine` running as root instead of `nginx-unprivileged`.** Copied from
   the siblings and proven there.
-- **No security headers** (HSTS, CSP, `X-Content-Type-Options`, `Referrer-Policy`).
-  `oral-collector` ships a shared `security-headers.conf`; the two Vite SPAs do not. Adding
-  them here is a small, self-contained follow-up.
+- **The two Vite SPAs ship no security headers.** This one does (`security-headers.conf`,
+  modelled on `oral-collector`'s), so it is ahead of the siblings rather than behind them.
 - **No staging environment.** No sibling repo has one. Adding one is new design, not a
   pattern to copy.
 - **The four older repos still authenticate with a static JSON key.** This one does not,
