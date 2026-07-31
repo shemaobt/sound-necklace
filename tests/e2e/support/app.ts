@@ -236,15 +236,22 @@ export class ColarApp {
   /** A digitação vive no RELATÓRIO (a facilitadora escreve depois — §8.7). */
   async typeAnswerInReport(index: number, text: string): Promise<void> {
     await this.page.getByRole('textbox', { name: 'resposta' }).nth(index).fill(text);
+    // ENG-369: o texto fica em estado local até alguém aceitar
+    await this.page
+      .locator('.cds-report-card')
+      .nth(index)
+      .getByRole('button', { name: 'aceitar a edição' })
+      .click();
   }
 
   /**
-   * Confirma o inglês sugerido no cartão `index` (ENG-327). Espera o rascunho
-   * chegar (o job é assíncrono) e devolve o texto que virou a resposta.
+   * Confirma a TRANSCRIÇÃO sugerida no cartão `index` (ENG-327; sujeito trocado na
+   * ENG-370 — o que um humano confere é o que foi dito, na língua em que foi dito).
+   * Espera o rascunho chegar (o job é assíncrono) e devolve o texto que virou a resposta.
    */
   async confirmDraftInReport(index: number): Promise<string> {
     const card = this.page.locator('.cds-report-card').nth(index);
-    const confirm = card.getByRole('button', { name: /confirmar o inglês/i });
+    const confirm = card.getByRole('button', { name: /confirmar a transcrição/i });
     await confirm.waitFor({ state: 'visible', timeout: 15000 });
     const en = await card.locator('.cds-report-draft-en').inputValue();
     await confirm.click();
@@ -299,7 +306,7 @@ export class ColarApp {
    * botão, e a lista encolhe a cada clique.
    */
   async confirmAllDrafts(): Promise<number> {
-    const buttons = this.page.getByRole('button', { name: /confirmar o inglês/i });
+    const buttons = this.page.getByRole('button', { name: /confirmar a transcrição/i });
     // o job é assíncrono: sem esperar o PRIMEIRO rascunho, a contagem seria 0 e o
     // laço sairia sem confirmar nada
     try {

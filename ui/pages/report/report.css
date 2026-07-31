@@ -344,3 +344,50 @@
 .cds-report-drafts-live:empty {
   margin: 0;
 }
+
+/* Controles de edição da resposta (ENG-369): o lápis anuncia que a linha é editável;
+   em edição ele dá lugar a descartar/aceitar. Ficam à direita, na mesma linha do
+   campo, e só ganham peso quando há o que decidir. */
+.cds-report-answer {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.cds-report-answer .cds-report-typed {
+  flex: 1;
+}
+
+.cds-report-answer-actions {
+  display: flex;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.cds-report-act {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--cds-radius-pill);
+  background: transparent;
+  color: var(--cds-ink-subtle);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: all 0.14s;
+}
+
+.cds-report-act:hover,
+.cds-report-act:focus-visible {
+  opacity: 1;
+  background: var(--cds-surface-muted);
+  color: var(--cds-ink);
+}
+
+.cds-report-act.is-accept:hover,
+.cds-report-act.is-accept:focus-visible {
+  color: var(--cds-telha);
+}
