@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.git
+.github
+.worktrees
+.claude
+.maestri
+playwright-report
+test-results
+.vitest-attachments
+.parity-shots
+.env
+.env.*
+!.env.example
+**/__screenshots__
