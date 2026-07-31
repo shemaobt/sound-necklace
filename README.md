@@ -25,8 +25,9 @@ Clean architecture in the practical sense — dependencies always point inward:
   WebM/Opus), TTS, sessions/locks. Every adapter ships a **fixture mode**, so the whole
   app runs with no real API.
 - `ui/` — the Shemá design system (atomic design) plus the flow stations. UI chrome is
-  PT-BR by default with an EN toggle (`ui/i18n/`); **exported artifacts are frozen PT-BR
-  and never routed through i18n**.
+  PT-BR by default with an EN toggle (`ui/i18n/`); **exported artifacts are English and
+  never routed through i18n** (ENG-326/ENG-356 — PT-BR survives in them only as story
+  data such as names and slugs).
 
 ## Getting started
 
@@ -60,6 +61,14 @@ Required checks on every PR: `golden-harness` · `typecheck` · `lint` · `depcr
 `domain/` and byte-diffs the produced artifacts against the reference's outputs — it is
 the one gate that can never be relaxed. Details and anti-gaming rules live in
 `CLAUDE.md` (Quality gates).
+
+## Deployment
+
+Google Cloud Run, same shape as `tripod-console` and `meaning-map-ui`: a container builds
+the static bundle and serves it through nginx, which reverse-proxies `/api` to the backend
+resolved at container start. Pushing to `main` runs `.github/workflows/deploy.yml`. The
+one-time GCP setup, the decisions behind the choice, and the known first-deploy pitfall
+(GCS bucket CORS) are in `docs/deploy-gcloud.md`.
 
 ## Workflow
 
