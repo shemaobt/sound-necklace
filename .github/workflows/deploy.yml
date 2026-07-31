@@ -39,19 +39,30 @@ jobs:
       # Os quatro repos mais antigos ainda mandam uma chave estática — este não
       # nasce devendo essa migração.
       - name: Google Auth
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT }}
+          token_format: 'access_token'
 
       - name: Setup Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Configure Docker Auth
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+      # Login com o access_token do passo acima, e não `gcloud auth configure-docker`:
+      # o helper do gcloud contra credencial de conta externa é o caminho que ninguém
+      # aqui exercitou. Este é o único par WIF+Docker que já roda na organização
+      # (obt-mentor-companion). Como o merge É o primeiro deploy e o job docker-build
+      # do CI não faz push, um erro aqui só apareceria em produção.
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
 
       - name: Build frontend image
         run: |

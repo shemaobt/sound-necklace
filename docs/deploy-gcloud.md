@@ -40,10 +40,11 @@ the simplest option for a static SPA in the abstract — Firebase Hosting is bot
 Google's own Architecture Center steers a pure static site there first. It wins here for
 three concrete reasons:
 
-1. **One deploy mechanism for the whole org.** The same `GCP_PROJECT_ID` / `GCP_SA_KEY`
-   GitHub secrets, the same Artifact Registry layout, the same `gcloud run deploy` shape,
-   the same Secret Manager project (`shemaobt-secrets`). A fourth product surface for one
-   more small app buys nothing and costs everyone a second thing to know.
+1. **One deploy mechanism for the whole org.** The same GCP project and WIF pool, the same
+   Artifact Registry layout, the same `gcloud run deploy` shape, the same Secret Manager
+   project (`shemaobt-secrets`) — and the same modules in `shema-infra` once that repo is
+   unblocked. A fourth product surface for one more small app buys nothing and costs
+   everyone a second thing to know.
 2. **The nginx `/api` proxy removes the build-time API URL entirely** (§3). On Firebase
    Hosting the same trick needs a `rewrites` rule to Cloud Run, which is a different
    mechanism to learn and debug.
