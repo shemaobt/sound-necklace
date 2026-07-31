@@ -423,15 +423,23 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
   const PATH = voiceAnswerPath({ level: 1, k: Q.k });
   const DRAFTS = { [PATH]: { source: 'Ele contou do boto.', en: 'He told of the dolphin.' } };
 
-  it('enquanto o job roda, o cartão avisa que está transcrevendo e a resposta segue vazia', async () => {
+  /**
+   * ENG-367: a espera virou a TELA. Antes cada um dos 41 cartões dizia "transcrevendo"
+   * e a revisão já estava lá para ser mexida enquanto o texto ainda ia mudar.
+   */
+  it('enquanto o job roda, a tela é a espera — nenhum cartão para mexer', async () => {
     const { stt } = controllableStt(DRAFTS);
     load(report());
-    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+    const view = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />,
+    );
 
-    const status = await screen.findByText(/transcrevendo/i);
-    const card = status.closest('.cds-report-card') as HTMLElement;
-    expect(within(card).getByText(Q.q)).toBeTruthy();
-    expect((within(card).getByLabelText('resposta') as HTMLTextAreaElement).value).toBe('');
+    await screen.findByText(/transcrevendo/i);
+    expect(view.container.querySelectorAll('.cds-report-card')).toHaveLength(0);
+    expect(screen.queryByLabelText('resposta')).toBeNull();
+    // a região live continua montada e vazia: criada junto com o conteúdo, não seria
+    // anunciada quando os rascunhos chegassem
+    expect(view.container.querySelector('.cds-report-drafts-live')).not.toBeNull();
   });
 
   it('o rascunho chega marcado como sugestão, e ainda NÃO é a resposta', async () => {

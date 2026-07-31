@@ -154,14 +154,21 @@ describe('Conversation — resume where the interview stopped (ENG-321)', () => 
     expect(questionText()).toBe(seq[5]!.question.q);
   });
 
-  it('with everything answered, reopens on the last question (the report one step away)', () => {
+  /**
+   * ENG-367 (decisão do dono): com tudo respondido não há o que perguntar, e reabrir na
+   * última pergunta convidava a regravar uma resposta que já existia. A retomada vai
+   * para a revisão — ou para a espera dela, se a transcrição ainda estiver rodando.
+   */
+  it('with everything answered, reopens on the review — never back on the interview', () => {
     const state = ensureMapping(mapping());
     const seq = questionSequence(state);
     const voice = seq.map((s) => voiceAnswerPath(s));
 
     load(state);
-    render(<Conversation voicePaths={() => voice} />);
-    expect(questionText()).toBe(seq[seq.length - 1]!.question.q);
+    const view = render(<Conversation voicePaths={() => voice} />);
+
+    expect(view.container.querySelector('.cds-conversation-question')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Próxima pergunta/i })).toBeNull();
   });
 
   it('with no answer at all, starts on the first question', () => {

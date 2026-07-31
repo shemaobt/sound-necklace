@@ -427,15 +427,24 @@ export function Conversation({
   // Whoever stopped at the 5th returns to the 5th; everything answered reopens
   // on the last one (the report is one step away). Mount only: from then on the
   // cursor belongs to the user.
-  const [index, setIndex] = useState(() => {
+  const firstUnanswered = (): number => {
     if (!mapped || sequence.length === 0) return 0;
     const voiced = voicePaths();
-    const first = sequence.findIndex(
+    return sequence.findIndex(
       (s2) => !readAnswer(mapped.mapping, s2).trim() && !voiced.includes(voiceAnswerPath(s2)),
     );
+  };
+  const [index, setIndex] = useState(() => {
+    const first = firstUnanswered();
     return first === -1 ? sequence.length - 1 : first;
   });
-  const [atReport, setAtReport] = useState(false);
+  /**
+   * ENG-367: sair e voltar não devolve à entrevista quando não há mais o que perguntar.
+   * Toda pergunta já respondida ou gravada significa que a conversa acabou — reabrir na
+   * última pergunta convidava a regravar uma resposta que já existia. Com pergunta em
+   * aberto, a entrevista continua sendo o lugar certo.
+   */
+  const [atReport, setAtReport] = useState(() => firstUnanswered() === -1);
   // Preparo pré-revisão (ENG-337): a descoberta das respostas roda ANTES de abrir
   // o relatório — ele chega pronto, sem "procurando" pipocando linha a linha. Uma
   // vez pronto, re-entradas abrem direto (o preparo re-roda por baixo, silencioso).
