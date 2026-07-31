@@ -1,6 +1,9 @@
 node_modules
 dist
 coverage
+# docs/ sai (4,8 MB e nada o importa). tests/ FICA: adapters/audio/fixture.ts importa
+# `makePcm` de tests/golden/pcm, então excluir a pasta quebra o build.
+docs
 .git
 .github
 .worktrees

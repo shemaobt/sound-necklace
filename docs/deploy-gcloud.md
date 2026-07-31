@@ -39,12 +39,16 @@ preemptively.
 | `.dockerignore` | Keeps `node_modules/`, `dist/`, worktrees and env files out of the build context. |
 | `.github/workflows/deploy.yml` | Build → push → read the backend URL from Secret Manager → `gcloud run deploy`. |
 
-`.github/workflows/ci.yml` is untouched. The quality gates stay exactly as they are and
-say nothing about deployment.
+The required checks in `.github/workflows/ci.yml` are untouched. It gains one
+**additional, non-required** job, `docker-build`: it builds this image, starts it, and
+asserts both that the SPA is served and that the container refuses to start without
+`BACKEND_URL`. No push, no GCP, no secret. It exists because the deploy fires on push to
+`main` — the merge *is* the first deploy — so without it a broken `Dockerfile` or a
+lockfile drift would only surface after merging.
 
 ## 3. Configuration: what is baked in, what is not
 
-The SPA reads two environment variables, both in `ui/app/api-config.ts`:
+The SPA reads three `VITE_*` variables. Two are in `ui/app/api-config.ts`:
 
 - **`VITE_API_MODE`** — baked into the image as `real` (`Dockerfile`, builder stage). This
   is the one build-time decision: a production image is always a real-API image. Fixture
@@ -54,6 +58,11 @@ The SPA reads two environment variables, both in `ui/app/api-config.ts`:
   received at start. So the backend can move without rebuilding the image, and the browser
   only ever talks to its own origin for the API.
 
+The third is **`VITE_VOICE`** (`ui/app/App.tsx`), and it is also left unset — unset means
+the real microphone, which is what production wants. Named here because it is the variable
+someone will come looking for while debugging "the recorder is a fixture in production",
+which has happened once before (ENG-298).
+
 `BACKEND_URL` reaches the container as a plain Cloud Run env var. CI reads it fresh from
 Secret Manager on every deploy (`sound_necklace_backend_url` in project `shemaobt-secrets`),
 matching `tripod_console_backend_url` and `meaning_map_ui_backend_url`.
@@ -62,9 +71,18 @@ Two deviations from `tripod-console`'s nginx config, both deliberate:
 
 - **No CORS headers on `/api`.** After the proxy the call is same-origin. The headers there
   are vestigial.
-- **`client_max_body_size 64m`** (nginx default is 1m). Voice answers upload as WebM/Opus
-  through `PUT /sessions/{id}/resources` — through this proxy, not via a signed URL. The
-  default would truncate a long answer. Downloads go direct to GCS and never touch nginx.
+- **`client_max_body_size 16m`** (nginx default is 1m). Voice answers upload as WebM/Opus
+  through `PUT /api/sound-necklace/sessions/{id}/resources` — through this proxy, not via
+  a signed URL — and at the default nginx would answer 413. Not higher than 16m: Cloud Run
+  already caps a request at 32 MiB, and nginx buffers request bodies to `/var/cache/nginx`,
+  which there is RAM against `--memory=256Mi`. A minute of WebM/Opus is roughly 200 kB.
+  Downloads go direct to GCS and never touch nginx.
+- **`gzip_types` is set explicitly.** `gzip on` alone compresses only `text/html` —
+  nginx's default, and it does not extend implicitly. Without the list the JS bundle ships
+  raw (~730 kB instead of ~236 kB), and Cloud Run does not compress on your behalf.
+- **`location ^~ /api`, not a bare prefix.** A regex location beats a prefix location in
+  nginx, so without `^~` any API route ending in one of the static-asset extensions would
+  be served off disk and 404 instead of being proxied.
 
 ## 4. Verified locally
 
@@ -74,9 +92,17 @@ Built and run on 2026-07-30 against the live backend
 - `GET /` → 200 `text/html`.
 - `GET /dashboard/<anything>` → 200 — client-side routing falls back to `index.html`.
 - `index.html` → `Cache-Control: no-cache, no-store, must-revalidate`.
-- Hashed asset → a single `Cache-Control: public, max-age=31536000, immutable`.
+- Hashed asset → a single `Cache-Control: public, max-age=31536000, immutable`, and
+  `Content-Encoding: gzip` (uncompressed it is 729 721 bytes).
 - `GET /api/auth/me` through the proxy returns byte-identical output to the same call made
-  directly against the backend (`{"detail":"Not authenticated","code":"UNAUTHORIZED"}`).
+  directly against the backend (`{"detail":"Not authenticated","code":"UNAUTHORIZED"}`),
+  including when `BACKEND_URL` carries a trailing slash.
+- `GET /api/nao-existe.js` returns the backend's `{"detail":"Not Found"}` rather than an
+  HTML 404 off disk — that is the `^~` precedence fix doing its job.
+- **`VITE_API_MODE=real` is genuinely baked**: the same build with `fixture` produces a
+  different bundle hash (`index-Da8L-1Ok.js` vs `index-CwKbJAxO.js`). Worth asserting
+  rather than assuming — a silently-unbaked mode gives an app that looks entirely healthy
+  until someone tries to log in.
 - Starting the container without `BACKEND_URL` exits immediately with a named error.
 - No error lines in the nginx log.
 
