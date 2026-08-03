@@ -1,10 +1,9 @@
 # Deploy — Google Cloud Run
 
-**Status:** provisioned, not deployed (2026-07-31). The files exist, the image was verified
-locally, and **the one-time GCP setup in §5 is done** — §5 is now a record of what exists
-and how to re-check it, not a list of work to do. Do not re-run it. The one thing still
-ahead is the deploy itself: `deploy.yml` fires on push to `main`, so merging this branch
-*is* the first deploy.
+**Status:** live since 2026-08-03 at
+`https://sound-necklace-f7ssqjozfq-uc.a.run.app`. §5 is a record of the provisioning that
+exists and how to re-check it, not a list of work to do — including the two IAM roles the
+first deploy proved were missing. `deploy.yml` fires on every push to `main`.
 
 The target is the same shape three sibling repositories already use — `tripod-console`,
 `meaning-map-ui` and `oral-collector` all build a container, push it to Artifact Registry
@@ -145,8 +144,19 @@ Built and run on 2026-07-30 against the live backend
   app separately with a console listener recorded zero CSP violations and zero page
   errors, with 45 fonts loaded and the stylesheet applied.
 
-Not verified by running it: the deploy itself. The GCP state in §5 was read with `gcloud`
-(read-only) on 2026-07-30.
+Verified against the deployed service on 2026-08-03, at
+`https://sound-necklace-f7ssqjozfq-uc.a.run.app`: `GET /` is 200 `text/html` and
+`/dashboard/<anything>` falls back to it; `/api/auth/me` answers the backend's 401 JSON
+through the proxy and `/api/nao-existe.js` its 404 JSON rather than HTML off disk; the
+hashed asset carries `immutable` plus `Content-Encoding: gzip` while `index.html` is
+`no-cache, no-store`; and the CSP, HSTS, `nosniff`, `Referrer-Policy` and `X-Frame-Options`
+headers are all present on the response.
+
+Still not verified: **an actual audio download from GCS under the CSP**. It is correct by
+construction on all three axes — `getResource` (`adapters/sessions/http.ts`) fetches, so it
+is governed by `connect-src`, which lists `https://storage.googleapis.com`; the API signs
+URLs on that same host; and the bucket CORS allows `GET` from this origin. But nothing has
+exercised it end to end, because doing so needs a real session and a login.
 
 ## 5. One-time setup — done on 2026-07-31; this is the record of it
 
@@ -167,12 +177,33 @@ scripted anywhere in the organization; the siblings were set up by hand too.
      --location=us-central1 --project=gen-lang-client-0886209230
    ```
 2. **Service account — created.** `sound-necklace-github-deployer@gen-lang-client-0886209230.iam.gserviceaccount.com`,
-   with the shape `shema-infra`'s `github_deployer` module defines: project roles
-   `roles/run.developer` + `roles/artifactregistry.writer` +
-   `roles/iam.serviceAccountTokenCreator`, and `roles/iam.workloadIdentityUser` on the SA
-   for `principalSet://iam.googleapis.com/<pool>/attribute.repository/shemaobt/sound-necklace`.
-   **No JSON key** — that is the point of WIF. Note the older live SAs drifted to
-   `run.admin` where the module says `run.developer`; this one follows the module.
+   with `roles/iam.workloadIdentityUser` on the SA for
+   `principalSet://iam.googleapis.com/<pool>/attribute.repository/shemaobt/sound-necklace`
+   and, on the project, `roles/artifactregistry.writer` + `roles/iam.serviceAccountUser` +
+   `roles/run.admin` (`roles/run.developer` and `roles/iam.serviceAccountTokenCreator` are
+   also still bound, from the first attempt, and are now redundant). **No JSON key** — that
+   is the point of WIF.
+
+   > **The `shema-infra` `github_deployer` module, as written, cannot deploy.** This SA was
+   > first created to the module's shape — `run.developer` + `artifactregistry.writer` +
+   > `iam.serviceAccountTokenCreator` — on the reasoning that the older live SAs had
+   > "drifted" to `run.admin` + `iam.serviceAccountUser`. That was backwards: the drift was
+   > the part that works. Two failures followed, on 2026-08-03, and both are worth knowing
+   > before replicating this anywhere:
+   >
+   > 1. **`iam.serviceAccountUser` is required, and `iam.serviceAccountTokenCreator` is not
+   >    a substitute.** Cloud Run runs a service *as* a service account — the compute
+   >    default `718681737495-compute@developer.gserviceaccount.com` when `--service-account`
+   >    is not passed, which is what the four sibling frontends do. Deploying therefore needs
+   >    `iam.serviceAccounts.actAs` on it, which only `serviceAccountUser` grants. Without it:
+   >    `ERROR: Permission 'iam.serviceAccounts.actAs' denied`.
+   > 2. **`run.developer` cannot make the service public.** It lacks
+   >    `run.services.setIamPolicy`, so `--allow-unauthenticated` fails to bind
+   >    `allUsers` → `roles/run.invoker` and every request answers **403**. This one is
+   >    nastier, because **the deploy step still exits 0** — the failure is a warning
+   >    (`Setting IAM policy failed`) buried in the log, so CI reports a green deploy over a
+   >    service nobody can reach. Read the log, or curl the URL, before believing a green
+   >    deploy.
 
    ```sh
    gcloud iam service-accounts get-iam-policy \
@@ -215,6 +246,12 @@ scripted anywhere in the organization; the siblings were set up by hand too.
    ("System will retry"). It reconciles on its own once the first deploy creates the
    service. Re-running it just says the mapping already exists, which is the expected
    answer, not a problem. Done here on 2026-07-31.
+
+   **Status on 2026-08-03, right after the first deploy:** still `Ready: False` /
+   `Retry: True`. The DNS half is done — `soundnecklace.shemaywam.com` resolves through
+   `ghs.googlehosted.com` — but HTTPS fails to negotiate, because the managed certificate
+   has not been issued yet. That takes anywhere from minutes to ~24h after the service
+   first exists, and needs no action. Until it lands, use the `*.run.app` URL.
 
    ```sh
    gcloud beta run domain-mappings describe --domain=soundnecklace.shemaywam.com \
