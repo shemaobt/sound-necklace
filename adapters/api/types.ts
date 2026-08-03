@@ -30,6 +30,10 @@ export interface Credentials {
 /**
  * Usuário autenticado com papéis (§7.1/O2) — forma da PORTA, não do wire: o adapter
  * real a monta de `/auth/login` (display_name ?? email) + `/auth/my-roles`.
+ *
+ * `roles` é o que foi CONCEDIDO no Colar, e só isso: quem administra a plataforma
+ * inteira entra sem papel nenhum aqui (ver `hasAppAccess` em client.ts) e a lista
+ * dele fica vazia — nenhum papel sintético é inventado para tapar o buraco.
  */
 export interface AuthUser {
   id: string;

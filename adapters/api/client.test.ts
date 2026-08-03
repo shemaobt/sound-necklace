@@ -155,6 +155,22 @@ describe('HttpAuthProvider', () => {
     expect(auth.currentUser()).toBeNull();
   });
 
+  it('platform admin SEM papel no app entra — a API o deixa passar, o SPA para de barrá-lo', async () => {
+    const { fetch } = stubFetch({
+      'POST /api/auth/login': {
+        body: { ...wireLogin, user: { ...wireUser, is_platform_admin: true } },
+      },
+      'GET /api/auth/my-roles': { body: [] },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch });
+
+    const user = await auth.login({ username: 'facilitadora@shema.org', password: 'x' });
+
+    expect(user.roles).toEqual([]); // nada foi inventado: o papel concedido segue vazio
+    expect(auth.token()).toBe('a1');
+    expect(auth.currentUser()).toEqual(user);
+  });
+
   it('maps a rejected login to AuthError without firing auth-expired', async () => {
     const { fetch } = stubFetch({
       'POST /api/auth/login': { status: 401, body: { detail: 'bad' } },
@@ -359,6 +375,43 @@ describe('HttpAuthProvider', () => {
     expect(user).toEqual({ id: 'u1', username: 'Marcia', roles: ['facilitator'] });
     expect(auth.token()).toBe('a2');
     expect(storage.dump()).toEqual([[KEY, 'r2']]);
+  });
+
+  it('resume() de platform admin sem papel no app devolve a sessão, não null', async () => {
+    const storage = fakeStorage();
+    storage.setItem(KEY, 'r-guardado');
+    const { fetch } = stubFetch({
+      'POST /api/auth/refresh': {
+        body: { access_token: 'a2', refresh_token: 'r2', token_type: 'bearer' },
+      },
+      'GET /api/auth/me': { body: { ...wireUser, is_platform_admin: true } },
+      'GET /api/auth/my-roles': { body: [] },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch, storage });
+
+    const user = await auth.resume();
+
+    expect(user).not.toBeNull();
+    expect(user?.roles).toEqual([]);
+    expect(auth.token()).toBe('a2');
+    expect(storage.dump()).toEqual([[KEY, 'r2']]);
+  });
+
+  it('resume() de conta comum sem papel no app devolve null e esquece o refresh', async () => {
+    const storage = fakeStorage();
+    storage.setItem(KEY, 'r-guardado');
+    const { fetch } = stubFetch({
+      'POST /api/auth/refresh': {
+        body: { access_token: 'a2', refresh_token: 'r2', token_type: 'bearer' },
+      },
+      'GET /api/auth/me': { body: wireUser },
+      'GET /api/auth/my-roles': { body: [] },
+    });
+    const auth = new HttpAuthProvider({ baseUrl: '/api', fetch, storage });
+
+    expect(await auth.resume()).toBeNull();
+    expect(auth.token()).toBeNull();
+    expect(storage.dump()).toEqual([]);
   });
 
   it('resume() sem nada guardado devolve null sem tocar a rede', async () => {
