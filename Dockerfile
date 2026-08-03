@@ -33,10 +33,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-RUN mkdir -p /var/cache/nginx /var/run /var/log/nginx && \
-  chown -R nginx:nginx /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html && \
-  touch /var/run/nginx.pid && \
-  chown nginx:nginx /var/run/nginx.pid
+# Sem USER aqui: o container roda como root, e a §6 do docs/deploy-gcloud.md
+# assume esse desvio. Preparar diretórios para o usuário `nginx` sugeriria uma
+# execução sem privilégio que não acontece — trocar para nginx-unprivileged é
+# tarefa à parte.
 
 EXPOSE 8080
 

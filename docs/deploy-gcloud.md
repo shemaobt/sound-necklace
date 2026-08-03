@@ -1,12 +1,15 @@
 # Deploy — Google Cloud Run
 
-**Status:** proposed (2026-07-30). The files exist and the image was verified locally;
-nothing has been deployed yet. The one-time GCP setup in §5 is still outstanding.
+**Status:** provisioned, not deployed (2026-07-31). The files exist, the image was verified
+locally, and **the one-time GCP setup in §5 is done** — §5 is now a record of what exists
+and how to re-check it, not a list of work to do. Do not re-run it. The one thing still
+ahead is the deploy itself: `deploy.yml` fires on push to `main`, so merging this branch
+*is* the first deploy.
 
 The target is the same shape three sibling repositories already use — `tripod-console`,
 `meaning-map-ui` and `oral-collector` all build a container, push it to Artifact Registry
 and run it on Cloud Run in `us-central1`. This document explains what was copied, what was
-changed for this repo, and what a human still has to do in the GCP console.
+changed for this repo, and what state GCP is already in.
 
 ## 0. What "the org pattern" actually is
 
@@ -145,34 +148,59 @@ Built and run on 2026-07-30 against the live backend
 Not verified by running it: the deploy itself. The GCP state in §5 was read with `gcloud`
 (read-only) on 2026-07-30.
 
-## 5. One-time setup, before the first deploy
+## 5. One-time setup — done on 2026-07-31; this is the record of it
+
+**Everything in this section already exists.** It is written as "what is there, and the
+command that proves it" so nobody redoes provisioning right before the first deploy.
 
 The target project is **`gen-lang-client-0886209230` ("OBT Lab")**, number `718681737495`,
 region `us-central1` — where every sibling service already runs, including
 `tripod-backend` at `https://tripod-backend-f7ssqjozfq-uc.a.run.app`. None of this is
 scripted anywhere in the organization; the siblings were set up by hand too.
 
-1. **Artifact Registry — already done.** The Docker repository `sound-necklace` exists in
-   `us-central1` in that project, and is empty. Nothing to do.
-2. **Service account** — one deployer per app is the house pattern, and there is no
-   `sound-necklace` one yet. The shape is defined by `shema-infra`'s `github_deployer`
-   module: an SA named `<app>-github-deployer`, project roles `roles/run.developer` +
-   `roles/artifactregistry.writer` + `roles/iam.serviceAccountTokenCreator`, and
-   `roles/iam.workloadIdentityUser` on the SA for
-   `principalSet://iam.googleapis.com/<pool>/attribute.repository/shemaobt/sound-necklace`.
-   **No JSON key** — that is the point of WIF. Note the live SAs drifted to `run.admin`
-   where the module says `run.developer`; follow the module.
-3. **Secret Manager**: create `sound_necklace_backend_url` in project `shemaobt-secrets`
-   holding `https://tripod-backend-f7ssqjozfq-uc.a.run.app` — the backend origin **without**
+1. **Artifact Registry — exists, pre-existing.** The Docker repository `sound-necklace`
+   exists in `us-central1` in that project, and is empty until the first deploy pushes an
+   image.
+
+   ```sh
+   gcloud artifacts repositories describe sound-necklace \
+     --location=us-central1 --project=gen-lang-client-0886209230
+   ```
+2. **Service account — created.** `sound-necklace-github-deployer@gen-lang-client-0886209230.iam.gserviceaccount.com`,
+   with the shape `shema-infra`'s `github_deployer` module defines: project roles
+   `roles/run.developer` + `roles/artifactregistry.writer` +
+   `roles/iam.serviceAccountTokenCreator`, and `roles/iam.workloadIdentityUser` on the SA
+   for `principalSet://iam.googleapis.com/<pool>/attribute.repository/shemaobt/sound-necklace`.
+   **No JSON key** — that is the point of WIF. Note the older live SAs drifted to
+   `run.admin` where the module says `run.developer`; this one follows the module.
+
+   ```sh
+   gcloud iam service-accounts get-iam-policy \
+     sound-necklace-github-deployer@gen-lang-client-0886209230.iam.gserviceaccount.com \
+     --project=gen-lang-client-0886209230          # expect the workloadIdentityUser binding
+   gcloud projects get-iam-policy gen-lang-client-0886209230 \
+     --flatten=bindings[].members --format='value(bindings.role)' \
+     --filter='bindings.members:sound-necklace-github-deployer'
+   ```
+3. **Secret Manager — created.** `sound_necklace_backend_url` in project `shemaobt-secrets`
+   holds `https://tripod-backend-f7ssqjozfq-uc.a.run.app` — the backend origin **without**
    the `/api` suffix, since nginx appends the full request URI and `/api` in the value
-   would produce `/api/api/...`. Grant the new service account `secretAccessor` on it.
-   The value is not confidential (it is already in this repo's `.env.example`); the reason
-   it lives in Secret Manager is late binding — repointing the backend without a rebuild —
-   plus keeping this workflow byte-identical to the siblings'. Hardcoding it in
-   `deploy.yml` is a legitimate simplification if you would rather not add the secret.
-4. **GitHub secrets**: `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER` and
-   `GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT` on this repository — the same three names
-   `obt-mentor-companion` uses. No `GCP_SA_KEY`.
+   would produce `/api/api/...`. The service account has `secretAccessor` on it. The value
+   is not confidential (it is already in this repo's `.env.example`); the reason it lives in
+   Secret Manager is late binding — repointing the backend without a rebuild — plus keeping
+   this workflow byte-identical to the siblings'.
+
+   ```sh
+   gcloud secrets versions access latest \
+     --secret=sound_necklace_backend_url --project=shemaobt-secrets
+   ```
+4. **GitHub secrets — set on 2026-07-31.** `GCP_PROJECT_ID`,
+   `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT` on this
+   repository — the same three names `obt-mentor-companion` uses. No `GCP_SA_KEY`.
+
+   ```sh
+   gh secret list        # names and dates only; values are write-only by design
+   ```
 5. **Custom domain — already created, and parked on purpose.** Running
 
    ```sh
@@ -188,6 +216,11 @@ scripted anywhere in the organization; the siblings were set up by hand too.
    service. Re-running it just says the mapping already exists, which is the expected
    answer, not a problem. Done here on 2026-07-31.
 
+   ```sh
+   gcloud beta run domain-mappings describe --domain=soundnecklace.shemaywam.com \
+     --region=us-central1 --project=gen-lang-client-0886209230
+   ```
+
    The mapping lists no `resourceRecords` until it reconciles, but every sibling domain
    (`oralcollector`, `console`, `meaningmap`, …) uses the same record, so it can be created
    in advance:
@@ -196,17 +229,26 @@ scripted anywhere in the organization; the siblings were set up by hand too.
    CNAME  soundnecklace  ->  ghs.googlehosted.com.
    ```
 
-6. **GCS bucket CORS — after the domain, and it is hygiene, not a blocker.** Audio is
-   downloaded straight from GCS via signed URLs (`adapters/sessions/http.ts`,
-   `getResource`), so the bucket's CORS allowlist must contain the origin the SPA is served
-   from. The live config on `gs://sound-necklace-private` is `origin: ["*"]` for
-   `GET, HEAD`, which already covers the Cloud Run URL and any custom domain — and with
-   signed URLs the signature is the credential, so `*` is not an access hole. Narrowing is
-   still better once the final origins are known:
+6. **GCS bucket CORS — narrowed on 2026-07-31, and it needs one step after the first
+   deploy.** Audio is downloaded straight from GCS via signed URLs
+   (`adapters/sessions/http.ts`, `getResource`), so the bucket's CORS allowlist must contain
+   the origin the SPA is served from. `gs://sound-necklace-private` used to be
+   `origin: ["*"]` for `GET, HEAD` — not an access hole, since with signed URLs the
+   signature is the credential, but wider than it needs to be. It was narrowed to the
+   known origins: the localhosts and `https://soundnecklace.shemaywam.com`.
+
+   > **After the first deploy, add the generated `*.run.app` origin.** Cloud Run's default
+   > hostname carries an unpredictable hash (`sound-necklace-<hash>-uc.a.run.app`), so it
+   > could not be listed in advance — and now that the list is no longer `*`, audio
+   > **will fail CORS on the Cloud Run URL** until it is added. The custom domain is
+   > unaffected. This is the one provisioning step the first deploy leaves behind.
 
    ```sh
+   gcloud storage buckets describe gs://sound-necklace-private \
+     --format='json(cors_config)'          # read the live list first
+
    cat > /tmp/sn-cors.json <<'JSON'
-   [{"origin":["http://localhost:5173","https://soundnecklace.shemaywam.com","https://<a URL do Cloud Run>"],
+   [{"origin":["http://localhost:5173","https://soundnecklace.shemaywam.com","https://<the Cloud Run URL>"],
      "method":["GET","HEAD"],"maxAgeSeconds":3600,
      "responseHeader":["Content-Type","Content-Length","Content-Range","Range"]}]
    JSON
