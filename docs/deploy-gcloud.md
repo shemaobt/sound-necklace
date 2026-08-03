@@ -247,11 +247,31 @@ scripted anywhere in the organization; the siblings were set up by hand too.
    service. Re-running it just says the mapping already exists, which is the expected
    answer, not a problem. Done here on 2026-07-31.
 
-   **Status on 2026-08-03, right after the first deploy:** still `Ready: False` /
-   `Retry: True`. The DNS half is done — `soundnecklace.shemaywam.com` resolves through
-   `ghs.googlehosted.com` — but HTTPS fails to negotiate, because the managed certificate
-   has not been issued yet. That takes anywhere from minutes to ~24h after the service
-   first exists, and needs no action. Until it lands, use the `*.run.app` URL.
+   > **Creating the mapping early costs a day, and that is the part worth knowing.** Right
+   > after the first deploy the mapping was still `Ready: False`, and the reason was not the
+   > certificate — it was `RouteMissing`, *"Route sound-necklace does not exist"*, the same
+   > error as at creation time. The paired condition explains it:
+   > `Retry: WaitingForOperation — System will retry after 24:00:00`. The mapping re-checks
+   > for the route **once every 24 hours**, so a mapping created three days before the
+   > service simply sits there, emitting no `resourceRecords` and provisioning no
+   > certificate, until its next poll comes around.
+   >
+   > **Delete and recreate it once the service exists** — it is serving nothing, so there is
+   > nothing to lose:
+   >
+   > ```sh
+   > gcloud beta run domain-mappings delete --domain=soundnecklace.shemaywam.com \
+   >   --region=us-central1 --project=gen-lang-client-0886209230 --quiet
+   > gcloud beta run domain-mappings create --service=sound-necklace \
+   >   --domain=soundnecklace.shemaywam.com --region=us-central1 \
+   >   --project=gen-lang-client-0886209230
+   > ```
+   >
+   > Done on 2026-08-03. The mapping immediately reported `DomainRoutable: True`, emitted
+   > the `CNAME soundnecklace → ghs.googlehosted.com.` record (which DNS already had), moved
+   > to `CertificatePending`, and dropped its retry interval from 24h to 1h. Nothing is left
+   > for a human: issuing the managed certificate is Google's side, minutes to ~24h. Until
+   > it lands, use the `*.run.app` URL.
 
    ```sh
    gcloud beta run domain-mappings describe --domain=soundnecklace.shemaywam.com \
