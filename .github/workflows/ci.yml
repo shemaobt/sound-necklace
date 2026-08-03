@@ -89,6 +89,29 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:browser
 
+  # Job ADICIONAL (não-required): a imagem de produção realmente constrói. Só build,
+  # sem push e sem GCP. Existe porque o deploy dispara no push para `main` — ou seja,
+  # o merge É o primeiro deploy: sem este job, um Dockerfile ou um lockfile quebrado
+  # só apareceria depois de mergeado. Os required checks seguem os de CLAUDE.md.
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - run: docker build -t sound-necklace:ci .
+      # a imagem serve o SPA e falha rápido sem BACKEND_URL — as duas pontas do
+      # entrypoint, verificadas sem precisar de rede nem de segredo
+      - name: Container serves the SPA
+        run: |
+          docker run -d --name ci-check -p 8080:8080 -e BACKEND_URL=http://127.0.0.1:1 sound-necklace:ci
+          for i in $(seq 1 20); do curl -sf -o /dev/null http://localhost:8080/ && break; sleep 1; done
+          curl -sf -o /dev/null http://localhost:8080/ || { docker logs ci-check; exit 1; }
+          curl -sf -o /dev/null http://localhost:8080/dashboard/rota-client-side
+          docker rm -f ci-check
+      - name: Container refuses to start without BACKEND_URL
+        run: |
+          if docker run --rm sound-necklace:ci; then echo "::error::deveria ter falhado sem BACKEND_URL"; exit 1; fi
+
   # Job ADICIONAL (não-required): a aceitação E2E dirige o app real em fixture.
   # Os required checks seguem os de CLAUDE.md — este não entra na lista.
   e2e:

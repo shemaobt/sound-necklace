@@ -1,0 +1,105 @@
+name: Deploy Sound Necklace to Cloud Run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  GAR_REPO: sound-necklace
+  FRONTEND_SERVICE: sound-necklace
+  SECRETS_PROJECT: shemaobt-secrets
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-sound-necklace
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check required secrets
+        run: |
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then echo "::error::GCP_PROJECT_ID is not set."; exit 1; fi
+          if [ -z "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ]; then echo "::error::GCP_WORKLOAD_IDENTITY_PROVIDER is not set."; exit 1; fi
+          if [ -z "${{ secrets.GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT }}" ]; then echo "::error::GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT is not set."; exit 1; fi
+          echo "Required secrets are set."
+
+      # Workload Identity Federation, não chave JSON: é o que o módulo
+      # `github_deployer` do shema-infra provisiona, o que a pool
+      # `github-actions-pool` já serve, e o que o obt-mentor-companion já usa.
+      # Os quatro repos mais antigos ainda mandam uma chave estática — este não
+      # nasce devendo essa migração.
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_WORKLOAD_IDENTITY_SERVICE_ACCOUNT }}
+          token_format: 'access_token'
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      # Login com o access_token do passo acima, e não `gcloud auth configure-docker`:
+      # o helper do gcloud contra credencial de conta externa é o caminho que ninguém
+      # aqui exercitou. Este é o único par WIF+Docker que já roda na organização
+      # (obt-mentor-companion). Como o merge É o primeiro deploy e o job docker-build
+      # do CI não faz push, um erro aqui só apareceria em produção.
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/frontend:${{ github.sha }} \
+            .
+
+      - name: Push frontend image
+        run: docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/frontend:${{ github.sha }}
+
+      - name: Fetch secrets from GCP Secret Manager
+        id: secrets
+        run: |
+          BACKEND_URL=$(gcloud secrets versions access latest \
+            --secret=sound_necklace_backend_url \
+            --project=${{ env.SECRETS_PROJECT }} | tr -d '\n')
+          echo "::add-mask::${BACKEND_URL}"
+          echo "backend_url=${BACKEND_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.FRONTEND_SERVICE }} \
+            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/frontend:${{ github.sha }} \
+            --project ${{ env.PROJECT_ID }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory=256Mi \
+            --cpu=1 \
+            --concurrency=80 \
+            --timeout=60 \
+            --set-env-vars="BACKEND_URL=${{ steps.secrets.outputs.backend_url }}"
+
+      - name: Show deployment URL
+        run: |
+          URL=$(gcloud run services describe ${{ env.FRONTEND_SERVICE }} \
+            --project ${{ env.PROJECT_ID }} \
+            --region ${{ env.REGION }} \
+            --format="value(status.url)")
+          echo "Deployed to: ${URL}"
