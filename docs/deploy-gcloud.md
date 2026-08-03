@@ -229,41 +229,47 @@ scripted anywhere in the organization; the siblings were set up by hand too.
    CNAME  soundnecklace  ->  ghs.googlehosted.com.
    ```
 
-6. **GCS bucket CORS — narrowed on 2026-07-31, and it needs one step after the first
-   deploy.** Audio is downloaded straight from GCS via signed URLs
-   (`adapters/sessions/http.ts`, `getResource`), so the bucket's CORS allowlist must contain
-   the origin the SPA is served from. `gs://sound-necklace-private` used to be
-   `origin: ["*"]` for `GET, HEAD` — not an access hole, since with signed URLs the
-   signature is the credential, but wider than it needs to be. It was narrowed to the
-   known origins: the localhosts and `https://soundnecklace.shemaywam.com`.
+6. **GCS bucket CORS — narrowed on 2026-07-31, and already complete.** Audio is downloaded
+   straight from GCS via signed URLs (`adapters/sessions/http.ts`, `getResource`), so the
+   bucket's CORS allowlist must contain the origin the SPA is served from.
+   `gs://sound-necklace-private` used to be `origin: ["*"]` for `GET, HEAD` — not an access
+   hole, since with signed URLs the signature is the credential, but wider than it needs to
+   be. The live list is now:
 
-   > **After the first deploy, add the generated `*.run.app` origin.** Cloud Run's default
-   > hostname carries an unpredictable hash (`sound-necklace-<hash>-uc.a.run.app`), so it
-   > could not be listed in advance — and now that the list is no longer `*`, audio
-   > **will fail CORS on the Cloud Run URL** until it is added. The custom domain is
-   > unaffected. This is the one provisioning step the first deploy leaves behind.
+   ```
+   https://soundnecklace.shemaywam.com
+   https://sound-necklace-f7ssqjozfq-uc.a.run.app
+   https://sound-necklace-718681737495.us-central1.run.app
+   http://localhost:5173
+   ```
+
+   **Both Cloud Run hostnames are in there, and neither needed the service to exist first.**
+   Cloud Run's default hostname is not random per service: the legacy form
+   `<service>-<hash>-<region>.a.run.app` derives its hash from the project and region — all
+   14 services in this project share `f7ssqjozfq` — and the current form is
+   `<service>-<project-number>.<region>.run.app`. Both were predictable, so both were
+   listed in advance. Nothing about CORS is left for after the first deploy.
+
+   **Where this is configured: by hand, with `gcloud`. Never by the API.** CORS is a
+   property of the GCS bucket, not of the backend — no application code, workflow or
+   startup path sets it. `tripod-api` checks in `sound-necklace-cors.json` as the reference
+   copy, and its README says so outright: *"applied by hand and by nobody else."* That file
+   and the live bucket currently match exactly. Because nothing enforces that, read the
+   bucket before trusting the file:
 
    ```sh
-   gcloud storage buckets describe gs://sound-necklace-private \
-     --format='json(cors_config)'          # read the live list first
-
-   cat > /tmp/sn-cors.json <<'JSON'
-   [{"origin":["http://localhost:5173","https://soundnecklace.shemaywam.com","https://<the Cloud Run URL>"],
-     "method":["GET","HEAD"],"maxAgeSeconds":3600,
-     "responseHeader":["Content-Type","Content-Length","Content-Range","Range"]}]
-   JSON
-   gcloud storage buckets update gs://sound-necklace-private --cors-file=/tmp/sn-cors.json
+   gcloud storage buckets describe gs://sound-necklace-private --format='json(cors_config)'
+   # to change it, edit tripod-api/sound-necklace-cors.json and apply it from there:
+   gcloud storage buckets update gs://sound-necklace-private \
+     --cors-file=sound-necklace-cors.json
    ```
 
    `OPTIONS` does not belong in `method` — that list is the allowed *request* methods, and
-   the preflight is implied. `Range` must stay in `responseHeader`: it is not a
-   CORS-safelisted request header, so seeking in a long recording preflights.
-
-   **`tripod-api` has a checked-in `sound-necklace-cors.json` that does not match the live
-   bucket** — it lists only the two localhosts and `https://soundnecklace.shemaywam.com`,
-   with `PUT` and `OPTIONS` this app never issues against GCS. Nothing applies it
-   automatically, but applying it by hand would narrow the bucket and break audio on the
-   `*.run.app` URL. Fix or delete it.
+   the preflight is implied. `PUT` does not either: the SPA only ever issues signed **GET**
+   against GCS, since uploads go through `PUT /api/sound-necklace/sessions/{id}/resources`.
+   `Range` stays in `responseHeader`, though not for the reason one might assume — an
+   ordinary seek (`bytes=1048576-`) *is* CORS-safelisted and does not preflight; a suffix
+   range (`bytes=-500`) is not.
 
 ## 6. Deviations from current external best practice, knowingly accepted
 
