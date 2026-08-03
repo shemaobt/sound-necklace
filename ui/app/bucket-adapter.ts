@@ -31,7 +31,9 @@ export async function resolveProjectId(): Promise<string> {
   const res = await apiGet('/auth/my-project-roles');
   if (!res.ok) throw new Error(`my-project-roles → HTTP ${res.status}`);
   const parsed = MyProjectRolesResponseSchema.parse(await res.json());
-  const ids = Object.keys(parsed.project_roles);
+  const granted = Object.keys(parsed.project_roles);
+  const ids =
+    granted.length === 0 && parsed.is_platform_admin ? await listAllProjectIds() : granted;
   const first = ids[0];
   if (!first) throw new Error('usuário sem projeto no tripod');
 
@@ -61,6 +63,27 @@ export async function canEditProjectGranularity(projectId: string): Promise<bool
   if (!res.ok) return false;
   const parsed = MyProjectRolesResponseSchema.parse(await res.json());
   return parsed.is_platform_admin || parsed.project_roles[projectId] === 'project_admin';
+}
+
+/**
+ * Projetos da instância inteira, para quem administra a plataforma. `my-project-roles`
+ * devolve `{}` para ele — a API o deixa entrar em qualquer projeto sem escrever linha
+ * em `project_user_access`, então não há o que listar ali — e `GET /projects` é o
+ * único endpoint que responde a pergunta nesse caso. A sondagem por áudio que vem
+ * depois é a mesma da conta multi-projeto: uma requisição por projeto.
+ *
+ * É a única rota fora de `/auth/*` + `/sound-necklace/*` que o SPA consome, então
+ * está fora do `contracts/openapi.json` e sem schema — daí a leitura defensiva. A
+ * falha SOBE — inclusive uma resposta em formato inesperado: engolir a chamada
+ * devolveria "usuário sem projeto no tripod" a quem tem acesso a todos eles,
+ * mensagem que manda procurar o grant errado.
+ */
+async function listAllProjectIds(): Promise<string[]> {
+  const res = await apiGet('/projects');
+  if (!res.ok) throw new Error(`projects → HTTP ${res.status}`);
+  const body: unknown = await res.json();
+  if (!Array.isArray(body)) throw new Error('projects → resposta inesperada');
+  return body.flatMap((p: { id?: unknown }) => (typeof p?.id === 'string' ? [p.id] : []));
 }
 
 function apiGet(path: string): Promise<Response> {

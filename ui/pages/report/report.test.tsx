@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import baseCss from '../../tokens/base.css?raw';
 import reportCss from './report.css?raw';
 import userEvent from '@testing-library/user-event';
@@ -574,8 +574,9 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     load(report());
     render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
 
-    await screen.findByText(/transcrevendo/i);
-    expect(started.flat()).toEqual([PATH]);
+    // esperar o rótulo "transcrevendo" não serve aqui: ele aparece antes de `start`
+    // ser chamado, e num runner lento a asserção corria antes do pedido sair
+    await waitFor(() => expect(started.flat()).toEqual([PATH]));
   });
 
   it('a chegada dos rascunhos é anunciada por uma região registrada vazia de antemão', async () => {

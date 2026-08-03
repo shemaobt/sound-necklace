@@ -130,6 +130,18 @@ const APP_KEY = 'sound-necklace';
 /** Onde o refresh token rotativo persiste (§12 emendado — decisão do dono). */
 const REFRESH_STORAGE_KEY = 'colar-de-sons:auth:refresh:v1';
 
+/**
+ * Acesso EFETIVO ao Colar: papel concedido no app OU condição de platform admin. A
+ * API já entra por essas duas portas — `require_app_access` devolve o usuário na
+ * hora quando ele é platform admin, sem consultar `user_app_roles` — e é justamente
+ * por isso que `my-roles` volta VAZIO para ele: ninguém lhe concedeu papel, ele
+ * dispensa a concessão. Um só ponto de decisão para o login e para a retomada; o
+ * gate daqui é cosmético, quem recusa de verdade continua sendo o servidor.
+ */
+function hasAppAccess(roles: Role[], isPlatformAdmin: boolean): boolean {
+  return roles.length > 0 || isPlatformAdmin;
+}
+
 export interface HttpAuthProviderOptions {
   baseUrl: string;
   fetch: typeof globalThis.fetch;
@@ -189,8 +201,9 @@ export class HttpAuthProvider implements AuthProvider {
       this.#resetSession();
       throw err;
     }
-    if (roles.length === 0) {
-      // conta válida na plataforma, mas sem papel no Colar: não há sessão a manter
+    if (!hasAppAccess(roles, res.user.is_platform_admin)) {
+      // conta válida na plataforma, sem papel no Colar e sem administrá-la: não há
+      // sessão a manter
       this.#resetSession();
       throw new AuthError('sem acesso ao Colar de Sons');
     }
@@ -238,7 +251,8 @@ export class HttpAuthProvider implements AuthProvider {
         suppressAuthExpired: true,
       });
       const roles = await this.#fetchRoles();
-      if (roles.length === 0) throw new AuthError('sem acesso ao Colar de Sons');
+      if (!hasAppAccess(roles, user.is_platform_admin))
+        throw new AuthError('sem acesso ao Colar de Sons');
 
       this.#user = this.#userFrom(user, roles);
       this.#scheduleRefresh();
