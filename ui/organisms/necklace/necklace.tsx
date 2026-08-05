@@ -358,10 +358,31 @@ export function Necklace(props: NecklaceProps) {
     let pending: { id: string; startBead: number } | null = null;
     let dragging: string | null = null;
 
+    let hoverEdge: number | null = null;
+    let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+    /**
+     * A conta que acabou de receber um toque. O dwell da borda nasceu na referência
+     * (L587-596), onde clicar numa borda TAMBÉM tocava só a borda — hover e clique
+     * concordavam. No nosso modelo eles discordam: clicar o começo OUVE a partir
+     * dali (docs/segmentation-rules.md regra 1). Sem esta supressão, o timer
+     * atrasado — ou o tremor do mouse sobre a conta recém-clicada, que virou borda
+     * ao definir o FIM — interrompe a reprodução do clique para tocar ~4 contas em
+     * volta da borda. Só um hover DELIBERADO (sair da conta e voltar) reconfere a
+     * borda; o clique manda enquanto o ponteiro não se move.
+     */
+    let suppressedBead: number | null = null;
+    const clearHover = () => {
+      if (hoverTimer) clearTimeout(hoverTimer);
+      hoverTimer = null;
+      hoverEdge = null;
+    };
+
     function onPointerDown(ev: PointerEvent): void {
       const ix = ixRef.current;
       if (!ix.total) return;
       const bead = beadFromEvent(ev);
+      clearHover();
+      suppressedBead = bead;
       const handle = ix.onDragBoundary ? handleAt(bead) : null;
       if (handle !== null) {
         pending = { id: handle, startBead: bead };
@@ -398,14 +419,6 @@ export function Necklace(props: NecklaceProps) {
       dragging = null;
     }
 
-    let hoverEdge: number | null = null;
-    let hoverTimer: ReturnType<typeof setTimeout> | null = null;
-    const clearHover = () => {
-      if (hoverTimer) clearTimeout(hoverTimer);
-      hoverTimer = null;
-      hoverEdge = null;
-    };
-
     function onPointerMove(ev: PointerEvent): void {
       const ix = ixRef.current;
       // arrasto de fronteira em curso (ou armado): domina o move
@@ -419,6 +432,9 @@ export function Necklace(props: NecklaceProps) {
       const sel = ix.selection;
       if (!ix.total || ix.transportOnly || !sel) return clearHover();
       const bead = beadFromEvent(ev);
+      // o clique manda até o ponteiro sair da conta que ele tocou
+      if (bead === suppressedBead) return;
+      suppressedBead = null;
       const near = (edge: number) => bead === edge || bead === edge - 1 || bead === edge + 1;
       const edge = near(sel.s) ? sel.s : near(sel.e) ? sel.e : null;
       if (edge === null) return clearHover();
@@ -431,17 +447,23 @@ export function Necklace(props: NecklaceProps) {
       }, 280);
     }
 
+    // sair do colar zera tudo: o próximo hover é uma intenção nova
+    const onPointerLeave = () => {
+      clearHover();
+      suppressedBead = null;
+    };
+
     node.addEventListener('pointerdown', onPointerDown);
     node.addEventListener('pointermove', onPointerMove);
     node.addEventListener('pointerup', endDrag);
     node.addEventListener('pointercancel', endDrag);
-    node.addEventListener('pointerleave', clearHover);
+    node.addEventListener('pointerleave', onPointerLeave);
     return () => {
       node.removeEventListener('pointerdown', onPointerDown);
       node.removeEventListener('pointermove', onPointerMove);
       node.removeEventListener('pointerup', endDrag);
       node.removeEventListener('pointercancel', endDrag);
-      node.removeEventListener('pointerleave', clearHover);
+      node.removeEventListener('pointerleave', onPointerLeave);
       if (hoverTimer) clearTimeout(hoverTimer);
     };
   }, []);
