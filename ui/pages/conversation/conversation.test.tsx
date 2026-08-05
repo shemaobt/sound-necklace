@@ -720,3 +720,27 @@ describe('Conversation — o cabeçalho fica sabendo da gravação (ENG-393)', (
     expect(appStore.getState().recording).toBe(false);
   });
 });
+
+/**
+ * ENG-392 — o tamanho da resposta em risco chega por extenso.
+ *
+ * O organismo só sabe interpolar a frase que recebe; quem converte segundos em
+ * palavras é esta página. Sem um teste aqui, ela poderia voltar a mandar "1:12"
+ * e o §9.2 cairia sem nada reclamar — o diálogo abre num portal, fora da raiz
+ * que o scanner de minimalismo varre.
+ */
+describe('Conversation — a duração no diálogo de regravar não traz dígito (ENG-392)', () => {
+  it('grava, para, e a confirmação descreve o tamanho por palavras', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    render(<Conversation recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'gravar de novo' }));
+
+    const dialogo = screen.getByRole('alertdialog');
+    expect(dialogo.textContent ?? '').toMatch(/minuto/);
+    expect(dialogo.textContent ?? '').not.toMatch(/\d/);
+  });
+});

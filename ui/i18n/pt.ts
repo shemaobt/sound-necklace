@@ -427,6 +427,12 @@ export const pt = {
     recordingLabel: 'gravando — os outros botões esperam a resposta',
     play: 'ouvir a resposta',
     again: 'gravar de novo',
+    /* O tamanho da resposta em risco, por extenso — §9.2 proíbe dígito aqui.
+       É escala, não cronômetro: numa advertência o que decide é QUANTO se
+       perde, e "cerca de dois minutos" carrega isso melhor que "2:07". */
+    answerLengthUnderMinute: 'menos de um minuto',
+    answerLengthOneMinute: 'cerca de um minuto',
+    answerLengthMinutes: 'cerca de {{minutos}} minutos',
     rerecordTitle: 'Gravar esta resposta de novo?',
     rerecordBody:
       'A resposta que já foi gravada ({{duration}}) será apagada, e uma nova gravação começa na hora. Isso não tem volta.',

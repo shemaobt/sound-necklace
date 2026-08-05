@@ -25,7 +25,7 @@ import {
   WAVE_BARS,
 } from '../../organisms/conversation-stage/conversation-stage';
 import type { PaletteEntry } from '../../tokens';
-import { sceneOrdinal } from '../cut/cutting';
+import { cardinal, sceneOrdinal } from '../cut/cutting';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../../state';
@@ -219,6 +219,20 @@ function QuestionScreen({
   // Quanto tempo de resposta existe hoje — a confirmação de regravar diz o que
   // está em risco (ENG-392). `undefined` = ainda não se sabe (ou a consulta falhou).
   const [answerSeconds, setAnswerSeconds] = useState<number | undefined>(undefined);
+
+  /* Segundos → palavras, no idioma da UI (§9.2: a tela do ouvinte não mostra
+     dígito). Acima de 99 minutos `cardinal` devolve '' e o diálogo cai na frase
+     sem tamanho — melhor omitir do que imprimir um número solto. */
+  const answerLength = ((): string | undefined => {
+    if (answerSeconds === undefined) return undefined;
+    if (answerSeconds < 60) return t('conversationStage.answerLengthUnderMinute');
+    const minutos = Math.round(answerSeconds / 60);
+    if (minutos === 1) return t('conversationStage.answerLengthOneMinute');
+    const porExtenso = cardinal(minutos, i18n.language);
+    return porExtenso
+      ? t('conversationStage.answerLengthMinutes', { minutos: porExtenso })
+      : undefined;
+  })();
   // A RESPOSTA desta pergunta está tocando — dos eventos reais da porta (ENG-322).
   const [answerPlaying, setAnswerPlaying] = useState(false);
   // Entre o toque e o som há fetch+decode no modo real (ENG-336): o botão diz
@@ -412,7 +426,7 @@ function QuestionScreen({
         onStop={onStop}
         onPlay={onPlay}
         onRerecord={onRerecord}
-        answerSeconds={answerSeconds}
+        answerLength={answerLength}
         // toque recusado durante a gravação: responde ao ouvido, não com texto (§9.4)
         onBlocked={() => sound?.refuse()}
         answerPlaying={answerPlaying}

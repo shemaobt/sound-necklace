@@ -134,7 +134,7 @@ const DEZENAS_EN = [
  * chamador omite o número). EN une dezena+unidade com hífen ("twenty-one"),
  * PT-BR com " e " ("vinte e um").
  */
-function cardinal(n: number, lang: string): string {
+export function cardinal(n: number, lang: string): string {
   if (n < 1 || n > 99) return '';
   const en = lang.startsWith('en');
   const unidades = en ? UNIDADES_EN : UNIDADES_PT;

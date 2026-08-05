@@ -54,7 +54,13 @@ export interface ConversationStageProps {
    * Duração da resposta já gravada. A confirmação de regravar diz em voz alta o
    * que está em risco; sem ela a pergunta é abstrata e a pessoa aceita no reflexo.
    */
-  answerSeconds?: number;
+  /**
+   * O tamanho da resposta em risco, JÁ por extenso ("cerca de um minuto").
+   * Chega pronto porque o §9.2 proíbe dígito em tela de ouvinte e quem sabe
+   * escrever número por palavra é a página (`cardinal`, no idioma da UI).
+   * Ausente = não deu para saber; o corpo do diálogo omite o tamanho.
+   */
+  answerLength?: string;
   /**
    * Um controle travado foi tocado durante a gravação (ENG-393). A recusa se
    * responde ao ouvido, não com texto (§9.4) — quem liga a porta de som decide o
@@ -177,16 +183,6 @@ function MicGlyph({ className = 'cds-conversation-stage-mic-glyph' }: { classNam
 }
 
 /**
- * m:ss. A única duração escrita numa tela de ouvinte (§9.2 proíbe números): sem
- * ela, "a resposta será apagada" não diz o tamanho do que se perde, e a pergunta
- * vira formalidade.
- */
-function mmss(seconds: number): string {
-  const total = Math.max(0, Math.round(seconds));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-/**
  * O palco da conversa do Conversation (redesign §6.6): guia à esquerda, a pergunta
  * grande em Merriweather à direita, a resposta por voz (microfone → forma de onda
  * ao vivo → ouvir/de novo) e, no rodapé, a barra de progresso por trecho
@@ -204,7 +200,7 @@ export function ConversationStage({
   onStop,
   onPlay,
   onRerecord,
-  answerSeconds,
+  answerLength,
   onBlocked,
   answerPlaying = false,
   answerOpening = false,
@@ -427,11 +423,11 @@ export function ConversationStage({
                 {t('conversationStage.rerecordTitle')}
               </Dialog.Title>
               <Dialog.Description className="cds-rerecord-confirm-body">
-                {answerSeconds === undefined
+                {answerLength === undefined
                   ? // a duração pode não ter chegado (consulta de IO falha): dizer
                     // "0:00" mentiria sobre o tamanho do que se perde
                     t('conversationStage.rerecordBodyUnknown')
-                  : t('conversationStage.rerecordBody', { duration: mmss(answerSeconds) })}
+                  : t('conversationStage.rerecordBody', { duration: answerLength })}
               </Dialog.Description>
               <div className="cds-rerecord-confirm-actions">
                 <span ref={keepRef} style={{ display: 'contents' }}>

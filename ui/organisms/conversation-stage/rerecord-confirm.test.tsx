@@ -23,7 +23,7 @@ function recordedStage(props: Partial<ConversationStageProps> = {}) {
     <ConversationStage
       question="Sobre o que é essa história?"
       recorderState="recorded"
-      answerSeconds={72}
+      answerLength="cerca de um minuto"
       progress={{ total: 11, current: 1 }}
       trechos={[]}
       onRerecord={onRerecord}
@@ -57,7 +57,17 @@ describe('pedir para regravar', () => {
 
     await abrirRegravar();
 
-    expect(screen.getByRole('alertdialog').textContent).toContain('1:12');
+    expect(screen.getByRole('alertdialog').textContent).toContain('cerca de um minuto');
+  });
+
+  it('e diz isso sem um único dígito — é tela de ouvinte (§9.2)', async () => {
+    /* O diálogo abre num portal, fora da raiz que o scanner de minimalismo do e2e
+       varre, então nenhuma das guardas o alcança. Esta é a que alcança. */
+    recordedStage();
+
+    await abrirRegravar();
+
+    expect(screen.getByRole('alertdialog').textContent ?? '').not.toMatch(/\d/);
   });
 });
 

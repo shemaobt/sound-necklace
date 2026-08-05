@@ -90,7 +90,7 @@ describe('ConversationStage — fluxo do gravador (Chromium real; CLAUDE.md gate
     expect(handlers.onStop).toHaveBeenCalledTimes(1);
 
     // gravado → ouvir a resposta / gravar de novo
-    update(base({ recorderState: 'recorded', answerSeconds: 72, ...handlers }));
+    update(base({ recorderState: 'recorded', answerLength: 'cerca de um minuto', ...handlers }));
     byText(el, 'ouvir a resposta').click();
     byText(el, 'gravar de novo').click();
     // regravar passa pela confirmação (ENG-392): abrir ainda não apaga nada
@@ -110,7 +110,9 @@ describe('ConversationStage — fluxo do gravador (Chromium real; CLAUDE.md gate
    */
   it('a confirmação de regravar abre com o foco em "Manter a gravação"', async () => {
     const onRerecord = vi.fn();
-    const el = mount(base({ recorderState: 'recorded', answerSeconds: 72, onRerecord }));
+    const el = mount(
+      base({ recorderState: 'recorded', answerLength: 'cerca de um minuto', onRerecord }),
+    );
 
     byText(el, 'gravar de novo').click();
 

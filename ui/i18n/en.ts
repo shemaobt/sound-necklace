@@ -401,6 +401,12 @@ export const en: Dict = {
     recordingLabel: 'recording — the other buttons wait for the answer',
     play: 'listen to the answer',
     again: 'record again',
+    /* O tamanho da resposta em risco, por extenso — §9.2 proíbe dígito aqui.
+       É escala, não cronômetro: numa advertência o que decide é QUANTO se
+       perde, e "cerca de dois minutos" carrega isso melhor que "2:07". */
+    answerLengthUnderMinute: 'under a minute',
+    answerLengthOneMinute: 'about a minute',
+    answerLengthMinutes: 'about {{minutos}} minutes',
     rerecordTitle: 'Record this answer again?',
     rerecordBody:
       'The answer already recorded ({{duration}}) will be erased, and a new recording starts right away. There is no undo.',
