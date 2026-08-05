@@ -1,9 +1,9 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import type { Span } from '../../../domain';
-import { beadPosition, resolveWindow, SIZE_M } from './geometry';
+import { beadPosition, beadsPerRow, resolveWindow, SIZE_M } from './geometry';
 import { Necklace, type NecklaceProps } from './necklace';
 
 /**
@@ -42,13 +42,24 @@ function firePointer(el: HTMLElement, type: string, clientX: number, clientY: nu
 }
 
 /** Coordenada de cliente do centro da conta `index`, dada a janela em uso. */
-function beadClient(
-  el: HTMLElement,
-  index: number,
-  winS: number,
-  bpr = 20,
-): { x: number; y: number } {
+/**
+ * Centro real da conta, lido do DOM.
+ *
+ * Já foi calculado a partir de um `bpr` fixo de 20 — e isso amarrava o teste a
+ * uma largura útil exata. Bastou a janela reservar a calha da barra de rolagem
+ * (`scrollbar-gutter`, que só aparece onde a barra é clássica, não no macOS) para
+ * a fileira caber 19 contas: as coordenadas passaram a apontar para a conta
+ * errada, no CI e só no CI.
+ */
+function beadClient(el: HTMLElement, index: number, winS: number): { x: number; y: number } {
+  const bead = el.querySelector(`.cds-necklace-bead[data-idx="${index}"]`);
+  if (bead) {
+    const r = bead.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+  // fora da janela renderizada: cai na geometria, medindo o bpr em vigor
   const rect = el.getBoundingClientRect();
+  const bpr = beadsPerRow(el.clientWidth, SIZE_M);
   const pos = beadPosition(index, winS, bpr, SIZE_M);
   return { x: rect.left + pos.left, y: rect.top + pos.top };
 }
@@ -240,6 +251,13 @@ describe('Necklace — desempenho e delegação', () => {
   it('renderiza ≥2400 contas com um único listener de pointerdown no container', () => {
     const calls: { el: EventTarget; type: string }[] = [];
     const orig = HTMLElement.prototype.addEventListener;
+    /* Restaura mesmo se a asserção falhar antes do fim. Sem isto, o espião
+       sobrevive ao teste e a repetição (`retry: 1`) captura o PRÓPRIO espião como
+       "original": cada addEventListener chama o anterior e a pilha estoura, o que
+       esconde a falha de verdade atrás de um "Maximum call stack size exceeded". */
+    onTestFinished(() => {
+      HTMLElement.prototype.addEventListener = orig;
+    });
     const spy = vi.spyOn(HTMLElement.prototype, 'addEventListener').mockImplementation(function (
       this: HTMLElement,
       ...args: Parameters<typeof orig>
