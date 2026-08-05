@@ -29,7 +29,7 @@
   align-items: center;
   gap: 10px;
   background: rgba(119, 125, 69, 0.14);
-  color: #585d31;
+  color: var(--cds-ui-positive);
   font-family: var(--cds-font-load-bearing);
   font-weight: 700;
   font-size: 15px;

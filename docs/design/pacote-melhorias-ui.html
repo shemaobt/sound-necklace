@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-cds-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pacote de melhorias UI/UX — Colar de Sons</title>
+
+<!-- =====================================================================
+     CDS — PACOTE DE MELHORIAS UI/UX (lista de agosto/2026)
+     Componentes autocontidos, sem dependências, para o index.html do app.
+
+     Copie os blocos marcados:
+       [1] CSS  — tokens de tema + todos os componentes (prefixo .cds-)
+       [3] JS   — CdsTheme · CdsFollow · CdsBeadStrip · CdsSceneDots ·
+                  CdsRerecord · CdsRecLock
+     O markup de referência de cada item está nas demos, marcado
+     [2.x] TEMPLATE. A moldura do documento (fundo bege, títulos das
+     seções, script "DEMO") NÃO é para copiar.
+
+     Itens da lista → seções:
+       1  lista de áudios + continuar visível ........ §1
+       2  colar dentro de janela de scroll ........... §2
+       3  organização da lista de cenas/frases ....... §3 (decisão: fio de contas, opção 1b)
+       4  indicador da cena com cor + número ......... §4
+       5-7 triagem: sem grupos, lista completa à vista,
+           ações sempre acessíveis ................... §5
+       8  dark mode .................................. §6
+       9  confirmação ao gravar de novo .............. §7
+       10 trava de ações durante a gravação .......... §8
+     Nenhum item toca os invariantes (§7 do PRD): schemas, IDs,
+     scene_kind em inglês, gates e semântica de costura ficam intactos.
+     ===================================================================== -->
+
+<!-- [1] CSS =============================================================== -->
+<style>
+/* ---------- 1.0 · tokens de tema (item 8 — dark mode) -------------------
+   Coloque data-cds-theme="light|dark" no <html> (CdsTheme.init faz isso).
+   Telas cerimoniais (Ouça a história / Mapeamento) continuam olive #3F3E20
+   nos dois temas — elas não usam estas variáveis. */
+[data-cds-theme]{
+  --cds-bg:#F6F5EB; --cds-card:#FFFFFF; --cds-elev:#F6F5EB; --cds-chip:#ECEADF;
+  --cds-ink:#0A0703; --cds-soft:#5A5A3E; --cds-faint:#8A8970;
+  --cds-hair:rgba(63,62,32,.14); --cds-hair2:rgba(63,62,32,.32);
+  --cds-sbg:#3F3E20; --cds-sfg:#F6F5EB; --cds-ak:#BE4A01; --cds-ok:#585D31;
+  --cds-wash:rgba(255,255,255,.5); --cds-ebg:rgba(143,55,1,.1); --cds-efg:#8F3701;
+}
+[data-cds-theme="dark"]{
+  --cds-bg:#1C1B0E; --cds-card:#2B2A17; --cds-elev:#33321C; --cds-chip:rgba(246,245,235,.09);
+  --cds-ink:#F1EBDB; --cds-soft:rgba(241,235,219,.78); --cds-faint:rgba(241,235,219,.55);
+  --cds-hair:rgba(246,245,235,.14); --cds-hair2:rgba(246,245,235,.34);
+  --cds-sbg:#F1EBDB; --cds-sfg:#2A2914; --cds-ak:#E8813E; --cds-ok:#CFD6A6;
+  --cds-wash:rgba(246,245,235,.04); --cds-ebg:rgba(232,129,62,.15); --cds-efg:#F0B489;
+}
+/* botão de tema (cabeçalho): mostre lua no claro, sol no escuro */
+.cds-themebtn{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--cds-chip);color:var(--cds-soft);display:inline-flex;align-items:center;justify-content:center}
+.cds-themebtn:hover{color:var(--cds-ak)}
+[data-cds-theme="light"] .cds-themebtn .cds-ico-sun{display:none}
+[data-cds-theme="dark"]  .cds-themebtn .cds-ico-moon{display:none}
+
+/* ---------- 1.1 · scrollbar fina (todas as janelas de rolagem) ---------- */
+.cds-scroll{scrollbar-width:thin;scrollbar-color:rgba(138,137,112,.5) transparent}
+.cds-scroll::-webkit-scrollbar{width:9px;height:9px}
+.cds-scroll::-webkit-scrollbar-thumb{background:rgba(138,137,112,.45);border-radius:99px;
+  border:2px solid transparent;background-clip:content-box}
+.cds-scroll::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 2 · janela do colar (item 2) --------------------------------
+   O colar rola AQUI DENTRO; a tela não cresce. Use junto com .cds-scroll.
+   position:relative é obrigatório para o CdsFollow calcular offsetTop.   */
+.cds-window{position:relative;overflow-y:auto;max-height:min(40vh,360px);
+  border-radius:24px;border:1px solid var(--cds-hair);background:var(--cds-wash);padding:18px 26px}
+.cds-window--dark{border-color:rgba(246,245,235,.14);background:rgba(10,7,3,.16)} /* telas olive */
+
+/* ---------- 3 · rodapé fixo + fio de contas (itens 1/3) ----------------- */
+.cds-footbar{display:flex;align-items:center;gap:16px;padding:12px 28px 16px;
+  border-top:1px solid var(--cds-hair);flex:none}
+.cds-footbar__label{flex:none;width:150px;font-size:11.5px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--cds-faint);line-height:1.4}
+.cds-footbar__strip{flex:1;min-width:0;display:flex;align-items:center;gap:14px;
+  overflow-x:auto;padding:8px 2px}
+.cds-fio{display:flex;align-items:center;gap:14px}
+.cds-fio__cord{position:relative;display:flex;align-items:center;flex:none;padding:0 6px;height:40px}
+.cds-fio__cord::before{content:"";position:absolute;left:4px;right:4px;top:50%;height:2px;
+  transform:translateY(-50%);background:var(--cds-hair2);border-radius:2px}
+.cds-fio__beads{position:relative;display:flex;align-items:center;gap:11px}
+.cds-fio__bead{width:22px;height:22px;border-radius:50%;flex:none;border:none;padding:0;cursor:pointer;
+  position:relative;z-index:1;box-shadow:0 1px 3px rgba(10,7,3,.18);transition:transform .18s,box-shadow .18s}
+.cds-fio__bead[aria-pressed="true"]{transform:scale(1.22);z-index:2;
+  box-shadow:0 0 0 3px var(--cds-ak),0 2px 8px rgba(10,7,3,.25)}
+.cds-fio__cap{flex:none;display:flex;align-items:center;gap:6px;background:var(--cds-card);
+  border-radius:999px;box-shadow:0 2px 6px rgba(63,62,32,.1);padding:6px 8px 6px 14px;animation:cds-fade .18s ease-out}
+.cds-fio__name{font-weight:700;font-size:12.5px;color:var(--cds-ink);white-space:nowrap}
+.cds-iconbtn{width:28px;height:28px;border-radius:50%;border:none;padding:0;cursor:pointer;flex:none;
+  display:inline-flex;align-items:center;justify-content:center;background:none;color:#B8B79E}
+.cds-iconbtn:hover{background:var(--cds-chip)}
+.cds-iconbtn--primary{background:#BE4A01;color:#F6F5EB}
+.cds-iconbtn--primary:hover{background:#8F3701}
+.cds-iconbtn--text{width:auto;padding:0 10px;font-size:11.5px;font-weight:700;color:#BE4A01;font-family:'Montserrat',system-ui,sans-serif}
+.cds-iconbtn--flagged{color:#B98A2C}
+.cds-footbar__empty{font-size:13px;color:var(--cds-faint);font-style:italic;
+  font-family:'Merriweather',Georgia,serif;white-space:nowrap}
+
+/* ---------- 4 · indicador de cena: cor + número (item 4) ---------------- */
+.cds-dots{display:flex;align-items:center;justify-content:center;gap:11px;flex-wrap:wrap}
+.cds-dot{width:32px;height:32px;border-radius:50%;flex:none;border:none;padding:0;cursor:pointer;
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  font-family:'Montserrat',system-ui,sans-serif;font-weight:800;font-size:12.5px;line-height:1;
+  color:#FFFFFF;text-shadow:0 1px 2px rgba(10,7,3,.35);transition:all .22s;background:transparent}
+.cds-dot[data-state="pending"]{border:2px solid currentColor;text-shadow:none;background:transparent}
+.cds-dot[data-state="none_fit"]{opacity:.45}
+.cds-dot[data-active]{width:38px;height:38px;font-size:14px;box-shadow:0 0 0 4px rgba(190,74,1,.2)}
+.cds-dot__badge{position:absolute;right:-4px;bottom:-4px;width:16px;height:16px;border-radius:50%;
+  background:#777D45;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--cds-bg)}
+
+/* ---------- 5 · triagem plana: lista completa + ações fixas (5-7) ------- */
+/* Estrutura: coluna flex; só o MIOLO (grade) rola; topo e barra são fixos. */
+.cds-triage{display:flex;flex-direction:column;min-height:0;flex:1}
+.cds-triage__grid-wrap{flex:1;min-height:0;overflow-y:auto;width:100%;max-width:960px;
+  margin:0 auto;padding:4px 8px 12px;position:relative}
+.cds-triage__grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.cds-kind{display:flex;align-items:center;gap:10px;width:100%;background:var(--cds-card);
+  border:1px solid var(--cds-hair);border-radius:13px;padding:12px 14px;min-height:52px;
+  cursor:pointer;transition:all .14s;text-align:left}
+.cds-kind:hover{border-color:#BE4A01;box-shadow:0 3px 10px rgba(190,74,1,.12)}
+.cds-kind__dot{width:10px;height:10px;border-radius:50%;flex:none}
+.cds-kind__label{flex:1;font-weight:600;font-size:14px;color:var(--cds-ink);line-height:1.25;text-wrap:pretty}
+.cds-triage__bar{flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding-top:12px;border-top:1px solid var(--cds-hair)}
+.cds-triage__actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
+.cds-nonefit{display:flex;align-items:center;gap:11px;background:var(--cds-chip);
+  border:1.5px dashed var(--cds-hair2);border-radius:999px;padding:11px 22px;cursor:pointer}
+.cds-nonefit:hover{border-color:#BE4A01}
+.cds-nonefit__ring{width:22px;height:22px;border-radius:50%;border:1.5px dashed var(--cds-hair2);
+  display:flex;align-items:center;justify-content:center;flex:none;font-size:12px;color:var(--cds-faint)}
+.cds-nonefit__label{font-weight:700;font-size:14px;color:var(--cds-soft)}
+.cds-cta{display:inline-flex;align-items:center;gap:10px;background:#BE4A01;color:#F6F5EB;
+  font-weight:700;font-size:14.5px;letter-spacing:.02em;padding:13px 28px;border-radius:999px;
+  border:none;cursor:pointer;white-space:nowrap;box-shadow:0 4px 14px rgba(190,74,1,.28)}
+.cds-cta:hover{background:#8F3701}
+.cds-cta[aria-disabled="true"]{background:var(--cds-chip);color:var(--cds-faint);
+  box-shadow:none;cursor:default}
+.cds-hint{background:var(--cds-ebg);color:var(--cds-efg);font-size:12.5px;line-height:1.45;
+  padding:10px 18px;border-radius:12px;max-width:640px;text-align:center;animation:cds-fade .2s ease-out}
+
+/* ---------- 6 · setup: lista de áudios + continuar visível (item 1) ----- */
+/* Duas colunas na MESMA altura da tela: a lista rola, a coluna direita
+   (resumo + Continuar) fica sempre à vista. Nada abaixo da dobra.        */
+.cds-setup{display:flex;gap:18px;align-items:stretch;flex:1;min-height:0}
+.cds-setup__list{flex:1.3;min-width:0;display:flex;flex-direction:column;background:var(--cds-card);
+  border-radius:22px;box-shadow:0 2px 8px rgba(63,62,32,.09);overflow:hidden}
+.cds-setup__list-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:15px 20px;border-bottom:1px solid var(--cds-hair);font-size:11.5px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--cds-faint)}
+.cds-setup__scroll{flex:1;min-height:0;overflow-y:auto;padding:10px;position:relative;
+  display:flex;flex-direction:column;gap:6px}
+.cds-audio{display:flex;align-items:center;gap:13px;width:100%;padding:11px 14px;border-radius:14px;
+  border:1.5px solid var(--cds-hair);background:transparent;cursor:pointer;transition:all .14s;text-align:left}
+.cds-audio:hover{border-color:#BE4A01}
+.cds-audio[aria-checked="true"]{border-color:#BE4A01;background:rgba(190,74,1,.07)}
+.cds-audio__radio{width:22px;height:22px;border-radius:50%;flex:none;box-sizing:border-box;
+  border:2px solid var(--cds-hair2);display:flex;align-items:center;justify-content:center}
+.cds-audio[aria-checked="true"] .cds-audio__radio{border:none;background:#BE4A01}
+.cds-audio[aria-checked="true"] .cds-audio__radio::after{content:"";width:9px;height:9px;border-radius:50%;background:#F6F5EB}
+.cds-audio__name{font-weight:700;font-size:14.5px;color:var(--cds-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cds-audio__file{font-size:12px;color:var(--cds-faint);font-family:'Merriweather',Georgia,serif}
+.cds-audio__dur{flex:none;font-size:12.5px;font-weight:600;color:var(--cds-soft);font-variant-numeric:tabular-nums}
+.cds-setup__side{flex:1;min-width:300px;max-width:380px;display:flex;flex-direction:column;gap:13px}
+.cds-continue{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  background:#BE4A01;color:#F6F5EB;font-weight:700;font-size:15.5px;letter-spacing:.03em;
+  padding:15px;border-radius:999px;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(190,74,1,.28)}
+.cds-continue:hover{background:#8F3701}
+.cds-continue[aria-disabled="true"]{background:rgba(190,74,1,.4);box-shadow:none;cursor:default}
+
+/* ---------- 7 · confirmação de regravação (item 9) ---------------------- */
+.cds-rerec{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+  background:rgba(10,7,3,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  animation:cds-fade .18s ease-out;font-family:'Montserrat',system-ui,sans-serif}
+.cds-rerec__card{background:#F6F5EB;border-radius:26px;box-shadow:0 28px 70px -22px rgba(10,7,3,.6);
+  padding:36px 42px;display:flex;flex-direction:column;align-items:center;gap:18px;max-width:440px;text-align:center}
+.cds-rerec__icon{width:58px;height:58px;border-radius:50%;background:rgba(190,74,1,.12);
+  display:flex;align-items:center;justify-content:center;color:#BE4A01}
+.cds-rerec__title{font-size:21px;font-weight:700;color:#0A0703;margin:0}
+.cds-rerec__body{font-family:'Merriweather',Georgia,serif;font-size:14.5px;line-height:1.6;
+  color:#5A5A3E;text-wrap:pretty;margin:0}
+.cds-rerec__confirm{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  background:#BE4A01;color:#F6F5EB;font-weight:700;font-size:14.5px;padding:13px;border-radius:999px;
+  border:none;cursor:pointer;box-shadow:0 4px 14px rgba(190,74,1,.3)}
+.cds-rerec__confirm:hover{background:#8F3701}
+.cds-rerec__keep{width:100%;padding:12px;border-radius:999px;font-weight:700;font-size:14px;
+  color:#5A5A3E;border:1.5px solid rgba(63,62,32,.28);background:none;cursor:pointer}
+.cds-rerec__keep:hover{border-color:#8F3701;color:#8F3701}
+
+/* ---------- 8 · trava durante a gravação (item 10) ----------------------
+   Marque com data-rec-lock TUDO que deve esperar a gravação: anterior,
+   próxima, "Ouvir a pergunta", "Ouvir esta cena/história/frase", voltar.
+   CdsRecLock.set(container, true) liga a classe e desabilita de verdade. */
+.cds-recording [data-rec-lock]{opacity:.32;pointer-events:none}
+.cds-recdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#E8813E;
+  animation:cds-pulse 1.2s ease-in-out infinite;vertical-align:middle;margin-right:9px}
+
+@keyframes cds-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cds-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){
+  .cds-recdot,.cds-rerec,.cds-fio__cap,.cds-hint{animation:none}
+  .cds-fio__bead,.cds-dot,.cds-kind,.cds-audio{transition:none}
+}
+</style>
+
+<!-- [3] JS ================================================================ -->
+<script>
+/* Sem dependências. Todos os módulos são globais pequenos e independentes. */
+
+/* --- CdsTheme (item 8) — tema claro/escuro persistido -------------------- */
+const CdsTheme = {
+  KEY:'colar-theme',
+  init(root=document.documentElement){
+    let t='light'; try{ if(localStorage.getItem(this.KEY)==='dark') t='dark'; }catch(e){}
+    root.setAttribute('data-cds-theme',t); return t;
+  },
+  toggle(root=document.documentElement){
+    const t=root.getAttribute('data-cds-theme')==='dark'?'light':'dark';
+    root.setAttribute('data-cds-theme',t);
+    try{ localStorage.setItem(this.KEY,t); }catch(e){}
+    return t;
+  }
+};
+
+/* --- CdsFollow (item 2) — a janela acompanha a conta que toca ------------ */
+/* win = elemento .cds-window; o 1º filho deve ser a coluna de fileiras.    */
+const CdsFollow = {
+  toBead(win, beadIndex, beadsPerRow){
+    if(!win) return;
+    const col=win.firstElementChild; if(!col) return;
+    const row=col.children[Math.floor(beadIndex/beadsPerRow)]; if(!row) return;
+    const top=Math.max(0, row.offsetTop - win.clientHeight/2 + row.offsetHeight/2);
+    if(Math.abs(win.scrollTop-top) < row.offsetHeight) return;
+    try{ win.scrollTo({top, behavior:'smooth'}); }catch(e){ win.scrollTop=top; }
+  }
+};
+
+/* --- CdsBeadStrip (item 3, decisão 1b) — fio de contas + cápsula --------- */
+const CdsBeadStrip = (() => {
+  const PALETTES = {
+    cena:[{b:'#BE4A01',l:'#E8813E'},{b:'#9A7B2E',l:'#C2A55A'},{b:'#4E7A6A',l:'#7BA595'},
+          {b:'#5E6B8C',l:'#8B97B5'},{b:'#8C5A74',l:'#B4849D'},{b:'#777D45',l:'#9EA46B'},
+          {b:'#89AAA3',l:'#B2CCC6'},{b:'#A85D3E',l:'#CE8767'}],
+    frase:[{b:'#D98A54',l:'#F0B489'},{b:'#C4A96A',l:'#E0CA97'},{b:'#86AC9C',l:'#AECFC2'},
+           {b:'#93A0BE',l:'#BBC5DC'},{b:'#B98FA8',l:'#D8B5C9'},{b:'#A3A878',l:'#C4C8A0'}]
+  };
+  const pearl = c => 'radial-gradient(circle at 34% 30%, '+c.l+' 0%, '+c.b+' 70%)';
+  /* mount({ el, palette:'cena'|'frase'|[{b,l}...], items:[{label,sub}],
+             onPick(i,item), actions:[{title, svg | text, primary?, onClick(i,item),
+             color?(item)}] })  →  { update, select, clear, selected }      */
+  function mount(o){
+    const root=o.el; root.classList.add('cds-fio');
+    const cord=document.createElement('div'); cord.className='cds-fio__cord';
+    const beads=document.createElement('div'); beads.className='cds-fio__beads';
+    cord.appendChild(beads);
+    const cap=document.createElement('div'); cap.className='cds-fio__cap'; cap.hidden=true;
+    root.append(cord,cap);
+    let items=o.items||[], sel=null;
+    const pal=Array.isArray(o.palette)?o.palette:(PALETTES[o.palette]||PALETTES.frase);
+    function render(){
+      beads.innerHTML='';
+      items.forEach((it,i)=>{
+        const b=document.createElement('button');
+        b.type='button'; b.className='cds-fio__bead';
+        b.title=it.label; b.setAttribute('aria-label',it.label);
+        b.setAttribute('aria-pressed', String(sel===i));
+        b.style.background=pearl(pal[i%pal.length]);
+        b.addEventListener('click',()=>{ sel=i; render(); o.onPick&&o.onPick(i,it); });
+        beads.appendChild(b);
+      });
+      cap.innerHTML=''; cap.hidden = sel==null || !items[sel];
+      if(cap.hidden) return;
+      const name=document.createElement('span'); name.className='cds-fio__name';
+      name.textContent=items[sel].label+(items[sel].sub?(' · '+items[sel].sub):'');
+      cap.appendChild(name);
+      (o.actions||[]).forEach(a=>{
+        const btn=document.createElement('button'); btn.type='button';
+        btn.className='cds-iconbtn'+(a.primary?' cds-iconbtn--primary':'')+(a.text?' cds-iconbtn--text':'');
+        if(a.color){ const c=a.color(items[sel]); if(c) btn.classList.add(c); }
+        btn.title=a.title; btn.setAttribute('aria-label',a.title);
+        if(a.text){ btn.textContent=a.text; } else { btn.innerHTML=a.svg||a.title; }
+        btn.addEventListener('click',()=>a.onClick&&a.onClick(sel,items[sel]));
+        cap.appendChild(btn);
+      });
+    }
+    render();
+    return {
+      update(next){ items=next||[]; if(sel!=null&&sel>=items.length) sel=null; render(); },
+      select(i){ sel=i; render(); },
+      clear(){ sel=null; render(); },
+      get selected(){ return sel; }
+    };
+  }
+  return { mount, PALETTES, pearl };
+})();
+
+/* --- CdsSceneDots (item 4) — indicador de cena com cor + número ---------- */
+const CdsSceneDots = {
+  CHECK:'<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#F6F5EB" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  /* scenes: [{state:'pending'|'tagged'|'none_fit', color:{b,l}}] */
+  render(el, scenes, active, onPick){
+    el.classList.add('cds-dots'); el.innerHTML='';
+    scenes.forEach((sc,i)=>{
+      const b=document.createElement('button');
+      b.type='button'; b.className='cds-dot'; b.dataset.state=sc.state;
+      if(i===active) b.dataset.active='1';
+      b.title='Cena '+(i+1); b.setAttribute('aria-label','Cena '+(i+1));
+      b.textContent=String(i+1);
+      if(sc.state==='pending'){ b.style.color=sc.color.b; }
+      else{
+        b.style.background=CdsBeadStrip.pearl(sc.color);
+        if(sc.state==='tagged'){
+          const badge=document.createElement('span');
+          badge.className='cds-dot__badge'; badge.innerHTML=this.CHECK;
+          b.appendChild(badge);
+        }
+      }
+      b.addEventListener('click',()=>onPick&&onPick(i));
+      el.appendChild(b);
+    });
+  }
+};
+
+/* --- CdsRerecord (item 9) — confirmar antes de descartar a gravação ------ */
+const CdsRerecord = {
+  MIC:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11.5" rx="3" fill="currentColor" stroke="none"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg>',
+  fmt(s){ s=Math.max(1,Math.round(s||0)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); },
+  /* open({ secs, onConfirm, onKeep })
+     onConfirm: apague a resposta e COMECE a gravar na hora (intenção única). */
+  open(o){
+    const prev=document.activeElement;
+    const veil=document.createElement('div'); veil.className='cds-rerec';
+    veil.innerHTML =
+      '<div class="cds-rerec__card" role="dialog" aria-modal="true" aria-labelledby="cds-rr-t" aria-describedby="cds-rr-b">'+
+        '<div class="cds-rerec__icon">'+this.MIC+'</div>'+
+        '<h2 class="cds-rerec__title" id="cds-rr-t">Gravar esta resposta de novo?</h2>'+
+        '<p class="cds-rerec__body" id="cds-rr-b">A resposta que já foi gravada ('+this.fmt(o.secs)+
+          ') será apagada, e uma nova gravação começa na hora. Isso não tem volta.</p>'+
+        '<button type="button" class="cds-rerec__confirm">'+this.MIC.replace('26" height="26','16" height="16')+
+          'Apagar e gravar de novo</button>'+
+        '<button type="button" class="cds-rerec__keep">Manter a gravação</button>'+
+      '</div>';
+    const done=(fn)=>{ document.removeEventListener('keydown',esc,true); veil.remove();
+      prev&&prev.focus&&prev.focus(); fn&&fn(); };
+    const esc=(e)=>{ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); done(o.onKeep); } };
+    veil.querySelector('.cds-rerec__confirm').addEventListener('click',()=>done(o.onConfirm));
+    veil.querySelector('.cds-rerec__keep').addEventListener('click',()=>done(o.onKeep));
+    veil.addEventListener('click',(e)=>{ if(e.target===veil) done(o.onKeep); });
+    document.addEventListener('keydown',esc,true);
+    document.body.appendChild(veil);
+    veil.querySelector('.cds-rerec__confirm').focus({preventScroll:true});
+    return { close:()=>done() };
+  }
+};
+
+/* --- CdsRecLock (item 10) — pausa o resto enquanto grava ----------------- */
+const CdsRecLock = {
+  /* set(container, on): dá .cds-recording ao container e desabilita de
+     verdade todo [data-rec-lock] (aria-disabled + tabindex, não só CSS). */
+  set(container, on){
+    container.classList.toggle('cds-recording', !!on);
+    container.querySelectorAll('[data-rec-lock]').forEach(n=>{
+      if(on){
+        n.setAttribute('aria-disabled','true');
+        if(n.tabIndex>=0){ n.dataset.cdsTab=String(n.tabIndex); n.tabIndex=-1; }
+      }else{
+        n.removeAttribute('aria-disabled');
+        if(n.dataset.cdsTab!=null){ n.tabIndex=+n.dataset.cdsTab; delete n.dataset.cdsTab; }
+      }
+    });
+  },
+  /* guard(isRecording, onDeny)(handler): CINTO E SUSPENSÓRIO — além do CSS,
+     embrulhe os handlers (avançar, voltar, ouvir pergunta, ouvir trecho,
+     voltar ao painel). onDeny: feedback sonoro curto (o ouvido decide).   */
+  guard(isRecording, onDeny){
+    return fn => function(...args){
+      if(isRecording()){ onDeny&&onDeny(); return; }
+      return fn.apply(this, args);
+    };
+  }
+};
+</script>
+
+<!-- ===== estilos SÓ da moldura do documento (não copiar) ================= -->
+<style>
+@font-face{font-family:'Montserrat';src:url('../assets/fonts/Montserrat-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:'Montserrat';src:url('../assets/fonts/Montserrat-SemiBold.ttf') format('truetype');font-weight:600;font-display:swap}
+@font-face{font-family:'Montserrat';src:url('../assets/fonts/Montserrat-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
+@font-face{font-family:'Merriweather';src:url('../assets/fonts/Merriweather-Italic.ttf') format('truetype');font-weight:400;font-style:italic;font-display:swap}
+html,body{margin:0;padding:0;background:#EDEBE0;font-family:'Montserrat',system-ui,sans-serif;color:#0A0703}
+.doc{max-width:1060px;margin:0 auto;padding:44px 36px 90px}
+.doc h1{font-size:30px;font-weight:700;letter-spacing:-.01em;margin:6px 0 4px}
+.doc .eyebrow{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#8A8970}
+.doc .lead{font-family:'Merriweather',Georgia,serif;font-style:italic;font-size:15.5px;color:#5A5A3E;line-height:1.6;max-width:72ch}
+.doc section{margin-top:40px;background:#FFFFFF;border-radius:22px;box-shadow:0 2px 10px rgba(63,62,32,.1);padding:26px 30px 30px}
+.doc h2{font-size:19px;font-weight:700;margin:0 0 6px;display:flex;align-items:center;gap:10px}
+.doc h2 .tag{background:#3F3E20;color:#F6F5EB;font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;letter-spacing:.04em}
+.doc .why{font-family:'Merriweather',Georgia,serif;font-style:italic;font-size:13.5px;color:#5A5A3E;line-height:1.55;margin:0 0 16px;max-width:80ch}
+.doc .api{font-size:12.5px;line-height:1.7;color:#3F3E20;background:#F1EFE4;border-radius:12px;padding:12px 16px;margin-top:14px}
+.doc code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:rgba(63,62,32,.07);padding:1px 5px;border-radius:5px}
+.demo{background:var(--cds-bg);border:1px solid rgba(63,62,32,.14);border-radius:16px;padding:18px;color:var(--cds-ink)}
+.demo-note{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8970;margin:0 0 8px}
+.doc a{color:#BE4A01}.doc a:hover{color:#8F3701}
+.doc .map{font-size:13px;line-height:1.9;color:#3F3E20}
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="eyebrow">Colar de Sons · entrega para implementação</div>
+  <h1>Pacote de melhorias UI/UX</h1>
+  <p class="lead">Só as mudanças da lista pedida, prontas para o <code>index.html</code>: copie o bloco
+  <strong>[1]&nbsp;CSS</strong> e o bloco <strong>[3]&nbsp;JS</strong> do fonte desta página; o markup de referência
+  de cada item está nas demos abaixo, marcado <strong>[2.x]&nbsp;TEMPLATE</strong>. Guia de integração passo a passo:
+  <code>entrega/pacote-melhorias-ui.md</code>. Nenhum item altera os dados exportados (invariantes do PRD §7).</p>
+
+  <!-- ================================================ §1 · setup -->
+  <section id="s1">
+    <h2><span class="tag">item 1</span> Escolher o áudio sem perder o Continuar de vista</h2>
+    <p class="why">A lista de áudios rola numa janela própria; o resumo e o botão <strong>Continuar</strong> vivem
+    na coluna da direita, sempre na tela. Selecionar um áudio acende o botão — o próximo passo fica óbvio.</p>
+    <div class="demo" style="height:300px;display:flex">
+      <!-- [2.1] TEMPLATE — tela de setup -->
+      <div class="cds-setup">
+        <div class="cds-setup__list">
+          <div class="cds-setup__list-head"><span>Áudios da entrega</span><span id="d1-count" style="letter-spacing:0;text-transform:none;font-family:'Merriweather',Georgia,serif;font-style:italic;font-weight:400"></span></div>
+          <div class="cds-setup__scroll cds-scroll" id="d1-list" role="radiogroup" aria-label="Áudios da entrega"></div>
+        </div>
+        <div class="cds-setup__side">
+          <div style="background:var(--cds-card);border-radius:22px;box-shadow:0 2px 8px rgba(63,62,32,.09);padding:18px 20px;flex:1">
+            <div id="d1-sel" style="font-size:14px;font-weight:700;color:var(--cds-soft)">Nenhum áudio ainda</div>
+            <div style="font-family:'Merriweather',Georgia,serif;font-style:italic;font-size:12.5px;color:var(--cds-faint);margin-top:4px">escolha um na lista ao lado</div>
+          </div>
+          <button class="cds-continue" id="d1-go" aria-disabled="true">Continuar — segmentar em contas →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================ §2 · janela do colar -->
+  <section id="s2">
+    <h2><span class="tag">item 2</span> O colar rola numa janela — a tela não cresce</h2>
+    <p class="why">Envolva as fileiras de contas em <code>.cds-window.cds-scroll</code> (variante
+    <code>--dark</code> nas telas olive). Durante a reprodução, chame
+    <code>CdsFollow.toBead(janela, indiceDaConta, contasPorFileira)</code> a cada avanço do playhead —
+    a janela acompanha sozinha a conta acesa. Título e botões de confirmação ficam fora, sempre visíveis.</p>
+    <div class="demo">
+      <p class="demo-note">demo — aperte tocar e veja a janela seguir a conta acesa</p>
+      <!-- [2.2] TEMPLATE — janela do colar -->
+      <div class="cds-window cds-scroll" id="d2-win" style="max-height:150px;max-width:640px">
+        <div id="d2-rows" style="display:flex;flex-direction:column;gap:12px"></div>
+      </div>
+      <button class="cds-cta" id="d2-play" style="margin-top:12px;padding:10px 22px;font-size:13px">▶ tocar</button>
+    </div>
+  </section>
+
+  <!-- ================================================ §3 · fio de contas -->
+  <section id="s3">
+    <h2><span class="tag">item 3</span> Lista de cenas/frases: fio de contas (opção 1b)</h2>
+    <p class="why">No rodapé fixo (<code>.cds-footbar</code>), a lista deixa de ser uma fileira de pílulas:
+    vira um <strong>mini-colar</strong> — uma conta por cena/frase, sem número dentro da conta.
+    Tocar numa conta seleciona (anel telha), toca o trecho, e abre <strong>uma única cápsula</strong>
+    com “Cena/Frase N · duração” e as ações. Limpe a seleção ao remover/reabrir/trocar de cena ou sessão.</p>
+    <div class="demo">
+      <p class="demo-note">demo — toque nas contas</p>
+      <!-- [2.3] TEMPLATE — rodapé com fio de contas -->
+      <div class="cds-footbar" style="border-top:none;padding:0">
+        <div class="cds-footbar__label">6 frases nesta cena</div>
+        <div class="cds-footbar__strip cds-scroll"><div id="d3-frases"></div></div>
+      </div>
+      <div class="cds-footbar" style="padding:8px 0 0">
+        <div class="cds-footbar__label">3 cenas costuradas</div>
+        <div class="cds-footbar__strip cds-scroll"><div id="d3-cenas"></div></div>
+      </div>
+    </div>
+    <div class="api"><code>CdsBeadStrip.mount({ el, palette:'frase', items:[{label:'Frase 1', sub:'0:04'},…],
+    onPick(i){ tocarTrecho(i) }, actions:[ ▶ / ⚑ / ✕ ] })</code> → <code>update · select · clear · selected</code>.
+    Paletas oficiais em <code>CdsBeadStrip.PALETTES.cena|frase</code> (8 tons de cena, 6 tintas de frase).</div>
+  </section>
+
+  <!-- ================================================ §4 · indicador -->
+  <section id="s4">
+    <h2><span class="tag">item 4</span> Indicador da cena na triagem: cor + número</h2>
+    <p class="why">A bolinha da triagem é a mesma linguagem do colar, agora sem ambiguidade: cor da cena
+    <strong>e</strong> número dentro. Cheia + selo ✓ = classificada; contorno = pendente; apagada = “nenhum se encaixa”.
+    A cena em foco cresce e ganha halo. (Números ficam <em>só</em> nestes indicadores — nunca nas contas do colar.)</p>
+    <div class="demo">
+      <p class="demo-note">demo — clique para trocar a cena em foco</p>
+      <!-- [2.4] TEMPLATE — <div class="cds-dots"> preenchido por CdsSceneDots.render -->
+      <div id="d4-dots"></div>
+    </div>
+    <div class="api"><code>CdsSceneDots.render(el, cenas, indiceAtivo, aoTocar)</code> ·
+    cada cena: <code>{ state:'pending'|'tagged'|'none_fit', color:{b,l} }</code>.</div>
+  </section>
+
+  <!-- ================================================ §5 · triagem plana -->
+  <section id="s5">
+    <h2><span class="tag">itens 5·6·7</span> Triagem sem grupos, tudo à vista, ações fixas</h2>
+    <p class="why">Sai o “Mais comuns”, saem os temas e o botão “ver todos” escondido: os <strong>27 tipos
+    ficam todos visíveis</strong> numa grade de 3 colunas que rola <em>dentro</em> da própria área
+    (<code>.cds-triage__grid-wrap</code>). Topo (indicadores + “Ouvir esta cena”) e a barra de baixo
+    (“Nenhum se encaixa” + “Já classifiquei todas”) são fixos — nenhuma ação importante exige rolar a página.
+    O botão de confirmar fica sempre presente, desabilitado até o fim; clicado antes da hora, responde
+    “Ainda faltam N cenas para classificar”. O ponto colorido do tipo é identidade, não agrupamento.</p>
+    <div class="demo" style="height:320px;display:flex;flex-direction:column">
+      <!-- [2.5] TEMPLATE — miolo da triagem -->
+      <div class="cds-triage">
+        <div class="cds-triage__grid-wrap cds-scroll">
+          <div class="cds-triage__grid" id="d5-grid"></div>
+        </div>
+        <div class="cds-triage__bar">
+          <div class="cds-hint" id="d5-hint" hidden></div>
+          <div class="cds-triage__actions">
+            <button class="cds-nonefit"><span class="cds-nonefit__ring">ø</span><span class="cds-nonefit__label">Nenhum se encaixa</span></button>
+            <button class="cds-cta" id="d5-cta" aria-disabled="true">Já classifiquei todas →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="api">Valores <code>scene_kind</code> continuam em inglês no estado/export; o rótulo PT-BR
+    (<code>SK_PT</code>) é só exibição, com o inglês no <code>title</code> — nada muda no dado. O filtro de texto
+    da facilitadora pode continuar existindo acima da grade.</div>
+  </section>
+
+  <!-- ================================================ §6 · dark mode -->
+  <section id="s6">
+    <h2><span class="tag">item 8</span> Tema escuro</h2>
+    <p class="why">Todas as superfícies claras trocam por variáveis <code>--cds-*</code>; o tema é um atributo no
+    <code>&lt;html&gt;</code>. Botão lua/sol no cabeçalho chama <code>CdsTheme.toggle()</code>; a escolha persiste em
+    <code>localStorage('colar-theme')</code>. As telas cerimoniais (Ouça a história, Mapeamento) continuam olive nos dois temas.</p>
+    <div class="demo" id="d6-demo" data-cds-theme="light" style="background:var(--cds-bg)">
+      <p class="demo-note" style="display:flex;align-items:center;gap:10px;color:var(--cds-faint)">demo — alterne o tema
+        <!-- [2.6] TEMPLATE — botão de tema do cabeçalho -->
+        <button class="cds-themebtn" id="d6-btn" aria-label="Tema claro ou escuro">
+          <svg class="cds-ico-moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="cds-ico-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.9 4.9l1.4 1.4"/><path d="M17.7 17.7l1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M4.9 19.1l1.4-1.4"/><path d="M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px;background:var(--cds-card);border-radius:14px;border:1px solid var(--cds-hair);padding:14px 16px">
+          <div style="font-weight:700;font-size:14px;color:var(--cds-ink)">Cartão de conteúdo</div>
+          <div style="font-size:12.5px;color:var(--cds-soft);margin-top:4px">texto secundário em <code style="background:var(--cds-chip)">--cds-soft</code></div>
+        </div>
+        <div style="flex:1;min-width:200px;background:var(--cds-card);border-radius:14px;border:1px solid var(--cds-hair);padding:14px 16px;display:flex;align-items:center;gap:10px">
+          <button class="cds-cta" style="padding:9px 18px;font-size:12.5px">Ação primária</button>
+          <button class="cds-cta" aria-disabled="true" style="padding:9px 18px;font-size:12.5px">Desabilitada</button>
+        </div>
+      </div>
+    </div>
+    <div class="api">Na demo o atributo está no painel; no app use o <code>&lt;html&gt;</code>:
+    <code>CdsTheme.init()</code> no boot, <code>CdsTheme.toggle()</code> no clique. Ícone Shemá: telha no claro, branco no escuro.</div>
+  </section>
+
+  <!-- ================================================ §7 · regravação -->
+  <section id="s7">
+    <h2><span class="tag">item 9</span> “Gravar de novo” pede confirmação</h2>
+    <p class="why">Regravar descarta a resposta anterior — agora isso é dito antes, com a duração da gravação
+    em risco, e a intenção fica clara nos rótulos: <strong>“Apagar e gravar de novo”</strong> (e a nova gravação
+    já começa) ou <strong>“Manter a gravação”</strong> (Esc e clique fora também mantêm). No botão que abre,
+    troque “de novo” por <strong>“gravar de novo”</strong> com ícone de microfone.</p>
+    <div class="demo">
+      <p class="demo-note">demo</p>
+      <button class="cds-cta" id="d7-open" style="padding:10px 22px;font-size:13px">abrir confirmação</button>
+      <span id="d7-log" style="font-size:12.5px;color:var(--cds-faint);margin-left:12px"></span>
+    </div>
+    <div class="api"><code>CdsRerecord.open({ secs: duraçãoDaResposta, onConfirm(){ apagar(); começarAGravar(); },
+    onKeep(){} })</code> — o modal cuida de foco, Esc e ARIA.</div>
+  </section>
+
+  <!-- ================================================ §8 · trava -->
+  <section id="s8">
+    <h2><span class="tag">item 10</span> Gravou? O resto espera.</h2>
+    <p class="why">Ao iniciar a gravação: pare qualquer reprodução e o TTS da pergunta; marque com
+    <code>data-rec-lock</code> os botões <em>anterior, próxima, Ouvir a pergunta, Ouvir esta cena/história/frase,
+    voltar ao painel</em>; chame <code>CdsRecLock.set(tela, true)</code> — eles apagam (opacity .32) e ficam
+    inertes de verdade (aria-disabled + tabindex). Embrulhe os handlers com <code>CdsRecLock.guard</code> para
+    responder com um bip curto de negação (feedback de ouvido, não de texto). A legenda do fio vira
+    “gravando — os outros botões esperam a resposta”.</p>
+    <div class="demo" id="d8-scope" style="background:#3F3E20;border-color:transparent">
+      <p class="demo-note" style="color:rgba(246,245,235,.55)">demo — simule a gravação</p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <button class="cds-cta" id="d8-rec" style="padding:10px 22px;font-size:13px">● gravar</button>
+        <!-- [2.8] TEMPLATE — marque cada ação com data-rec-lock -->
+        <button data-rec-lock id="d8-a" style="border:1px solid rgba(246,245,235,.3);background:none;color:#F6F5EB;border-radius:999px;padding:9px 18px;font-weight:600;font-size:13px;cursor:pointer">← anterior</button>
+        <button data-rec-lock style="border:1px solid rgba(246,245,235,.3);background:none;color:#F6F5EB;border-radius:999px;padding:9px 18px;font-weight:600;font-size:13px;cursor:pointer">Ouvir a pergunta</button>
+        <button data-rec-lock style="background:#F6F5EB;color:#3F3E20;border:none;border-radius:999px;padding:9px 20px;font-weight:700;font-size:13px;cursor:pointer">Próxima pergunta →</button>
+        <span id="d8-cap" style="font-size:12px;color:rgba(246,245,235,.55)"></span>
+      </div>
+    </div>
+  </section>
+
+  <p class="lead" style="margin-top:36px">Guia de integração, textos exatos em PT-BR, acessibilidade e checklist de QA:
+  <strong>entrega/pacote-melhorias-ui.md</strong>.</p>
+</div>
+
+<!-- ===== DEMO (não copiar) =============================================== -->
+<script>
+(function(){
+  const PLAY='<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  const FLAG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/></svg>';
+  const X='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+
+  /* §1 setup */
+  const audios=[['A Onça e o Fogo','3:12'],['Rute e Noemi','6:48'],['O Dilúvio de Noé','5:21'],['A Semente que Cresceu','2:44'],['O Menino e o Rio','4:07'],['A Festa da Colheita','3:58'],['O Cesto de Mandioca','2:19'],['A Canoa do Avô','7:02'],['As Três Irmãs','5:44'],['O Fogo Roubado','3:31']];
+  const list=document.getElementById('d1-list'), go=document.getElementById('d1-go'), selLbl=document.getElementById('d1-sel');
+  document.getElementById('d1-count').textContent=audios.length+' áudios';
+  audios.forEach((a,i)=>{
+    const b=document.createElement('button'); b.className='cds-audio'; b.setAttribute('role','radio'); b.setAttribute('aria-checked','false');
+    b.innerHTML='<span class="cds-audio__radio"></span><span style="flex:1;min-width:0"><span class="cds-audio__name" style="display:block">'+a[0]+'</span><span class="cds-audio__file">'+a[0].normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.wav</span></span><span class="cds-audio__dur">'+a[1]+'</span>';
+    b.addEventListener('click',()=>{ list.querySelectorAll('.cds-audio').forEach(x=>x.setAttribute('aria-checked','false')); b.setAttribute('aria-checked','true'); selLbl.textContent='Áudio pronto — '+a[0]; selLbl.style.color='var(--cds-ok)'; go.setAttribute('aria-disabled','false'); });
+    list.appendChild(b);
+  });
+
+  /* §2 janela + follow */
+  const rows=document.getElementById('d2-rows'), win=document.getElementById('d2-win'), PER=24, N=192, cells=[];
+  for(let r=0;r<N/PER;r++){ const row=document.createElement('div'); row.style.cssText='display:flex;gap:6px;align-items:center';
+    for(let i=0;i<PER;i++){ const c=document.createElement('div'); c.style.cssText='width:16px;height:16px;border-radius:50%;flex:none;background:radial-gradient(circle at 34% 30%,#FBFAF3,#E7E3D3 70%);border:1px solid rgba(63,62,32,.16)'; row.appendChild(c); cells.push(c); } rows.appendChild(row); }
+  let t=null;
+  document.getElementById('d2-play').addEventListener('click',function(){
+    if(t){ clearInterval(t); t=null; this.textContent='▶ tocar'; return; }
+    let i=-1; this.textContent='◼ parar';
+    t=setInterval(()=>{ i++; if(i>=N){ clearInterval(t); t=null; document.getElementById('d2-play').textContent='▶ tocar'; return; }
+      cells[i].style.background='radial-gradient(circle at 34% 30%,#E8813E,#BE4A01 70%)'; cells[i].style.border='none';
+      CdsFollow.toBead(win,i,PER); },28);
+  });
+
+  /* §3 fios */
+  CdsBeadStrip.mount({ el:document.getElementById('d3-frases'), palette:'frase',
+    items:[1,2,3,4,5,6].map(n=>({label:'Frase '+n, sub:'0:0'+(2+n%4)})),
+    actions:[ {title:'ouvir a frase', svg:PLAY, primary:true},
+              {title:'marcar para revisar', svg:FLAG},
+              {title:'remover', svg:X} ] });
+  CdsBeadStrip.mount({ el:document.getElementById('d3-cenas'), palette:'cena',
+    items:[1,2,3].map(n=>({label:'Cena '+n, sub:'0:1'+n})),
+    actions:[ {title:'ouvir a cena', svg:PLAY, primary:true},
+              {title:'Reabrir', text:'Reabrir'} ] });
+
+  /* §4 dots */
+  const P=CdsBeadStrip.PALETTES.cena;
+  let scenes=[{state:'tagged'},{state:'tagged'},{state:'none_fit'},{state:'pending'},{state:'pending'}].map((s,i)=>({state:s.state,color:P[i%P.length]}));
+  let active=3; const dotsEl=document.getElementById('d4-dots');
+  const drawDots=()=>CdsSceneDots.render(dotsEl,scenes,active,(i)=>{ active=i; drawDots(); });
+  drawDots();
+
+  /* §5 grade plana */
+  const THEME_C={mov:'#BE4A01',fala:'#9A7B2E',trab:'#4E7A6A',sent:'#5E6B8C',rito:'#8C5A74',narr:'#777D45'};
+  const KINDS=[['Apelo','APPEAL','fala'],['Aproximação noturna','NIGHT_APPROACH','mov'],['Bênção','BLESSING','rito'],['Casamento','MARRIAGE','rito'],['Chegada','ARRIVAL','mov'],['Consentimento','CONSENT','fala'],['Convocação do tribunal na porta','GATE_TRIBUNAL_SUMMONS','fala'],['Crônica de abertura','OPENING_CHRONICLE','narr'],['Fechamento do narrador','NARRATOR_CLOSING','narr'],['Genealogia','GENEALOGY','narr'],['Iniciativa','INITIATIVE','trab'],['Instrução','INSTRUCTION','fala'],['Introdução do narrador','NARRATOR_INTRODUCTION','narr'],['Lamento','LAMENT','sent'],['Luto','MOURNING','sent'],['Nascimento','BIRTH','rito'],['Nomeação','NAMING','rito'],['Oferta de resgate','REDEMPTION_OFFER','fala'],['Partida','DEPARTURE','mov'],['Provisão e retorno ao lar','PROVISION_AND_HOMECOMING','mov'],['Ratificação','RATIFICATION','fala'],['Reconhecimento do resgatador','REDEEMER_RECOGNITION','narr'],['Recusa do resgate','REDEMPTION_REFUSAL','fala'],['Refeição','MEAL','trab'],['Relato','REPORT','narr'],['Respiga','GLEANING','trab'],['Voto','VOW','fala']];
+  const grid=document.getElementById('d5-grid');
+  KINDS.forEach(k=>{ const b=document.createElement('button'); b.className='cds-kind'; b.title=k[1];
+    b.innerHTML='<span class="cds-kind__dot" style="background:'+THEME_C[k[2]]+'"></span><span class="cds-kind__label">'+k[0]+'</span>'; grid.appendChild(b); });
+  document.getElementById('d5-cta').addEventListener('click',function(){
+    if(this.getAttribute('aria-disabled')==='true'){ const h=document.getElementById('d5-hint'); h.hidden=false; h.textContent='Ainda faltam 2 cenas para classificar — toque nas bolinhas numeradas.'; }
+  });
+
+  /* §6 tema (demo local; no app use CdsTheme no <html>) */
+  document.getElementById('d6-btn').addEventListener('click',()=>{
+    const d=document.getElementById('d6-demo');
+    d.setAttribute('data-cds-theme', d.getAttribute('data-cds-theme')==='dark'?'light':'dark');
+  });
+
+  /* §7 regravação */
+  document.getElementById('d7-open').addEventListener('click',()=>{
+    CdsRerecord.open({ secs:12,
+      onConfirm(){ document.getElementById('d7-log').textContent='apagou e começou a gravar'; },
+      onKeep(){ document.getElementById('d7-log').textContent='manteve a gravação'; } });
+  });
+
+  /* §8 trava */
+  let rec=false; const scope=document.getElementById('d8-scope');
+  const deny=()=>{ document.getElementById('d8-cap').textContent='gravando — os outros botões esperam a resposta'; };
+  document.getElementById('d8-rec').addEventListener('click',function(){
+    rec=!rec; CdsRecLock.set(scope,rec);
+    this.innerHTML=rec?'<span class="cds-recdot"></span>parar':'● gravar';
+    document.getElementById('d8-cap').textContent=rec?'gravando — os outros botões esperam a resposta':'';
+  });
+  document.getElementById('d8-a').addEventListener('click', CdsRecLock.guard(()=>rec,deny)(()=>{ document.getElementById('d8-cap').textContent='voltou uma pergunta'; }));
+})();
+</script>
+</body>
+</html>

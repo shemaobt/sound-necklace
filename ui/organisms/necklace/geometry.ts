@@ -108,6 +108,31 @@ export function beadAtXY(
 }
 
 /**
+ * Quanto rolar a janela do colar para a conta acesa continuar à vista, ou `null`
+ * quando não há o que fazer. `beadTop` é o CENTRO da conta (o que `beadPosition`
+ * devolve), por isso a visibilidade conta meia conta para cada lado.
+ *
+ * `null` com a conta já visível é a regra que importa: sem ela a janela rolaria a
+ * cada conta e brigaria com quem foi olhar outro trecho de propósito. Janela ainda
+ * sem altura (jsdom não tem layout) também não decide nada.
+ *
+ * Quando precisa rolar, centra a conta: saindo por baixo, a fileira acesa reaparece
+ * no meio e ainda sobra meia janela de história pela frente antes da próxima rolagem.
+ */
+export function followScrollTop(
+  beadTop: number,
+  size: Size,
+  viewport: number,
+  scrollTop: number,
+): number | null {
+  if (viewport <= 0) return null;
+  const half = size.bead / 2;
+  const visible = beadTop - half >= scrollTop && beadTop + half <= scrollTop + viewport;
+  if (visible) return null;
+  return Math.max(0, beadTop - viewport / 2);
+}
+
+/**
  * Retângulos de uma banda `[s, e]` — um por linha quando a banda cruza a quebra
  * (L485–498). `pad` folga em px além da conta. Intervalo vazio (e < s) → nenhum.
  */

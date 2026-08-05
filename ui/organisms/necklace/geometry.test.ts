@@ -7,6 +7,7 @@ import {
   beadsPerRow,
   bandRects,
   cordRects,
+  followScrollTop,
   resolveWindow,
   SIZE_M,
 } from './geometry';
@@ -125,5 +126,59 @@ describe('centerOffset — colar sempre centrado (feedback do dono)', () => {
     expect(centerOffset(40, 16, 400, SIZE_M)).toBe(0);
     // container mais estreito que a fileira → nunca negativo
     expect(centerOffset(20, 20, 100, SIZE_M)).toBe(0);
+  });
+});
+
+/**
+ * ENG-387 — a janela acompanha a conta acesa.
+ *
+ * O colar agora rola dentro de uma janela em vez de fazer a página crescer. Quem
+ * decide o quanto rolar é esta função pura: jsdom não tem layout, e no organismo
+ * o playhead é aplicado imperativamente (o campo de contas é memoizado de
+ * propósito, para não re-renderizar a 60fps). Aqui se testa a decisão; que a
+ * conta acesa termine visível de verdade é asserção do teste em Chromium.
+ */
+describe('seguir a conta acesa dentro da janela', () => {
+  const VIEWPORT = 200;
+
+  it('não mexe quando a conta acesa já está à vista', () => {
+    const { top } = beadPosition(3, 0, 10, SIZE_M);
+
+    expect(followScrollTop(top, SIZE_M, VIEWPORT, 0)).toBeNull();
+  });
+
+  it('rola quando a conta acesa passou abaixo da borda', () => {
+    const { top } = beadPosition(300, 0, 10, SIZE_M);
+
+    const next = followScrollTop(top, SIZE_M, VIEWPORT, 0);
+
+    expect(next).not.toBeNull();
+    expect(next!).toBeGreaterThan(0);
+    expect(top).toBeGreaterThanOrEqual(next!);
+    expect(top).toBeLessThanOrEqual(next! + VIEWPORT);
+  });
+
+  it('rola de volta quando o usuário voltou para uma conta acima da janela', () => {
+    const { top } = beadPosition(2, 0, 10, SIZE_M);
+
+    const next = followScrollTop(top, SIZE_M, VIEWPORT, 900);
+
+    expect(next).not.toBeNull();
+    expect(next!).toBeLessThan(900);
+    expect(top).toBeGreaterThanOrEqual(next!);
+  });
+
+  it('nas primeiras fileiras nunca pede posição negativa', () => {
+    const { top } = beadPosition(0, 0, 10, SIZE_M);
+
+    const next = followScrollTop(top, SIZE_M, VIEWPORT, 400);
+
+    expect(next).toBe(0);
+  });
+
+  it('janela mais alta que o conteúdo: não há o que rolar', () => {
+    const { top } = beadPosition(5, 0, 10, SIZE_M);
+
+    expect(followScrollTop(top, SIZE_M, 10_000, 0)).toBeNull();
   });
 });

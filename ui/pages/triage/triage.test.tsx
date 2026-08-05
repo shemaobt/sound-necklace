@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -86,7 +86,9 @@ async function classifyFocused(): Promise<void> {
 }
 
 function dots(): HTMLElement[] {
-  return screen.getAllByRole('button', { name: 'ir para a cena' });
+  /* Desde a ENG-389 cada ponto é nomeado pela SUA cena ("Cena 1", "Cena 2"…),
+     então não há mais um nome único para buscar — pega-se pelo grupo. */
+  return within(screen.getByRole('group', { name: 'cenas' })).getAllByRole('button');
 }
 
 beforeEach(() => {
@@ -301,15 +303,36 @@ describe('Triage — cobertura só-facilitadora (PRD v2 §8.5)', () => {
 });
 
 describe('Triage — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
-  it('a área de foco tem ≤1 linha de instrução e nenhum dígito (gaveta fechada)', () => {
+  /**
+   * A guarda continua valendo para a tela inteira MENOS o indicador de cena
+   * (ENG-389, decisão do dono, 2026-08-04): lá o número é identidade da cena, e
+   * sem ele o indicador era confundido com uma conta do colar. A exceção é
+   * recortada aqui em vez de a asserção ser afrouxada — se um dígito vazar para
+   * qualquer outro canto da triagem, este teste ainda cai.
+   */
+  it('fora do indicador de cena, a área de foco não tem dígito nem mais de uma instrução', () => {
     load(triaging([lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })]));
     const { container } = render(<Triage />);
 
-    expect(container.textContent ?? '').not.toMatch(/\d/);
-    for (const el of container.querySelectorAll('[aria-label]')) {
+    const indicator = screen.getByRole('group', { name: 'cenas' });
+    const semIndicador = container.cloneNode(true) as HTMLElement;
+    semIndicador.querySelector(`.${indicator.className}`)?.remove();
+
+    expect(semIndicador.textContent ?? '').not.toMatch(/\d/);
+    for (const el of semIndicador.querySelectorAll('[aria-label]')) {
       expect(el.getAttribute('aria-label')).not.toMatch(/\d/);
     }
     expect(container.querySelectorAll('[data-role="instruction"]').length).toBeLessThanOrEqual(1);
+  });
+
+  it('o indicador de cena é a ÚNICA exceção: ele numera, o colar continua sem número', () => {
+    load(triaging([lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })]));
+    const { container } = render(<Triage />);
+
+    expect(dots().map((d) => d.textContent?.trim())).toEqual(['1', '2']);
+
+    const colar = container.querySelector('.cds-necklace');
+    expect(colar?.textContent ?? '').not.toMatch(/\d/);
   });
 });
 
@@ -319,7 +342,7 @@ describe('Triage — tratamento creme (redesign §6.4, §4.5)', () => {
     const { container } = render(<Triage />);
 
     expect(container.querySelector('.cds-triage')).not.toBeNull();
-    expect(triageCss).toMatch(/\.cds-triage\s*\{[^}]*var\(--cds-cream\)/);
+    expect(triageCss).toMatch(/\.cds-triage\s*\{[^}]*var\(--cds-ui-bg\)/);
   });
 
   it('todo movimento decorativo fica sob prefers-reduced-motion: no-preference', () => {

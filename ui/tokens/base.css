@@ -12,8 +12,8 @@ body {
 }
 
 body {
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
   font-family: var(--cds-font-load-bearing);
   /* tamanho de texto confortável para a UI da facilitadora (PRD §13) */
   font-size: 15px;

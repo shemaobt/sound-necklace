@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { type ReactNode, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, WaveformBar } from '../../atoms';
@@ -44,7 +45,22 @@ export interface ConversationStageProps {
   onRecord?: () => void;
   onStop?: () => void;
   onPlay?: () => void;
+  /**
+   * Descartar a resposta gravada e JÁ começar outra — uma intenção, um toque
+   * (ENG-392). Só é chamado depois da confirmação: o organismo é o portão.
+   */
   onRerecord?: () => void;
+  /**
+   * Duração da resposta já gravada. A confirmação de regravar diz em voz alta o
+   * que está em risco; sem ela a pergunta é abstrata e a pessoa aceita no reflexo.
+   */
+  answerSeconds?: number;
+  /**
+   * Um controle travado foi tocado durante a gravação (ENG-393). A recusa se
+   * responde ao ouvido, não com texto (§9.4) — quem liga a porta de som decide o
+   * que tocar; o organismo não conhece adapter.
+   */
+  onBlocked?: () => void;
   /** A resposta gravada está TOCANDO agora (eventos reais da porta) — ouvir ⇄ pausar (ENG-322). */
   answerPlaying?: boolean;
   /** Reprodução pedida e ainda abrindo (fetch+decode no modo real) — ENG-336. */
@@ -139,10 +155,10 @@ function SpeakGlyph() {
 }
 
 /** Microfone como SVG inline (nunca unicode), herdando a cor do botão. */
-function MicGlyph() {
+function MicGlyph({ className = 'cds-conversation-stage-mic-glyph' }: { className?: string }) {
   return (
     <svg
-      className="cds-conversation-stage-mic-glyph"
+      className={className}
       aria-hidden="true"
       focusable="false"
       viewBox="0 0 24 24"
@@ -158,6 +174,16 @@ function MicGlyph() {
       />
     </svg>
   );
+}
+
+/**
+ * m:ss. A única duração escrita numa tela de ouvinte (§9.2 proíbe números): sem
+ * ela, "a resposta será apagada" não diz o tamanho do que se perde, e a pergunta
+ * vira formalidade.
+ */
+function mmss(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 /**
@@ -178,6 +204,8 @@ export function ConversationStage({
   onStop,
   onPlay,
   onRerecord,
+  answerSeconds,
+  onBlocked,
   answerPlaying = false,
   answerOpening = false,
   onStopPlay,
@@ -189,6 +217,28 @@ export function ConversationStage({
   speaking = false,
 }: ConversationStageProps) {
   const { t } = useTranslation();
+  const [confirmingRerecord, setConfirmingRerecord] = useState(false);
+  const keepRef = useRef<HTMLSpanElement>(null);
+
+  /**
+   * Microfone aberto: o resto da tela espera (ENG-393). Avançar, voltar, reouvir
+   * a pergunta ou o trecho no meio de uma resposta corrompe ou perde o que a
+   * pessoa está dizendo. A trava é DERIVADA do estado do gravador — assim ela se
+   * levanta sozinha em toda saída, inclusive quando o salvamento falha.
+   */
+  const locked = recorderState === 'recording';
+  /**
+   * A recusa nunca é muda: quem está falando não está lendo a tela. Recusar no
+   * próprio handler (e não só apagar o botão) é o que sobrevive a um DOM em
+   * transição — é aqui que a gravação de fato se salva.
+   */
+  const guard = (run?: () => void) => (): void => {
+    if (locked) {
+      onBlocked?.();
+      return;
+    }
+    run?.();
+  };
 
   return (
     <div className="cds-conversation-stage">
@@ -200,7 +250,8 @@ export function ConversationStage({
             <button
               type="button"
               className="cds-conversation-stage-speak"
-              onClick={onSpeakQuestion}
+              aria-disabled={locked || undefined}
+              onClick={guard(onSpeakQuestion)}
             >
               {speaking ? <PauseGlyph /> : <SpeakGlyph />}
               {speaking ? t('conversationStage.pause') : t('conversationStage.listen')}
@@ -209,7 +260,21 @@ export function ConversationStage({
         </div>
 
         <div className="cds-conversation-stage-panel">
-          {header ? <div className="cds-conversation-stage-panel-header">{header}</div> : null}
+          {header ? (
+            <div
+              className="cds-conversation-stage-panel-header"
+              data-waiting={locked || undefined}
+              // o ▶ do trecho chega como ReactNode: não há handler para embrulhar,
+              // então a recusa acontece na captura, antes do clique chegar a ele
+              onClickCapture={(event) => {
+                if (!locked) return;
+                event.stopPropagation();
+                onBlocked?.();
+              }}
+            >
+              {header}
+            </div>
+          ) : null}
 
           <QuestionCard
             question={question}
@@ -254,7 +319,10 @@ export function ConversationStage({
                         ? t('conversationStage.pausePlayback')
                         : t('conversationStage.play')}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={onRerecord}>
+                  {/* regravar passa pela confirmação (ENG-392): um toque errado aqui
+                      apagava, em silêncio, a história que a pessoa acabou de contar */}
+                  <Button variant="ghost" size="sm" onClick={() => setConfirmingRerecord(true)}>
+                    <MicGlyph className="cds-conversation-stage-rerecord-glyph" />
                     {t('conversationStage.again')}
                   </Button>
                 </div>
@@ -290,9 +358,14 @@ export function ConversationStage({
 
               <div className="cds-conversation-stage-hint">
                 <p className="cds-conversation-stage-hint-strong">
-                  {recorderState === 'recording'
-                    ? t('conversationStage.recordingLabel')
-                    : t('conversationStage.idleHint')}
+                  {locked ? (
+                    <>
+                      <span className="cds-conversation-stage-rec-dot" aria-hidden="true" />
+                      {t('conversationStage.recordingLabel')}
+                    </>
+                  ) : (
+                    t('conversationStage.idleHint')
+                  )}
                 </p>
                 <p className="cds-conversation-stage-typed-hint">
                   {t('conversationStage.typedHint')}
@@ -306,12 +379,12 @@ export function ConversationStage({
       <div className="cds-conversation-stage-footer">
         <div className="cds-conversation-stage-nav">
           {onPrev ? (
-            <Button variant="ghost" size="sm" onClick={onPrev}>
+            <Button variant="ghost" size="sm" ariaDisabled={locked} onClick={guard(onPrev)}>
               {t('conversationStage.prev')}
             </Button>
           ) : null}
           {onNext ? (
-            <Button variant="dark" size="sm" onClick={onNext}>
+            <Button variant="dark" size="sm" ariaDisabled={locked} onClick={guard(onNext)}>
               {t('conversationStage.next')}
             </Button>
           ) : null}
@@ -325,6 +398,61 @@ export function ConversationStage({
           />
         </div>
       </div>
+
+      {confirmingRerecord ? (
+        <Dialog.Root
+          open
+          onOpenChange={(open) => {
+            // Esc, ou qualquer fechamento que não seja o "apagar", preserva a
+            // gravação: o caminho de menor esforço é sempre o que não destrói (§9.5)
+            if (!open) setConfirmingRerecord(false);
+          }}
+        >
+          <Dialog.Portal>
+            <Dialog.Overlay className="cds-rerecord-confirm-overlay" />
+            <Dialog.Content
+              // alertdialog, e não dialog: é confirmação destrutiva — o corpo é
+              // anunciado junto do título e clicar fora não decide nada
+              role="alertdialog"
+              className="cds-rerecord-confirm"
+              onInteractOutside={(event) => event.preventDefault()}
+              // foco na ação SEGURA (como o seam-modal): um Enter distraído mantém
+              // a resposta em vez de apagá-la
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                keepRef.current?.querySelector('button')?.focus();
+              }}
+            >
+              <Dialog.Title className="cds-rerecord-confirm-title">
+                {t('conversationStage.rerecordTitle')}
+              </Dialog.Title>
+              <Dialog.Description className="cds-rerecord-confirm-body">
+                {answerSeconds === undefined
+                  ? // a duração pode não ter chegado (consulta de IO falha): dizer
+                    // "0:00" mentiria sobre o tamanho do que se perde
+                    t('conversationStage.rerecordBodyUnknown')
+                  : t('conversationStage.rerecordBody', { duration: mmss(answerSeconds) })}
+              </Dialog.Description>
+              <div className="cds-rerecord-confirm-actions">
+                <span ref={keepRef} style={{ display: 'contents' }}>
+                  <Button variant="primary" onClick={() => setConfirmingRerecord(false)}>
+                    {t('conversationStage.rerecordKeep')}
+                  </Button>
+                </span>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setConfirmingRerecord(false);
+                    onRerecord?.();
+                  }}
+                >
+                  {t('conversationStage.rerecordConfirm')}
+                </Button>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      ) : null}
     </div>
   );
 }

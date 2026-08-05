@@ -28,7 +28,7 @@ import type { PaletteEntry } from '../../tokens';
 import { sceneOrdinal } from '../cut/cutting';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
-import { sessionStore, useAppStore, useSessionStore } from '../../state';
+import { appStore, sessionStore, useAppStore, useSessionStore } from '../../state';
 import './conversation.css';
 
 /**
@@ -207,6 +207,18 @@ function QuestionScreen({
   const [levels, setLevels] = useState<number[]>([]);
   const [speaking, setSpeaking] = useState(false);
   const [recordError, setRecordError] = useState(false);
+
+  // O "← Histórias" do cabeçalho vive fora desta estação e é o único caminho de
+  // saída que o palco não desenha (ENG-393). Espelhar o estado num efeito, em vez
+  // de acender e apagar a bandeira em cada transição, cobre TODA saída de graça —
+  // inclusive a falha de salvamento e o desmonte ao trocar de pergunta.
+  useEffect(() => {
+    appStore.getState().setRecording(recorderState === 'recording');
+    return () => appStore.getState().setRecording(false);
+  }, [recorderState]);
+  // Quanto tempo de resposta existe hoje — a confirmação de regravar diz o que
+  // está em risco (ENG-392). `undefined` = ainda não se sabe (ou a consulta falhou).
+  const [answerSeconds, setAnswerSeconds] = useState<number | undefined>(undefined);
   // A RESPOSTA desta pergunta está tocando — dos eventos reais da porta (ENG-322).
   const [answerPlaying, setAnswerPlaying] = useState(false);
   // Entre o toque e o som há fetch+decode no modo real (ENG-336): o botão diz
@@ -255,8 +267,13 @@ function QuestionScreen({
     if (recorder) {
       void recorder
         .has(path)
-        .then((h) => {
-          if (alive && h) setRecorderState('recorded');
+        .then(async (h) => {
+          if (!alive || !h) return;
+          setRecorderState('recorded');
+          // a duração só interessa para a pergunta de regravar; falha dela não
+          // muda o estado — a confirmação abre sem o número, nunca com um falso
+          const sec = await recorder.duration(path).catch(() => undefined);
+          if (alive && sec !== undefined) setAnswerSeconds(sec);
         })
         // fronteira de IO real (ENG-247): consulta falhou → segue como não gravada
         .catch(() => undefined);
@@ -290,6 +307,13 @@ function QuestionScreen({
 
   const onRecord = async (): Promise<void> => {
     if (!recorder) return;
+    // O microfone abre num silêncio: a história tocando no colar, a pergunta na
+    // voz do guia e a resposta anterior em reprodução entravam TODAS pelo mesmo
+    // ar — a gravação saía com a fala da pessoa por baixo do som do app.
+    player?.stop();
+    setSpanPlaying(false);
+    speaker?.stop();
+    recorder.stopPlayback();
     const rec = await recorder.start(path);
     // desmontou durante o await (navegou depressa) → descarta e não escreve estado
     if (!mountedRef.current) {
@@ -313,8 +337,9 @@ function QuestionScreen({
     // "guardando" — spinner no botão, sem aceitar clique (ENG-318); antes disto a
     // tela dizia "Gravando…" enquanto na verdade persistia.
     setRecorderState('saving');
+    let answer;
     try {
-      await rec.stop();
+      answer = await rec.stop();
     } catch {
       // fronteira de IO real (ENG-247): no modo real o stop embute o PUT da resposta
       // (rede/413 podem falhar) — a gravação se perdeu; volta ao microfone com a
@@ -334,6 +359,7 @@ function QuestionScreen({
     // esta resposta na sessão errada (contaminação cross-sessão). Espelha `onRecord`.
     if (!mountedRef.current) return;
     sound?.recordStop();
+    setAnswerSeconds(answer.durationSec);
     setRecorderState('recorded');
     // Voz salva no caminho canônico: avisa o shell para registrá-lo em meta.voice (§10.4).
     onVoiceSaved?.(path);
@@ -348,9 +374,16 @@ function QuestionScreen({
       sound?.refuse();
     });
   };
+  /**
+   * Só chega aqui depois da confirmação (ENG-392) — e então é uma intenção só:
+   * a resposta antiga sai e a nova gravação começa na hora. Devolver o microfone
+   * parado obrigaria a um segundo toque para fazer o que já foi decidido.
+   */
   const onRerecord = (): void => {
     setLevels([]);
+    setAnswerSeconds(undefined);
     setRecorderState('idle');
+    void onRecord();
   };
 
   return (
@@ -379,6 +412,9 @@ function QuestionScreen({
         onStop={onStop}
         onPlay={onPlay}
         onRerecord={onRerecord}
+        answerSeconds={answerSeconds}
+        // toque recusado durante a gravação: responde ao ouvido, não com texto (§9.4)
+        onBlocked={() => sound?.refuse()}
         answerPlaying={answerPlaying}
         answerOpening={answerOpening}
         onStopPlay={() => recorder?.stopPlayback()}

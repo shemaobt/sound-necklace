@@ -9,6 +9,7 @@ import { FixtureProjectSettings } from '../../../adapters/project-settings';
 import { FixtureSessionStore } from '../../../adapters/sessions';
 import { sessionStore } from '../../state';
 import { pt } from '../../i18n/pt';
+import headerCss from '../../app/header.css?raw';
 import lockCss from './granularity-lock.css?raw';
 import setupCss from './setup.css?raw';
 import Setup from './index';
@@ -480,6 +481,95 @@ describe('Setup — portas de entrada (§8.9, ENG-311)', () => {
     await act(async () => release?.());
     expect(await screen.findByRole('radio', { name: /conto-do-boto/ })).toBeTruthy();
     expect(document.querySelectorAll('.cds-skeleton')).toHaveLength(0);
+  });
+});
+
+/**
+ * ENG-386 — escolher o áudio sem perder o Continuar de vista.
+ *
+ * Com uma entrega grande, a lista empurrava o botão de criar a sessão para longe
+ * abaixo da dobra: a facilitadora escolhia um áudio e não sabia o que fazer em
+ * seguida, porque a única ação que move a sessão adiante estava fora da tela.
+ *
+ * O defeito é o layout, não a validação. O botão segue sempre clicável e
+ * explicando no clique ("guiar, nunca punir", §9.5) — trocá-lo por um
+ * desabilitado seria mudar comportamento em vez de consertar a dobra.
+ */
+describe('Setup — a ação de seguir não depende do tamanho da lista (ENG-386)', () => {
+  /** A janela que rola com a lista; a ação NÃO pode viver dentro dela. */
+  function scrollBox(container: HTMLElement): HTMLElement {
+    const box = container.querySelector<HTMLElement>('.cds-setup-audios-scroll');
+    expect(box, 'a lista de áudios não tem janela de rolagem própria').not.toBeNull();
+    return box!;
+  }
+
+  it('o botão de criar a sessão vive fora da janela que rola', async () => {
+    const { container } = renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    const criar = screen.getByRole('button', { name: pt.setup.create });
+
+    expect(scrollBox(container).contains(criar)).toBe(false);
+  });
+
+  it('a lista de áudios rola dentro da própria janela', async () => {
+    const { container } = renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    expect(scrollBox(container).querySelector('.cds-setup-audios')).not.toBeNull();
+  });
+
+  it('a ação mora na coluna estreita, não embaixo da lista', async () => {
+    /* É o arranjo do item 1 da entrega que resolve o defeito: a ação e a lista são
+       colunas IRMÃS. Enquanto o botão for descendente da coluna da lista, crescer a
+       entrega volta a empurrá-lo — não importa o que a folha de estilo diga. */
+    const { container } = renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    const criar = screen.getByRole('button', { name: pt.setup.create });
+    const lista = container.querySelector<HTMLElement>('.cds-setup-col-list');
+    const lado = container.querySelector<HTMLElement>('.cds-setup-col-side');
+
+    expect(lista, 'não há coluna da lista').not.toBeNull();
+    expect(lado, 'não há coluna da ação').not.toBeNull();
+    expect(lista!.contains(criar)).toBe(false);
+    expect(lado!.contains(criar)).toBe(true);
+  });
+
+  it('a altura da estação sai do cabeçalho real do shell, não de um chute', () => {
+    /* Duas coisas que jsdom não mede e que, quebradas, devolvem o defeito inteiro
+       sem derrubar nenhum outro teste.
+
+       (a) A estação precisa de altura DEFINIDA — é dela que `flex: 1` tira a sobra
+       que a lista cede. Trocar por `min-height` deixa a corrente frouxa e a lista
+       volta a crescer sem fim.
+       (b) O quanto se desconta é o cabeçalho do shell, que é o único cromo acima da
+       Setup (não há fio de contas fora de uma sessão). Se alguém mudar a altura do
+       cabeçalho, é AQUI que se descobre — em vez de na tela da facilitadora. */
+    const alturaEstacao = /\.cds-setup\s*\{[^}]*height:\s*calc\(100dvh\s*-\s*(\d+)px\)/.exec(
+      setupCss,
+    );
+    expect(alturaEstacao, 'a estação não tem altura definida derivada da janela').not.toBeNull();
+
+    const alturaCabecalho = /\.cds-header\s*\{[^}]*height:\s*(\d+)px/.exec(headerCss);
+    expect(alturaCabecalho, 'não achei a altura do cabeçalho do shell').not.toBeNull();
+
+    expect(
+      alturaEstacao![1],
+      'o desconto da Setup e a altura do cabeçalho do shell divergiram',
+    ).toBe(alturaCabecalho![1]);
+  });
+
+  it('a janela da lista toma a sobra em vez de carregar um teto em pixels', () => {
+    const inicio = setupCss.indexOf('.cds-setup-audios-scroll {');
+    expect(inicio, 'a regra .cds-setup-audios-scroll não existe').toBeGreaterThanOrEqual(0);
+    const regra = setupCss.slice(inicio, setupCss.indexOf('}', inicio));
+
+    expect(regra).toMatch(/overflow-y:\s*auto/);
+    expect(regra, 'a janela precisa crescer/encolher com a coluna').toMatch(/flex:\s*1\s+1\s+0/);
+    /* um teto em pixels só garantiria o botão em janelas altas — foi por isso que a
+       primeira tentativa desta issue não fechou o defeito */
+    expect(regra).not.toMatch(/max-height:/);
   });
 });
 

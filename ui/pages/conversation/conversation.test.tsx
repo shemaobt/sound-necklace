@@ -288,12 +288,12 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
 
-    await userEvent.click(await screen.findByRole('button', { name: /^ouvir$/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /^ouvir a resposta$/ }));
     expect(recorder.playing).not.toBeNull();
     // tocando: o botão oferece pausar
     await userEvent.click(screen.getByRole('button', { name: 'pausar' }));
     expect(recorder.playing).toBeNull();
-    expect(screen.getByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
   });
 
   it('ouvir mostra "abrindo…" até a porta confirmar o início da reprodução (ENG-336)', async () => {
@@ -317,7 +317,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
-    await userEvent.click(await screen.findByRole('button', { name: /^ouvir$/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /^ouvir a resposta$/ }));
 
     // em voo: abrindo, e sem segundo clique acumulando outra reprodução
     const opening = screen.getByRole('button', { name: 'abrindo a resposta…' });
@@ -334,7 +334,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     await act(async () => {
       playbackCbs.forEach((cb) => cb(null));
     });
-    expect(screen.getByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
   });
 
   it('parar entra em "guardando" até a persistência confirmar (ENG-318)', async () => {
@@ -368,10 +368,10 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     expect((saving as HTMLButtonElement).disabled).toBe(true);
 
     await act(async () => release?.());
-    expect(await screen.findByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
   });
 
-  it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
+  it('gravar guarda no caminho exato da pergunta; "gravar de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
     render(<Conversation recorder={recorder} />);
@@ -383,14 +383,15 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     expect(await recorder.has(path)).toBe(true);
 
-    // "de novo" volta ao microfone e regrava no MESMO caminho
-    await userEvent.click(screen.getByRole('button', { name: 'de novo' }));
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    // "gravar de novo" pergunta antes (ENG-392) e, confirmado, já está gravando de
+    // volta no MESMO caminho — uma intenção, um toque
+    await userEvent.click(screen.getByRole('button', { name: 'gravar de novo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar e gravar de novo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     expect(await recorder.has(path)).toBe(true);
 
     // "listen" toca a gravação deste caminho
-    await userEvent.click(screen.getByRole('button', { name: 'ouvir' }));
+    await userEvent.click(screen.getByRole('button', { name: 'ouvir a resposta' }));
     expect(recorder.playing).toBe(path);
 
     // a digitação saiu do palco da entrevista — vive só no relatório (ui/pages/report)
@@ -431,18 +432,29 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     expect(onVoiceSaved).not.toHaveBeenCalled();
   });
 
-  it('navegar durante a gravação cancela a gravação em curso (libera o microfone)', async () => {
+  /**
+   * ENG-393 mudou o gatilho: com o microfone aberto, "Próxima pergunta" não anda
+   * mais — era exatamente por aí que uma resposta se perdia no meio de uma frase.
+   * O contrato de limpeza continua valendo para quem SAI da estação (o voltar do
+   * cabeçalho, uma troca de sessão): desmontar cancela a gravação órfã e devolve
+   * o microfone.
+   */
+  it('gravando, a próxima pergunta espera; sair da estação cancela a gravação em curso', async () => {
     const recorder = new FixtureVoiceRecorder();
     const startSpy = vi.spyOn(recorder, 'start');
     load(mapping());
-    render(<Conversation recorder={recorder} />);
+    const state = ensureMapping(mapping());
+    const { unmount } = render(<Conversation recorder={recorder} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     const rec = await startSpy.mock.results[0]!.value;
     const cancelSpy = vi.spyOn(rec, 'cancel');
 
-    // trocar de pergunta remonta a tela; a gravação órfã tem de ser cancelada
     await next();
+    expect(questionText()).toBe(questionSequence(state)[0]!.question.q);
+    expect(cancelSpy).not.toHaveBeenCalled();
+
+    unmount();
     expect(cancelSpy).toHaveBeenCalled();
   });
 });
@@ -668,5 +680,43 @@ describe('Conversation — fronteira de IO real da resposta (ENG-247)', () => {
     // volta ao microfone (nada preso em "gravando"), e o shell NÃO registrou o caminho
     expect(screen.getByRole('button', { name: 'gravar a resposta' })).toBeTruthy();
     expect(onVoiceSaved).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * ENG-393, o elo que faltava. O "← Histórias" mora em `ui/app`, fora desta
+ * estação, e é a única saída que o palco da conversa não desenha. O cabeçalho já
+ * sabe recusar (header.test.tsx) e a estação já sabe travar o que é dela — o que
+ * ninguém provava é que uma coisa avisa a outra. Sem isto, os dois lados podem
+ * estar certos e a pessoa ainda sair da sessão no meio de uma resposta.
+ */
+describe('Conversation — o cabeçalho fica sabendo da gravação (ENG-393)', () => {
+  it('gravando, a bandeira global sobe; parando, desce', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    render(<Conversation recorder={recorder} />);
+
+    expect(appStore.getState().recording).toBe(false);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    expect(appStore.getState().recording).toBe(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    expect(appStore.getState().recording).toBe(false);
+  });
+
+  it('sair da estação no meio da gravação não deixa a bandeira presa', async () => {
+    /* Uma bandeira presa em true travaria o voltar da pessoa PARA SEMPRE, numa
+       tela onde nem existe gravação — o modo mais cruel de falhar desta feature. */
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    const { unmount } = render(<Conversation recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    expect(appStore.getState().recording).toBe(true);
+
+    unmount();
+
+    expect(appStore.getState().recording).toBe(false);
   });
 });

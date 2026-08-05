@@ -32,7 +32,7 @@
   /* corta a marca d'água, que sangra de propósito para fora do canto */
   overflow: hidden;
   padding: 42px 46px 44px;
-  background: var(--cds-cream);
+  background: var(--cds-ui-elevated);
   border-radius: var(--cds-radius-frame);
   box-shadow: var(--cds-shadow-modal);
   display: flex;
@@ -74,7 +74,7 @@
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-gran-lock-title {
@@ -84,7 +84,7 @@
   font-weight: 400;
   font-size: 28px;
   line-height: 1.22;
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
   text-wrap: pretty;
 }
 
@@ -92,7 +92,7 @@
   max-width: 46ch;
   font-size: 13.5px;
   line-height: 1.65;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
   text-wrap: pretty;
 }
 

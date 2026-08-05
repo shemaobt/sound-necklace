@@ -8,9 +8,9 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--cds-olive, #3f3e20) 35%, transparent);
-  background: var(--cds-cream, #f6f5eb);
-  color: var(--cds-olive, #3f3e20);
+  border: 1px solid color-mix(in srgb, var(--cds-ui-body-ink) 35%, transparent);
+  background: var(--cds-ui-elevated);
+  color: var(--cds-ui-body-ink);
   font-family: var(--cds-font-quiet-voice, 'Merriweather', Georgia, serif);
   font-size: 18px;
   line-height: 1;
@@ -22,8 +22,8 @@
   position: relative;
   max-width: 280px;
   padding: 16px 40px 14px 18px;
-  background: var(--cds-cream, #f6f5eb);
-  color: var(--cds-olive, #3f3e20);
+  background: var(--cds-ui-elevated);
+  color: var(--cds-ui-body-ink);
   border-radius: var(--cds-radius-card, 20px);
   box-shadow: var(--cds-shadow-menu, 0 8px 26px rgba(10, 7, 3, 0.18));
 }
@@ -44,7 +44,7 @@
   font-size: 12px;
   letter-spacing: 0.02em;
   text-decoration: underline;
-  color: color-mix(in srgb, var(--cds-olive, #3f3e20) 75%, transparent);
+  color: color-mix(in srgb, var(--cds-ui-body-ink) 75%, transparent);
   cursor: pointer;
 }
 
@@ -58,7 +58,7 @@
   border: none;
   border-radius: 50%;
   background: none;
-  color: color-mix(in srgb, var(--cds-olive, #3f3e20) 70%, transparent);
+  color: color-mix(in srgb, var(--cds-ui-body-ink) 70%, transparent);
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
@@ -67,6 +67,6 @@
 .cds-tutorial-popup-trigger:focus-visible,
 .cds-tutorial-popup-never:focus-visible,
 .cds-tutorial-popup-close:focus-visible {
-  outline: 2px solid var(--cds-olive, #3f3e20);
+  outline: 2px solid var(--cds-ui-body-ink);
   outline-offset: 2px;
 }

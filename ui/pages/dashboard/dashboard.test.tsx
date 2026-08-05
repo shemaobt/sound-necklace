@@ -309,7 +309,7 @@ describe('Dashboard — expiração de auth (§7.1)', () => {
 
 describe('Dashboard — superfície creme (redesign §4.1)', () => {
   it('a tela usa o fundo creme via token', () => {
-    expect(dashboardCss).toMatch(/\.cds-dashboard\s*\{[^}]*var\(--cds-cream\)/);
+    expect(dashboardCss).toMatch(/\.cds-dashboard\s*\{[^}]*var\(--cds-ui-bg\)/);
   });
 });
 

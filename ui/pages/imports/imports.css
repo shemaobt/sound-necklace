@@ -1,10 +1,10 @@
 .cds-imports {
   max-width: 40rem;
   margin: 0 auto;
-  padding: var(--cds-space-6, 2rem) var(--cds-space-4, 1.5rem);
+  padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: var(--cds-space-4, 1.5rem);
+  gap: 1.5rem;
 }
 
 .cds-imports-title {
@@ -16,17 +16,17 @@
 .cds-imports-intro,
 .cds-imports-guidance {
   margin: 0;
-  color: var(--cds-ink-soft, #5b5b4a);
+  color: var(--cds-ui-ink-soft);
 }
 
 .cds-imports-door {
   display: flex;
   flex-direction: column;
-  gap: var(--cds-space-2, 0.5rem);
-  padding: var(--cds-space-4, 1.5rem);
-  border: 1px solid var(--cds-line, rgba(0, 0, 0, 0.14));
-  border-radius: var(--cds-radius-2, 12px);
-  background: var(--cds-surface, #fdfcf5);
+  gap: 0.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--cds-ui-hairline);
+  border-radius: var(--cds-radius-input);
+  background: var(--cds-ui-card);
   cursor: pointer;
 }
 
@@ -37,13 +37,13 @@
 .cds-imports-notices {
   display: flex;
   flex-direction: column;
-  gap: var(--cds-space-2, 0.5rem);
+  gap: 0.5rem;
 }
 
 .cds-imports-notice {
   margin: 0;
-  padding: var(--cds-space-2, 0.5rem) var(--cds-space-3, 1rem);
-  border-radius: var(--cds-radius-1, 8px);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
 }
 
 .cds-imports-notice[data-tone='ok'] {

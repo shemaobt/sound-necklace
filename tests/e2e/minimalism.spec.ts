@@ -45,6 +45,31 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   const main = page.locator('main.cds-app-main');
   const scan = (label: string) => scanListenerSurface(main, { label });
 
+  /**
+   * A ÚNICA exceção viva ao digit-free (ENG-389, decisão do dono, 2026-08-04): o
+   * indicador de cena da Triagem passou a numerar as cenas. Ele reusa a linguagem
+   * visual da conta do colar, e sem número o usuário o lia como "uma conta" — não
+   * sabia em que cena estava nem quais faltavam.
+   *
+   * A exceção é a SUBÁRVORE do indicador, não um padrão de texto. Um padrão como
+   * "um ordinal solto" perdoaria qualquer outro número que vazasse nessa forma —
+   * uma contagem de contas renderizada como "12", por exemplo. Excisando o
+   * componente, a dispensa fica presa a ele: no resto da triagem, contagem, ID e
+   * duração continuam reprovando, como nas demais estações.
+   */
+  const scanTriagem = (label: string) =>
+    scanListenerSurface(main, {
+      label,
+      except: [
+        {
+          selector: '.cds-progress-dots',
+          reason:
+            'PRD §9.2 + ENG-389: o indicador de cena da Triagem numera as cenas — exceção ' +
+            'única, aprovada pelo dono; contas do colar e fio do rodapé seguem sem dígito.',
+        },
+      ],
+    });
+
   await app.login();
   await app.createSession();
 
@@ -71,19 +96,14 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await scan('Escuta 2 — revisão das cenas');
   await page.getByRole('button', { name: 'Continuar →' }).click();
 
-  // ——— Triage: foco na cena / picker (grade "Mais comuns") ———
+  // ——— Triage: foco na cena / picker (os 27 tipos, ENG-390) ———
   await expect(page.getByText('Essa cena é sobre o quê?')).toBeVisible();
-  await scan('Triage — foco/picker');
-
-  // ——— Triage: todos os tipos por tema (picker expandido) ———
-  await page.getByRole('button', { name: 'Ver todos os tipos por tema' }).click();
-  await scan('Triage — todos os tipos');
-  await page.getByRole('button', { name: 'recolher' }).click();
+  await scanTriagem('Triage — foco/picker');
 
   // ——— Triage: passo de confiança ———
   await page.getByRole('radio', { name: SCENARIO.triage[0].kind, exact: true }).click();
   await expect(page.getByText('O quanto isso parece certo pra você?')).toBeVisible();
-  await scan('Triage — confiança');
+  await scanTriagem('Triage — confiança');
 
   // classifica as três cenas para avançar (2 tipos + nenhum se encaixa)
   await page.getByRole('radio', { name: SCENARIO.triage[0].confidence, exact: true }).click();
@@ -93,7 +113,7 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
   await page.getByRole('radio', { name: 'Nenhum se encaixa', exact: true }).click();
   // todas classificadas → momento de revisão
-  await scan('Triage — revisão');
+  await scanTriagem('Triage — revisão');
   await page.getByRole('button', { name: 'Continuar →' }).click();
 
   // ——— Segmentação: ancoragem (primeira cena produtiva, sem frases) ———

@@ -174,7 +174,7 @@ export function Triage({ player = null, sound }: TriageProps) {
           setFocusIdx(i);
           setInspecting(i);
         }}
-        dotLabel={t('progressDots.dotLabel')}
+        dotLabel={(i) => t('progressDots.sceneDot', { n: i + 1 })}
       />
 
       {reviewing ? (
@@ -217,6 +217,11 @@ export function Triage({ player = null, sound }: TriageProps) {
                   windowMargin={0}
                   sceneBand={false}
                   size={SIZE_L}
+                  /* Cinco fileiras (ENG-387): aqui o colar é lembrete da cena
+                     dentro de um cartão que já vive acima da grade de tipos, e
+                     com windowMargin 0 uma cena longa renderiza inteira, sem
+                     nada que a apare. */
+                  maxHeight={5 * SIZE_L.row + 12}
                   transportOnly
                   playbackHead={head}
                   onBeadPointerDown={playScene}

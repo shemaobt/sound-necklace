@@ -10,8 +10,8 @@
   gap: 24px;
   min-height: 72vh;
   padding: 40px clamp(1rem, 5vw, 3rem) 56px;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
 }
 
 .cds-settings-header {
@@ -24,7 +24,7 @@
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-settings-title {
@@ -37,7 +37,7 @@
   margin: 0;
   font-style: italic;
   font-size: 0.95rem;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 /* ── cartão claro: idioma ─────────────────────────────────────────────── */
@@ -46,7 +46,7 @@
   width: min(840px, 100%);
   padding: 26px 32px 30px;
   border-radius: 18px;
-  background: #fff;
+  background: var(--cds-ui-card);
   box-shadow: var(--cds-shadow-card);
 }
 
@@ -60,7 +60,7 @@
   margin: 0 0 1.1rem;
   font-style: italic;
   font-size: 0.88rem;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-settings-langs {
@@ -77,9 +77,9 @@
   gap: 0.15rem;
   text-align: left;
   padding: 16px 44px 16px 20px;
-  border: 1px solid rgba(63, 62, 32, 0.16);
+  border: 1px solid rgba(var(--cds-ui-line-rgb), 0.16);
   border-radius: 14px;
-  background: #fff;
+  background: var(--cds-ui-card);
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -87,13 +87,13 @@
 }
 
 .cds-settings-lang:hover {
-  border-color: var(--cds-telha);
+  border-color: var(--cds-ui-accent);
 }
 
 .cds-settings-lang[data-state='checked'] {
-  border-color: var(--cds-telha);
-  background: color-mix(in srgb, var(--cds-telha) 6%, white);
-  color: var(--cds-telha-deep);
+  border-color: var(--cds-ui-accent);
+  background: var(--cds-ui-selected-bg);
+  color: var(--cds-ui-accent-deep);
 }
 
 .cds-settings-lang-name {
@@ -102,7 +102,7 @@
 
 .cds-settings-lang-region {
   font-size: 0.82rem;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-settings-lang-check {

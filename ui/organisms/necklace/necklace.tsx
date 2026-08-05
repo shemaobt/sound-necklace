@@ -10,6 +10,7 @@ import {
   cordRects,
   beadPosition,
   beadsPerRow,
+  followScrollTop,
   type Rect,
   resolveWindow,
   type Size,
@@ -51,6 +52,11 @@ export interface NecklaceProps {
   /** modo transporte (Escuta/review): toca ao tocar, sem afordâncias de seleção */
   transportOnly?: boolean;
   size?: Size;
+  /** teto em px da janela de contas: o colar rola DENTRO dela e a página não
+   *  cresce, então título, botão de tocar e confirmação ficam sempre à vista.
+   *  Cada estação pede o seu (a Segmentação quer uma tira mais curta que a
+   *  Escuta); sem ele, o campo é inteiro e nada rola. */
+  maxHeight?: number;
   /** fronteiras arrastáveis (ENG-342): `at` = conta onde o punho fica; `id` =
    *  identidade opaca que a página interpreta (o colar não sabe de cena/frase) */
   dragHandles?: DragHandle[];
@@ -231,9 +237,13 @@ export function Necklace(props: NecklaceProps) {
     playbackHead = null,
     transportOnly = false,
     size = SIZE_M,
+    maxHeight,
     dragHandles,
   } = props;
 
+  const windowRef = useRef<HTMLDivElement>(null);
+  /** Última conta que a janela seguiu — ver a guarda no efeito do playhead. */
+  const lastFollowedHead = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -372,8 +382,12 @@ export function Necklace(props: NecklaceProps) {
 
     function endDrag(ev: PointerEvent): void {
       const ix = ixRef.current;
-      if (dragging === null && pending !== null) {
-        // não chegou a arrastar: foi um tap na conta de fronteira → toca a cena
+      /* `pointercancel` NÃO é um toque. O navegador cancela quando decide levar o
+         gesto (rolagem, back-swipe) — tratá-lo como tap fazia a cena começar a
+         tocar no meio de um arrasto que o dedo nem terminou. Só o `pointerup`
+         sem arrasto é toque. */
+      const foiToque = ev.type !== 'pointercancel';
+      if (dragging === null && pending !== null && foiToque) {
         const bead = pending.startBead;
         if (ix.playbackHead !== null && bead === ix.playbackHead) ix.onHeadTap?.();
         else ix.onBeadPointerDown?.(bead);
@@ -443,7 +457,35 @@ export function Necklace(props: NecklaceProps) {
       if (head === null || idx > head) delete bead.dataset.play;
       else bead.dataset.play = idx === head ? 'head' : 'played';
     }
-  }, [playbackHead, field]);
+
+    // ...e a janela segue essa mesma cabeça (ENG-387): sem isto, numa história
+    // longa o ouvinte caça a conta acesa rolando o documento. Fica aqui, na ilha
+    // imperativa, para não passar por estado do React a 60fps.
+    //
+    // Só quando a CABEÇA anda. O efeito também roda quando o campo se recompõe
+    // (mudou a seleção, por exemplo), e a cabeça sobrevive à pausa: sem esta
+    // guarda, pausar no fim da história, rolar de volta ao começo e tocar numa
+    // conta para cortar arrastava a janela de volta para o ponto pausado — bem em
+    // cima da conta que a pessoa acabou de escolher.
+    const cabecaAndou = head !== lastFollowedHead.current;
+    lastFollowedHead.current = head;
+
+    const win = windowRef.current;
+    if (!win || head === null || !cabecaAndou || head < winS || head > winE) return;
+    const next = followScrollTop(
+      beadPosition(head, winS, bpr, size).top,
+      size,
+      win.clientHeight,
+      win.scrollTop,
+    );
+    if (next === null) return;
+    // lido na hora da chamada: uma media query de folha de estilo não alcança um
+    // scroll imperativo (§4.5 — movimento decorativo é opt-in)
+    const reduce =
+      typeof globalThis.matchMedia === 'function' &&
+      globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    win.scrollTo({ top: next, behavior: reduce ? 'auto' : 'smooth' });
+  }, [playbackHead, field, winS, winE, bpr, size]);
 
   // punhos de arrasto (ENG-342): marca as contas-fronteira para o cursor. Escrita
   // imperativa como o playback — não recomputa o campo memoizado.
@@ -458,8 +500,14 @@ export function Necklace(props: NecklaceProps) {
   }, [dragHandles, field]);
 
   return (
-    <div ref={containerRef} className="cds-necklace" style={{ height: `${field.height}px` }}>
-      <BeadField field={field} size={size} />
+    <div
+      ref={windowRef}
+      className="cds-necklace-window"
+      style={maxHeight === undefined ? undefined : { maxHeight: `${maxHeight}px` }}
+    >
+      <div ref={containerRef} className="cds-necklace" style={{ height: `${field.height}px` }}>
+        <BeadField field={field} size={size} />
+      </div>
     </div>
   );
 }

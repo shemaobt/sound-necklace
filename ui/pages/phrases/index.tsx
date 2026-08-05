@@ -25,7 +25,7 @@ import {
 } from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button } from '../../atoms';
-import { ScenePhraseChip } from '../../molecules';
+import { BeadStrip, type BeadStripItem } from '../../molecules';
 import {
   Necklace,
   type NecklaceSegment,
@@ -46,8 +46,8 @@ import './phrases.css';
  * da 1ª frase). Cada clique dá áudio na hora (§8.2); "▶ ouvir a cena" toca só a
  * cena. A travessia de borda abre o seam-modal com a oferta que o domínio
  * classificou (mover desliza a costura e trava; reancorar limpa; escalada volta à
- * Triage). Chips das frases travadas: Remover; ajuste pós-fato é arrastar a borda
- * no colar (dragPhraseBoundary, ENG-342 — reabrir/⚑ removidos).
+ * Triage). Fio de contas das frases travadas: Remover; ajuste pós-fato é arrastar
+ * a borda no colar (dragPhraseBoundary, ENG-342 — reabrir/⚑ removidos).
  *
  * Camada de wiring: o modelo de clique delega ao redutor `clickBead`; confirmar
  * (`confirmFrase`), mover (`moveBorder`), reancorar (`reanchorFrase`), arrastar a
@@ -55,6 +55,13 @@ import './phrases.css';
  * (`confirmFrasesDone`) e voltar (`enterScene`/`setMode`) são decisões puras do
  * domínio aplicadas pelo `sessionStore`. O áudio chega por prop.
  */
+/**
+ * Teto da janela de contas (ENG-387): uma tira de 6 fileiras. A Segmentação é a
+ * mais curta das estações porque a moldura tracejada abraça o colar e o fio das
+ * frases vem logo abaixo — uma cena longa rola dentro da tira, não na página.
+ */
+const NECKLACE_MAX_H = 6 * SIZE_SEG.row + 12;
+
 export interface PhrasesProps {
   player?: Player | null;
   /** A voz da UI (§9): travar a frase, mover a costura, recusar e avançar têm som. */
@@ -68,6 +75,10 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   const [error, setError] = useState<string | null>(null);
   const [offer, setOffer] = useState<BorderOffer | null>(null);
   const [warned, setWarned] = useState<string | null>(null);
+  // Qual frase costurada abre a cápsula do rodapé — a seleção é da PÁGINA, o fio
+  // de contas só a recebe e devolve o toque. Guardamos junto o `scope` em que ela
+  // foi feita (ver abaixo).
+  const [pick, setPick] = useState<{ scope: string; key: string } | null>(null);
 
   // Tudo o que a tela deriva da sessão num único memo por `session` (ref estável
   // entre frames de playback → o campo do colar não recomputa quando só a cabeça
@@ -101,6 +112,24 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     if (!player) return;
     return () => player.stop();
   }, [player]);
+
+  /**
+   * A cápsula aponta para uma frase pelo `prop_id`, e o domínio reatribui ids
+   * pelo menor livre — um id apagado volta a existir noutra frase. Uma seleção
+   * que sobreviva ao que ela aponta ofereceria "Remover" sobre outra frase.
+   *
+   * Por isso a escolha carrega o `scope` em que foi feita e só vale enquanto ele
+   * durar: trocar de sessão (aberta ou retomada), de modo ou de cena ativa a
+   * invalida por construção, sem efeito nem render em cascata. Remover tem o seu
+   * próprio zerar, porque ali o item some sem o scope mudar.
+   */
+  /* Separador NUL, escapado e não literal: cru no fonte ele faz o arquivo deixar
+     de ser texto — grep e `file` param de enxergá-lo. O valor em runtime é o
+     mesmo, e nenhum slug consegue forjar a fronteira entre os campos. */
+  const scope = session
+    ? `${session.slug}\u0000${session.manifestId}\u0000${session.mode}\u0000${session.activeSceneId ?? ''}`
+    : '';
+  const picked = pick?.scope === scope ? pick.key : null;
 
   if (!session || !derived) return null;
   const { sc, scSpan, scenePhrases, segments, lockedEndBeads, dragHandles } = derived;
@@ -232,6 +261,7 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   // é puro (fiel ao reference, golden), a absorção é composta aqui — como o reprime.
   const remove = (i: number): void => {
     setError(null);
+    setPick(null);
     sessionStore.getState().apply((s) => {
       const removed = s.frases[i];
       const after = removeFrase(s, i);
@@ -257,6 +287,9 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
       case 'mapeamento':
         setError(null);
         setWarned(null);
+        // sair da cena esvazia o rodapé: chegar noutra cena (ou voltar a esta)
+        // com uma cápsula já aberta é herdar a escolha de outro momento
+        setPick(null);
         sound?.advance();
         sessionStore.getState().apply(() => result.state);
         return;
@@ -265,6 +298,7 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
 
   const back = (): void => {
     setError(null);
+    setPick(null);
     const s = sessionStore.getState().session;
     if (!s) return;
     const scenes = productiveScenes(s);
@@ -287,6 +321,23 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   const neighborSide: SeamCordSide | null = neighbor
     ? { span: neighbor.span, tint: partTint(neighbor.part_id) }
     : null;
+
+  /**
+   * Uma conta por frase costurada, na ordem em que aparecem na cena: a cor e o
+   * número por extenso saem da mesma posição `pos`, senão o rodapé discordaria
+   * do que o ouvinte vê no colar. Sem `sub`: a duração seria um dígito na tela
+   * do ouvinte (§9.2).
+   */
+  const phraseBeads: BeadStripItem[] = scenePhrases.map(({ f, index }, pos) => ({
+    key: f.prop_id,
+    label: phraseLabel(pos),
+    swatch: phraseColor(pos),
+    actions: (
+      <Button variant="ghost" size="sm" onClick={() => remove(index)}>
+        {t('phrases.remove')}
+      </Button>
+    ),
+  }));
 
   return (
     <section className="cds-phrases">
@@ -316,6 +367,7 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
           selection={session.selection}
           pendingStart={session.pendingStart}
           size={SIZE_SEG}
+          maxHeight={NECKLACE_MAX_H}
           window={scSpan}
           playbackHead={head}
           dragHandles={dragHandles}
@@ -329,21 +381,14 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
       {scenePhrases.length ? (
         <>
           <div className="cds-phrases-divider" aria-hidden="true" />
-          <ul className="cds-phrases-chips">
-            {scenePhrases.map(({ f, index }, pos) => (
-              <li key={f.prop_id}>
-                <ScenePhraseChip
-                  label={phraseLabel(pos)}
-                  swatch={phraseColor(pos)}
-                  actions={
-                    <Button variant="ghost" size="sm" onClick={() => remove(index)}>
-                      {t('phrases.remove')}
-                    </Button>
-                  }
-                />
-              </li>
-            ))}
-          </ul>
+          <div className="cds-phrases-strip">
+            <BeadStrip
+              groupLabel={t('phrases.stripAria')}
+              items={phraseBeads}
+              selected={picked}
+              onSelect={(key) => setPick({ scope, key })}
+            />
+          </div>
         </>
       ) : null}
 

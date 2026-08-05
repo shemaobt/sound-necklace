@@ -63,7 +63,7 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await page.getByRole('button', { name: 'gravar a resposta' }).click();
   await shot('09b-conversation-gravando');
   await page.getByRole('button', { name: 'Parar' }).click();
-  await expect(page.getByRole('button', { name: 'ouvir', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ouvir a resposta', exact: true })).toBeVisible();
   await shot('09c-conversation-resposta-pronta');
 
   // a prévia do relatório (a "revisão"): a conversa reunida, antes de guardar

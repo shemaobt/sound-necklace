@@ -20,6 +20,9 @@ contracts still come from PRD v2 + `docs/reference/index.html`.
 | `Colar de Sons - Telas.dc.html` | Assembled-screens panorama (labels p1…p12; images live in the design project) |
 | `support.js` | The `.dc.html` runtime (generated; do not edit) |
 | `assets/` | Shemá brand SVGs: icon (branco/telha/verde) + pattern tile |
+| `trava-granularidade.html` | The granularity-lock dialog (ENG-363) |
+| `pacote-melhorias-ui.html` | **August 2026 delivery** — copy-ready CSS/JS plus a marked-up template per item, from the first walkthrough of the built app (ENG-386…ENG-393) |
+| `pacote-melhorias-ui.md` | The integration guide for the above: exact PT-BR copy, accessibility notes, QA checklist |
 
 ## Viewing
 
@@ -48,3 +51,18 @@ Merriweather 300/400/400-italic/700.
   (e.g. the Setup screen here still shows a numeric bead-duration stepper and a
   drag-and-drop file zone — superseded by granularity levels + bucket-only,
   PRD v2 §8.1/§7.4; see ENG-243).
+- **A newer delivery supersedes an older one for the screen it covers.**
+  `pacote-melhorias-ui.html` was written against the built app and wins over
+  `Protótipo.dc.html` where they disagree — most visibly on Setup, whose
+  centered single column it replaces with two columns so the create button
+  cannot be pushed below the fold.
+- **A delivery can also be stale about behaviour, and then the code wins.** Four
+  of this one's instructions did not survive contact with the app and were
+  deliberately not followed (ENG-386…ENG-393): its `CdsFollow` assumes per-row
+  DOM the necklace does not have; its footer capsule restores play/flag/reopen
+  that ENG-291 and ENG-342 removed on purpose; its Setup disables the Continue
+  button where this app validates on click and explains (§9.5 "guide, never
+  punish"); and its `--cds-*` names collide with the existing token vocabulary,
+  so its dark palette was mapped onto a new `--cds-ui-*` role layer instead.
+  Read a delivery for the LOOK; check the decision log before taking its
+  interactions at face value.

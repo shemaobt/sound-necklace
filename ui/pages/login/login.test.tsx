@@ -60,7 +60,7 @@ describe('Login — entrada da facilitadora (§7.1)', () => {
 
 describe('Login — superfície creme (redesign §4.1)', () => {
   it('a tela usa o fundo creme via token', () => {
-    expect(loginCss).toMatch(/\.cds-login\s*\{[^}]*var\(--cds-cream\)/);
+    expect(loginCss).toMatch(/\.cds-login\s*\{[^}]*var\(--cds-ui-bg\)/);
   });
 });
 

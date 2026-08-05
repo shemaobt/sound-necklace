@@ -46,6 +46,13 @@ import './export.css';
  * quando a estação passa a ser alcançável — follow-up ENG). O download real
  * (Blob/anchor) é a fronteira de sistema `saveBytes`, injetável nos testes.
  */
+/**
+ * Teto da janela de contas (ENG-387): 6 fileiras na conta menor do Export. Aqui o
+ * colar é retrato da história pronta, não superfície de trabalho — o que precisa
+ * estar à vista são os três documentos e o botão de concluir.
+ */
+const NECKLACE_MAX_H = 6 * SIZE_EXPORT.row + 12;
+
 export interface ExportProps {
   store?: SessionStore;
   sessionId?: string;
@@ -267,6 +274,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       <div className="cds-export-stage">
         <Necklace
           size={SIZE_EXPORT}
+          maxHeight={NECKLACE_MAX_H}
           totalBeads={session.totalBeads}
           beadSec={session.beadSec}
           segments={segments}

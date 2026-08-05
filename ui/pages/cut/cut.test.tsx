@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -109,8 +109,8 @@ describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
     expect(s.parts).toHaveLength(2);
     expect(s.pendingStart).toBe(5);
     expect(s.current.index).toBe(1);
-    // a cena travada aparece como chip
-    expect(screen.getByRole('group', { name: 'Cena um' })).toBeTruthy();
+    // a cena travada aparece como conta no fio do rodapé
+    expect(screen.getByRole('button', { name: 'Cena um' })).toBeTruthy();
   });
 
   it('“Confirmar esta cena” sem fim escolhido mostra a cópia exata e não trava', async () => {
@@ -148,7 +148,7 @@ describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
   });
 });
 
-describe('Escuta 2 — chips das cenas confirmadas (redesign §6.3)', () => {
+describe('Escuta 2 — fio de contas das cenas confirmadas (ENG-388)', () => {
   it('num retorno salvo com parts fora de ordem, numera pela posição no colar (ENG-344)', () => {
     // PT3 criada por último ocupa parts[0]; PT1 (a primeira do colar) fica em parts[1].
     load(
@@ -159,11 +159,32 @@ describe('Escuta 2 — chips das cenas confirmadas (redesign §6.3)', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    const { container } = render(<Cut />);
 
-    // os chips seguem o colar (bead-first primeiro), não a ordem do array
-    const chips = screen.getAllByRole('group');
-    expect(chips.map((c) => c.getAttribute('aria-label'))).toEqual(['Cena um', 'Cena dois']);
+    // as contas seguem o colar (bead-first primeiro), não a ordem do array
+    const beads = container.querySelectorAll('.cds-bead-strip-bead');
+    expect([...beads].map((b) => b.getAttribute('aria-label'))).toEqual(['Cena um', 'Cena dois']);
+  });
+
+  it('sem toque, nenhuma cena grita as suas ações — a cápsula só abre quando tocada', async () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
+        current: { layer: 'parts', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    const { container } = render(<Cut />);
+
+    expect(screen.queryByRole('button', { name: 'Remover' })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cena dois' }));
+
+    const capsula = container.querySelector('.cds-bead-strip-capsule');
+    expect(capsula?.textContent).toContain('Cena dois');
+    // uma cápsula só: as ações da outra cena continuam guardadas
+    expect(screen.getAllByRole('button', { name: 'Remover' })).toHaveLength(1);
   });
 });
 
@@ -322,8 +343,10 @@ describe('Escuta 2 — tratamento creme (redesign §6.3, §4.5)', () => {
     // sem cena travada não há o que reouvir: a linha explica a emenda e nada mais
     expect(screen.getByText(/O começo já está costurado/)).toBeTruthy();
     expect(screen.queryByText(/para reouvir/)).toBeNull();
-    expect(cutCss).toMatch(/\.cds-cut\s*\{[^}]*var\(--cds-cream\)/);
-    expect(cutCss).toMatch(/\.cds-cut-emph\s*\{[^}]*var\(--cds-telha\)/);
+    // o papel, não o token cru: tokens.test.tsx prova que --cds-ui-bg/-accent
+    // resolvem creme/telha no tema claro (ENG-391)
+    expect(cutCss).toMatch(/\.cds-cut\s*\{[^}]*var\(--cds-ui-bg\)/);
+    expect(cutCss).toMatch(/\.cds-cut-emph\s*\{[^}]*var\(--cds-ui-accent\)/);
   });
 
   it('todo movimento decorativo fica sob prefers-reduced-motion: no-preference', () => {
@@ -425,7 +448,13 @@ describe('Escuta 2 — a revisão exige cobertura de VERDADE', () => {
   });
 });
 
-describe('Escuta 2 — chips das cenas travadas: Remover (simetria com frases)', () => {
+describe('Escuta 2 — a cápsula da cena tocada: Remover (simetria com frases)', () => {
+  /** Toca a conta e clica o Remover que a cápsula abriu. */
+  async function removerPelaCapsula(nome: string): Promise<void> {
+    await userEvent.click(screen.getByRole('button', { name: nome }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remover' }));
+  }
+
   it('“Remover” apaga a cena travada', async () => {
     load(
       cutting({
@@ -437,8 +466,7 @@ describe('Escuta 2 — chips das cenas travadas: Remover (simetria com frases)',
     );
     render(<Cut />);
 
-    const chip = screen.getByRole('group', { name: 'Cena um' });
-    await userEvent.click(within(chip).getByRole('button', { name: 'Remover' }));
+    await removerPelaCapsula('Cena um');
 
     expect(sessionStore.getState().session!.parts.some((p) => p.part_id === 'PT1')).toBe(false);
   });
@@ -458,11 +486,85 @@ describe('Escuta 2 — chips das cenas travadas: Remover (simetria com frases)',
     );
     render(<Cut />);
 
-    const chip = screen.getByRole('group', { name: 'Cena dois' });
-    await userEvent.click(within(chip).getByRole('button', { name: 'Remover' }));
+    await removerPelaCapsula('Cena dois');
 
     const locked = sessionStore.getState().session!.parts.filter((p) => p.locked);
     expect(locked.map((p) => p.part_id)).toEqual(['PT1', 'PT3']);
     expect(locked.find((p) => p.part_id === 'PT3')!.span).toEqual({ s: 3, e: 9 }); // absorveu [3,5]
+  });
+});
+
+/**
+ * A cápsula aponta para uma cena pelo `part_id`, e o domínio reatribui ids pelo
+ * menor livre: um id apagado volta a existir noutra cena. Uma seleção que
+ * sobreviva ao que ela aponta oferece "Remover" sobre a cena errada — por isso
+ * cada troca do chão debaixo dela zera a escolha.
+ */
+describe('Escuta 2 — a seleção do fio não sobrevive ao que ela aponta (ENG-388)', () => {
+  function duasCenas(): void {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), lockedPart('PT2', { s: 5, e: 9 })],
+        current: { layer: 'parts', index: -1 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+  }
+
+  it('trocar a âncora ativa (travar outra cena) fecha a cápsula', async () => {
+    load(
+      cutting({
+        parts: [lockedPart('PT1', { s: 0, e: 4 }), part({ part_id: 'PT2' })],
+        current: { layer: 'parts', index: 1 },
+        selection: { s: 5, e: 9 },
+        pendingStart: null,
+      }),
+    );
+    const { container } = render(<Cut />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cena um' }));
+    expect(container.querySelector('.cds-bead-strip-capsule')).not.toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
+
+    expect(container.querySelector('.cds-bead-strip-capsule')).toBeNull();
+  });
+
+  it('trocar de modo fecha a cápsula', async () => {
+    duasCenas();
+    const { container } = render(<Cut />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cena um' }));
+    expect(container.querySelector('.cds-bead-strip-capsule')).not.toBeNull();
+
+    await act(async () => {
+      sessionStore.getState().apply((s) => ({ ...s, mode: 'triagem' }));
+    });
+
+    expect(container.querySelector('.cds-bead-strip-capsule')).toBeNull();
+  });
+
+  it('abrir/retomar outra sessão fecha a cápsula', async () => {
+    duasCenas();
+    const { container } = render(<Cut />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cena um' }));
+    expect(container.querySelector('.cds-bead-strip-capsule')).not.toBeNull();
+
+    // outra história, com uma cena que reusa o MESMO part_id da escolhida
+    await act(async () => {
+      load(
+        cutting({
+          slug: 'outra-historia',
+          parts: [lockedPart('PT1', { s: 0, e: 9 })],
+          current: { layer: 'parts', index: -1 },
+          selection: null,
+          pendingStart: null,
+        }),
+      );
+    });
+
+    expect(container.querySelector('.cds-bead-strip-capsule')).toBeNull();
   });
 });

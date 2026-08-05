@@ -3,7 +3,7 @@
 .cds-skeleton {
   display: inline-block;
   border-radius: 8px;
-  background: var(--cds-hairline);
+  background: var(--cds-ui-hairline);
 }
 
 @media (prefers-reduced-motion: no-preference) {

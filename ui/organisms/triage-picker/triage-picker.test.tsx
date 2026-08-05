@@ -6,43 +6,6 @@ import { splitByGuard } from '../../atoms/testing/css';
 import { TriagePicker } from './triage-picker';
 import pickerCss from './triage-picker.css?raw';
 
-/** Conversation de temas decidido no planejamento (issue ENG-225) — display-only. */
-const EXPECTED_THEMES: Record<string, string[]> = {
-  'indo-e-vindo': [
-    'DEPARTURE_SCENE',
-    'ARRIVAL_SCENE',
-    'NIGHT_APPROACH_SCENE',
-    'PROVISION_HOMECOMING_SCENE',
-    'INITIATIVE_SCENE',
-  ],
-  'fala-e-acordo': [
-    'APPEAL_SCENE',
-    'INSTRUCTION_SCENE',
-    'CONSENT_SCENE',
-    'RATIFICATION_SCENE',
-    'GATE_COURT_CONVENING_SCENE',
-    'REDEMPTION_OFFER_SCENE',
-    'REDEMPTION_DECLINE_SCENE',
-    'REPORT_SCENE',
-  ],
-  'trabalho-e-terra': ['GLEANING_SCENE', 'MEAL_SCENE'],
-  sentimento: ['LAMENT_SCENE', 'BEREAVEMENT_SCENE'],
-  'rito-e-alianca': [
-    'MARRIAGE_SCENE',
-    'VOW_SCENE',
-    'BIRTH_SCENE',
-    'NAMING_SCENE',
-    'BLESSING_SCENE',
-    'REDEEMER_RECOGNITION_SCENE',
-  ],
-  narracao: [
-    'NARRATOR_INTRODUCTION_SCENE',
-    'NARRATOR_FRAMING_CLOSE_SCENE',
-    'OPENING_CHRONICLE_SCENE',
-    'GENEALOGY_SCENE',
-  ],
-};
-
 /** Os valores EN dos cartões visíveis (o none-fit não tem title). */
 function visibleKindValues(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll('[role="radio"][title]')).map(
@@ -50,90 +13,60 @@ function visibleKindValues(container: HTMLElement): string[] {
   );
 }
 
-function expand(container: HTMLElement) {
-  const disclosure = Array.from(container.querySelectorAll('button')).find(
-    (b) => b.textContent === 'Ver todos os tipos por tema',
-  );
-  expect(disclosure).toBeDefined();
-  fireEvent.click(disclosure!);
-}
-
-describe('TriagePicker — grade "Mais comuns" e disclosure por tema', () => {
-  it('recolhido, mostra exatamente os 8 tipos do tier comum', () => {
+/**
+ * ENG-390 — os 27 tipos de uma vez.
+ *
+ * Na primeira validação a grade abria em "Mais comuns" e o resto vivia atrás de
+ * um disclosure discreto que ninguém achou: as pessoas classificavam a partir de
+ * uma lista curta acreditando ser a lista inteira. E o agrupamento por tema
+ * obrigava a adivinhar o balde antes de procurar o tipo — a taxonomia é nossa,
+ * não delas. Some tudo: 27 cartões, uma grade só.
+ */
+describe('TriagePicker — os 27 tipos, todos à vista', () => {
+  it('mostra os 27 tipos já na primeira renderização, sem nada para abrir', () => {
     const { container } = render(<TriagePicker />);
-    const comuns = SCENE_KINDS.filter((k) => k.tier === 'comum').map((k) => k.value);
-    expect(visibleKindValues(container).sort()).toEqual([...comuns].sort());
+
+    expect(visibleKindValues(container).sort()).toEqual(SCENE_KINDS.map((k) => k.value).sort());
   });
 
-  it('o disclosure expõe os 27 tipos agrupados nos 6 temas decididos', () => {
-    const { container } = render(<TriagePicker />);
-    const disclosure = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent === 'Ver todos os tipos por tema',
-    )!;
-    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+  it('não há disclosure nem seção "Mais comuns" para descobrir', () => {
+    const { container, queryByText } = render(<TriagePicker />);
 
-    fireEvent.click(disclosure);
-
-    const themeBlocks = Array.from(container.querySelectorAll('[data-theme]'));
-    expect(themeBlocks.map((b) => b.getAttribute('data-theme'))).toEqual(
-      Object.keys(EXPECTED_THEMES),
-    );
-    for (const block of themeBlocks) {
-      const name = block.getAttribute('data-theme')!;
-      const values = Array.from(block.querySelectorAll('[role="radio"][title]')).map(
-        (el) => el.getAttribute('title') ?? '',
-      );
-      expect(values.sort()).toEqual([...EXPECTED_THEMES[name]!].sort());
-    }
-    const all = new Set(
-      themeBlocks.flatMap((b) =>
-        Array.from(b.querySelectorAll('[role="radio"][title]')).map(
-          (el) => el.getAttribute('title') ?? '',
-        ),
-      ),
-    );
-    expect(all.size).toBe(27);
-    expect([...all].sort()).toEqual(SCENE_KINDS.map((k) => k.value).sort());
+    expect(queryByText('Ver todos os tipos por tema')).toBeNull();
+    expect(queryByText('recolher')).toBeNull();
+    expect(queryByText('Mais comuns')).toBeNull();
+    expect(container.querySelector('[aria-expanded]')).toBeNull();
   });
 
-  it('o título de cada tema renderiza traduzido (a chave aninhada resolve de verdade)', () => {
+  it('os tipos vêm em ordem alfabética do rótulo PT-BR — a busca é pelo nome, não pelo balde', () => {
     const { container } = render(<TriagePicker />);
-    expand(container);
 
-    const titulos = Array.from(container.querySelectorAll('.cds-triage-picker-theme-label')).map(
+    const rotulos = Array.from(container.querySelectorAll('[role="radio"][title]')).map(
       (el) => el.textContent?.trim() ?? '',
     );
 
-    // Sem esta asserção, uma chave que NÃO resolve renderiza o próprio caminho
-    // ("triagePicker.theme.indo-e-vindo") e a suíte seguiria verde.
-    expect(titulos).toEqual([
-      'Indo e vindo',
-      'Fala e acordo',
-      'Trabalho e terra',
-      'Sentimento',
-      'Rito e aliança',
-      'Narração',
-    ]);
+    expect(rotulos).toEqual([...rotulos].sort((a, b) => a.localeCompare(b, 'pt-BR')));
   });
 
-  it('"recolher" fecha a lista por tema de volta aos comuns', () => {
-    const { container, getByRole } = render(<TriagePicker />);
-    expand(container);
-    const recolher = getByRole('button', { name: 'recolher' });
-    expect(recolher.getAttribute('aria-expanded')).toBe('true');
-    fireEvent.click(recolher);
-    expect(container.querySelector('[data-theme]')).toBeNull();
-    expect(visibleKindValues(container)).toHaveLength(8);
-  });
-
-  it('o cartão "Nenhum se encaixa" permanece visível recolhido e expandido', () => {
+  it('"Nenhum se encaixa" continua presente e fora da área que rola', () => {
     const { container, getByText } = render(<TriagePicker />);
-    expect(getByText('Nenhum se encaixa')).toBeTruthy();
-    expand(container);
-    expect(getByText('Nenhum se encaixa')).toBeTruthy();
+
+    const noneFit = getByText('Nenhum se encaixa');
+    const rolagem = container.querySelector('.cds-triage-picker-scroll');
+
+    expect(rolagem).not.toBeNull();
+    expect(rolagem!.contains(noneFit)).toBe(false);
   });
 
-  it('não há campo de busca — a classificação é operada só pela grade e pelos temas', () => {
+  it('a grade rola dentro da própria área, não empurrando a página', () => {
+    const { container } = render(<TriagePicker />);
+
+    const rolagem = container.querySelector('.cds-triage-picker-scroll');
+
+    expect(rolagem!.querySelectorAll('[role="radio"][title]')).toHaveLength(27);
+  });
+
+  it('não há campo de busca — a classificação é operada só pela grade', () => {
     const { container, queryByRole } = render(<TriagePicker />);
     expect(container.querySelector('input')).toBeNull();
     expect(queryByRole('searchbox')).toBeNull();
@@ -150,8 +83,6 @@ describe('TriagePicker — cartão mostra PT, inglês só no title (hover)', () 
   it('nenhum valor EN aparece como texto visível em estado algum', () => {
     const { container } = render(<TriagePicker />);
     expect(container.textContent).not.toMatch(/_SCENE/);
-    expand(container);
-    expect(container.textContent).not.toMatch(/_SCENE/);
     fireEvent.click(container.querySelector('[role="radio"][title="APPEAL_SCENE"]')!);
     expect(container.textContent).not.toMatch(/_SCENE/);
   });
@@ -159,10 +90,10 @@ describe('TriagePicker — cartão mostra PT, inglês só no title (hover)', () 
 
 describe('TriagePicker — escolher tipo revela o passo de confiança', () => {
   it('escolher um tipo troca a grade pelo passo de confiança com o tipo escolhido', () => {
-    const { container, getByText, queryByText } = render(<TriagePicker />);
+    const { container, getByText } = render(<TriagePicker />);
     fireEvent.click(container.querySelector('[role="radio"][title="BEREAVEMENT_SCENE"]')!);
 
-    expect(queryByText('Mais comuns')).toBeNull();
+    expect(container.querySelector('.cds-triage-picker-scroll')).toBeNull();
     expect(getByText('Luto')).toBeTruthy();
     expect(getByText('O quanto isso parece certo pra você?')).toBeTruthy();
     expect(getByText('Certeza')).toBeTruthy();
@@ -177,7 +108,7 @@ describe('TriagePicker — escolher tipo revela o passo de confiança', () => {
     fireEvent.click(getByText('Certeza'));
     fireEvent.click(getByText('trocar tipo'));
 
-    expect(getByText('Mais comuns')).toBeTruthy();
+    expect(container.querySelectorAll('[role="radio"][title]')).toHaveLength(SCENE_KINDS.length);
     expect(queryByText('Certeza')).toBeNull();
     expect(onConfirm).not.toHaveBeenCalled();
 

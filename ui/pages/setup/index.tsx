@@ -99,6 +99,32 @@ function ProjectGranularity({ level }: { level: GranularityLevel }) {
 }
 
 /**
+ * O resumo da escolha (ENG-386, pacote de melhorias UI item 1): a confirmação de que
+ * o áudio entrou passa a morar ao LADO do botão, não dentro da linha lá na lista.
+ * Quem acabou de escolher olha para o mesmo canto onde está a ação que segue adiante.
+ *
+ * Recebe a listagem e o id em vez do áudio já resolvido para que a busca fique aqui:
+ * a Setup já roça o teto de complexidade do lint.
+ */
+function SelectedAudio({
+  audios,
+  audioId,
+}: {
+  audios: BucketAudio[] | null;
+  audioId: string | null;
+}) {
+  const { t } = useTranslation();
+  const chosen = audios?.find((a) => a.id === audioId);
+  if (!chosen) return null;
+  return (
+    <p className="cds-setup-picked">
+      <span className="cds-setup-audio-ready">{t('setup.audioReady')}</span>
+      <span className="cds-setup-picked-name">{chosen.filename}</span>
+    </p>
+  );
+}
+
+/**
  * Mesma grade = mesmo bead em MILISSEGUNDOS. É a precisão que o artefato guarda — o
  * `manifest_id` mistura `round(beadSec × 1000)` (`domain/hash.ts`) —, então duas
  * durações que arredondam para o mesmo milissegundo produzem a mesma grade e o mesmo
@@ -348,8 +374,13 @@ export function Setup({
 
       {door === 'zero' ? (
         <div className="cds-setup-form">
+          {/* Duas colunas da MESMA altura (ENG-386, pacote de melhorias UI item 1):
+              à esquerda a entrega, que é a única coisa que pode encolher; à direita,
+              estreita, o que se decide e — ancorada no pé — a ação. É o arranjo que
+              tira o botão da dependência do tamanho da lista, e não o teto da janela:
+              um teto em pixels só resolveria em janelas altas. */}
           <div className="cds-setup-cols">
-            <div className="cds-setup-col">
+            <div className="cds-setup-col cds-setup-col-list">
               <h2 id="cds-setup-audio-label" className="cds-setup-heading">
                 {t('setup.audioHeading')}
               </h2>
@@ -360,59 +391,69 @@ export function Setup({
                   <p className="cds-setup-vh" role="status">
                     {t('setup.loadingAudios')}
                   </p>
-                  <div className="cds-setup-audios" aria-hidden="true">
-                    {Array.from({ length: 4 }, (_, i) => (
-                      <div key={i} className="cds-setup-audio cds-setup-audio-skeleton">
-                        <Skeleton width="55%" height={15} />
-                        <Skeleton width="35%" height={12} />
-                      </div>
-                    ))}
+                  {/* mesma janela da lista real: a espera não pode ter outra altura,
+                      ou a tela dá um salto quando a listagem chega */}
+                  <div className="cds-setup-audios-scroll">
+                    <div className="cds-setup-audios" aria-hidden="true">
+                      {Array.from({ length: 4 }, (_, i) => (
+                        <div key={i} className="cds-setup-audio cds-setup-audio-skeleton">
+                          <Skeleton width="55%" height={15} />
+                          <Skeleton width="35%" height={12} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </>
               ) : (
-                <RadioGroup.Root
-                  className="cds-setup-audios"
-                  aria-labelledby="cds-setup-audio-label"
-                  value={audioId ?? ''}
-                  onValueChange={setAudioId}
-                >
-                  {audios.map((a) => (
-                    <RadioGroup.Item key={a.id} value={a.id} className="cds-setup-audio">
-                      <span className="cds-setup-audio-name">{a.filename}</span>
-                      {/* badge curto (ENG-310): a frase completa do indicador §12/O6
-                          continua no title/aria — repetida por cartão ela virava parede */}
-                      {a.consent_present ? (
-                        <span
-                          className="cds-setup-consent-ok"
-                          title={t('setup.consentOk')}
-                          aria-label={t('setup.consentOk')}
-                        >
-                          {t('setup.consentOkShort')}
-                        </span>
-                      ) : (
-                        <span
-                          className="cds-setup-consent-warn"
-                          data-role="warning"
-                          title={t('setup.consentWarn')}
-                          aria-label={t('setup.consentWarn')}
-                        >
-                          {t('setup.consentWarnShort')}
-                        </span>
-                      )}
-                      {audioId === a.id ? (
-                        <span className="cds-setup-audio-ready">{t('setup.audioReady')}</span>
-                      ) : null}
-                    </RadioGroup.Item>
-                  ))}
-                </RadioGroup.Root>
+                /* A entrega rola AQUI DENTRO (ENG-386): numa entrega grande a lista
+                   crescia até empurrar o "Criar a sessão" para fora da tela, e quem
+                   acabara de escolher o áudio não via mais como seguir. A ação fica
+                   fora desta janela — a distância até ela não depende mais de quantos
+                   áudios a entrega tem. */
+                <div className="cds-setup-audios-scroll">
+                  <RadioGroup.Root
+                    className="cds-setup-audios"
+                    aria-labelledby="cds-setup-audio-label"
+                    value={audioId ?? ''}
+                    onValueChange={setAudioId}
+                  >
+                    {audios.map((a) => (
+                      <RadioGroup.Item key={a.id} value={a.id} className="cds-setup-audio">
+                        <span className="cds-setup-audio-name">{a.filename}</span>
+                        {/* badge curto (ENG-310): a frase completa do indicador §12/O6
+                            continua no title/aria — repetida por cartão ela virava parede */}
+                        {a.consent_present ? (
+                          <span
+                            className="cds-setup-consent-ok"
+                            title={t('setup.consentOk')}
+                            aria-label={t('setup.consentOk')}
+                          >
+                            {t('setup.consentOkShort')}
+                          </span>
+                        ) : (
+                          <span
+                            className="cds-setup-consent-warn"
+                            data-role="warning"
+                            title={t('setup.consentWarn')}
+                            aria-label={t('setup.consentWarn')}
+                          >
+                            {t('setup.consentWarnShort')}
+                          </span>
+                        )}
+                      </RadioGroup.Item>
+                    ))}
+                  </RadioGroup.Root>
+                </div>
               )}
             </div>
 
-            <div className="cds-setup-col">
+            <div className="cds-setup-col cds-setup-col-side">
               <h2 id="cds-setup-gran-label" className="cds-setup-heading">
                 {t('setup.granHeading')}
               </h2>
               {level === null ? null : <ProjectGranularity level={level} />}
+
+              <SelectedAudio audios={audios} audioId={audioId} />
 
               <label className="cds-setup-field">
                 <span>{t('setup.titleField')}</span>
@@ -432,23 +473,29 @@ export function Setup({
                 />
                 <span>{t('setup.consentCheck')}</span>
               </label>
+
+              {/* O pé da coluna: a recusa explicada e o botão, juntos e sempre à
+                  vista. O botão segue SEMPRE clicável e validando no clique (§9.5
+                  guia, não pune) — a entrega desenha um `aria-disabled` aqui, e é a
+                  única coisa dela que não seguimos. */}
+              <div className="cds-setup-foot">
+                {error ? (
+                  <p className="cds-setup-error" role="alert">
+                    {t(error.key, { detail: error.detail })}
+                  </p>
+                ) : null}
+
+                <button
+                  type="button"
+                  className="cds-setup-create"
+                  onClick={() => void create()}
+                  disabled={busy}
+                >
+                  {busy ? t('setup.creating') : t('setup.create')}
+                </button>
+              </div>
             </div>
           </div>
-
-          {error ? (
-            <p className="cds-setup-error" role="alert">
-              {t(error.key, { detail: error.detail })}
-            </p>
-          ) : null}
-
-          <button
-            type="button"
-            className="cds-setup-create"
-            onClick={() => void create()}
-            disabled={busy}
-          >
-            {busy ? t('setup.creating') : t('setup.create')}
-          </button>
         </div>
       ) : (
         <div className="cds-setup-import-door">
