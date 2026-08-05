@@ -30,6 +30,14 @@ export interface MinimalismScanOptions {
   readonly label: string;
   /** allowlist versionada de dígitos permitidos; cada entrada exige `reason` */
   readonly allow?: readonly MinimalismAllowEntry[];
+  /**
+   * Seletores de subárvores que o §9.2 dispensa por decisão explícita do dono.
+   * Preferir isto a uma entrada de `allow`: a allowlist casa PADRÃO DE TEXTO, e
+   * um padrão como "um ordinal solto" perdoaria qualquer outro número da mesma
+   * forma que vazasse na tela. Excisar o componente aprovado mantém a exceção
+   * presa a ele — é a mesma forma que a guarda de unidade usa.
+   */
+  readonly except?: readonly { readonly selector: string; readonly reason: string }[];
 }
 
 /**
@@ -59,12 +67,33 @@ export async function scanListenerSurface(
     }
   }
 
+  for (const entry of opts.except ?? []) {
+    if (!entry.reason.trim()) {
+      throw new Error(`exceção de "${opts.label}" sem justificativa`);
+    }
+  }
+
   await expect(root, `${opts.label}: superfície presente`).toBeVisible();
 
-  const probe = await root.evaluate((node): Probe => {
+  const excecoes = (opts.except ?? []).map((e) => e.selector);
+  const probe = await root.evaluate((node, sel): Probe => {
     const el = node as HTMLElement;
+    /* Oculta as subárvores dispensadas no nó REAL e restaura em seguida. Um
+       clone destacado seria mais limpo e estaria errado: `innerText` depende de
+       layout, e num nó fora do documento ele não enxerga nada — o scan passaria
+       sem medir coisa alguma. */
+    const escondidos: [HTMLElement, string][] = [];
+    for (const s of sel) {
+      el.querySelectorAll<HTMLElement>(s).forEach((n) => {
+        escondidos.push([n, n.style.display]);
+        n.style.display = 'none';
+      });
+    }
+    const restaurar = () => {
+      for (const [n, display] of escondidos) n.style.display = display;
+    };
     const all = (sel: string) => Array.from(el.querySelectorAll(sel));
-    return {
+    const probed = {
       instructions: all('[data-role="instruction"]').map((n) =>
         (n as HTMLElement).innerText.trim(),
       ),
@@ -72,7 +101,9 @@ export async function scanListenerSurface(
       tables: all('table').length,
       text: el.innerText,
     };
-  });
+    restaurar();
+    return probed;
+  }, excecoes);
 
   // Regra 1 — no máximo UMA linha de instrução, curta (≤ 90 caracteres).
   expect(probe.instructions.length, `${opts.label}: linhas de instrução`).toBeLessThanOrEqual(1);

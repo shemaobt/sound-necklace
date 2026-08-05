@@ -29,9 +29,24 @@ import { buildAdapterRegistry, buildStationRegistry, type StationComponent } fro
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
 import { StationHost } from './station-host';
+import { initTheme, readTheme, toggleTheme, type Theme } from './theme';
 import { useEditorLock } from './use-editor-lock';
 import { voiceStoreFor } from './voice-adapter';
 import { Stepper } from './stepper';
+
+/**
+ * Tema em vigor (ENG-391). A verdade mora no atributo do `<html>`, posto pelo script
+ * de boot antes da primeira pintura; este estado só existe para o cabeçalho saber
+ * qual glifo desenhar. O `initTheme` no efeito reaplica o mesmo valor — é o que
+ * cobre o dev server e os testes, onde o boot do index.html não passou.
+ */
+function useTheme(): [Theme, () => void] {
+  const [theme, setTheme] = useState<Theme>(readTheme);
+  useEffect(() => {
+    initTheme();
+  }, []);
+  return [theme, useCallback(() => setTheme(toggleTheme()), [])];
+}
 
 /** Assina o estado do autosave da store (saving/saved) para o selo do header. */
 function useAutosaveStatus(): SaveStatus {
@@ -384,6 +399,8 @@ function useSessionPlayer(routeId: string | null): {
 export function App() {
   const route = useRoute();
   const muted = useAppStore((s) => s.muted);
+  const recording = useAppStore((s) => s.recording);
+  const [theme, onToggleTheme] = useTheme();
   const online = useOnline();
   useAuthExpiry();
   useAuthGate(route.name);
@@ -540,6 +557,12 @@ export function App() {
       muted={muted}
       onToggleMuted={() => appStore.getState().toggleMuted()}
       onBack={() => navigate('/dashboard')}
+      // gravando, sair da estação perderia a resposta em curso (ENG-393)
+      backDisabled={recording}
+      onBackBlocked={() => sound.refuse()}
+      // o tema é global e sem consequência de conteúdo: pode trocar em qualquer estação
+      theme={theme}
+      onToggleTheme={onToggleTheme}
       // o booster só faz sentido com uma sessão tocável aberta (ENG-314)
       volume={storyVolume}
       onVolume={route.name === 'session' ? onStoryVolume : undefined}

@@ -615,7 +615,7 @@ describe('Relatório — foco do campo de resposta (ENG-372)', () => {
   it('mas mantém um indicador de foco visível — geometria E cor, não só cor', () => {
     // o filete da esquerda engrossa E vira telha: quem não distingue cor ainda vê a mudança
     expect(rule).toContain('border-left-width: 3px');
-    expect(rule).toContain('var(--cds-telha)');
+    expect(rule).toContain('var(--cds-ui-accent)');
   });
 
   it('não mexe na regra global de foco', () => {

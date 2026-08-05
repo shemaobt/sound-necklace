@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Header } from './header';
@@ -83,6 +84,49 @@ describe('Header — som e volume da sessão (ENG-314)', () => {
 });
 
 /**
+ * ENG-391: o tema é um clique do cabeçalho — ao contrário do idioma, não governa
+ * nada do conteúdo (nem a voz, nem o locale do STT), só o quanto a tela queima os
+ * olhos. Trocar no meio de uma sessão é legítimo e não custa nada.
+ */
+describe('Header — tema claro/escuro (ENG-391)', () => {
+  it('mostra a lua no claro e o sol no escuro, e o rótulo diz para onde vai', () => {
+    const onToggleTheme = vi.fn();
+    const { rerender, container } = render(
+      <Header
+        muted={false}
+        onToggleMuted={() => {}}
+        onBack={() => {}}
+        theme="light"
+        onToggleTheme={onToggleTheme}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mudar para o tema escuro' }));
+    expect(onToggleTheme).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('.cds-header-theme .cds-ico-moon')).not.toBeNull();
+
+    rerender(
+      <Header
+        muted={false}
+        onToggleMuted={() => {}}
+        onBack={() => {}}
+        theme="dark"
+        onToggleTheme={onToggleTheme}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Mudar para o tema claro' })).not.toBeNull();
+    expect(container.querySelector('.cds-header-theme .cds-ico-sun')).not.toBeNull();
+  });
+
+  it('sem quem trate a troca, não há botão — nenhum controle que não faz nada', () => {
+    render(<Header muted={false} onToggleMuted={() => {}} onBack={() => {}} />);
+
+    expect(screen.queryByRole('button', { name: /tema/ })).toBeNull();
+  });
+});
+
+/**
  * ENG-371: o idioma deixou de ser um clique do cabeçalho. Um botão PT/EN ao lado do som
  * convidava a alternar no meio de uma sessão — e o idioma governa a voz da entrevista e o
  * locale mandado ao STT. O cabeçalho agora leva a Configurações, onde a escolha mora.
@@ -109,5 +153,45 @@ describe('Header — nem idioma nem Configurações (ENG-371/ENG-375)', () => {
 
     expect(container.querySelector('.cds-header-settings')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Configurações' })).toBeNull();
+  });
+});
+
+/**
+ * ENG-393 — o "← Histórias" também espera a gravação.
+ *
+ * É a única saída da estação que não vive dentro do palco da conversa: travar os
+ * botões de lá e deixar este vivo deixaria a pessoa sair da sessão no meio de uma
+ * resposta, que é justamente a perda que a issue existe para impedir.
+ *
+ * A recusa devolve som, não texto — quem opera essa tela decide de ouvido —, e
+ * por isso o clique recusado precisa CHEGAR ao handler. É o mesmo motivo pelo
+ * qual o palco recusou `inert`: subárvore inerte não despacha clique nenhum.
+ */
+describe('Header — voltar durante a gravação (ENG-393)', () => {
+  it('gravando, voltar não navega — avisa quem sabe fazer barulho', async () => {
+    const onBack = vi.fn();
+    const onBackBlocked = vi.fn();
+    render(
+      <Header
+        muted={false}
+        onToggleMuted={() => {}}
+        onBack={onBack}
+        backDisabled
+        onBackBlocked={onBackBlocked}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar às histórias' }));
+
+    expect(onBack).not.toHaveBeenCalled();
+    expect(onBackBlocked).toHaveBeenCalledTimes(1);
+  });
+
+  it('gravando, o botão se anuncia indisponível', () => {
+    render(<Header muted={false} onToggleMuted={() => {}} onBack={() => {}} backDisabled />);
+
+    expect(
+      screen.getByRole('button', { name: 'Voltar às histórias' }).getAttribute('aria-disabled'),
+    ).toBe('true');
   });
 });

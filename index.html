@@ -3,7 +3,34 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <title>Colar de Sons — Arquivo Oral</title>
+    <!--
+      Tema antes da primeira pintura (ENG-391). Síncrono e aqui em cima de
+      propósito: um efeito do React só roda depois de pintar, e o usuário do
+      tema escuro veria um flash branco a cada carregamento.
+
+      DUPLICAÇÃO DELIBERADA de ui/app/theme.ts — mesma precedência, mesmo
+      atributo, mesma chave. Não dá para importar o módulo aqui sem esperar o
+      bundle, que é justamente o que se quer evitar. Mudou lá, muda aqui.
+    -->
+    <script>
+      (function () {
+        var stored = null;
+        try {
+          stored = localStorage.getItem('colar-de-sons:theme:v1');
+        } catch (e) {
+          /* janela anônima travada: segue a preferência do sistema */
+        }
+        var theme =
+          stored === 'dark' || stored === 'light'
+            ? stored
+            : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        document.documentElement.setAttribute('data-cds-theme', theme);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

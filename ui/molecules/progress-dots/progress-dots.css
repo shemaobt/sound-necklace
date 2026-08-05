@@ -1,7 +1,8 @@
 /*
  * Pontos da Triage (Protótipo.dc.html, tDots): pérolas de 22px (30px a atual,
- * com halo telha); taggeada = pérola da cor da cena com check, none_fit = a
- * mesma esmaecida, pendente = aro vazio. Botões-alvo de salto, sem números.
+ * com halo telha); taggeada = pérola da cor da cena com o selo de check,
+ * none_fit = a mesma esmaecida, pendente = aro da cor da cena. Cada ponto traz
+ * o NÚMERO da sua cena — exceção única ao §9.2 (ENG-389), justificada no .tsx.
  */
 .cds-progress-dots {
   display: inline-flex;
@@ -10,6 +11,7 @@
 }
 
 .cds-progress-dots-dot {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,10 +24,21 @@
   cursor: pointer;
   flex: none;
   transition: all 0.22s;
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 1;
+  /* sobre a pérola cheia o número é creme; o pendente sobrescreve com a cor da
+     cena via style inline, porque a tinta só existe em tempo de execução */
+  color: var(--cds-cream);
+  /* a pérola é clara no alto e escura embaixo: sem a sombra o número some na
+     metade de cima de algumas cenas */
+  text-shadow: 0 1px 2px rgba(10, 7, 3, 0.45);
 }
 
 .cds-progress-dots-dot[data-state='pending'] {
-  border: 1.5px solid rgba(63, 62, 32, 0.28);
+  border: 1.5px solid rgba(var(--cds-ui-line-rgb), 0.28);
+  text-shadow: none;
 }
 
 .cds-progress-dots-dot[data-state='none_fit'] {
@@ -35,5 +48,21 @@
 .cds-progress-dots-dot[data-current='true'] {
   width: 30px;
   height: 30px;
+  font-size: 13px;
   box-shadow: 0 0 0 4px rgba(190, 74, 1, 0.14);
+}
+
+.cds-progress-dots-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--cds-confidence-filled);
+  /* o aro na cor do fundo descola o selo da pérola por baixo */
+  box-shadow: 0 0 0 2px var(--cds-ui-bg);
 }

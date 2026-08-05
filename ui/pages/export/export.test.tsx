@@ -288,7 +288,7 @@ describe('Export — colar inteiro + tratamento creme (redesign §6.7)', () => {
   });
 
   it('o palco aplica o fundo creme via token e não anima fora do prefers-reduced-motion', () => {
-    expect(exportCss).toMatch(/\.cds-export\s*\{[^}]*var\(--cds-cream\)/);
+    expect(exportCss).toMatch(/\.cds-export\s*\{[^}]*var\(--cds-ui-bg\)/);
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
     const { outside } = splitByGuard(exportCss, guard);
     expect(outside).not.toMatch(/animation|@keyframes/);

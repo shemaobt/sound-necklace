@@ -4,6 +4,10 @@
    direita (organismo). O único movimento decorativo (entrada do achado/bloqueio)
    fica sob a guarda de reduced-motion (§4.5). */
 
+/* Altura FECHADA, não mínima: quem rola é a grade do picker, nunca a estação.
+   Os pontos de progresso, o estado da cena e o colar ("Ouvir esta cena") ficam
+   parados em cima — na primeira validação era preciso rolar a página para
+   alcançar "Nenhum se encaixa" e o Confirmar, e o colar sumia junto. */
 .cds-triage {
   position: relative;
   display: flex;
@@ -11,16 +15,24 @@
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
-  min-height: calc(100vh - 110px);
+  height: calc(100vh - 110px);
+  min-height: 0;
+  overflow: hidden;
   padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
   text-align: center;
+}
+
+/* Só o foco cede altura. Pontos de progresso, avisos e o gate ficam inteiros:
+   se encolhessem, o texto vazaria da própria caixa em vez de rolar. */
+.cds-triage > :not(.cds-triage-focus) {
+  flex: none;
 }
 
 .cds-triage-empty {
   margin: 0;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
   font-family: var(--cds-font-quiet-voice);
 }
 
@@ -31,6 +43,21 @@
   gap: 1rem;
   width: 100%;
   max-width: 680px;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* a estação entrega ao picker a altura que sobrou, em vez de deixá-lo
+     adivinhar em vh (o teto default do organismo) */
+  --cds-triage-picker-scroll-max: none;
+}
+
+/* A corrente de flex precisa do min-height:0 em cada elo até a caixa de rolagem:
+   sem isso o conteúdo do filho define o tamanho e a rolagem escapa para a
+   página, que é justamente o que a altura fechada acima evita. */
+.cds-triage-focus .cds-triage-picker[data-stage='tipos'],
+.cds-triage-focus .cds-triage-picker-group,
+.cds-triage-focus .cds-triage-picker-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* o cartão do colar da cena (protótipo tColarRows): branco translúcido sobre o
@@ -41,13 +68,14 @@
   align-items: center;
   gap: 10px;
   width: 100%;
+  flex: none;
 }
 
 .cds-triage-colar-card {
   width: 100%;
   padding: 14px 22px;
   border-radius: var(--cds-radius-card);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--cds-ui-wash);
   box-shadow: var(--cds-shadow-card);
   cursor: pointer;
 }
@@ -57,25 +85,27 @@
   font-family: var(--cds-font-load-bearing);
   font-weight: 500;
   font-size: 12.5px;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-triage-instruction {
   margin: 0;
+  flex: none;
   max-width: 30ch;
   font-family: var(--cds-font-load-bearing);
   font-size: clamp(24px, 3vh, 30px);
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.25;
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
 }
 
 .cds-triage-tag {
   margin: 0;
+  flex: none;
   font-family: var(--cds-font-quiet-voice);
   font-size: 0.95rem;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
 }
 
 .cds-triage-tag[data-tag='pending'] {
@@ -83,7 +113,7 @@
 }
 
 .cds-triage-tag[data-tag='none_fit'] {
-  color: var(--cds-telha-deep);
+  color: var(--cds-ui-accent-deep);
 }
 
 .cds-triage-finding,
@@ -102,8 +132,8 @@
 }
 
 .cds-triage-lockout {
-  background: rgba(143, 55, 1, 0.1);
-  color: var(--cds-telha-deep);
+  background: var(--cds-ui-error-bg);
+  color: var(--cds-ui-error-fg);
 }
 
 .cds-triage-gate {
@@ -118,7 +148,7 @@
   max-width: 42ch;
   font-family: var(--cds-font-quiet-voice);
   font-size: 0.85rem;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -153,5 +183,5 @@
   font-style: italic;
   font-weight: 300;
   font-size: clamp(24px, 3.4vh, 34px);
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
 }

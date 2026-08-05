@@ -10,22 +10,22 @@
   width: 100%;
   min-height: 64px;
   padding: 16px;
-  border: 1px solid rgba(63, 62, 32, 0.12);
+  border: 1px solid rgba(var(--cds-ui-line-rgb), 0.12);
   border-radius: 15px;
-  background: #ffffff;
+  background: var(--cds-ui-card);
   box-shadow: var(--cds-shadow-card);
   font-family: var(--cds-font-load-bearing);
   font-weight: 700;
   font-size: 16px;
   line-height: 1.2;
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
   text-align: left;
   cursor: pointer;
   transition: all 0.14s;
 }
 
 .cds-kind-card:hover {
-  border-color: var(--cds-telha);
+  border-color: var(--cds-ui-accent);
   box-shadow: 0 4px 12px rgba(190, 74, 1, 0.14);
 }
 
@@ -42,25 +42,25 @@
 }
 
 .cds-kind-card[data-selected='true'] {
-  border-color: var(--cds-telha);
-  background: color-mix(in srgb, var(--cds-telha) 6%, white);
+  border-color: var(--cds-ui-accent);
+  background: var(--cds-ui-selected-bg);
 }
 
 /* "Nenhum se encaixa" (protótipo pickNoneFit) */
 .cds-kind-card[data-variant='none-fit'] {
   gap: 13px;
   padding: 15px 20px;
-  border: 1.5px dashed rgba(63, 62, 32, 0.3);
+  border: 1.5px dashed rgba(var(--cds-ui-line-rgb), 0.3);
   border-radius: 16px;
-  background: var(--cds-surface-muted);
+  background: var(--cds-ui-chip);
   box-shadow: none;
-  color: var(--cds-olive-soft);
+  color: var(--cds-ui-ink-soft);
   font-size: 15px;
 }
 
 .cds-kind-card[data-variant='none-fit']:hover {
-  border-color: rgba(63, 62, 32, 0.3);
-  background: #e5e2d2;
+  border-color: rgba(var(--cds-ui-line-rgb), 0.3);
+  background: var(--cds-ui-chip-hover);
   box-shadow: none;
 }
 
@@ -76,14 +76,14 @@
   width: 26px;
   height: 26px;
   flex: none;
-  border: 1.5px dashed rgba(63, 62, 32, 0.4);
+  border: 1.5px dashed rgba(var(--cds-ui-line-rgb), 0.4);
   border-radius: 50%;
   font-size: 14px;
-  /* ink-subtle dá 4.43:1 no surface-muted (calibrado p/ creme) — olive-soft passa AA */
-  color: var(--cds-olive-soft);
+  /* ink-subtle dá 4.43:1 no surface-muted (calibrado p/ creme) — ink-soft passa AA */
+  color: var(--cds-ui-ink-soft);
 }
 
 .cds-kind-card[data-variant='none-fit'][data-selected='true'] {
-  border-color: var(--cds-telha);
-  background: color-mix(in srgb, var(--cds-telha) 6%, white);
+  border-color: var(--cds-ui-accent);
+  background: var(--cds-ui-selected-bg);
 }

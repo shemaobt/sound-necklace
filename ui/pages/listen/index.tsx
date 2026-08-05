@@ -20,6 +20,13 @@ import './listen.css';
  * de transporte por prop (injeção da estação/teste; o áudio só é ligado pelo Setup
  * — ENG-243 — então em runtime, sem player, o colar renderiza sem playback).
  */
+/**
+ * Teto da janela de contas (ENG-387): a história inteira cabe em 9 fileiras e o
+ * resto rola ali dentro — a decisão "Já ouvi a história completa" nunca é
+ * empurrada para fora da tela por uma história longa.
+ */
+const NECKLACE_MAX_H = 9 * SIZE_L.row + 12;
+
 export interface ListenProps {
   player?: Player | null;
   /** A voz da UI (§9): confirmar a escuta avança; sem ouvir tudo, recusa. */
@@ -87,6 +94,7 @@ export function Listen({ player = null, sound }: ListenProps) {
           totalBeads={totalBeads}
           beadSec={session.beadSec}
           size={SIZE_L}
+          maxHeight={NECKLACE_MAX_H}
           transportOnly
           playbackHead={head}
           onBeadPointerDown={handlers?.onBead}

@@ -57,4 +57,137 @@
   /* movimento (§4.5) */
   --cds-motion-duration: 220ms;
   --cds-motion-easing: ease-out;
+
+  /* ---------------------------------------------------------------------
+     PAPÉIS DE SUPERFÍCIE (--cds-ui-*, ENG-391) — a única camada que troca
+     com o tema. Acima ficam MARCA e ESCALA: telha, olive, creme, raios,
+     sombras e fontes são identidade, valem igual nos dois temas.
+
+     Os valores claros aqui são exatamente as cores de hoje (por isso tanto
+     `var()`): trocar de papel não pode repintar o tema claro. As telas
+     cerimoniais (Ouça a história / Mapeamento) seguem em olive nos dois
+     temas — elas se pintam pelas custom properties de chrome (app.css) e
+     não passam por aqui.
+
+     `color-scheme` é o que faz scrollbar e controle nativo acompanharem;
+     sem ele o escuro fica meio pronto. */
+  color-scheme: light;
+
+  --cds-ui-bg: var(--cds-cream);
+  --cds-ui-card: #ffffff;
+  --cds-ui-elevated: var(--cds-cream);
+  --cds-ui-chip: var(--cds-surface-muted);
+
+  /* tinta do documento: o body sempre usou olive, mais macia que --cds-ui-ink;
+     é papel próprio para que o claro fique idêntico ao que já vai no ar */
+  --cds-ui-body-ink: var(--cds-olive);
+  --cds-ui-ink: var(--cds-ink);
+  --cds-ui-ink-soft: var(--cds-olive-soft);
+  /* o pacote de design pede #8A8970 aqui; fica o substituto AA de sempre */
+  --cds-ui-ink-faint: var(--cds-ink-subtle);
+
+  --cds-ui-hairline: var(--cds-hairline);
+  --cds-ui-hairline-strong: rgba(63, 62, 32, 0.32);
+
+  /* CANAL de tinta das linhas, não uma cor: as hairlines desta casa nascem todas
+     do mesmo tom em uma dúzia de opacidades diferentes (0.06 a 0.4). Um papel por
+     opacidade seria um papel por regra; trocando só o canal, cada uso guarda o
+     alfa que já tinha — é o que mantém o tema claro idêntico ao que vai no ar. */
+  --cds-ui-line-rgb: 63, 62, 32;
+
+  /* botão/faixa de peso: fundo escuro com tinta clara por cima */
+  /* Para onde um botão forte escurece no hover. NÃO é o `strong-fg`: no claro a
+     tinta é creme, e misturar o fundo com ela CLAREARIA — o hover inverteria de
+     direção. No escuro o fundo já é claro, então a mistura é com a tinta escura. */
+  --cds-ui-strong-shade: #000000;
+  --cds-ui-strong-bg: var(--cds-olive);
+  --cds-ui-strong-fg: var(--cds-cream);
+
+  --cds-ui-accent: var(--cds-telha);
+  /* telha-profundo como TINTA (duração, erro, link quieto): no escuro ele afunda
+     no fundo e some, então o papel sobe para o tom claro do acento */
+  --cds-ui-accent-deep: var(--cds-telha-deep);
+  --cds-ui-positive: #585d31;
+  --cds-ui-error-bg: rgba(143, 55, 1, 0.1);
+  --cds-ui-error-fg: var(--cds-error);
+
+  /* véu translúcido de painéis sobre o fundo (janela do colar, chrome) */
+  --cds-ui-wash: rgba(255, 255, 255, 0.5);
+
+  /* lavagem quente da escolha (protótipo bigStyle: telha a 6% sobre o branco) */
+  --cds-ui-selected-bg: color-mix(in srgb, var(--cds-telha) 6%, white);
+  /* o chip rebaixado sob o ponteiro */
+  --cds-ui-chip-hover: #e5e2d2;
+  /* faixa rebaixada DENTRO de um cartão (a capa do cartão de sessão) */
+  --cds-ui-inset: #eeece0;
+  /* o "papel" quente do relatório: faixa de voz e bloco de rascunho */
+  --cds-ui-paper: #f6f1e6;
+  /* pílula do que já foi baixado/concluído */
+  --cds-ui-done-bg: color-mix(in srgb, var(--cds-confidence-filled) 16%, white);
+  --cds-ui-done-fg: color-mix(in srgb, var(--cds-confidence-filled) 80%, black);
+  /* a ação ainda inelegível — telha lavado no fundo da página (protótipo
+     confirmSceneBg). Literal porque é uma tinta escolhida à mão, não um mix. */
+  --cds-ui-cta-disabled: #d8b79e;
+
+  /* Pérola NÃO TOCADA e o aro do marcador de fim de cena. A pérola TINGIDA não
+     passa por aqui: a cor de uma cena é o dado (a molécula injeta
+     --cds-pearl-base/lit/deep), e o dado não muda de tema. */
+  --cds-ui-pearl: var(--cds-pearl);
+  --cds-ui-pearl-lit: var(--cds-pearl-highlight);
+  --cds-ui-bead-ring: transparent;
+}
+
+/* Tema escuro (ENG-391) — valores do pacote de design
+   docs/design/pacote-melhorias-ui.html §1.0. Todo papel declarado acima
+   reaparece aqui; um esquecido cairia no valor claro e pintaria creme sobre
+   creme, falha que só o teste colocalizado enxerga. */
+[data-cds-theme='dark'] {
+  color-scheme: dark;
+
+  --cds-ui-bg: #1c1b0e;
+  --cds-ui-card: #2b2a17;
+  --cds-ui-elevated: #33321c;
+  --cds-ui-chip: rgba(246, 245, 235, 0.09);
+
+  --cds-ui-body-ink: #f1ebdb;
+  --cds-ui-ink: #f1ebdb;
+  --cds-ui-ink-soft: rgba(241, 235, 219, 0.78);
+  --cds-ui-ink-faint: rgba(241, 235, 219, 0.55);
+
+  --cds-ui-hairline: rgba(246, 245, 235, 0.14);
+  --cds-ui-hairline-strong: rgba(246, 245, 235, 0.34);
+
+  --cds-ui-line-rgb: 246, 245, 235;
+
+  /* no escuro o peso inverte: a tinta clara vira fundo */
+  --cds-ui-strong-shade: #2a2914;
+  --cds-ui-strong-bg: #f1ebdb;
+  --cds-ui-strong-fg: #2a2914;
+
+  /* telha pura fica pesada demais no escuro; o acento sobe para o tom `lit` */
+  --cds-ui-accent: #e8813e;
+  --cds-ui-accent-deep: #f0b489;
+  --cds-ui-positive: #cfd6a6;
+  --cds-ui-error-bg: rgba(232, 129, 62, 0.15);
+  --cds-ui-error-fg: #f0b489;
+
+  --cds-ui-wash: rgba(246, 245, 235, 0.04);
+
+  /* 16%, e não os 6% do claro: sobre um cartão escuro uma lavagem de 6% não se
+     enxerga, e a escolha ficaria marcada só pela borda */
+  --cds-ui-selected-bg: color-mix(in srgb, var(--cds-ui-accent) 16%, var(--cds-ui-card));
+  --cds-ui-chip-hover: rgba(246, 245, 235, 0.14);
+  --cds-ui-inset: rgba(246, 245, 235, 0.05);
+  --cds-ui-paper: rgba(232, 129, 62, 0.1);
+  --cds-ui-done-bg: rgba(119, 125, 69, 0.28);
+  --cds-ui-done-fg: var(--cds-ui-positive);
+  /* o mesmo telha lavado, agora afundando na página em vez de saltar dela:
+     o creme do claro faria a ação travada parecer a mais viva da tela */
+  --cds-ui-cta-disabled: rgba(190, 74, 1, 0.32);
+
+  /* o "unDark" da entrega (§8): a conta não tocada vira pérola de creme
+     translúcido em vez de um furo branco no escuro */
+  --cds-ui-pearl: rgba(246, 245, 235, 0.09);
+  --cds-ui-pearl-lit: rgba(246, 245, 235, 0.22);
+  --cds-ui-bead-ring: rgba(246, 245, 235, 0.3);
 }

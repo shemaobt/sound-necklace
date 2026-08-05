@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -128,7 +128,7 @@ describe('Segmentação — janela na cena ativa (PRD v2 §8.6)', () => {
 });
 
 describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
-  it('confirmar uma frase dentro da cena trava o span e mostra o chip', async () => {
+  it('confirmar uma frase dentro da cena trava o span e mostra a conta no fio', async () => {
     load(segmenting({ selection: { s: 12, e: 15 }, pendingStart: null }));
     render(<Phrases />);
 
@@ -139,7 +139,7 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
     expect(locked.locked).toBe(true);
     expect(locked.span).toEqual({ s: 12, e: 15 });
     expect(locked.part_link).toBe('PT1');
-    expect(screen.getByRole('group', { name: 'Frase um' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Frase um' })).toBeTruthy();
   });
 
   it('um-toque: confirmar sem tocar o fim (início pré-ancorado) pede o fim, não trava 1 conta', async () => {
@@ -261,7 +261,7 @@ describe('Segmentação — travessia de borda (seam modal, PRD v2 §8.6)', () =
   });
 });
 
-describe('Segmentação — chips das frases travadas (redesign §6.5)', () => {
+describe('Segmentação — a cápsula da frase tocada (ENG-388)', () => {
   function withLockedPhrase(): void {
     load(
       segmenting({
@@ -274,12 +274,37 @@ describe('Segmentação — chips das frases travadas (redesign §6.5)', () => {
     );
   }
 
+  /** Toca a conta e clica o Remover que a cápsula abriu. */
+  async function removerPelaCapsula(nome: string): Promise<void> {
+    await userEvent.click(screen.getByRole('button', { name: nome }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remover' }));
+  }
+
+  it('sem toque, nenhuma frase grita as suas ações — a cápsula só abre quando tocada', async () => {
+    load(
+      segmenting({
+        frases: [
+          frase({ prop_id: 'P1', span: { s: 12, e: 15 }, part_link: 'PT1', locked: true }),
+          frase({ prop_id: 'P2', span: { s: 16, e: 18 }, part_link: 'PT1', locked: true }),
+        ],
+        current: { layer: 'frases', index: -1 },
+      }),
+    );
+    const { container } = render(<Phrases />);
+
+    expect(screen.queryByRole('button', { name: 'Remover' })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Frase dois' }));
+
+    expect(container.querySelector('.cds-bead-strip-capsule')?.textContent).toContain('Frase dois');
+    expect(screen.getAllByRole('button', { name: 'Remover' })).toHaveLength(1);
+  });
+
   it('“Remover” apaga a frase travada', async () => {
     withLockedPhrase();
     render(<Phrases />);
 
-    const chip = screen.getByRole('group', { name: 'Frase um' });
-    await userEvent.click(within(chip).getByRole('button', { name: 'Remover' }));
+    await removerPelaCapsula('Frase um');
 
     expect(sessionStore.getState().session!.frases.some((f) => f.prop_id === 'P1')).toBe(false);
   });
@@ -297,12 +322,94 @@ describe('Segmentação — chips das frases travadas (redesign §6.5)', () => {
     );
     render(<Phrases />);
 
-    const chip = screen.getByRole('group', { name: 'Frase dois' });
-    await userEvent.click(within(chip).getByRole('button', { name: 'Remover' }));
+    await removerPelaCapsula('Frase dois');
 
     const locked = sessionStore.getState().session!.frases.filter((f) => f.locked);
     expect(locked.map((f) => f.prop_id)).toEqual(['P1', 'P3']);
     expect(locked.find((f) => f.prop_id === 'P3')!.span).toEqual({ s: 14, e: 18 }); // absorveu [14,15]
+  });
+});
+
+/**
+ * A cápsula aponta para uma frase pelo `prop_id`, e o domínio reatribui ids pelo
+ * menor livre: um id apagado volta a existir noutra frase. Uma seleção que
+ * sobreviva ao que ela aponta oferece "Remover" sobre a frase errada — por isso
+ * cada troca do chão debaixo dela zera a escolha.
+ */
+describe('Segmentação — a seleção do fio não sobrevive ao que ela aponta (ENG-388)', () => {
+  function duasFrases(): void {
+    load(
+      segmenting({
+        frases: [
+          frase({ prop_id: 'P1', span: { s: 12, e: 15 }, part_link: 'PT1', locked: true }),
+          frase({ prop_id: 'P2', span: { s: 16, e: 18 }, part_link: 'PT1', locked: true }),
+        ],
+        current: { layer: 'frases', index: -1 },
+      }),
+    );
+  }
+
+  it('trocar de cena ativa e voltar NÃO reabre a cápsula da cena anterior', async () => {
+    load(
+      segmenting({
+        parts: [productive('PT1', { s: 12, e: 18 }), productive('PT2', { s: 19, e: 25 })],
+        frases: [
+          frase({ prop_id: 'P1', span: { s: 12, e: 15 }, part_link: 'PT1', locked: true }),
+          frase({ prop_id: 'P2', span: { s: 19, e: 22 }, part_link: 'PT2', locked: true }),
+        ],
+        current: { layer: 'frases', index: -1 },
+        activeSceneId: 'PT1',
+      }),
+    );
+    const { container } = render(<Phrases />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Frase um' }));
+    expect(container.querySelector('.cds-bead-strip-capsule')).not.toBeNull();
+
+    // ir para a cena seguinte e voltar — pelos botões da própria estação
+    await userEvent.click(screen.getByRole('button', { name: 'Pronto com esta cena →' }));
+    expect(sessionStore.getState().session!.activeSceneId).toBe('PT2');
+    await userEvent.click(screen.getByRole('button', { name: '← Voltar' }));
+    expect(sessionStore.getState().session!.activeSceneId).toBe('PT1');
+
+    expect(container.querySelector('.cds-bead-strip-capsule')).toBeNull();
+  });
+
+  it('trocar de modo fecha a cápsula', async () => {
+    duasFrases();
+    const { container } = render(<Phrases />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Frase um' }));
+    expect(container.querySelector('.cds-bead-strip-capsule')).not.toBeNull();
+
+    await act(async () => {
+      sessionStore.getState().apply((s) => ({ ...s, mode: 'mapeamento' }));
+    });
+
+    expect(container.querySelector('.cds-bead-strip-capsule')).toBeNull();
+  });
+
+  it('abrir/retomar outra sessão fecha a cápsula', async () => {
+    duasFrases();
+    const { container } = render(<Phrases />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Frase um' }));
+    expect(container.querySelector('.cds-bead-strip-capsule')).not.toBeNull();
+
+    // outra história, com uma frase que reusa o MESMO prop_id da escolhida
+    await act(async () => {
+      load(
+        segmenting({
+          slug: 'outra-historia',
+          frases: [
+            frase({ prop_id: 'P1', span: { s: 12, e: 18 }, part_link: 'PT1', locked: true }),
+          ],
+          current: { layer: 'frases', index: -1 },
+        }),
+      );
+    });
+
+    expect(container.querySelector('.cds-bead-strip-capsule')).toBeNull();
   });
 });
 
@@ -466,7 +573,7 @@ describe('Segmentação — tratamento creme (redesign §6.5, §4.5)', () => {
     const { container } = render(<Phrases />);
 
     expect(container.querySelector('.cds-phrases')).not.toBeNull();
-    expect(phrasesCss).toMatch(/\.cds-phrases\s*\{[^}]*var\(--cds-cream\)/);
+    expect(phrasesCss).toMatch(/\.cds-phrases\s*\{[^}]*var\(--cds-ui-bg\)/);
   });
 
   it('todo movimento decorativo fica sob prefers-reduced-motion: no-preference', () => {

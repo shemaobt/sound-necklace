@@ -31,7 +31,7 @@
 .cds-conversation-report-fallback {
   max-width: 34ch;
   font-family: var(--cds-font-load-bearing);
-  color: var(--cds-olive-soft);
+  color: var(--cds-ui-ink-soft);
 }
 
 /* rodapé da prévia do relatório: o `.cds-conversation` não tem padding embaixo (o

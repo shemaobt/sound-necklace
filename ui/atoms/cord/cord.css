@@ -2,6 +2,6 @@
   display: block;
   width: 100%;
   height: 2px;
-  background: var(--cds-hairline);
+  background: var(--cds-ui-hairline);
   pointer-events: none;
 }

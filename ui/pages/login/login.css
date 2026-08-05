@@ -5,8 +5,8 @@
 .cds-login {
   display: flex;
   min-height: 100vh;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
 }
 
 /* ---------- painel cerimonial (esquerda) ---------- */
@@ -83,7 +83,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #6d6c56;
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-login-title {
@@ -93,7 +93,7 @@
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.1;
-  color: var(--cds-ink, #0a0703);
+  color: var(--cds-ui-ink);
 }
 
 .cds-login-subtitle {
@@ -101,7 +101,7 @@
   font-family: var(--cds-font-quiet-voice);
   font-style: italic;
   font-size: 1rem;
-  color: #5a5a3e;
+  color: var(--cds-ui-ink-soft);
 }
 
 .cds-login-field {
@@ -120,17 +120,17 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6d6c56;
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-login-input {
   padding: 13px 15px;
-  border: 1px solid var(--cds-hairline);
+  border: 1px solid var(--cds-ui-hairline);
   border-radius: 12px;
   font: inherit;
   font-size: 0.95rem;
-  color: var(--cds-ink, #0a0703);
-  background: var(--cds-branco, #fff);
+  color: var(--cds-ui-ink);
+  background: var(--cds-ui-card);
   transition:
     border-color 0.18s,
     box-shadow 0.18s;
@@ -144,8 +144,8 @@
   margin: 0;
   padding: 0.6rem 0.9rem;
   border-radius: 12px;
-  background: rgba(143, 55, 1, 0.1);
-  color: var(--cds-telha-deep);
+  background: var(--cds-ui-error-bg);
+  color: var(--cds-ui-error-fg);
   font-family: var(--cds-font-quiet-voice);
   font-size: 0.9rem;
   line-height: 1.4;

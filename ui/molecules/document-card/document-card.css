@@ -9,8 +9,8 @@
   max-width: 420px;
   padding: 30px 32px;
   border-radius: 22px;
-  background: white;
-  box-shadow: 0 2px 6px rgba(63, 62, 32, 0.08);
+  background: var(--cds-ui-card);
+  box-shadow: 0 2px 6px rgba(var(--cds-ui-line-rgb), 0.08);
   /* o cartão se alinha sozinho (protótipo): a Export centra o palco inteiro, e sem
      isto o rótulo/título/texto herdavam o centro enquanto o botão ficava à
      esquerda — três linhas centradas puxando para um canto */
@@ -22,21 +22,21 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--cds-olive) 55%, var(--cds-cream));
+  color: color-mix(in srgb, var(--cds-ui-body-ink) 55%, var(--cds-ui-bg));
 }
 
 .cds-document-card-title {
   font-family: var(--cds-font-load-bearing);
   font-weight: 700;
   font-size: 19px;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
 }
 
 .cds-document-card-desc {
   margin: 0;
   font-size: 14px;
   line-height: 1.55;
-  color: color-mix(in srgb, var(--cds-olive) 78%, var(--cds-cream));
+  color: color-mix(in srgb, var(--cds-ui-body-ink) 78%, var(--cds-ui-bg));
 }
 
 .cds-document-card-download {
@@ -62,7 +62,7 @@
 }
 
 .cds-document-card-download[data-downloaded='true'] {
-  background: color-mix(in srgb, var(--cds-confidence-filled) 16%, white);
-  color: color-mix(in srgb, var(--cds-confidence-filled) 80%, black);
+  background: var(--cds-ui-done-bg);
+  color: var(--cds-ui-done-fg);
   box-shadow: none;
 }

@@ -111,6 +111,72 @@ describe('css base e tokens (§4.5, PRD §13, LGPD)', () => {
     );
   });
 
+  it('todo papel --cds-ui-* do tema claro tem par no escuro (ENG-391)', () => {
+    /* A falha que isto pega é silenciosa: um papel esquecido no bloco escuro
+       cai no valor claro e pinta creme sobre creme. Nenhum teste de
+       comportamento vê isso — só a comparação dos dois conjuntos.
+
+       Só os papéis (--cds-ui-*) trocam com o tema. As cores de MARCA
+       (--cds-telha, --cds-olive, --cds-cream…) são constantes nos dois temas:
+       são identidade, não superfície, e continuam congeladas acima. */
+    const rolesIn = (block: string): Set<string> =>
+      new Set(Array.from(block.matchAll(/(--cds-ui-[\w-]+)\s*:/g), (m) => m[1]!));
+
+    const blockAfter = (marker: string): string => {
+      const start = tokensCss.indexOf(marker);
+      expect(start, `bloco ${marker} não existe em tokens.css`).toBeGreaterThanOrEqual(0);
+      const open = tokensCss.indexOf('{', start);
+      return tokensCss.slice(open, tokensCss.indexOf('}', open));
+    };
+
+    const light = rolesIn(blockAfter(':root'));
+    const dark = rolesIn(blockAfter("[data-cds-theme='dark']"));
+
+    expect(light.size, 'nenhum papel --cds-ui-* declarado no tema claro').toBeGreaterThan(0);
+    const missing = [...light].filter((role) => !dark.has(role));
+    expect(missing, `papéis sem par no tema escuro: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('no tema CLARO cada papel aponta para o token de marca que ele substituiu (ENG-391)', () => {
+    /* As estações deixaram de citar --cds-cream/--cds-telha e passaram a citar
+       o papel. O elo que ficou implícito é este: no claro, o papel TEM de
+       resolver exatamente a cor de antes. Sem esta asserção, trocar um valor do
+       bloco claro repintaria o app inteiro sem nenhum teste reclamar — os
+       testes de cada estação agora olham só para o NOME do papel. */
+    const start = tokensCss.indexOf(':root');
+    const open = tokensCss.indexOf('{', start);
+    const light = tokensCss.slice(open, tokensCss.indexOf('}', open));
+
+    expect(light).toContain('--cds-ui-bg: var(--cds-cream)');
+    expect(light).toContain('--cds-ui-card: #ffffff');
+    expect(light).toContain('--cds-ui-elevated: var(--cds-cream)');
+    expect(light).toContain('--cds-ui-chip: var(--cds-surface-muted)');
+    expect(light).toContain('--cds-ui-body-ink: var(--cds-olive)');
+    expect(light).toContain('--cds-ui-ink: var(--cds-ink)');
+    expect(light).toContain('--cds-ui-ink-soft: var(--cds-olive-soft)');
+    expect(light).toContain('--cds-ui-ink-faint: var(--cds-ink-subtle)');
+    expect(light).toContain('--cds-ui-hairline: var(--cds-hairline)');
+    expect(light).toContain('--cds-ui-accent: var(--cds-telha)');
+    expect(light).toContain('--cds-ui-accent-deep: var(--cds-telha-deep)');
+    expect(light).toContain('--cds-ui-error-fg: var(--cds-error)');
+    expect(light).toContain('--cds-ui-strong-bg: var(--cds-olive)');
+    expect(light).toContain('--cds-ui-strong-fg: var(--cds-cream)');
+    expect(light).toContain('--cds-ui-pearl: var(--cds-pearl)');
+    expect(light).toContain('--cds-ui-pearl-lit: var(--cds-pearl-highlight)');
+    /* o canal das linhas é o mesmo olive dos hairlines, escrito em números */
+    expect(light).toContain('--cds-ui-line-rgb: 63, 62, 32');
+    /* o aro da conta de fim de cena não existe no claro: o quadrado escuro já
+       se separa do creme sozinho */
+    expect(light).toContain('--cds-ui-bead-ring: transparent');
+  });
+
+  it('declara color-scheme para que scrollbars e controles nativos sigam o tema', () => {
+    /* Sem isto o dark mode "quase funciona": as cores próprias ficam certas e
+       a scrollbar/os controles nativos continuam claros. */
+    expect(tokensCss).toMatch(/color-scheme:\s*light/);
+    expect(tokensCss).toMatch(/color-scheme:\s*dark/);
+  });
+
   it('respeita prefers-reduced-motion e foco visível de 3px telha', () => {
     expect(baseCss).toContain('prefers-reduced-motion');
     expect(baseCss).toContain(':focus-visible');

@@ -39,10 +39,10 @@
 }
 
 .cds-confidence-trio-card[data-choice='duvida'] {
-  background: white;
-  color: var(--cds-olive-soft);
+  background: var(--cds-ui-card);
+  color: var(--cds-ui-ink-soft);
   border-style: dashed;
-  border-color: rgba(63, 62, 32, 0.3);
+  border-color: rgba(var(--cds-ui-line-rgb), 0.3);
 }
 
 /* o disco da Certeza é creme sobre o cartão oliva (protótipo pickConfAlta) */

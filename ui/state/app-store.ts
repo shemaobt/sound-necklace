@@ -9,6 +9,14 @@ import { useStore } from 'zustand';
 export interface AppStore {
   muted: boolean;
   toggleMuted(): void;
+  /**
+   * Há um microfone aberto agora (ENG-393). Mora aqui, e não no estado da
+   * estação, porque quem precisa saber está FORA dela: o "← Histórias" do
+   * cabeçalho é o único caminho de saída que o palco da conversa não desenha, e
+   * sair no meio de uma resposta perde a resposta.
+   */
+  recording: boolean;
+  setRecording(recording: boolean): void;
 }
 
 export function createAppStore() {
@@ -16,6 +24,10 @@ export function createAppStore() {
     muted: false,
     toggleMuted() {
       set((s) => ({ muted: !s.muted }));
+    },
+    recording: false,
+    setRecording(recording: boolean) {
+      set({ recording });
     },
   }));
 }

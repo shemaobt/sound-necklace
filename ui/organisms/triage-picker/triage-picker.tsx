@@ -9,39 +9,42 @@ import { scenePalette, type PaletteEntry } from '../../tokens';
 import './triage-picker.css';
 
 /**
- * O picker da Triage (PRD v2 §8.5; protótipo "Colar de Sons - Protótipo",
- * estação Triage): grade "Mais comuns" (os tipos do tier comum), disclosure
- * "Ver todos os tipos por tema" com os 6 temas decididos no planejamento e
- * cartão tracejado "Nenhum se encaixa" sempre presente. Escolher um tipo troca
- * a grade pelo passo de confiança; confirmar emite os valores contratuais
- * (inglês intocado, alta/média/baixa). Presentacional: nenhuma mutação de
- * domínio acontece aqui.
+ * O picker da Triage (PRD v2 §8.5): os 27 tipos numa grade só, em ordem
+ * alfabética do rótulo exibido, mais o cartão tracejado "Nenhum se encaixa"
+ * sempre presente. Escolher um tipo troca a grade pelo passo de confiança;
+ * confirmar emite os valores contratuais (inglês intocado, high/medium/low).
+ * Presentacional: nenhuma mutação de domínio acontece aqui.
  *
- * A pertinência de tema é display-only e vive NESTE organismo (não em
- * domain/scene-kinds.ts). Um radiogroup único com headings visuais de tema:
- * `role=group` aninhado em radiogroup não é sancionado pelo ARIA (required
- * owned = radio). Setas movem o foco SEM marcar (variante toolbar do APG) —
- * marcar já revela o passo de confiança, o que tornaria as setas destrutivas.
- * No passo de confiança o trio segue o APG padrão (setas movem E marcam),
- * então marcar ali NUNCA emite: a emissão contratual fica num "Confirmar"
- * explícito, revelado após a primeira escolha (ação dominante única, §9.2).
+ * A primeira validação com gente real derrubou o desenho anterior (grade "Mais
+ * comuns" + disclosure "Ver todos os tipos por tema" + blocos por tema): o
+ * disclosure era discreto demais e as pessoas classificavam a partir da lista
+ * curta acreditando ser a lista inteira, e o agrupamento temático obrigava a
+ * adivinhar o balde antes de poder procurar o tipo — a taxonomia é nossa, não
+ * delas. Por isso a ordem é alfabética: procura-se pelo nome que se tem na
+ * cabeça. E por isso a rolagem é da grade, não da página: "Nenhum se encaixa" e
+ * o passo seguinte continuam alcançáveis sem rolar.
  *
- * Trade-off documentado: os botões de disclosure ("Ver todos os tipos por
- * tema"/"recolher") vivem DENTRO do elemento radiogroup — movê-los para fora
- * quebraria a ordem visual do protótipo (entre os comuns e o none-fit) sem
- * quebrar o grupo em dois radiogroups. O handler de teclado ignora não-radios;
- * o custo é uma parada de Tab extra no meio do grupo, inevitável para uma
- * ação que precisa ser alcançável.
+ * A tabela THEMES sobrevive SÓ como fonte de cor (`tintOf`): o ponto colorido
+ * do cartão continua sendo identidade daquele tipo, apenas não é mais título de
+ * grupo. Não é código morto — apagá-la tira a cor dos 27 cartões.
+ *
+ * Um radiogroup único. Setas movem o foco SEM marcar (variante toolbar do APG)
+ * — marcar já revela o passo de confiança, o que tornaria as setas destrutivas.
+ * O movimento é linear na ordem do DOM, não 2D: a grade é uma lista que quebra
+ * em colunas, e navegá-la como lista é o que o teclado já esperava. No passo de
+ * confiança o trio segue o APG padrão (setas movem E marcam), então marcar ali
+ * NUNCA emite: a emissão contratual fica num "Confirmar" explícito, revelado
+ * após a primeira escolha (ação dominante única, §9.2).
  */
 
 interface Theme {
-  /** id ESTÁVEL (não traduzível): identifica o bloco no DOM (`data-theme`). */
+  /** id ESTÁVEL (não traduzível): nomeia a família de cor, não um bloco na tela. */
   id: string;
   kinds: string[];
   tint: PaletteEntry;
 }
 
-/** Cores por tema = as 6 primeiras entradas do scenePalette (protótipo). */
+/** Cores por família = as 6 primeiras entradas do scenePalette (protótipo). */
 const THEMES: Theme[] = [
   {
     id: 'indo-e-vindo',
@@ -107,6 +110,7 @@ function tintOf(value: string): PaletteEntry {
 
 interface CardModel {
   value: string;
+  label: string;
   tint: PaletteEntry;
 }
 
@@ -127,7 +131,6 @@ export interface TriagePickerProps {
 
 export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
   const { t, i18n } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
   const [choice, setChoice] = useState<ConfidenceChoice | null>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
@@ -145,18 +148,34 @@ export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
     rootRef.current?.querySelector<HTMLElement>('[role="radio"][tabindex="0"]')?.focus();
   }, [picked]);
 
-  // Expandir/recolher troca um botão pelo outro; seguir com o foco evita a
-  // queda para o body no meio do grupo.
-  const prevExpanded = useRef(expanded);
+  /*
+   * "Ainda tem tipo abaixo?" (ENG-390). A grade dos 27 rola, e numa janela de
+   * 900px aparecem 12: se ela rolar em silêncio, a pessoa classifica a partir do
+   * que vê — que é o defeito que achatar a lista veio consertar. A pista tem de
+   * ficar POR CIMA dos cartões (eles são opacos: uma sombra no fundo da caixa
+   * some atrás deles), e por isso é um elemento, não um `background`.
+   *
+   * O estado é medido, não presumido: quantos cartões cabem depende da altura
+   * que a estação entrega e do tamanho da fonte. Depende de `picked` porque a
+   * caixa sai do DOM no passo da confiança e volta outra depois.
+   */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [temMais, setTemMais] = useState(false);
   useEffect(() => {
-    if (prevExpanded.current === expanded) return;
-    prevExpanded.current = expanded;
-    rootRef.current
-      ?.querySelector<HTMLElement>(
-        expanded ? '.cds-triage-picker-collapse' : '.cds-triage-picker-disclosure',
-      )
-      ?.focus();
-  }, [expanded]);
+    const box = scrollRef.current;
+    if (!box) return;
+    /* 1px de folga: alturas fracionárias nunca fecham a conta exatamente */
+    const medir = () => setTemMais(box.scrollTop + box.clientHeight < box.scrollHeight - 1);
+    medir();
+    box.addEventListener('scroll', medir, { passive: true });
+    // ResizeObserver não existe no jsdom; lá a medida síncrona basta.
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(medir);
+    ro?.observe(box);
+    return () => {
+      box.removeEventListener('scroll', medir);
+      ro?.disconnect();
+    };
+  }, [picked]);
 
   if (picked) {
     const label = sceneKindLabel(picked, i18n.language);
@@ -202,14 +221,16 @@ export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
     );
   }
 
-  const commonCards: CardModel[] = SCENE_KINDS.filter((k) => k.tier === 'comum').map((k) => ({
+  // Alfabética pelo rótulo EXIBIDO, não pelo valor inglês: quem procura procura
+  // a palavra que está lendo na tela, e a ordem tem de seguir a língua da UI.
+  const cards: CardModel[] = SCENE_KINDS.map((k) => ({
     value: k.value,
+    label: sceneKindLabel(k.value, i18n.language),
     tint: tintOf(k.value),
-  }));
-  const themeSections = expanded ? THEMES : [];
+  })).sort((a, b) => a.label.localeCompare(b.label, i18n.language));
 
-  const radioCount = commonCards.length + themeSections.reduce((n, t) => n + t.kinds.length, 0) + 1; // + "Nenhum se encaixa"
-  const tabIdx = Math.min(focusedIdx, radioCount - 1);
+  const noneFitIdx = cards.length; // o none-fit é o último rádio na ordem do DOM
+  const tabIdx = Math.min(focusedIdx, noneFitIdx);
 
   const onGroupKeyDown = (e: ReactKeyboardEvent) => {
     const target = KEY_TARGET[e.key];
@@ -230,47 +251,6 @@ export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
     setFocusedIdx(next);
   };
 
-  // offsets na ordem do DOM para o roving tabindex (um só tabbável)
-  const renderCards = (cards: CardModel[], start: number) =>
-    cards.map((m, i) => (
-      <KindCard
-        key={m.value}
-        label={sceneKindLabel(m.value, i18n.language)}
-        en={m.value}
-        tint={m.tint}
-        tabbable={start + i === tabIdx}
-        onSelect={() => {
-          setPicked(m.value);
-          setChoice(null);
-        }}
-      />
-    ));
-
-  const gridCards = commonCards;
-  const themeStart = (i: number) =>
-    gridCards.length + themeSections.slice(0, i).reduce((n, t) => n + t.kinds.length, 0);
-  const noneFitIdx = radioCount - 1;
-
-  const grid = renderCards(gridCards, 0);
-  const themeBlocks = themeSections.map((theme, i) => (
-    <div key={theme.id} className="cds-triage-picker-theme" data-theme={theme.id}>
-      <div className="cds-triage-picker-theme-label">
-        <span
-          className="cds-triage-picker-theme-dot"
-          style={{ background: theme.tint.base }}
-          aria-hidden="true"
-        />
-        {t(`triagePicker.theme.${theme.id}`)}
-      </div>
-      <div className="cds-triage-picker-grid">
-        {renderCards(
-          theme.kinds.map((value) => ({ value, tint: theme.tint })),
-          themeStart(i),
-        )}
-      </div>
-    </div>
-  ));
-
   return (
     <div className="cds-triage-picker" data-stage="tipos" ref={rootRef}>
       <div
@@ -280,36 +260,28 @@ export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
         className="cds-triage-picker-group"
         onKeyDown={onGroupKeyDown}
       >
-        <div className="cds-triage-picker-section">{t('triagePicker.common')}</div>
-        <div className="cds-triage-picker-grid">{grid}</div>
-        {expanded ? (
-          <>
-            {themeBlocks}
-            <button
-              type="button"
-              className="cds-triage-picker-collapse"
-              aria-expanded="true"
-              onClick={() => {
-                setExpanded(false);
-                setFocusedIdx(0);
-              }}
-            >
-              {t('triagePicker.collapse')}
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="cds-triage-picker-disclosure"
-            aria-expanded="false"
-            onClick={() => {
-              setExpanded(true);
-              setFocusedIdx(0);
-            }}
-          >
-            {t('triagePicker.seeAll')}
-          </button>
-        )}
+        {/* só a grade rola: o none-fit fica fora da caixa de rolagem (mas dentro
+            do grupo) para nunca depender de uma rolagem para ser encontrado */}
+        <div className="cds-triage-picker-scroll" ref={scrollRef} data-more={temMais}>
+          <div className="cds-triage-picker-grid">
+            {cards.map((m, i) => (
+              <KindCard
+                key={m.value}
+                label={m.label}
+                en={m.value}
+                tint={m.tint}
+                tabbable={i === tabIdx}
+                onSelect={() => {
+                  setPicked(m.value);
+                  setChoice(null);
+                }}
+              />
+            ))}
+          </div>
+          {/* a borda que diz "continua" — decoração pura: quem não enxerga já
+              ouve a contagem dos 27 pelo radiogroup */}
+          <div className="cds-triage-picker-more" aria-hidden="true" />
+        </div>
         <KindCard
           noneFit
           label={t('triagePicker.noneFit')}

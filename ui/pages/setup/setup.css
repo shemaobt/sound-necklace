@@ -1,27 +1,48 @@
-/* Setup (Protótipo.dc.html, isSetup + PRD v2 §8.1): coluna ÚNICA centrada de
-   640px — eyebrow "Preparação", título 40px, linha de confiança (§O7) — com o
-   conteúdo do PRD (portas, bucket-only, granularidade, consentimento) na
-   linguagem visual do protótipo: cards brancos radius 14/15, CTA telha
-   full-width, marca d'água no canto. Sem movimento decorativo. */
+/* Setup (PRD v2 §8.1): eyebrow "Preparação", título 40px, linha de confiança (§O7),
+   cards brancos radius 14/15, CTA telha, marca d'água no canto — a linguagem visual
+   do Protótipo.dc.html. O ARRANJO, porém, é o do pacote de melhorias UI item 1
+   (docs/design/pacote-melhorias-ui.html, entrega posterior e escrita para esta tela):
+   moldura em coluna — cabeçalho, portas, rodapé — e, no meio, DUAS colunas da mesma
+   altura. Sem movimento decorativo. */
 
+/* A estação inteira cabe na janela (ENG-386): a altura é MEDIDA, não estimada — o
+   único cromo acima da Setup é o cabeçalho de 64px do shell (ui/app/header.css; o fio
+   de contas só existe dentro de uma sessão). É a convenção das estações de escuta,
+   registrada em ui/docs.md; o `72vh` que estava aqui era chute, e chute não garante
+   que o botão apareça.
+
+   Esta altura definida é o que faz o resto funcionar: sem ela, `flex: 1` nas colunas
+   não tem sobra de onde sair e a lista volta a crescer sem fim. `dvh` porque no
+   celular a barra do navegador entra e sai da conta. */
 .cds-setup {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 26px;
-  min-height: 72vh;
-  padding: 40px clamp(1rem, 5vw, 3rem) 48px;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
-  overflow: hidden;
+  /* espaçamento que cede em janelas baixas: cada pixel devolvido aqui é altura que
+     a lista ganha antes de a tela precisar rolar */
+  gap: clamp(12px, 2.2vh, 26px);
+  height: calc(100dvh - 64px);
+  padding: clamp(16px, 3vh, 40px) clamp(1rem, 5vw, 3rem) clamp(16px, 3vh, 48px);
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
+  /* salvaguarda para janelas muito baixas (ENG-386) — nunca `hidden`: a primeira
+     coisa que um corte esconderia aqui é justamente o botão de criar a sessão */
+  overflow: auto;
 }
 
-/* todos os blocos da coluna única do protótipo */
+/* a moldura segue na coluna de 640px do protótipo */
 .cds-setup > * {
   width: 100%;
   max-width: 640px;
   position: relative;
+}
+
+/* o que emoldura não encolhe: só a lista cede altura */
+.cds-setup-header,
+.cds-setup-doors,
+.cds-setup-notes {
+  flex: none;
 }
 
 .cds-setup-header {
@@ -38,7 +59,7 @@
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-setup-title {
@@ -48,7 +69,7 @@
   font-weight: 700;
   letter-spacing: -0.015em;
   line-height: 1.05;
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
 }
 
 /* §O7 — linha de confiança fixada e proeminente. */
@@ -67,7 +88,7 @@
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.5;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-setup-heading {
@@ -76,7 +97,7 @@
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-setup-doors,
@@ -94,6 +115,42 @@
   gap: 10px;
 }
 
+/* A entrega rola numa janela própria (ENG-386, pacote de melhorias UI item 1).
+   A altura NÃO é um teto em pixels: a janela toma a sobra da coluna (`flex: 1` com
+   `min-height: 0`, que é o que deixa um filho rolável encolher abaixo do conteúdo).
+   Um teto fixo só garantiria o botão em janelas altas — aqui a lista cede primeiro,
+   qualquer que seja a altura da janela, e o botão nunca é empurrado.
+   O piso existe para a janela não virar uma fresta ilegível: a partir dele a
+   salvaguarda da estação assume e a tela rola. */
+.cds-setup-audios-scroll {
+  flex: 1 1 0;
+  min-height: 88px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid var(--cds-ui-hairline);
+  border-radius: var(--cds-radius-tile);
+  background: var(--cds-ui-chip);
+  /* barra fina do pacote de entrega (`.cds-scroll` em
+     docs/design/pacote-melhorias-ui.html), nas convenções --cds- da casa */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(138, 137, 112, 0.5) transparent;
+}
+
+.cds-setup-audios-scroll::-webkit-scrollbar {
+  width: 9px;
+}
+
+.cds-setup-audios-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--cds-radius-pill);
+  background: rgba(138, 137, 112, 0.45);
+  background-clip: content-box;
+}
+
+.cds-setup-audios-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* cards brancos do protótipo (bigStyle): borda quase invisível + sombra baixa */
 .cds-setup-door,
 .cds-setup-level,
@@ -103,9 +160,9 @@
   gap: 0.15rem;
   text-align: left;
   padding: 14px 16px;
-  border: 1px solid rgba(63, 62, 32, 0.12);
+  border: 1px solid rgba(var(--cds-ui-line-rgb), 0.12);
   border-radius: 15px;
-  background: #fff;
+  background: var(--cds-ui-card);
   box-shadow: var(--cds-shadow-card);
   color: inherit;
   font: inherit;
@@ -125,21 +182,21 @@
 .cds-setup-door:hover,
 .cds-setup-level:hover,
 .cds-setup-audio:hover {
-  border-color: var(--cds-telha);
+  border-color: var(--cds-ui-accent);
   box-shadow: 0 4px 12px rgba(190, 74, 1, 0.14);
 }
 
 .cds-setup-door[data-state='checked'],
 .cds-setup-level[data-state='checked'],
 .cds-setup-audio[data-state='checked'] {
-  border-color: var(--cds-telha);
-  background: color-mix(in srgb, var(--cds-telha) 6%, white);
+  border-color: var(--cds-ui-accent);
+  background: var(--cds-ui-selected-bg);
 }
 
 .cds-setup-door:focus-visible,
 .cds-setup-level:focus-visible,
 .cds-setup-audio:focus-visible {
-  outline: 2px solid var(--cds-olive);
+  outline: 2px solid var(--cds-ui-body-ink);
   outline-offset: 2px;
 }
 
@@ -148,7 +205,7 @@
 .cds-setup-audio-name {
   font-weight: 700;
   font-size: 15px;
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
 }
 
 .cds-setup-door-desc,
@@ -156,12 +213,12 @@
   font-family: var(--cds-font-quiet-voice);
   font-style: italic;
   font-size: 13.5px;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-setup-consent-ok {
   font-size: 0.8rem;
-  color: #585d31;
+  color: var(--cds-ui-positive);
 }
 
 .cds-setup-consent-warn {
@@ -174,7 +231,7 @@
 .cds-setup-audio-ready {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #585d31;
+  color: var(--cds-ui-positive);
 }
 
 .cds-setup-audio[data-state='checked'] {
@@ -182,11 +239,36 @@
   background: rgba(119, 125, 69, 0.08);
 }
 
-/* coluna única do protótipo: as "colunas" empilham dentro dos 640px */
-.cds-setup-cols {
+/* O miolo é mais largo que a moldura: duas colunas dentro de 640px espremeriam a
+   grade de áudios de volta para uma coluna só. */
+.cds-setup > .cds-setup-form {
+  max-width: 1040px;
+  flex: 1 1 auto;
+}
+
+.cds-setup-form {
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 18px;
+}
+
+/* As duas colunas da entrega (item 1): mesma altura, e a sobra da estação chega
+   aqui inteira.
+
+   Repare no que NÃO está escrito: `min-height: 0`. A tentação é grande — é o
+   remédio de sempre para um filho rolável que não encolhe — e aqui ele produz um
+   defeito pior que o original: a corrente passa a poder encolher SEM FIM, e numa
+   janela baixa as duas colunas se sobrepõem em vez de a estação rolar. Quem
+   destrava a rolagem da lista é a própria janela dela, que por ser um contêiner de
+   rolagem já tem mínimo automático zero; assim o mínimo daqui continua sendo o que
+   de fato precisa caber, e abaixo disso a salvaguarda `overflow: auto` da estação
+   assume. */
+.cds-setup-cols {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 18px;
+  flex: 1 1 auto;
 }
 
 .cds-setup-col {
@@ -195,10 +277,42 @@
   gap: 0.75rem;
 }
 
-.cds-setup-form {
+/* esquerda: a entrega, a única coisa que cede altura */
+.cds-setup-col-list {
+  flex: 1.3 1 0;
+  min-width: 0;
+}
+
+/* direita: estreita e de altura natural — o que se decide, e a ação no pé */
+.cds-setup-col-side {
+  flex: 1 1 0;
+  min-width: 280px;
+  max-width: 380px;
+}
+
+/* `margin-top: auto` ancora a ação no pé da coluna: com pouca ou muita coisa
+   acima dela, o botão fica no mesmo lugar, que é onde a pessoa aprendeu a olhar */
+.cds-setup-foot {
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 10px;
+  flex: none;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+/* Empilhado, a lista continua sendo quem cede (as colunas seguem dentro de uma
+   altura definida), então o botão não afunda — que era o defeito inteiro. */
+@media (max-width: 900px) {
+  .cds-setup-cols {
+    flex-direction: column;
+  }
+
+  .cds-setup-col-side {
+    flex: none;
+    min-width: 0;
+    max-width: none;
+  }
 }
 
 .cds-setup-note {
@@ -216,23 +330,23 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 16px;
-  border: 1px solid var(--cds-hairline);
+  border: 1px solid var(--cds-ui-hairline);
   border-radius: var(--cds-radius-tile);
-  background: var(--cds-surface-muted);
+  background: var(--cds-ui-chip);
 }
 
 .cds-setup-gran-value {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
 }
 
 .cds-setup-gran .cds-setup-note {
   font-size: 0.8rem;
   line-height: 1.45;
   opacity: 1;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-setup-field {
@@ -243,17 +357,17 @@
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 /* input do protótipo: branco, radius 14, 52px */
 .cds-setup-field input {
   min-height: 52px;
   padding: 0 16px;
-  border: 1px solid rgba(63, 62, 32, 0.18);
+  border: 1px solid rgba(var(--cds-ui-line-rgb), 0.18);
   border-radius: var(--cds-radius-tile);
-  background: #ffffff;
-  color: var(--cds-ink);
+  background: var(--cds-ui-card);
+  color: var(--cds-ui-ink);
   font: inherit;
   font-size: 15px;
   letter-spacing: normal;
@@ -267,14 +381,41 @@
   font-size: 0.9rem;
 }
 
+/* O resumo da escolha (ENG-386): cartão branco do protótipo, na coluna da ação —
+   a confirmação de que o áudio entrou fica onde estão os olhos de quem vai seguir. */
+.cds-setup-picked {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid rgba(var(--cds-ui-line-rgb), 0.12);
+  border-radius: var(--cds-radius-tile);
+  background: var(--cds-ui-card);
+  box-shadow: var(--cds-shadow-card);
+}
+
+.cds-setup-picked-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cds-ui-ink);
+  /* nome de arquivo longo quebra em vez de alargar a coluna estreita */
+  overflow-wrap: anywhere;
+}
+
+.cds-setup-foot .cds-setup-error {
+  align-self: stretch;
+  text-align: center;
+}
+
 .cds-setup-error {
   margin: 0;
   align-self: center;
   max-width: 60ch;
   padding: 10px 20px;
   border-radius: var(--cds-radius-pill);
-  background: rgba(143, 55, 1, 0.1);
-  color: var(--cds-telha-deep);
+  background: var(--cds-ui-error-bg);
+  color: var(--cds-ui-error-fg);
   font-size: 14px;
   font-weight: 600;
 }
@@ -317,22 +458,38 @@
   align-items: center;
 }
 
+/* a porta de importação também toma a sobra: sem isso o rodapé colava nela e o
+   resto da estação ficava vazio embaixo */
+.cds-setup > .cds-setup-import-door {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-height: 0;
+}
+
 .cds-setup-import-hint {
   margin: 0;
   font-family: var(--cds-font-quiet-voice);
   font-style: italic;
-  color: var(--cds-olive-soft);
+  color: var(--cds-ui-ink-soft);
 }
 
-/* marca d'água telha vazando no canto (protótipo) */
+/* marca d'água telha vazando no canto (protótipo). Ela se recorta sozinha, numa
+   camada só de decoração: com a seção rolável (ENG-386), o que vaza para fora do
+   canto contaria como área a rolar e a tela ganharia uma barra fantasma. */
 .cds-setup-watermark {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  max-width: none;
+  overflow: hidden;
+  opacity: 0.045;
+  pointer-events: none;
+}
+
+.cds-setup-watermark > svg {
   position: absolute;
   right: -90px;
   bottom: -100px;
-  width: auto;
-  max-width: none;
-  opacity: 0.045;
-  pointer-events: none;
 }
 
 /* ---------- ENG-311: portas desabilitadas + esqueleto da lista ---------- */

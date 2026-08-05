@@ -44,9 +44,23 @@ test('gravar uma resposta produz áudio audível, não um arquivo vazio', async 
   // sem o helper: ele aperta gravar/parar de enfiada, e uma gravação de zero segundo
   // rende um WebM só de cabeçalho — real, mas inaudível. Aqui a pessoa "fala".
   await page.getByRole('button', { name: 'gravar a resposta' }).click();
+
+  /* ENG-393 — com o microfone aberto, o "← Histórias" do CABEÇALHO também espera.
+     Ele mora em ui/app, fora da estação, e é a única saída que o palco da conversa
+     não desenha: sair aqui perde a resposta que está sendo dita. A estação e o
+     cabeçalho têm testes próprios; o que só um percurso real prova é que um avisa
+     o outro. Aqui se afirma só o atributo: o Playwright trata `aria-disabled`
+     como não-acionável e ficaria esperando o clique. Que o clique recusado chame
+     o bip em vez de navegar é o que header.test.tsx prova. */
+  const voltar = page.getByRole('button', { name: 'Voltar às histórias' });
+  await expect(voltar).toHaveAttribute('aria-disabled', 'true');
+
   await page.waitForTimeout(700);
   await page.getByRole('button', { name: 'Parar' }).click();
-  await page.getByRole('button', { name: 'ouvir', exact: true }).click();
+
+  // parou: a saída volta a existir
+  await expect(voltar).not.toHaveAttribute('aria-disabled', 'true');
+  await page.getByRole('button', { name: 'ouvir a resposta', exact: true }).click();
 
   await expect
     .poll(async () =>

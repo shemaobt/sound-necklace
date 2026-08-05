@@ -26,7 +26,7 @@ import {
   sceneColor,
   sceneOrdinal,
 } from './cutting';
-import { ScenePhraseChip } from '../../molecules';
+import { BeadStrip, type BeadStripItem } from '../../molecules';
 import './cut.css';
 
 /**
@@ -42,6 +42,13 @@ import './cut.css';
  * reaberta, cenas preservadas) são decisões puras do domínio aplicadas pelo
  * `sessionStore`. O áudio chega por prop.
  */
+/**
+ * Teto da janela de contas (ENG-387): 8 fileiras. Menos que a Escuta 1 porque
+ * abaixo do colar ainda ficam o fio das cenas costuradas e a confirmação — e
+ * numa história longa era justamente isso que sumia da tela.
+ */
+const NECKLACE_MAX_H = 8 * SIZE_L.row + 12;
+
 /** As cenas cobrem 0…N-1 sem buraco? (ladrilham a história inteira) */
 function tilesWholeStory(spans: Span[], totalBeads: number): boolean {
   const ordered = [...spans].sort((a, b) => a.s - b.s);
@@ -64,10 +71,14 @@ export function Cut({ player = null, sound }: CutProps) {
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Qual cena costurada abre a cápsula do rodapé — a seleção é da PÁGINA, o fio
+  // de contas só a recebe e devolve o toque. Guardamos junto o `scope` em que ela
+  // foi feita (ver abaixo).
+  const [pick, setPick] = useState<{ scope: string; key: string } | null>(null);
 
   const parts = session?.parts ?? null;
   // Cenas travadas rankeadas pela posição no colar (bead inicial), não pela ordem
-  // de criação: número, cor e ordem dos chips seguem o que o ouvinte vê da esquerda
+  // de criação: número, cor e ordem das contas seguem o que o ouvinte vê da esquerda
   // para a direita, mesmo num retorno salvo com `parts` fora de ordem (ENG-344).
   const lockedScenes = useMemo(() => rankLockedScenes(parts ?? []), [parts]);
   const segments = useMemo<NecklaceSegment[]>(
@@ -96,6 +107,24 @@ export function Cut({ player = null, sound }: CutProps) {
     if (!player) return;
     return () => player.stop();
   }, [player]);
+
+  /**
+   * A cápsula aponta para uma cena pelo `part_id`, e o domínio reatribui ids pelo
+   * menor livre — um id apagado volta a existir noutra cena. Uma seleção que
+   * sobreviva ao que ela aponta ofereceria "Remover" sobre outra cena.
+   *
+   * Por isso a escolha carrega o `scope` em que foi feita e só vale enquanto ele
+   * durar: trocar de sessão (aberta ou retomada), de modo ou de âncora ativa a
+   * invalida por construção, sem efeito nem render em cascata. Remover tem o seu
+   * próprio zerar, porque ali o item some sem o scope mudar.
+   */
+  /* O separador é NUL escapado, não literal: escrito cru no fonte ele faz o
+     arquivo deixar de ser texto (grep e `file` param de enxergá-lo). O valor em
+     runtime é o mesmo, e nenhum slug consegue forjar a fronteira entre campos. */
+  const scope = session
+    ? `${session.slug}\u0000${session.manifestId}\u0000${session.mode}\u0000${session.current.layer}:${session.current.index}`
+    : '';
+  const picked = pick?.scope === scope ? pick.key : null;
 
   if (!session) return null;
 
@@ -220,6 +249,7 @@ export function Cut({ player = null, sound }: CutProps) {
   // (fiel ao reference, golden), a absorção é composta aqui — como o reprime.
   const removeScene = (partId: string): void => {
     setError(null);
+    setPick(null);
     sessionStore.getState().apply((s) => {
       const removed = s.parts.find((p) => p.part_id === partId);
       const after = removePart(
@@ -229,6 +259,26 @@ export function Cut({ player = null, sound }: CutProps) {
       return removed?.locked && removed.span ? absorbNextScene(after, removed.span.s) : after;
     });
   };
+
+  /**
+   * Uma conta por cena costurada, na ordem do colar (`lockedScenes` já vem
+   * rankeada pelo bead inicial, ENG-344): a cor da conta e o número por extenso
+   * saem do mesmo `rank`, senão o rodapé discordaria do que o ouvinte vê.
+   * Sem `sub`: a duração seria um dígito na tela do ouvinte (§9.2).
+   */
+  const sceneBeads: BeadStripItem[] = lockedScenes.map((sc) => {
+    const ordinal = sceneOrdinal(sc.rank, i18n.language);
+    return {
+      key: sc.part.part_id,
+      label: ordinal ? t('cut.sceneLabel', { ordinal }) : t('cut.sceneLabelBare'),
+      swatch: sceneColor(sc.rank),
+      actions: (
+        <Button variant="ghost" size="sm" onClick={() => removeScene(sc.part.part_id)}>
+          {t('cut.remove')}
+        </Button>
+      ),
+    };
+  });
 
   return (
     <section className="cds-cut">
@@ -256,6 +306,7 @@ export function Cut({ player = null, sound }: CutProps) {
           selection={session.selection}
           pendingStart={session.pendingStart}
           size={SIZE_L}
+          maxHeight={NECKLACE_MAX_H}
           playbackHead={head}
           dragHandles={dragHandles}
           onBeadPointerDown={onBead}
@@ -268,28 +319,14 @@ export function Cut({ player = null, sound }: CutProps) {
       {hasLocked ? (
         <>
           <div className="cds-cut-divider" aria-hidden="true" />
-          <ul className="cds-cut-chips">
-            {lockedScenes.map((sc) => {
-              const ordinal = sceneOrdinal(sc.rank, i18n.language);
-              return (
-                <li key={sc.part.part_id}>
-                  <ScenePhraseChip
-                    label={ordinal ? t('cut.sceneLabel', { ordinal }) : t('cut.sceneLabelBare')}
-                    swatch={sceneColor(sc.rank)}
-                    actions={
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeScene(sc.part.part_id)}
-                      >
-                        {t('cut.remove')}
-                      </Button>
-                    }
-                  />
-                </li>
-              );
-            })}
-          </ul>
+          <div className="cds-cut-strip">
+            <BeadStrip
+              groupLabel={t('cut.stripAria')}
+              items={sceneBeads}
+              selected={picked}
+              onSelect={(key) => setPick({ scope, key })}
+            />
+          </div>
         </>
       ) : null}
 

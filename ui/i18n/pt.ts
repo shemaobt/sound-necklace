@@ -18,6 +18,10 @@ export const pt = {
     storyVolume: 'volume da história',
     unmute: 'Ligar o som da interface',
     settings: 'Configurações',
+    // o rótulo diz o DESTINO, não o estado: quem ouve o leitor de tela precisa
+    // saber o que o clique faz; o ícone (lua/sol) já diz a mesma coisa por olho
+    themeToDark: 'Mudar para o tema escuro',
+    themeToLight: 'Mudar para o tema claro',
   },
   autosave: {
     saving: 'Salvando…',
@@ -219,6 +223,10 @@ export const pt = {
   },
   progressDots: {
     dotLabel: 'ir para a cena',
+    /* Único rótulo com dígito no app (ENG-389): o indicador da triagem numera a
+       cena porque, sem número, era lido como uma conta do colar. Em toda outra
+       superfície "Cena N" vai por extenso (`cut.sceneLabel` + `sceneOrdinal`). */
+    sceneDot: 'Cena {{n}}',
   },
   stationState: {
     current: 'etapa atual',
@@ -260,6 +268,9 @@ export const pt = {
     instructionReplay: '. Toque numa cena pronta para reouvir.',
     sceneLabel: 'Cena {{ordinal}}',
     sceneLabelBare: 'Cena',
+    /* Nome do fio de contas do rodapé (ENG-388). Digit-free: o leitor de tela
+       anuncia o grupo, e cada conta já se anuncia pela sua cena. */
+    stripAria: 'cenas costuradas',
     remove: 'Remover',
     back: '← Voltar',
     confirmScene: '✓ Confirmar esta cena',
@@ -270,6 +281,7 @@ export const pt = {
     instruction: 'Toque no colar onde cada frase termina. O começo já está costurado.',
     instructionReplay: ' Toque numa frase pronta para reouvir.',
     halfSelection: 'Toque no colar onde esta frase termina.',
+    stripAria: 'frases desta cena',
     remove: 'Remover',
     back: '← Voltar',
     confirmPhrase: '✓ Confirmar esta frase',
@@ -326,23 +338,9 @@ export const pt = {
     lockout: '⚠ Nenhuma cena se encaixa em Rute. Segmentação e Mapeamento ficam travadas.',
   },
   triagePicker: {
-    // Aninhado de verdade: chaves planas com ponto só resolviam por um FALLBACK do
-    // i18next (ignoreJSONStructure). Se esse default mudar, os 6 títulos de tema viram
-    // a chave crua na tela — e nada quebraria.
-    theme: {
-      'indo-e-vindo': 'Indo e vindo',
-      'fala-e-acordo': 'Fala e acordo',
-      'trabalho-e-terra': 'Trabalho e terra',
-      sentimento: 'Sentimento',
-      'rito-e-alianca': 'Rito e aliança',
-      narracao: 'Narração',
-    },
     swap: 'trocar tipo',
     confidenceQuestion: 'O quanto isso parece certo pra você?',
     confirm: 'Confirmar',
-    common: 'Mais comuns',
-    seeAll: 'Ver todos os tipos por tema',
-    collapse: 'recolher',
     noneFit: 'Nenhum se encaixa',
     groupAria: 'Tipos de cena',
   },
@@ -426,9 +424,22 @@ export const pt = {
     stop: 'Parar',
     idleHint: 'Toque e fale a sua resposta',
     emptyWave: 'a sua resposta vira um fio de som aqui',
-    recordingLabel: 'Gravando…',
-    play: 'ouvir',
-    again: 'de novo',
+    recordingLabel: 'gravando — os outros botões esperam a resposta',
+    play: 'ouvir a resposta',
+    again: 'gravar de novo',
+    /* O tamanho da resposta em risco, por extenso — §9.2 proíbe dígito aqui.
+       É escala, não cronômetro: numa advertência o que decide é QUANTO se
+       perde, e "cerca de dois minutos" carrega isso melhor que "2:07". */
+    answerLengthUnderMinute: 'menos de um minuto',
+    answerLengthOneMinute: 'cerca de um minuto',
+    answerLengthMinutes: 'cerca de {{minutos}} minutos',
+    rerecordTitle: 'Gravar esta resposta de novo?',
+    rerecordBody:
+      'A resposta que já foi gravada ({{duration}}) será apagada, e uma nova gravação começa na hora. Isso não tem volta.',
+    rerecordBodyUnknown:
+      'A resposta que já foi gravada será apagada, e uma nova gravação começa na hora. Isso não tem volta.',
+    rerecordConfirm: 'Apagar e gravar de novo',
+    rerecordKeep: 'Manter a gravação',
     typedHint: 'A facilitadora pode escrever depois — nunca por você.',
     prev: '← anterior',
     next: 'Próxima pergunta',
