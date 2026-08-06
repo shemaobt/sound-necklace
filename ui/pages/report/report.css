@@ -20,6 +20,14 @@
   text-align: left;
 }
 
+/* While transcription runs the body leaves and the box remains: 760px of background
+   and 80px of padding drawn over the olive of the wait — a band across the screen. The
+   sheet drops the document surface and lets the wait own it, which is what ENG-367 meant. */
+.cds-report--waiting {
+  background: none;
+  padding: 0;
+}
+
 .cds-report-header {
   display: flex;
   flex-direction: column;

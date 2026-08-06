@@ -442,6 +442,54 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     expect(view.container.querySelector('.cds-report-drafts-live')).not.toBeNull();
   });
 
+  it('the wait speaks the interface language, not the name of the key', async () => {
+    const { stt } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />,
+    );
+
+    await screen.findByText(/transcrevendo/i);
+    expect(view.container.textContent).not.toMatch(/transcribingEyebrow/i);
+  });
+
+  /**
+   * The report sheet paints its own document surface (`--cds-ui-bg`, a 760px column,
+   * 36+44 of breathing room). With the body swapped for the wait, that box was still
+   * drawn — a band across the screen under the animation, exactly the width of the
+   * column. The state owns the surface, so it has to reach the sheet.
+   */
+  it('while the job runs, the sheet does not paint its own box', async () => {
+    const { stt } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />,
+    );
+
+    await screen.findByText(/transcrevendo/i);
+    expect(view.container.querySelector('.cds-report')?.className).toContain('cds-report--waiting');
+  });
+
+  it('with the drafts in hand, the sheet becomes the document surface again', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />,
+    );
+
+    finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    expect(view.container.querySelector('.cds-report')?.className).not.toContain(
+      'cds-report--waiting',
+    );
+  });
+
+  it('the waiting sheet zeroes background and padding — the band has nowhere to come from', () => {
+    const waiting = reportCss.slice(reportCss.indexOf('.cds-report--waiting'));
+    expect(waiting).toMatch(/background:\s*none/);
+    expect(waiting).toMatch(/padding:\s*0/);
+  });
+
   it('o rascunho chega marcado como sugestão, e ainda NÃO é a resposta', async () => {
     const { stt, finish } = controllableStt(DRAFTS);
     load(report());
