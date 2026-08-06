@@ -378,6 +378,7 @@ export const en: Dict = {
     draftsRegion: 'answer drafts',
     draftsReady_one: 'Suggestion ready — {{count}} answer to review.',
     draftsReady_other: 'Suggestion ready — {{count}} answers to review.',
+    transcribingEyebrow: 'Listening',
     transcribing: 'transcribing the answer…',
     editAnswer: 'edit the answer',
     discardEdit: 'discard the edit',

@@ -404,6 +404,7 @@ export const pt = {
     draftsRegion: 'rascunhos das respostas',
     draftsReady_one: 'Sugestão pronta — {{count}} resposta para revisar.',
     draftsReady_other: 'Sugestão pronta — {{count}} respostas para revisar.',
+    transcribingEyebrow: 'Ouvindo',
     transcribing: 'transcrevendo a resposta…',
     editAnswer: 'editar a resposta',
     discardEdit: 'descartar a edição',
