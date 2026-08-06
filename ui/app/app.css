@@ -13,6 +13,11 @@
   background: var(--cds-ui-bg);
   color: var(--cds-ui-body-ink);
 
+  /* Altura do chrome que a estação NÃO ocupa: cabeçalho 64px + fio de contas 46px.
+     As estações medem a altura útil por esta variável, em vez do 110px literal — o
+     rodapé de navegação (74px), quando existe, entra sozinho na conta abaixo. */
+  --cds-shell-inset: 110px;
+
   /* chrome claro (default) */
   --cds-chrome-bg: rgba(255, 255, 255, 0.5);
   --cds-chrome-band-bg: rgba(255, 255, 255, 0.28);
@@ -77,6 +82,11 @@
   --cds-chrome-save-bg: rgba(119, 125, 69, 0.24);
   --cds-chrome-save-fg: #cfd6a6;
   --cds-chrome-save-dot: #d9a441;
+}
+
+/* estação com rodapé publicado: a barra de 74px sai da altura útil sozinha */
+.cds-app:has(.cds-nav-footer) {
+  --cds-shell-inset: 184px;
 }
 
 .cds-app-main {

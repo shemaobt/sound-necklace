@@ -28,6 +28,7 @@ import {
 import type { PaletteEntry } from '../../tokens';
 import { cardinal, sceneOrdinal } from '../cut/cutting';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
+import { StationNav } from '../../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../../state';
 import './conversation.css';
@@ -661,29 +662,30 @@ export function Conversation({
             <p>{t('conversation.reportFallback')}</p>
           </div>
         )}
-        {/* The transcription wait IS the screen (ENG-367), and the footer lives out
-            here: under the wait it offered the way out to the Export with the drafts
-            still in flight. Leaves the DOM rather than using `hidden`: the stylesheet
-            gives this div `display: flex`, which would beat the browser's `[hidden]` —
-            and the bug would have survived the test. */}
+        {/* A prévia do relatório troca de PÁGINA (voltar à conversa / guardar os
+            documentos), então vai ao rodapé — protótipo v3 §1. A navegação por
+            PERGUNTA fica no corpo: ela anda dentro desta página.
+
+            A guarda da ENG-367 continua: durante a espera da transcrição não se
+            publica navegação nenhuma, senão a saída para a Export ficaria oferecida
+            com os rascunhos ainda em voo. Não publicar é mais forte que esconder —
+            o `hidden` de lá perdia para o `display: flex` da folha de estilo. */}
         {transcribing ? null : (
-          <div className="cds-conversation-controls">
-            <Button variant="ghost" size="sm" onClick={() => setAtReport(false)}>
-              {t('conversation.prev')}
-            </Button>
-            {onGoToExport ? (
-              <Button
-                variant="primary"
-                data-role="primary-action"
-                onClick={() => {
-                  sound?.advance();
-                  onGoToExport();
-                }}
-              >
-                {t('conversation.toExport')}
-              </Button>
-            ) : null}
-          </div>
+          <StationNav
+            back={{ label: t('conversation.prev'), onClick: () => setAtReport(false) }}
+            next={
+              onGoToExport
+                ? {
+                    label: t('conversation.toExport'),
+                    onClick: () => {
+                      sound?.advance();
+                      onGoToExport();
+                    },
+                    enabled: true,
+                  }
+                : undefined
+            }
+          />
         )}
       </section>
     );

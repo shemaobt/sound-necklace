@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import { renderStation } from '../../organisms/nav-footer/testing';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -82,7 +83,7 @@ describe('Escuta 2 — título do protótipo (redesign design parity Fase 3)', (
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     expect(screen.getByRole('heading', { name: 'Corte a história em cenas' })).toBeTruthy();
   });
@@ -98,7 +99,7 @@ describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
 
@@ -122,7 +123,7 @@ describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
 
@@ -139,7 +140,7 @@ describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
 
@@ -159,7 +160,7 @@ describe('Escuta 2 — fio de contas das cenas confirmadas (ENG-388)', () => {
         pendingStart: null,
       }),
     );
-    const { container } = render(<Cut />);
+    const { container } = renderStation(<Cut />);
 
     // as contas seguem o colar (bead-first primeiro), não a ordem do array
     const beads = container.querySelectorAll('.cds-bead-strip-bead');
@@ -189,7 +190,10 @@ describe('Escuta 2 — fio de contas das cenas confirmadas (ENG-388)', () => {
 });
 
 describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
-  it('“Confirmar as cenas →” só existe com ≥1 cena travada', () => {
+  // Desde o rodapé de navegação (protótipo v3 §1) o avanço não SOME sem cena: fica
+  // apagado e continua clicável, e é o clique que traz o aviso da página — "nunca
+  // punir" (CLAUDE.md). Quem barra de verdade é o `confirmParts` do domínio.
+  it('sem cena travada, “Confirmar as cenas →” fica apagado no rodapé', () => {
     load(
       cutting({
         parts: [part({ part_id: 'PT1' })],
@@ -198,8 +202,27 @@ describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut />);
-    expect(screen.queryByRole('button', { name: 'Confirmar as cenas →' })).toBeNull();
+    renderStation(<Cut />);
+    expect(
+      screen.getByRole('button', { name: 'Confirmar as cenas →' }).getAttribute('data-enabled'),
+    ).toBe('false');
+  });
+
+  it('sem cena travada, clicar o avanço apagado avisa e não muda de modo', async () => {
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: null,
+        pendingStart: null,
+      }),
+    );
+    renderStation(<Cut />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar as cenas →' }));
+
+    expect(sessionStore.getState().session!.mode).toBe('escuta');
+    expect(screen.getByRole('alert').textContent?.trim()).toBeTruthy();
   });
 
   it('“Confirmar as cenas →” leva à Triage', async () => {
@@ -211,7 +234,7 @@ describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar as cenas →' }));
 
@@ -220,7 +243,7 @@ describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
     expect(s.partsConfirmed).toBe(true);
   });
 
-  it('“← Voltar” reabre a história (passo 1) preservando as cenas travadas', async () => {
+  it('“← Ouvir de novo” reabre a história (passo 1) preservando as cenas travadas', async () => {
     load(
       cutting({
         parts: [lockedPart('PT1', { s: 0, e: 4 }), part({ part_id: 'PT2' })],
@@ -229,9 +252,9 @@ describe('Escuta 2 — confirmar as cenas e voltar (PRD v2 §8.4)', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
-    await userEvent.click(screen.getByRole('button', { name: '← Voltar' }));
+    await userEvent.click(screen.getByRole('button', { name: '← Ouvir de novo' }));
 
     const s = sessionStore.getState().session!;
     expect(s.whole.confirmed).toBe(false);
@@ -254,7 +277,7 @@ describe('Escuta 2 — momento de revisão quando a história está toda em cena
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     expect(screen.getByText(/A história está toda em cenas/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
@@ -274,7 +297,7 @@ describe('Escuta 2 — momento de revisão quando a história está toda em cena
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
 
@@ -292,7 +315,7 @@ describe('Escuta 2 — momento de revisão quando a história está toda em cena
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     expect(screen.getByRole('button', { name: 'Confirmar as cenas →' })).toBeTruthy();
     expect(screen.queryByText(/A história está toda em cenas/)).toBeNull();
@@ -312,7 +335,7 @@ describe('Escuta 2 — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
         pendingStart: 5,
       }),
     );
-    const { container } = render(<Cut />);
+    const { container } = renderStation(<Cut />);
 
     expect(container.textContent ?? '').not.toMatch(/\d/);
     for (const el of container.querySelectorAll('[aria-label]')) {
@@ -336,7 +359,7 @@ describe('Escuta 2 — tratamento creme (redesign §6.3, §4.5)', () => {
         pendingStart: null,
       }),
     );
-    const { container } = render(<Cut />);
+    const { container } = renderStation(<Cut />);
 
     expect(container.querySelector('.cds-cut')).not.toBeNull();
     expect(container.querySelector('.cds-cut-emph')?.textContent).toBe('esta cena termina');
@@ -380,7 +403,7 @@ describe('Escuta 2 — a voz da UI (protótipo _lock/_chime/_blip)', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut sound={sound} />);
+    renderStation(<Cut sound={sound} />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
 
@@ -398,7 +421,7 @@ describe('Escuta 2 — a voz da UI (protótipo _lock/_chime/_blip)', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut sound={sound} />);
+    renderStation(<Cut sound={sound} />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
 
@@ -425,7 +448,7 @@ describe('Escuta 2 — a revisão exige cobertura de VERDADE', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     // não pode jurar cobertura: as contas 3,4,5 estão sem cena
     expect(screen.queryByText(/A história está toda em cenas/)).toBeNull();
@@ -442,7 +465,7 @@ describe('Escuta 2 — a revisão exige cobertura de VERDADE', () => {
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     expect(screen.getByText(/A história está toda em cenas/)).toBeTruthy();
   });
@@ -464,7 +487,7 @@ describe('Escuta 2 — a cápsula da cena tocada: Remover (simetria com frases)'
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     await removerPelaCapsula('Cena um');
 
@@ -484,7 +507,7 @@ describe('Escuta 2 — a cápsula da cena tocada: Remover (simetria com frases)'
         pendingStart: null,
       }),
     );
-    render(<Cut />);
+    renderStation(<Cut />);
 
     await removerPelaCapsula('Cena dois');
 

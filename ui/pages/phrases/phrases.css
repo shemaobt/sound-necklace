@@ -12,7 +12,7 @@
   align-items: center;
   justify-content: center;
   gap: clamp(12px, 2vh, 22px);
-  min-height: calc(100vh - 110px);
+  min-height: calc(100vh - var(--cds-shell-inset, 110px));
   padding: 18px 1.5rem 3rem;
   background: var(--cds-ui-bg);
   color: var(--cds-ui-body-ink);

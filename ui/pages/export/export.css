@@ -12,7 +12,7 @@
      alto continuar acessível pelo topo em vez de estourar para fora */
   justify-content: safe center;
   gap: 1.5rem;
-  min-height: calc(100vh - 110px);
+  min-height: calc(100vh - var(--cds-shell-inset, 110px));
   padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
   background: var(--cds-ui-bg);
   color: var(--cds-ui-body-ink);

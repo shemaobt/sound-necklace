@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import { renderStation } from '../../organisms/nav-footer/testing';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -99,7 +100,7 @@ afterEach(() => {
 describe('Segmentação — janela na cena ativa (PRD v2 §8.6)', () => {
   it('mostra só a cena ativa ± margem: banda tracejada presente, contas de fora ausentes', () => {
     load(segmenting({}));
-    const { container } = render(<Phrases />);
+    const { container } = renderStation(<Phrases />);
     // banda tracejada da cena desperta
     expect(container.querySelector('.cds-necklace-scene-band')).not.toBeNull();
     // a cena é {12,18}, margem 8 → janela 4..26; a conta 0 fica fora e não renderiza
@@ -110,7 +111,7 @@ describe('Segmentação — janela na cena ativa (PRD v2 §8.6)', () => {
 
   it('o título lê “Cena N · <tipo>” por extenso e o botão da última cena avança para o Conversation', () => {
     load(segmenting({}));
-    render(<Phrases />);
+    renderStation(<Phrases />);
     expect(screen.getByText('Cena um · Nascimento')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' })).toBeTruthy();
   });
@@ -122,7 +123,7 @@ describe('Segmentação — janela na cena ativa (PRD v2 §8.6)', () => {
         activeSceneId: 'PT1',
       }),
     );
-    render(<Phrases />);
+    renderStation(<Phrases />);
     expect(screen.getByRole('button', { name: 'Pronto com esta cena →' })).toBeTruthy();
   });
 });
@@ -130,7 +131,7 @@ describe('Segmentação — janela na cena ativa (PRD v2 §8.6)', () => {
 describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
   it('confirmar uma frase dentro da cena trava o span e mostra a conta no fio', async () => {
     load(segmenting({ selection: { s: 12, e: 15 }, pendingStart: null }));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
 
@@ -146,7 +147,7 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
     // primeFrase deixa pendingStart semeado na fronteira; confirmar antes de tocar
     // o fim travaria uma frase de UMA conta — o guarda pede o toque do fim
     load(segmenting({ selection: { s: 14, e: 14 }, pendingStart: 14 }));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
 
@@ -156,7 +157,7 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
 
   it('frase de UMA conta continua possível com o gesto completo (dois toques na mesma conta)', async () => {
     load(segmenting({ selection: { s: 14, e: 14 }, pendingStart: null }));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
 
@@ -167,7 +168,7 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
 
   it('sem seleção completa mostra a cópia exata e não trava', async () => {
     load(segmenting({ selection: null, pendingStart: null }));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
 
@@ -177,7 +178,7 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
 
   it('frase começando antes da fronteira mostra a cópia com a conta da emenda', async () => {
     load(segmenting({ selection: { s: 10, e: 14 }, pendingStart: null }));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
 
@@ -187,7 +188,7 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
 
   it('frase terminando fora do colar mostra a cópia exata', async () => {
     load(segmenting({ selection: { s: 14, e: 30 }, pendingStart: null }));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
 
@@ -199,7 +200,7 @@ describe('Segmentação — ancorar a frase e validar (PRD v2 §8.6)', () => {
 describe('Segmentação — travessia de borda (seam modal, PRD v2 §8.6)', () => {
   it('uma seleção que passa da borda abre o modal na variante simples', async () => {
     load(segmenting({ selection: { s: 14, e: 20 }, pendingStart: null }));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
 
@@ -209,7 +210,7 @@ describe('Segmentação — travessia de borda (seam modal, PRD v2 §8.6)', () =
 
   it('“Mover a borda até aqui” desliza a costura e trava a frase', async () => {
     load(segmenting({ selection: { s: 14, e: 20 }, pendingStart: null }));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
     await userEvent.click(screen.getByRole('button', { name: 'Mover a borda até aqui' }));
@@ -223,7 +224,7 @@ describe('Segmentação — travessia de borda (seam modal, PRD v2 §8.6)', () =
 
   it('“Reancorar dentro da cena” re-ancora na fronteira e não trava', async () => {
     load(segmenting({ selection: { s: 14, e: 20 }, pendingStart: null }));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
     await userEvent.click(screen.getByRole('button', { name: 'Reancorar dentro da cena' }));
@@ -251,7 +252,7 @@ describe('Segmentação — travessia de borda (seam modal, PRD v2 §8.6)', () =
         pendingStart: null,
       }),
     );
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta frase' }));
     expect(screen.queryByRole('button', { name: 'Mover a borda até aqui' })).toBeNull();
@@ -302,7 +303,7 @@ describe('Segmentação — a cápsula da frase tocada (ENG-388)', () => {
 
   it('“Remover” apaga a frase travada', async () => {
     withLockedPhrase();
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await removerPelaCapsula('Frase um');
 
@@ -320,7 +321,7 @@ describe('Segmentação — a cápsula da frase tocada (ENG-388)', () => {
         current: { layer: 'frases', index: -1 },
       }),
     );
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await removerPelaCapsula('Frase dois');
 
@@ -416,7 +417,7 @@ describe('Segmentação — a seleção do fio não sobrevive ao que ela aponta 
 describe('Segmentação — cena vazia e navegação (PRD v2 §8.6)', () => {
   it('sair de uma cena sem frases avisa uma vez; o segundo clique segue', async () => {
     load(segmenting({}));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     const done = () => screen.getByRole('button', { name: 'Já segmentei todas as cenas →' });
     await userEvent.click(done());
@@ -439,7 +440,7 @@ describe('Segmentação — cena vazia e navegação (PRD v2 §8.6)', () => {
         current: { layer: 'frases', index: 1 },
       }),
     );
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' }));
 
@@ -448,7 +449,7 @@ describe('Segmentação — cena vazia e navegação (PRD v2 §8.6)', () => {
 
   it('“← Voltar” na primeira cena volta à Triage', async () => {
     load(segmenting({}));
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '← Voltar' }));
 
@@ -462,7 +463,7 @@ describe('Segmentação — cena vazia e navegação (PRD v2 §8.6)', () => {
         activeSceneId: 'PT2',
       }),
     );
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: '← Voltar' }));
 
@@ -482,7 +483,7 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
         pendingStart: null,
       }),
     );
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     expect(screen.getByText(/As frases desta cena estão prontas/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Continuar →' })).toBeTruthy();
@@ -508,7 +509,7 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
         pendingStart: null,
       }),
     );
-    render(<Phrases />);
+    renderStation(<Phrases />);
     expect(screen.getByText('Cena um · Nascimento')).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
@@ -528,7 +529,7 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
         current: { layer: 'frases', index: 1 },
       }),
     );
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     expect(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' })).toBeTruthy();
     expect(screen.queryByText(/As frases desta cena estão prontas/)).toBeNull();
@@ -543,7 +544,7 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
         current: { layer: 'frases', index: 0 },
       }),
     );
-    render(<Phrases />);
+    renderStation(<Phrases />);
 
     expect(screen.getByText(/Toque no colar onde cada frase termina/)).toBeTruthy();
     expect(screen.queryByText(/para reouvir/)).toBeNull();
@@ -553,7 +554,7 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
 describe('Segmentação — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
   it('não mostra dígito, tem ≤1 linha de instrução e exatamente uma ação dominante', () => {
     load(segmenting({ selection: null, pendingStart: null }));
-    const { container } = render(<Phrases />);
+    const { container } = renderStation(<Phrases />);
 
     expect(container.textContent ?? '').not.toMatch(/\d/);
     for (const el of container.querySelectorAll('[aria-label]')) {
@@ -570,7 +571,7 @@ describe('Segmentação — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
 describe('Segmentação — tratamento creme (redesign §6.5, §4.5)', () => {
   it('o palco aplica o fundo creme', () => {
     load(segmenting({}));
-    const { container } = render(<Phrases />);
+    const { container } = renderStation(<Phrases />);
 
     expect(container.querySelector('.cds-phrases')).not.toBeNull();
     expect(phrasesCss).toMatch(/\.cds-phrases\s*\{[^}]*var\(--cds-ui-bg\)/);
@@ -594,7 +595,7 @@ describe('Segmentação — frase confirmada pinta as contas como as cenas (ENG-
         current: { layer: 'frases', index: 1 },
       }),
     );
-    const { container } = render(<Phrases />);
+    const { container } = renderStation(<Phrases />);
 
     const inside = container.querySelector(
       '.cds-necklace-bead[data-idx="14"] .cds-pearl',

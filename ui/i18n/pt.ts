@@ -272,7 +272,7 @@ export const pt = {
        anuncia o grupo, e cada conta já se anuncia pela sua cena. */
     stripAria: 'cenas costuradas',
     remove: 'Remover',
-    back: '← Voltar',
+    back: '← Ouvir de novo',
     confirmScene: '✓ Confirmar esta cena',
     confirmAll: 'Confirmar as cenas →',
   },
@@ -331,6 +331,7 @@ export const pt = {
     colarHint: 'toque no colar para ouvir esta cena',
     tagNoneFit: '⌀ nenhum se encaixa',
     tagPending: '— por classificar',
+    back: '← Cortar cenas',
     confAlta: 'certeza',
     confMedia: 'quase',
     confBaixa: 'na dúvida',

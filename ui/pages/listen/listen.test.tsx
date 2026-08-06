@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderStation } from '../../organisms/nav-footer/testing';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -57,7 +58,7 @@ afterEach(() => {
 describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () => {
   it('confirmar avança o fluxo guiado e não deixa ação de reabrir (ENG-342)', async () => {
     sessionStore.getState().load(makeSession());
-    render(<Listen />);
+    renderStation(<Listen />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Já ouvi a história completa' }));
 
@@ -74,7 +75,7 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
       ...incompleto,
       whole: { ...incompleto.whole, span: { s: 0, e: incompleto.totalBeads - 2 } },
     });
-    render(<Listen />);
+    renderStation(<Listen />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Já ouvi a história completa' }));
 
@@ -89,7 +90,7 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
     const heads: (number | null)[] = [];
     player.onHead((h) => heads.push(h));
     sessionStore.getState().load(makeSession());
-    render(<Listen player={player} />);
+    renderStation(<Listen player={player} />);
 
     document
       .querySelector('.cds-necklace')!
@@ -101,11 +102,10 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
     expect(heads[0]).toBe(0);
   });
 
-  // data-heard vive no wrapper [data-role="primary-action"] (index.tsx)
-  const heardTarget = (): Element | null =>
-    screen
-      .getByRole('button', { name: 'Já ouvi a história completa' })
-      .closest('[data-role="primary-action"]');
+  // "Já ouvi a história completa" saiu do corpo e virou o Avançar do rodapé
+  // (protótipo v3 §2); quem diz se acendeu é o `data-enabled` desse botão.
+  const heardTarget = (): Element =>
+    screen.getByRole('button', { name: 'Já ouvi a história completa' });
 
   /** Toca a partir da conta `from` e deixa a cabeça correr até o fim do áudio. */
   function playToEnd(engine: FixtureAudioEngine, from: number): void {
@@ -129,17 +129,17 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
   it('o pill de confirmação acende quando a cabeça percorre a história inteira', async () => {
     const { engine, player } = await makePlayer();
     sessionStore.getState().load(makeSession());
-    render(<Listen player={player} />);
+    renderStation(<Listen player={player} />);
 
-    expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
+    expect(heardTarget().getAttribute('data-enabled')).not.toBe('true');
     playToEnd(engine, 0);
-    expect(heardTarget()?.getAttribute('data-heard')).toBe('true');
+    expect(heardTarget().getAttribute('data-enabled')).toBe('true');
   });
 
   it('amostrar só o fim da história NÃO acende o pill (cobertura cumulativa)', async () => {
     const { engine, player } = await makePlayer();
     sessionStore.getState().load(makeSession());
-    render(<Listen player={player} />);
+    renderStation(<Listen player={player} />);
 
     // toca a partir da conta 5 até o fim: a cabeça alcança a última conta, mas
     // metade da história nunca foi ouvida
@@ -149,7 +149,7 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
       for (let bead = 5; bead < 10; bead++) engine.transport.advance(BEAD_SEC);
     });
 
-    expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
+    expect(heardTarget().getAttribute('data-enabled')).not.toBe('true');
   });
 
   it('o primeiro tick de uma história curta não acende o pill', async () => {
@@ -159,21 +159,21 @@ describe('Escuta 1 — decisão única ligada ao domínio (PRD v2 §8.3)', () =>
     const decoded = await engine.decode(pcmSpecBytes({ ...SPEC, samples: 12000 }));
     const player = engine.createPlayer(decoded, BEAD_SEC);
     sessionStore.getState().load(makeSession(undefined, 1.5));
-    render(<Listen player={player} />);
+    renderStation(<Listen player={player} />);
 
     act(() => {
       player.play(0, 5);
       engine.transport.advance(0.05); // cabeça na conta 0
     });
 
-    expect(heardTarget()?.getAttribute('data-heard')).not.toBe('true');
+    expect(heardTarget().getAttribute('data-enabled')).not.toBe('true');
   });
 });
 
 describe('Escuta 1 — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
-  it('não mostra dígito, tem ≤1 linha de instrução e exatamente uma ação dominante', () => {
+  it('não mostra dígito, tem ≤1 linha de instrução e uma única ação dominante', () => {
     sessionStore.getState().load(makeSession());
-    const { container } = render(<Listen />);
+    const { container } = renderStation(<Listen />);
 
     expect(container.textContent ?? '').not.toMatch(/\d/);
     for (const el of container.querySelectorAll('[aria-label]')) {
@@ -183,14 +183,17 @@ describe('Escuta 1 — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
       expect(el.getAttribute('title')).not.toMatch(/\d/);
     }
     expect(container.querySelectorAll('[data-role="instruction"]').length).toBeLessThanOrEqual(1);
-    expect(container.querySelectorAll('[data-role="primary-action"]')).toHaveLength(1);
+    // a ação dominante saiu do corpo e é o Avançar do rodapé (protótipo v3 §2):
+    // no corpo não sobra nenhuma, e na tela inteira continua havendo exatamente uma.
+    expect(container.querySelectorAll('[data-role="primary-action"]')).toHaveLength(0);
+    expect(container.querySelectorAll('.cds-nav-footer button')).toHaveLength(1);
   });
 });
 
 describe('Escuta 1 — tratamento cerimonial (redesign §6.2, §4.5)', () => {
   it('a seção cerimonial aplica o fundo olive e a tagline Merriweather itálico', () => {
     sessionStore.getState().load(makeSession());
-    const { container } = render(<Listen />);
+    const { container } = renderStation(<Listen />);
     expect(container.querySelector('.cds-listen')).not.toBeNull();
     expect(container.querySelector('.cds-listen-tagline')?.textContent).toBe('Ouça a história.');
 

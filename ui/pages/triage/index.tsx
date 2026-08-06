@@ -16,9 +16,8 @@ import {
 } from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { sceneColor } from '../cut/cutting';
-import { Button } from '../../atoms';
 import { ProgressDots } from '../../molecules';
-import { Necklace, SIZE_L } from '../../organisms';
+import { Necklace, SIZE_L, StationNav } from '../../organisms';
 import { CoverageDrawer } from '../../organisms/coverage-drawer/coverage-drawer';
 import { TriagePicker } from '../../organisms/triage-picker/triage-picker';
 import { sessionStore, useSessionStore } from '../../state';
@@ -143,6 +142,12 @@ export function Triage({ player = null, sound }: TriageProps) {
     advanceFocus();
   };
 
+  // Voltar ao Cortar (protótipo v3 §1): `escuta` com a história ainda confirmada é
+  // exatamente a Escuta 2 (`stepper-model`), o mesmo destino do fio de contas.
+  const back = (): void => {
+    sessionStore.getState().apply((s) => setMode(s, 'escuta'));
+  };
+
   // O gate compõe o `setMode` puro com a entrada de camada da referência
   // (L1006–1008): só quando o modo efetivo é phrases (há produtiva) roda
   // `enterSegmentacao`. Sob o gate só habilitado com produtiva, o ramo é certo.
@@ -178,13 +183,10 @@ export function Triage({ player = null, sound }: TriageProps) {
       />
 
       {reviewing ? (
-        <div className="cds-triage-review" data-role="primary-action">
+        <div className="cds-triage-review">
           <p className="cds-triage-review-headline" data-role="instruction">
             {t('triage.reviewHeadline')}
           </p>
-          <Button variant="primary" onClick={advance}>
-            {t('review.continue')}
-          </Button>
         </div>
       ) : (
         <div className="cds-triage-focus">
@@ -244,7 +246,10 @@ export function Triage({ player = null, sound }: TriageProps) {
         </p>
       ) : null}
 
-      {/* o CTA antigo virou o Continuar da revisão; aqui fica só o guia do gate */}
+      {/* o CTA de avanço vive agora no rodapé (protótipo v3 §2); no corpo sobra só o
+          guia do gate. Isso também resolve por construção o problema que motivou o
+          CTA duplicado: inspecionar uma cena com o gate já aberto não some mais com
+          a saída, porque a saída nunca esteve no corpo. */}
       {!gate.enabled && gate.message ? (
         <div className="cds-triage-gate">
           <p className="cds-triage-gate-msg" role="status">
@@ -253,18 +258,10 @@ export function Triage({ player = null, sound }: TriageProps) {
         </div>
       ) : null}
 
-      {/* Inspecionando uma cena com o gate JÁ aberto, a saída fica aqui — como o CTA
-          do protótipo, que vive no rodapé e não depende do picker. Sem isto, tocar
-          num ponto só para reouvir a cena (que é para isso que o colar está lá)
-          sumia com a única ação de avanço, e o único jeito de voltar a ela era
-          RECLASSIFICAR uma cena que ninguém queria mexer. */}
-      {gate.enabled && !reviewing ? (
-        <div className="cds-triage-gate" data-role="primary-action">
-          <Button variant="primary" onClick={advance}>
-            {t('review.continue')}
-          </Button>
-        </div>
-      ) : null}
+      <StationNav
+        back={{ label: t('triage.back'), onClick: back }}
+        next={{ label: t('review.continue'), onClick: advance, enabled: gate.enabled }}
+      />
 
       <CoverageDrawer coverage={coverage} />
     </section>

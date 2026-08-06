@@ -24,6 +24,7 @@ import { shouldGateToLogin } from './auth-gate';
 import { buildSessionPlayer, createDeferredPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
+import { NavFooterOutlet, NavFooterProvider } from '../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../organisms/preparing-session/preparing-session';
 import { buildAdapterRegistry, buildStationRegistry, type StationComponent } from './registries';
 import { ReviewBanner } from './review-banner';
@@ -629,11 +630,17 @@ export function App() {
     body = ownsHeader ? station : <main className="cds-app-main">{station}</main>;
   }
 
+  // O rodapé de navegação (protótipo v3 §1) fica no fim do shell e só existe quando
+  // a estação ativa publica a sua navegação — login, painel e telas de espera não
+  // publicam nada e simplesmente não o têm, sem lista de exceções aqui.
   return (
-    <div className="cds-app">
-      {header}
-      {body}
-      <AddonsLayer />
-    </div>
+    <NavFooterProvider>
+      <div className="cds-app">
+        {header}
+        {body}
+        <NavFooterOutlet />
+        <AddonsLayer />
+      </div>
+    </NavFooterProvider>
   );
 }

@@ -15,7 +15,7 @@
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
-  height: calc(100vh - 110px);
+  height: calc(100vh - var(--cds-shell-inset, 110px));
   min-height: 0;
   overflow: hidden;
   padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
