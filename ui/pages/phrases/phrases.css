@@ -53,15 +53,16 @@
   color: var(--cds-ui-ink-soft);
 }
 
-/* a moldura tracejada da cena desperta (protótipo: 1.5px dashed, radius 26) */
+/* O colar da cena desperta. Protótipo v3 §4 tirou a moldura tracejada: fica só o
+   fundo lavado, raio 26px e respiro maior — o colar é lido como objeto sem cerca.
+   O tracejado que sobra na tela é a BANDA da cena ativa, desenhada pelo colar. */
 .cds-phrases-stage {
   position: relative;
   width: 100%;
-  /* a moldura ABRAÇA o colar: o max-width exato vem inline da página
+  /* o fundo ABRAÇA o colar: o max-width exato vem inline da página
      (nº de contas da janela × slot + respiro); teto duro nas 22 do protótipo */
   max-width: 896px;
   padding: 22px 30px;
-  border: 1.5px dashed rgba(var(--cds-ui-line-rgb), 0.35);
   border-radius: var(--cds-radius-frame);
   background: var(--cds-ui-wash);
 }

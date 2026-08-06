@@ -46,11 +46,13 @@
 }
 
 /* o fio atrás de cada fileira (protótipo _rowStyle); escuro sobre creme,
-   claro sobre oliva — quem pinta oliva define --cds-necklace-cord */
+   claro sobre oliva — quem pinta oliva define --cds-necklace-cord.
+   Protótipo v3 §4 baixou a opacidade (claro .2 → .12) mantendo os 2px: o fio
+   sustenta as contas, não compete com elas. */
 .cds-necklace-cord {
   position: absolute;
   z-index: 0;
-  background: var(--cds-necklace-cord, rgba(var(--cds-ui-line-rgb), 0.2));
+  background: var(--cds-necklace-cord, rgba(var(--cds-ui-line-rgb), 0.12));
   pointer-events: none;
 }
 

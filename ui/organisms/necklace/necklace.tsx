@@ -116,7 +116,7 @@ function computeField(
   const beads: BeadDescriptor[] = [];
   for (let i = winS; i <= winE; i++) {
     const dim = window !== null && (i < window.s || i > window.e);
-    const pos = beadPosition(i, winS, bpr, size);
+    const pos = beadPosition(i, winS, winE, bpr, size);
     beads.push({
       index: i,
       left: pos.left + xOff,
@@ -131,12 +131,20 @@ function computeField(
   const shift = (r: Rect): Rect => ({ ...r, left: r.left + xOff });
   const sceneBand =
     window && sceneBandOn
-      ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, bpr, size, 4).map(shift)
+      ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, winE, bpr, size, 4).map(
+          shift,
+        )
       : [];
   const selectionBand = selection
-    ? bandRects(Math.max(winS, selection.s), Math.min(winE, selection.e), winS, bpr, size, 3).map(
-        shift,
-      )
+    ? bandRects(
+        Math.max(winS, selection.s),
+        Math.min(winE, selection.e),
+        winS,
+        winE,
+        bpr,
+        size,
+        3,
+      ).map(shift)
     : [];
 
   const rows = Math.ceil((winE - winS + 1) / bpr);
@@ -495,7 +503,7 @@ export function Necklace(props: NecklaceProps) {
     const win = windowRef.current;
     if (!win || head === null || !cabecaAndou || head < winS || head > winE) return;
     const next = followScrollTop(
-      beadPosition(head, winS, bpr, size).top,
+      beadPosition(head, winS, winE, bpr, size).top,
       size,
       win.clientHeight,
       win.scrollTop,

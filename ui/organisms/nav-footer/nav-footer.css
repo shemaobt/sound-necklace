@@ -52,9 +52,10 @@
   letter-spacing: 0.02em;
   white-space: nowrap;
   cursor: pointer;
-  /* apagado é aparência, nunca `disabled`: o clique ainda leva o aviso da página */
-  background: var(--cds-frame);
-  color: var(--cds-ink-subtle);
+  /* apagado é aparência, nunca `disabled`: o clique ainda leva o aviso da página.
+     Tokens de TEMA, não hex: o rodapé acompanha o modo escuro (ENG-393). */
+  background: var(--cds-ui-cta-disabled);
+  color: var(--cds-ui-ink-soft);
   transition:
     background 0.18s,
     color 0.18s,
@@ -62,7 +63,7 @@
 }
 
 .cds-nav-footer-next[data-enabled='true'] {
-  background: var(--cds-telha);
+  background: var(--cds-ui-accent);
   color: var(--cds-cream);
   box-shadow: 0 4px 14px rgba(190, 74, 1, 0.28);
 }
@@ -85,7 +86,7 @@
 
 .cds-nav-footer-back:focus-visible,
 .cds-nav-footer-next:focus-visible {
-  outline: 2px solid var(--cds-telha);
+  outline: 2px solid var(--cds-ui-accent);
   outline-offset: 2px;
 }
 

@@ -31,9 +31,13 @@
   color: var(--cds-ui-ink);
 }
 
+/* v3 §4: prato lavado sem moldura, como nos demais colares */
 .cds-export-stage {
   width: 100%;
   max-width: 880px;
+  padding: 20px 30px;
+  border-radius: 24px;
+  background: var(--cds-ui-wash);
 }
 
 .cds-export-warning,

@@ -79,13 +79,34 @@ export function beadsPerRow(width: number, size: Size): number {
   return Math.max(1, Math.floor(width / size.slot));
 }
 
+/**
+ * Deslocamento horizontal que centra a fileira `row` (protótipo v3 §4: "as linhas do
+ * colar são centralizadas; a última fileira, incompleta, fica centrada em vez de
+ * alinhada à esquerda"). É relativo à largura do CAMPO (`min(count, bpr)` contas), e
+ * não à do container: quem centra o campo inteiro é o `centerOffset`, então somar os
+ * dois sobre um colar curto — uma fileira só, já centrada — o empurraria para a
+ * direita. Por isso um colar de uma fileira dá 0 aqui.
+ */
+export function rowShift(row: number, count: number, bpr: number, size: Size): number {
+  const fieldCols = Math.min(count, bpr);
+  const inRow = Math.min(bpr, count - row * bpr);
+  if (inRow <= 0) return 0;
+  return ((fieldCols - inRow) * size.slot) / 2;
+}
+
 /** Centro (left/top) da conta `index` na grade absoluta, dada a janela e o bpr. */
-export function beadPosition(index: number, winS: number, bpr: number, size: Size): BeadPos {
+export function beadPosition(
+  index: number,
+  winS: number,
+  winE: number,
+  bpr: number,
+  size: Size,
+): BeadPos {
   const local = index - winS;
   const row = Math.floor(local / bpr);
   const col = local % bpr;
   return {
-    left: col * size.slot + size.slot / 2,
+    left: rowShift(row, winE - winS + 1, bpr, size) + col * size.slot + size.slot / 2,
     top: 6 + row * size.row + size.row / 2,
   };
 }
@@ -102,8 +123,11 @@ export function beadAtXY(
   bpr: number,
   size: Size,
 ): number {
-  const col = Math.max(0, Math.min(bpr - 1, Math.floor(x / size.slot)));
+  // a fileira sai do Y primeiro: só ela diz qual deslocamento descontar do X, e é
+  // esse desconto que mantém clique e desenho na mesma conta na fileira incompleta
   const row = Math.max(0, Math.floor((y - 6) / size.row));
+  const shift = rowShift(row, winE - winS + 1, bpr, size);
+  const col = Math.max(0, Math.min(bpr - 1, Math.floor((x - shift) / size.slot)));
   return Math.max(winS, Math.min(winE, winS + row * bpr + col));
 }
 
@@ -140,11 +164,13 @@ export function bandRects(
   s: number,
   e: number,
   winS: number,
+  winE: number,
   bpr: number,
   size: Size,
   pad: number,
 ): Rect[] {
   if (e < s) return [];
+  const count = winE - winS + 1;
   const ls = s - winS;
   const le = e - winS;
   const rowStart = Math.floor(ls / bpr);
@@ -154,7 +180,8 @@ export function bandRects(
     const colStart = r === rowStart ? ls % bpr : 0;
     const colEnd = r === rowEnd ? le % bpr : bpr - 1;
     rects.push({
-      left: colStart * size.slot + (size.slot - size.bead) / 2 - pad,
+      left:
+        rowShift(r, count, bpr, size) + colStart * size.slot + (size.slot - size.bead) / 2 - pad,
       width: (colEnd - colStart + 1) * size.slot - (size.slot - size.bead) + 2 * pad,
       top: 6 + r * size.row + (size.row - size.bead) / 2 - pad,
       height: size.bead + 2 * pad,
@@ -176,7 +203,7 @@ export function cordRects(winS: number, winE: number, bpr: number, size: Size): 
   for (let r = 0; r < rows; r++) {
     const n = Math.min(bpr, count - r * bpr);
     rects.push({
-      left: (size.slot - size.bead) / 2,
+      left: rowShift(r, count, bpr, size) + (size.slot - size.bead) / 2,
       width: (n - 1) * size.slot + size.bead,
       top: 6 + r * size.row + size.row / 2 - 1,
       height: 2,

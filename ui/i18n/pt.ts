@@ -272,6 +272,7 @@ export const pt = {
        anuncia o grupo, e cada conta já se anuncia pela sua cena. */
     stripAria: 'cenas costuradas',
     remove: 'Remover',
+    chipOpen: 'ver as ações desta cena',
     back: '← Ouvir de novo',
     confirmScene: '✓ Confirmar esta cena',
     confirmAll: 'Confirmar as cenas →',
@@ -283,6 +284,7 @@ export const pt = {
     halfSelection: 'Toque no colar onde esta frase termina.',
     stripAria: 'frases desta cena',
     remove: 'Remover',
+    chipOpen: 'ver as ações desta frase',
     back: '← Voltar',
     confirmPhrase: '✓ Confirmar esta frase',
     doneLast: 'Já segmentei todas as cenas →',

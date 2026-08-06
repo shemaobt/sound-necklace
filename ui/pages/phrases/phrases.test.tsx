@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { renderStation } from '../../organisms/nav-footer/testing';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -362,7 +362,7 @@ describe('Segmentação — a seleção do fio não sobrevive ao que ela aponta 
         activeSceneId: 'PT1',
       }),
     );
-    const { container } = render(<Phrases />);
+    const { container } = renderStation(<Phrases />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Frase um' }));
     expect(container.querySelector('.cds-bead-strip-capsule')).not.toBeNull();

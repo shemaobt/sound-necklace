@@ -60,7 +60,10 @@ function beadClient(el: HTMLElement, index: number, winS: number): { x: number; 
   // fora da janela renderizada: cai na geometria, medindo o bpr em vigor
   const rect = el.getBoundingClientRect();
   const bpr = beadsPerRow(el.clientWidth, SIZE_M);
-  const pos = beadPosition(index, winS, bpr, SIZE_M);
+  // o tamanho da janela sai do próprio DOM (uma conta renderizada por índice), que é
+  // o que a geometria precisa para centrar a fileira incompleta (protótipo v3 §4)
+  const winE = winS + el.querySelectorAll('.cds-necklace-bead').length - 1;
+  const pos = beadPosition(index, winS, winE, bpr, SIZE_M);
   return { x: rect.left + pos.left, y: rect.top + pos.top };
 }
 

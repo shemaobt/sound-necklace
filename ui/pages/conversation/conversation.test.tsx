@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { renderStation } from '../../organisms/nav-footer/testing';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -547,12 +547,8 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     const recorder = new FixtureVoiceRecorder();
     const startSpy = vi.spyOn(recorder, 'start');
     load(mapping());
-<<<<<<< HEAD
     const state = ensureMapping(mapping());
-    const { unmount } = render(<Conversation recorder={recorder} />);
-=======
-    renderStation(<Conversation recorder={recorder} />);
->>>>>>> 92ddc21 (feat(ui): page navigation moves to a persistent footer)
+    const { unmount } = renderStation(<Conversation recorder={recorder} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     const rec = await startSpy.mock.results[0]!.value;

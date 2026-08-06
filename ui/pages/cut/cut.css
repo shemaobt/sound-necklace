@@ -50,11 +50,15 @@
   color: var(--cds-ui-accent);
 }
 
+/* v3 §4: o colar assenta num prato lavado, sem moldura — raio 26px e respiro maior */
 .cds-cut-stage {
   position: relative;
   width: 100%;
   /* 28 contas por fileira no slot de 34px (protótipo _chunk(beads, 28)) */
   max-width: 952px;
+  padding: 22px 32px;
+  border-radius: 26px;
+  background: var(--cds-ui-wash);
 }
 
 /* hairline entre o colar e as cenas costuradas (protótipo) */
