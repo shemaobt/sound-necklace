@@ -19,6 +19,7 @@ import { ShemaIcon } from '../../tokens';
 import { buildBeads, createSession, hashPCM } from '../../../domain';
 import { navigate as routerNavigate } from '../../app/router';
 import { sessionStore } from '../../state';
+import { useRefreshOnFocus } from '../../app/use-refresh-on-focus';
 import { GranularityLock } from './granularity-lock';
 import {
   defaultAudioEngine,
@@ -241,6 +242,11 @@ export function Setup({
 
   // A granularidade do projeto (ENG-352). Falha de leitura não é fatal: a criação
   // barra sozinha logo abaixo (sem nível não há grade), então basta o aviso.
+  //
+  // `reread` re-dispara a leitura: o nível é decisão do PROJETO, e quem já estava
+  // com esta tela aberta seguia vendo o valor velho depois de outra pessoa confirmar,
+  // até recarregar a página. Voltar a olhar a aba relê (useRefreshOnFocus, abaixo).
+  const [reread, setReread] = useState(0);
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -262,7 +268,9 @@ export function Setup({
     return () => {
       alive = false;
     };
-  }, [projectSettings, projectId, canEdit]);
+  }, [projectSettings, projectId, canEdit, reread]);
+
+  useRefreshOnFocus(() => setReread((n) => n + 1));
 
   const create = async (): Promise<void> => {
     setError(null);

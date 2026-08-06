@@ -90,12 +90,12 @@ describe('paletas de identidade de segmento (§4.2)', () => {
   it('índices vizinhos caem sempre em famílias diferentes, inclusive na volta', () => {
     for (let i = 0; i < scenePalette.length; i++) {
       const a = i % SCENE_FAMILIES;
-      const b = (i + 1) % scenePalette.length % SCENE_FAMILIES;
+      const b = ((i + 1) % scenePalette.length) % SCENE_FAMILIES;
       expect(a).not.toBe(b);
     }
     for (let i = 0; i < phrasePalette.length; i++) {
       const a = i % PHRASE_FAMILIES;
-      const b = (i + 1) % phrasePalette.length % PHRASE_FAMILIES;
+      const b = ((i + 1) % phrasePalette.length) % PHRASE_FAMILIES;
       expect(a).not.toBe(b);
     }
   });

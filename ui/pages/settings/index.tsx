@@ -11,6 +11,7 @@ import type { GranularityLevel, ProjectSettings } from '../../../contracts';
 import { Pearl } from '../../atoms';
 import { setLang, type Lang } from '../../i18n';
 import { ShemaIcon, scenePalette } from '../../tokens';
+import { useRefreshOnFocus } from '../../app/use-refresh-on-focus';
 import { defaultCanEdit, defaultProjectId, defaultProjectSettings } from './ports';
 import './settings.css';
 
@@ -72,6 +73,11 @@ export function Settings({ store = defaultProjectSettings(), projectId, canEdit 
    */
   const [error, setError] = useState<string | null>(null);
 
+  // `reread` re-dispara a leitura. O nível é decisão do PROJETO e IRREVERSÍVEL: quem
+  // ficou com esta tela aberta seguia vendo "ainda não escolhido" depois de outra
+  // pessoa confirmar, e podia tentar escolher de novo só para receber o 409. Voltar a
+  // olhar a aba relê.
+  const [reread, setReread] = useState(0);
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -95,7 +101,9 @@ export function Settings({ store = defaultProjectSettings(), projectId, canEdit 
     return () => {
       alive = false;
     };
-  }, [store, projectId, canEdit]);
+  }, [store, projectId, canEdit, reread]);
+
+  useRefreshOnFocus(() => setReread((n) => n + 1));
 
   const confirm = async (): Promise<void> => {
     setError(null);
