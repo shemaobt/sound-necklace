@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AnswerDraft, Transcriber } from '../../../adapters/stt/types';
@@ -74,6 +74,13 @@ export interface ReportProps {
    * de um áudio que a pessoa descartou (ENG-327).
    */
   recordingVersion?: Record<string, number>;
+  /**
+   * Tells the station that the transcription wait has taken over the screen. The
+   * navigation footer lives in the PARENT, outside this sheet, and without this signal
+   * it stayed under the wait offering the way out to the Export with the drafts still
+   * in flight.
+   */
+  onWaitingChange?: (waiting: boolean) => void;
 }
 
 /** Prefixo da chave reservada da nota — fora do vocabulário de perguntas. */
@@ -571,6 +578,7 @@ export function Report({
   stt = null,
   sessionId = null,
   recordingVersion,
+  onWaitingChange,
 }: ReportProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
@@ -667,6 +675,16 @@ export function Report({
     retry,
   } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion, needsTranscription);
 
+  const waiting = sttPhase === 'running';
+  // Layout, not a plain effect: the signal goes up BEFORE paint. With `useEffect` the
+  // parent only reacted once the wait was already on screen, and the footer flashed
+  // for a frame.
+  useLayoutEffect(() => {
+    onWaitingChange?.(waiting);
+    // unmounting the sheet with the wait standing would hide the footer forever
+    return () => onWaitingChange?.(false);
+  }, [waiting, onWaitingChange]);
+
   // O inglês que chegou vira o conteúdo INICIAL do campo em revisão, gravado uma
   // única vez na chave reservada. Depois disso o campo é da pessoa: apagá-lo tem
   // de deixá-lo apagado — ler o rascunho como fallback ressuscitaria o texto que
@@ -752,15 +770,17 @@ export function Report({
    *
    * 'failed' e o esgotamento do prazo não seguram ninguém: a revisão abre e cada cartão
    * traz seu "tentar de novo", porque digitar à mão sempre resolve (§8.7 — sem beco).
+   *
+   * The sheet drops its own document surface while it waits (`--waiting`): the 760px
+   * column with background and padding, emptied of content, turned into a band across
+   * the screen under the animation.
    */
-  const waiting = sttPhase === 'running';
-
   const toReview = sequence.filter(
     (s) => voiceSet.has(voiceAnswerPath(s)) && !readAnswer(mapped.mapping, s).trim(),
   ).length;
 
   return (
-    <section className="cds-report">
+    <section className={waiting ? 'cds-report cds-report--waiting' : 'cds-report'}>
       {waiting ? null : (
         <header className="cds-report-header">
           <p className="cds-report-eyebrow">{t('report.eyebrow')}</p>

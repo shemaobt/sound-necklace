@@ -178,6 +178,106 @@ describe('Conversation — resume where the interview stopped (ENG-321)', () => 
   });
 });
 
+/**
+ * A SKIPPED question is an empty answer, not a pending one: not recording is itself
+ * the decision. Resuming on the FIRST hole pinned the session to the beginning — with
+ * audio recorded up to the 40th, reopening landed on the 2nd, every time, with dozens
+ * of clicks between the facilitator and where they had stopped. The cursor now follows
+ * the LAST answer, which is where the conversation actually stopped; skipped questions
+ * stay reachable through "← anterior" and the bead thread.
+ */
+describe('Conversation — resume follows the last answer, not the first hole', () => {
+  it('with questions skipped in the middle, reopens AFTER the last answered one', () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = [seq[0]!, seq[2]!, seq[5]!].map((s) => voiceAnswerPath(s));
+
+    load(state);
+    render(<Conversation voicePaths={() => voice} />);
+
+    expect(questionText()).toBe(seq[6]!.question.q);
+  });
+
+  it('with the LAST question answered, reopens the review even with holes behind', () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = [seq[1]!, seq[seq.length - 1]!].map((s) => voiceAnswerPath(s));
+
+    load(state);
+    const view = render(<Conversation voicePaths={() => voice} />);
+
+    expect(view.container.querySelector('.cds-conversation-question')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Próxima pergunta/i })).toBeNull();
+  });
+
+  /**
+   * The pre-review preparation (ENG-337) was only ever triggered by `goNext`. A session
+   * REOPENED straight into the review never triggered it, and the screen sat on
+   * "bringing the audio back" forever — a dead end. With the rule above sending more
+   * sessions there, mount has to prepare on its own.
+   */
+  it('reopening straight into the review, preparation runs — the wait is not a dead end', async () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = seq.map((s) => voiceAnswerPath(s));
+
+    load(state);
+    render(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => voice}
+        onGoToExport={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Guardar os documentos →' })).toBeTruthy();
+  });
+});
+
+/**
+ * ENG-367 turned the transcription wait into the screen, but the footer lives in the
+ * PARENT and never found out: "← anterior" and "Guardar os documentos →" stayed under
+ * the wait, offering the way out to the Export with the drafts still in flight.
+ */
+describe('Conversation — the footer does not survive the transcription wait', () => {
+  it('while transcription runs, neither the back link nor the CTA stay on screen', async () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = seq.map((s) => voiceAnswerPath(s));
+    // a job that never finishes: the screen stays on the wait for the whole test
+    const stt = {
+      start: () => Promise.resolve(),
+      progress: () => Promise.resolve({ done: false, drafts: {} }),
+    };
+    // the report discovers recordings through the recorder, not through `meta.voice`:
+    // without one that answers "it exists", nothing is transcribed and the wait never starts
+    const recorder: VoiceRecorder = {
+      start: () => Promise.reject(new Error('unused in this test')),
+      play: () => Promise.resolve(),
+      duration: () => Promise.resolve(9),
+      stopPlayback: () => {},
+      has: () => Promise.resolve(true),
+      delete: () => Promise.resolve(),
+      onPlayback: () => () => {},
+    };
+
+    load(state);
+    render(
+      <Conversation
+        recorder={recorder}
+        voicePaths={() => voice}
+        onGoToExport={vi.fn()}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    await screen.findByText(/transcrevendo/i);
+    expect(screen.queryByRole('button', { name: 'Guardar os documentos →' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '← anterior' })).toBeNull();
+  });
+});
+
 describe('Conversation — a sequência completa da conversa (PRD v2 §8.7)', () => {
   it('percorre 11 + 5×2 + 5×2 perguntas na ordem do domínio, com a cena none_fit incluída no nível 2', async () => {
     const state = mapping();
