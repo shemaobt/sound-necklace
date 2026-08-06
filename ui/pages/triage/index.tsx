@@ -119,8 +119,12 @@ export function Triage({ player = null, sound }: TriageProps) {
     if (nx >= 0) setFocusIdx(nx);
   };
 
+  // Classificar move o foco para a PRÓXIMA cena, então o áudio da anterior tem de
+  // calar junto: seguir tocando deixaria o ouvinte olhando uma cena e ouvindo outra,
+  // e o som é a única âncora que ele tem sobre a tela.
   const classify = (kind: string, confidence: Confidence): void => {
     const id = scene.part_id;
+    player?.stop();
     sound?.lock();
     sessionStore.getState().apply((s) => tagScene(s, id, kind, confidence));
     setInspecting(null);
@@ -136,6 +140,7 @@ export function Triage({ player = null, sound }: TriageProps) {
 
   const noneFit = (): void => {
     const id = scene.part_id;
+    player?.stop();
     sound?.lock();
     sessionStore.getState().apply((s) => markNoneFit(s, id));
     setInspecting(null);

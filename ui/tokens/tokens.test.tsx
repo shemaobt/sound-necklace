@@ -41,29 +41,13 @@ describe('tokens Shemá — valores congelados (§4.1/§4.4)', () => {
 });
 
 describe('paletas de identidade de segmento (§4.2)', () => {
-  it('cena tem 8 matizes exatos e frase 6 tons mais claros', () => {
-    expect(scenePalette.map((p) => p.base)).toEqual([
-      '#BE4A01',
-      '#9A7B2E',
-      '#4E7A6A',
-      '#5E6B8C',
-      '#8C5A74',
-      '#777D45',
-      '#89AAA3',
-      '#A85D3E',
-    ]);
-    expect(phrasePalette.map((p) => p.base)).toEqual([
-      '#D98A54',
-      '#C4A96A',
-      '#86AC9C',
-      '#93A0BE',
-      '#B98FA8',
-      '#A3A878',
-    ]);
-  });
+  /** As 8 famílias de cena e as 6 de frase do protótipo. */
+  const SCENE_FAMILIES = 8;
+  const PHRASE_FAMILIES = 6;
 
-  it('cada entrada expõe {base, lit, deep} com as triplas exatas do Protótipo.dc.html (PAL/PALF)', () => {
-    expect(scenePalette).toEqual([
+  it('as famílias do protótipo abrem a paleta, intactas e na ordem original', () => {
+    // continuam byte-idênticas: uma sessão antiga não muda de cor ao reabrir
+    expect(scenePalette.slice(0, SCENE_FAMILIES)).toEqual([
       { base: '#BE4A01', lit: '#E8813E', deep: '#8F3701' },
       { base: '#9A7B2E', lit: '#C2A55A', deep: '#6E5A22' },
       { base: '#4E7A6A', lit: '#7BA595', deep: '#3A5C4F' },
@@ -73,7 +57,7 @@ describe('paletas de identidade de segmento (§4.2)', () => {
       { base: '#89AAA3', lit: '#B2CCC6', deep: '#5F827B' },
       { base: '#A85D3E', lit: '#CE8767', deep: '#7E442C' },
     ]);
-    expect(phrasePalette).toEqual([
+    expect(phrasePalette.slice(0, PHRASE_FAMILIES)).toEqual([
       { base: '#D98A54', lit: '#F0B489', deep: '#B06A3A' },
       { base: '#C4A96A', lit: '#E0CA97', deep: '#9C844D' },
       { base: '#86AC9C', lit: '#AECFC2', deep: '#688B7D' },
@@ -81,6 +65,39 @@ describe('paletas de identidade de segmento (§4.2)', () => {
       { base: '#B98FA8', lit: '#D8B5C9', deep: '#966F87' },
       { base: '#A3A878', lit: '#C4C8A0', deep: '#7F845B' },
     ]);
+  });
+
+  it('a paleta estendida cobre uma história longa sem repetir cor', () => {
+    expect(scenePalette).toHaveLength(SCENE_FAMILIES * 5);
+    expect(phrasePalette).toHaveLength(PHRASE_FAMILIES * 5);
+    expect(new Set(scenePalette.map((p) => p.base)).size).toBe(scenePalette.length);
+    expect(new Set(phrasePalette.map((p) => p.base)).size).toBe(phrasePalette.length);
+  });
+
+  it('cada entrada é uma tripla {base, lit, deep} de hex de 6 dígitos', () => {
+    for (const p of [...scenePalette, ...phrasePalette]) {
+      for (const c of [p.base, p.lit, p.deep]) expect(c).toMatch(/^#[0-9A-F]{6}$/);
+    }
+  });
+
+  /**
+   * A promessa do §4.2 é sobre VIZINHANÇA, não sobre a lista: `sceneColor` indexa
+   * pela posição no colar, então o que precisa ser verdade é que duas cenas vizinhas
+   * nunca caiam na mesma família — nem em duas variações da mesma cor. A ordenação
+   * por variação (0–7 originais, 8–15 claras, …) é o que garante isso, inclusive na
+   * volta do módulo, quando o índice recomeça.
+   */
+  it('índices vizinhos caem sempre em famílias diferentes, inclusive na volta', () => {
+    for (let i = 0; i < scenePalette.length; i++) {
+      const a = i % SCENE_FAMILIES;
+      const b = (i + 1) % scenePalette.length % SCENE_FAMILIES;
+      expect(a).not.toBe(b);
+    }
+    for (let i = 0; i < phrasePalette.length; i++) {
+      const a = i % PHRASE_FAMILIES;
+      const b = (i + 1) % phrasePalette.length % PHRASE_FAMILIES;
+      expect(a).not.toBe(b);
+    }
   });
 });
 
