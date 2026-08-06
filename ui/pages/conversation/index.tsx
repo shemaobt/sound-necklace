@@ -1,4 +1,4 @@
-import { type ComponentType, useEffect, useMemo, useRef, useState } from 'react';
+import { type ComponentType, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
@@ -93,6 +93,8 @@ interface ReportSlotProps {
   stt?: Transcriber | null;
   sessionId?: string | null;
   recordingVersion?: Record<string, number>;
+  /** The transcription wait took the screen: this station's footer leaves with it. */
+  onWaitingChange?: (waiting: boolean) => void;
 }
 
 /**
@@ -472,33 +474,53 @@ export function Conversation({
   }, [session]);
   const sequence = useMemo(() => (mapped ? questionSequence(mapped) : []), [mapped]);
 
-  // Resume (ENG-321): the conversation reopens on the first question with NO
-  // answer at all — text in the answer store OR voice persisted in `meta.voice`.
-  // Whoever stopped at the 5th returns to the 5th; everything answered reopens
-  // on the last one (the report is one step away). Mount only: from then on the
-  // cursor belongs to the user.
-  const firstUnanswered = (): number => {
-    if (!mapped || sequence.length === 0) return 0;
-    const voiced = voicePaths();
-    return sequence.findIndex(
-      (s2) => !readAnswer(mapped.mapping, s2).trim() && !voiced.includes(voiceAnswerPath(s2)),
-    );
-  };
-  const [index, setIndex] = useState(() => {
-    const first = firstUnanswered();
-    return first === -1 ? sequence.length - 1 : first;
-  });
   /**
-   * ENG-367: sair e voltar não devolve à entrevista quando não há mais o que perguntar.
-   * Toda pergunta já respondida ou gravada significa que a conversa acabou — reabrir na
-   * última pergunta convidava a regravar uma resposta que já existia. Com pergunta em
-   * aberto, a entrevista continua sendo o lugar certo.
+   * Resume (ENG-321): the cursor follows the LAST answer — text in the answer store
+   * OR voice persisted in `meta.voice` — and reopens on the question after it.
+   *
+   * It used to open on the FIRST question with no answer, which read a skipped
+   * question as a pending one. Skipping is deliberate: not recording IS the answer,
+   * an empty one. So one skip early in the interview became a permanent hole, and a
+   * session recorded up to the 40th reopened on the 2nd, every single time, with
+   * dozens of clicks between the facilitator and where they actually stopped.
+   * A skipped question is still reachable through "← anterior" and the bead thread.
+   *
+   * Mount only: from then on the cursor belongs to the user.
    */
-  const [atReport, setAtReport] = useState(() => firstUnanswered() === -1);
+  const lastAnswered = (): number => {
+    if (!mapped || sequence.length === 0) return -1;
+    const voiced = voicePaths();
+    const answered = (s2: QuestionSlot): boolean =>
+      Boolean(readAnswer(mapped.mapping, s2).trim()) || voiced.includes(voiceAnswerPath(s2));
+    for (let i = sequence.length - 1; i >= 0; i--) if (answered(sequence[i]!)) return i;
+    return -1;
+  };
+  const [index, setIndex] = useState(() =>
+    Math.min(lastAnswered() + 1, Math.max(sequence.length - 1, 0)),
+  );
+  /**
+   * The session was RESUMED at the end, rather than reaching it through this mount's
+   * `goNext` — a distinction `atReport` alone loses the moment anyone advances. Frozen
+   * as initial state because recording an answer changes what `lastAnswered` returns.
+   */
+  const [resumedAtReport] = useState(
+    () => sequence.length > 0 && lastAnswered() === sequence.length - 1,
+  );
+  /**
+   * ENG-367: leaving and coming back does not return to the interview when there is
+   * nothing left to ask. The LAST question answered means the conversation reached its
+   * end — reopening on it invited re-recording an answer that already existed. Holes
+   * behind it are deliberate skips, not pending work, and do not hold the session in
+   * the interview.
+   */
+  const [atReport, setAtReport] = useState(() => resumedAtReport);
   // Preparo pré-revisão (ENG-337): a descoberta das respostas roda ANTES de abrir
   // o relatório — ele chega pronto, sem "procurando" pipocando linha a linha. Uma
   // vez pronto, re-entradas abrem direto (o preparo re-roda por baixo, silencioso).
   const [reportReady, setReportReady] = useState(false);
+  // The report sheet signals when the transcription wait takes over the screen; the
+  // footer belongs to this station, and without the signal it survived the wait.
+  const [transcribing, setTranscribing] = useState(false);
   const [reportVoice, setReportVoice] = useState<{
     checked: ReadonlySet<string>;
     has: ReadonlySet<string>;
@@ -519,74 +541,13 @@ export function Conversation({
     return () => player.stop();
   }, [player]);
 
-  if (!session || !mapped || !sequence.length) return null;
-
-  const total = sequence.length;
-  const idx = Math.min(index, total - 1);
-  const slot = sequence[idx]!;
-  const path = voiceAnswerPath(slot);
-
-  if (atReport) {
-    if (!reportReady) {
-      // ainda não é o relatório: a região se anuncia como o preparo (role=status dentro)
-      return (
-        <section className="cds-conversation" aria-label={t('conversation.preparingReview')}>
-          <PreparingSession
-            eyebrow={t('conversation.preparingReviewEyebrow')}
-            line={t('conversation.preparingReview')}
-          />
-        </section>
-      );
-    }
-    return (
-      <section className="cds-conversation" aria-label={t('conversation.reportAria')}>
-        {ReportStation ? (
-          // sem o recorder o relatório não acha gravação nenhuma e todo card cai no
-          // "ainda sem resposta gravada" — a voz da entrevista ficava inalcançável lá
-          <ReportStation
-            recorder={recorder}
-            preloaded={reportVoice ?? undefined}
-            stt={stt}
-            sessionId={sessionId}
-            recordingVersion={recordingVersion}
-          />
-        ) : (
-          <div className="cds-conversation-report-fallback">
-            <p>{t('conversation.reportFallback')}</p>
-          </div>
-        )}
-        <div className="cds-conversation-controls">
-          <Button variant="ghost" size="sm" onClick={() => setAtReport(false)}>
-            {t('conversation.prev')}
-          </Button>
-          {onGoToExport ? (
-            <Button
-              variant="primary"
-              data-role="primary-action"
-              onClick={() => {
-                sound?.advance();
-                onGoToExport();
-              }}
-            >
-              {t('conversation.toExport')}
-            </Button>
-          ) : null}
-        </div>
-      </section>
-    );
-  }
-
-  const goPrev = (): void => {
-    if (idx > 0) setIndex(idx - 1);
-    else sessionStore.getState().apply((s) => setMode(s, 'segmentacao'));
-  };
   /**
    * Descobre as respostas gravadas ANTES da revisão (ENG-337). Um caminho que não
    * responder no teto entra sem veredito (a linha re-descobre); falha resolve como
    * "sem gravação" pelo catch — o preparo nunca segura a revisão para sempre. É
    * também onde os rascunhos de transcrição (ENG-327) serão aguardados.
    */
-  const prepareReview = async (): Promise<void> => {
+  const prepareReview = useCallback(async (): Promise<void> => {
     if (!recorder) {
       setReportReady(true);
       return;
@@ -618,8 +579,91 @@ export function Conversation({
     });
     setReportVoice({ checked, has });
     setReportReady(true);
-  };
+  }, [recorder, sequence]);
 
+  /**
+   * Reopening STRAIGHT into the review has to prepare on its own. Preparation was only
+   * ever triggered by `goNext`, so a session resumed with everything answered sat on
+   * "bringing the audio back" forever — a dead end. Mount only: from there on `goNext`
+   * owns the transition, and re-preparing on every render would redo the whole
+   * discovery pass.
+   */
+  const preparedOnMount = useRef(false);
+  useEffect(() => {
+    if (!resumedAtReport || preparedOnMount.current) return;
+    preparedOnMount.current = true;
+    void prepareReview();
+  }, [resumedAtReport, prepareReview]);
+
+  if (!session || !mapped || !sequence.length) return null;
+
+  const total = sequence.length;
+  const idx = Math.min(index, total - 1);
+  const slot = sequence[idx]!;
+  const path = voiceAnswerPath(slot);
+
+  if (atReport) {
+    if (!reportReady) {
+      // ainda não é o relatório: a região se anuncia como o preparo (role=status dentro)
+      return (
+        <section className="cds-conversation" aria-label={t('conversation.preparingReview')}>
+          <PreparingSession
+            eyebrow={t('conversation.preparingReviewEyebrow')}
+            line={t('conversation.preparingReview')}
+          />
+        </section>
+      );
+    }
+    return (
+      <section className="cds-conversation" aria-label={t('conversation.reportAria')}>
+        {ReportStation ? (
+          // sem o recorder o relatório não acha gravação nenhuma e todo card cai no
+          // "ainda sem resposta gravada" — a voz da entrevista ficava inalcançável lá
+          <ReportStation
+            recorder={recorder}
+            preloaded={reportVoice ?? undefined}
+            stt={stt}
+            sessionId={sessionId}
+            recordingVersion={recordingVersion}
+            onWaitingChange={setTranscribing}
+          />
+        ) : (
+          <div className="cds-conversation-report-fallback">
+            <p>{t('conversation.reportFallback')}</p>
+          </div>
+        )}
+        {/* The transcription wait IS the screen (ENG-367), and the footer lives out
+            here: under the wait it offered the way out to the Export with the drafts
+            still in flight. Leaves the DOM rather than using `hidden`: the stylesheet
+            gives this div `display: flex`, which would beat the browser's `[hidden]` —
+            and the bug would have survived the test. */}
+        {transcribing ? null : (
+          <div className="cds-conversation-controls">
+            <Button variant="ghost" size="sm" onClick={() => setAtReport(false)}>
+              {t('conversation.prev')}
+            </Button>
+            {onGoToExport ? (
+              <Button
+                variant="primary"
+                data-role="primary-action"
+                onClick={() => {
+                  sound?.advance();
+                  onGoToExport();
+                }}
+              >
+                {t('conversation.toExport')}
+              </Button>
+            ) : null}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  const goPrev = (): void => {
+    if (idx > 0) setIndex(idx - 1);
+    else sessionStore.getState().apply((s) => setMode(s, 'segmentacao'));
+  };
   const goNext = (): void => {
     if (idx < total - 1) setIndex(idx + 1);
     else {
