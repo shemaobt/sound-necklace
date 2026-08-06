@@ -224,7 +224,8 @@ describe('Conversation — resume follows the last answer, not the first hole', 
     const voice = seq.map((s) => voiceAnswerPath(s));
 
     load(state);
-    render(
+    // renderStation: a saída da prévia é o Avançar do RODAPÉ desde o v3 §1
+    renderStation(
       <Conversation
         recorder={new FixtureVoiceRecorder()}
         voicePaths={() => voice}
