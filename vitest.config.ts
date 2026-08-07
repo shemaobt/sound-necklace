@@ -16,6 +16,9 @@ export default defineConfig({
             'adapters/**/*.test.ts',
             'tests/golden/**/*.test.ts',
           ],
+          // mesmo escudo do projeto dom: `.browser.test.ts` casa com o padrão acima e
+          // rodaria aqui, em node, onde não existe o IndexedDB que ele veio testar
+          exclude: ['adapters/**/*.browser.test.ts'],
         },
       },
       {
@@ -51,7 +54,7 @@ export default defineConfig({
           env: { VITE_API_MODE: 'fixture' },
           // init do i18n (default PT) para os testes de interação — ENG-279.
           setupFiles: ['./ui/i18n/test-setup.ts'],
-          include: ['ui/**/*.browser.test.{ts,tsx}'],
+          include: ['{ui,adapters}/**/*.browser.test.{ts,tsx}'],
           browser: {
             enabled: true,
             headless: true,

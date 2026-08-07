@@ -18,6 +18,7 @@ import {
   serializeArtifact,
   toSessionDto,
 } from '../../../contracts';
+import { idbAudioCache } from '../../../adapters/voice/idb-cache';
 import { Button } from '../../atoms';
 import { scenePalette } from '../../tokens';
 import {
@@ -242,6 +243,13 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       setNotice(null);
       sound?.advance();
       setPhase('saved');
+      // O áudio em cache existe para a janela em que ele é reproduzido — gravar,
+      // revisar, exportar. Ela fechou. Depois do `complete`, e nunca antes: o cache é
+      // o que faz a revisão abrir sem rede, e apagá-lo numa conclusão que falhou
+      // deixaria a próxima tentativa mais lenta em vez de mais limpa.
+      void idbAudioCache()
+        .clearSession(sessionId)
+        .catch(() => undefined);
     } catch {
       setNotice(t('export.saveError'));
       sound?.refuse();

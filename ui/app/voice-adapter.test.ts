@@ -31,15 +31,18 @@ describe('voiceStoreFor — modo real liga aos recursos da sessão (ENG-247)', (
     vi.resetModules();
   });
 
-  it('VITE_API_MODE=real devolve o SessionVoiceStore (persistência no tripod-api)', async () => {
+  it('VITE_API_MODE=real persiste no tripod-api, por trás do cache de áudio', async () => {
     vi.stubEnv('VITE_API_MODE', 'real');
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.prod/api');
     vi.resetModules();
     const { voiceStoreFor: realFor } = await import('./voice-adapter');
-    const { SessionVoiceStore } = await import('../../adapters/voice/session-store');
+    const { CachedVoiceStore } = await import('../../adapters/voice/cached-store');
     const { MemoryVoiceStore } = await import('../../adapters/voice/memory-store');
-    expect(realFor('sessao-x')).toBeInstanceOf(SessionVoiceStore);
-    // fora de sessão não há namespace de recursos — cai no armazém em memória
+    // o armazém real ganhou uma camada: os bytes continuam indo para a API, e o
+    // cache é o que evita baixá-los de novo a cada reabertura da sessão
+    expect(realFor('sessao-x')).toBeInstanceOf(CachedVoiceStore);
+    // fora de sessão não há namespace de recursos — cai no armazém em memória, que
+    // já É um cache e não ganha outro por cima
     expect(realFor(null)).toBeInstanceOf(MemoryVoiceStore);
   });
 });
