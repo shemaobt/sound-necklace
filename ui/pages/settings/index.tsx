@@ -2,17 +2,29 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 
+import type { AudioEngine, Player } from '../../../adapters/audio';
+import type { BucketSource } from '../../../adapters/bucket';
+import type { GranularityResolver } from '../../../adapters/granularity';
 import {
   ForbiddenError,
   GranularityLockedError,
   type ProjectSettingsStore,
 } from '../../../adapters/project-settings';
+import type { BucketAudio } from '../../../contracts';
 import type { GranularityLevel, ProjectSettings } from '../../../contracts';
 import { Pearl } from '../../atoms';
 import { setLang, type Lang } from '../../i18n';
 import { ShemaIcon, scenePalette } from '../../tokens';
 import { useRefreshOnFocus } from '../../app/use-refresh-on-focus';
-import { defaultCanEdit, defaultProjectId, defaultProjectSettings } from './ports';
+import {
+  defaultAudioEngine,
+  defaultBucket,
+  defaultCanEdit,
+  defaultProjectId,
+  defaultProjectSettings,
+  defaultResolver,
+} from './ports';
+import { resolveSample, SAMPLE_SEC, sampleAudio, sampleBeadCount, sampleBeadSize } from './sample';
 import './settings.css';
 
 /**
@@ -34,13 +46,6 @@ const LEVELS: readonly GranularityLevel[] = ['small', 'medium', 'large'];
 /** O cordão da prévia é telha, a mesma cor de cena que o colar usa (§4.2). */
 const CORD_TINT = scenePalette[0]!;
 
-/** O cordão da prévia: conta menor cabe em mais contas — é o que o nível significa. */
-const PREVIEW: Record<GranularityLevel, { size: number; count: number }> = {
-  small: { size: 13, count: 30 },
-  medium: { size: 18, count: 21 },
-  large: { size: 27, count: 14 },
-};
-
 /**
  * Os idiomas que a ferramenta REALMENTE fala. A referência desenha um terceiro cartão
  * (Español), mas traduzir o app inteiro é trabalho de tradutor humano, não de layout —
@@ -56,9 +61,20 @@ export interface SettingsProps {
   projectId?: string;
   /** Se esta pessoa pode confirmar a granularidade (papel `project_admin`). */
   canEdit?: boolean;
+  /** A amostra ouve o primeiro áudio do projeto (decisão do dono, 2026-08-06). */
+  bucket?: BucketSource;
+  audioEngine?: AudioEngine;
+  resolver?: GranularityResolver;
 }
 
-export function Settings({ store = defaultProjectSettings(), projectId, canEdit }: SettingsProps) {
+export function Settings({
+  store = defaultProjectSettings(),
+  projectId,
+  canEdit,
+  bucket = defaultBucket(),
+  audioEngine = defaultAudioEngine(),
+  resolver = defaultResolver(),
+}: SettingsProps) {
   const { t } = useTranslation();
 
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
@@ -105,6 +121,33 @@ export function Settings({ store = defaultProjectSettings(), projectId, canEdit 
 
   useRefreshOnFocus(() => setReread((n) => n + 1));
 
+  /**
+   * A amostra (decisão do dono, 2026-08-06): o PRIMEIRO áudio do projeto, só o
+   * começo dele, e a quantidade de contas que cada nível produz nesse mesmo trecho.
+   * Escolher o tamanho da conta olhando um cordão inventado pedia um ato de fé —
+   * ninguém sabe o que "Pequena" quer dizer até ouvir.
+   *
+   * A LISTAGEM basta para o cordão: o `beadSec` sai do acousteme, que já vem nela.
+   * Os BYTES só descem quando alguém pede para ouvir — decodificar um áudio de campo
+   * inteiro para desenhar contas seria cobrar caro por uma decoração.
+   */
+  const [audios, setAudios] = useState<BucketAudio[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void bucket
+      .list()
+      .then((list) => alive && setAudios(list))
+      .catch(() => alive && setAudios([]));
+    return () => {
+      alive = false;
+    };
+  }, [bucket]);
+
+  const sample = sampleAudio(audios);
+  const [player, setPlayer] = useState<Player | null>(null);
+  const [loadingSample, setLoadingSample] = useState(false);
+  useEffect(() => () => player?.stop(), [player]);
+
   const confirm = async (): Promise<void> => {
     setError(null);
     setStatus('saving');
@@ -134,6 +177,37 @@ export function Settings({ store = defaultProjectSettings(), projectId, canEdit 
     }
   };
 
+  const sampleBeadSec = resolveSample(
+    (level, acousteme) => resolver.resolve(level, acousteme ?? null),
+    // confirmado, a amostra ilustra o nível REAL do projeto; antes disso, o escolhido
+    (settings?.locked ? settings.granularity_level : null) ?? chosen,
+    sample,
+  );
+  const beadCount = sampleBeadSec === null ? 0 : sampleBeadCount(sampleBeadSec);
+
+  /** Toca o começo do áudio na grade do nível — o mesmo trecho em qualquer nível. */
+  const hearSample = async (): Promise<void> => {
+    if (!sample || sampleBeadSec === null || beadCount === 0) return;
+    if (player) {
+      player.stop();
+      setPlayer(null);
+      return;
+    }
+    setLoadingSample(true);
+    // fronteira de IO: falha aqui não trava a tela — a escolha do nível não depende
+    // de ouvir, e um erro de rede não pode sequestrar a decisão do projeto
+    try {
+      const decoded = await audioEngine.decode(await bucket.fetchBytes(sample.id));
+      const p = audioEngine.createPlayer(decoded, sampleBeadSec);
+      p.play(0, beadCount - 1);
+      setPlayer(p);
+    } catch {
+      setError('settings.sampleError');
+    } finally {
+      setLoadingSample(false);
+    }
+  };
+
   const confirmed = settings?.locked ?? false;
   /**
    * Confirmado, o valor é o do SERVIDOR — e `null` quando nem a releitura o trouxe.
@@ -153,6 +227,11 @@ export function Settings({ store = defaultProjectSettings(), projectId, canEdit 
       <LanguageCard />
 
       <GranularityCard
+        beadCount={beadCount}
+        hasSample={sample !== null && beadCount > 0}
+        sampleBusy={loadingSample}
+        samplePlaying={player !== null}
+        onHearSample={() => void hearSample()}
         confirmed={confirmed}
         shown={shown}
         admin={admin}
@@ -210,6 +289,11 @@ function GranularityCard({
   admin,
   status,
   error,
+  beadCount,
+  hasSample,
+  sampleBusy,
+  samplePlaying,
+  onHearSample,
   onChoose,
   onConfirm,
 }: {
@@ -219,12 +303,18 @@ function GranularityCard({
   status: 'loading' | 'idle' | 'saving';
   /** Chave do dicionário, traduzida aqui — ver o estado `error` em `Settings`. */
   error: string | null;
+  /** Contas que o nível escolhido produz no trecho de amostra. */
+  beadCount: number;
+  hasSample: boolean;
+  sampleBusy: boolean;
+  samplePlaying: boolean;
+  onHearSample: () => void;
   onChoose: (level: GranularityLevel) => void;
   onConfirm: () => void;
 }) {
   const { t } = useTranslation();
   /** O cordão é decoração (`aria-hidden`), então um tamanho de desenho não afirma nada. */
-  const preview = PREVIEW[shown ?? 'medium'];
+  const beadSize = sampleBeadSize(beadCount);
 
   return (
     <section className="cds-settings-gran" aria-labelledby="cds-settings-gran-title">
@@ -243,11 +333,36 @@ function GranularityCard({
         <p role="status">{t('settings.loading')}</p>
       ) : (
         <>
+          {/* O cordão agora é MEDIDO, não inventado: são as contas que este nível
+              produz no trecho de amostra. Ele é decoração (`aria-hidden`) — quem
+              afirma a densidade em texto é a linha abaixo, que o leitor de tela lê. */}
           <div className="cds-settings-cord" aria-hidden="true">
-            {Array.from({ length: preview.count }, (_, i) => (
-              <Pearl key={i} state="lit" tint={CORD_TINT} size={preview.size} />
+            {Array.from({ length: beadCount }, (_, i) => (
+              <Pearl key={i} state="lit" tint={CORD_TINT} size={beadSize} />
             ))}
           </div>
+
+          {hasSample ? (
+            <div className="cds-settings-sample">
+              <p className="cds-settings-sample-line">
+                {t('settings.sampleDensity', { count: beadCount, seconds: SAMPLE_SEC })}
+              </p>
+              <button
+                type="button"
+                className="cds-settings-sample-play"
+                onClick={onHearSample}
+                disabled={sampleBusy}
+              >
+                {t(
+                  sampleBusy
+                    ? 'settings.sampleLoading'
+                    : samplePlaying
+                      ? 'settings.sampleStop'
+                      : 'settings.samplePlay',
+                )}
+              </button>
+            </div>
+          ) : null}
 
           {confirmed ? (
             shown ? (

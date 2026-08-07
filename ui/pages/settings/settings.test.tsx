@@ -184,3 +184,104 @@ describe('Configurações — idioma', () => {
     expect(screen.queryByText(pt.settings.title)).toBeNull();
   });
 });
+
+/**
+ * A amostra (decisão do dono, 2026-08-06). Escolher o tamanho da conta olhando um
+ * cordão inventado pedia um ato de fé: ninguém sabe o que "Pequena" quer dizer até
+ * ouvir. O que a amostra precisa acertar é UMA coisa — o mesmo trecho do mesmo áudio
+ * mudando de densidade conforme o nível. Se a conta encolhe e o número não sobe, a
+ * amostra não ensina nada.
+ */
+describe('Configurações — a amostra da granularidade', () => {
+  /** Bucket de um áudio só: a amostra é o PRIMEIRO da listagem. */
+  function bucketWith(ids: string[]) {
+    return {
+      list: vi.fn(async () =>
+        ids.map((id) => ({ id, filename: `${id}.wav`, consent_present: true })),
+      ),
+      fetchBytes: vi.fn(async () => new ArrayBuffer(8)),
+    };
+  }
+
+  /** Resolvedor de teste: nível → beadSec, sem passar pela regra O8 real. */
+  const resolver = {
+    resolve: (level: 'small' | 'medium' | 'large') => ({
+      beadSec: { small: 0.2, medium: 0.3, large: 0.5 }[level],
+    }),
+  };
+
+  const beads = (container: HTMLElement) =>
+    container.querySelectorAll('.cds-settings-cord .cds-pearl').length;
+
+  it('o mesmo trecho vira mais contas em Pequena e menos em Grande', async () => {
+    const { container } = render(
+      <Settings
+        store={new FixtureProjectSettings()}
+        projectId="proj-1"
+        canEdit
+        bucket={bucketWith(['a1'])}
+        resolver={resolver}
+      />,
+    );
+
+    const group = await screen.findByRole('radiogroup', { name: pt.settings.granEyebrow });
+    const pick = async (name: string) =>
+      userEvent.click(within(group).getByRole('radio', { name }));
+
+    await pick(pt.settings.level.small);
+    await waitFor(() => expect(beads(container)).toBeGreaterThan(0));
+    const small = beads(container);
+
+    await pick(pt.settings.level.medium);
+    await waitFor(() => expect(beads(container)).toBeLessThan(small));
+    const medium = beads(container);
+
+    await pick(pt.settings.level.large);
+    await waitFor(() => expect(beads(container)).toBeLessThan(medium));
+  });
+
+  it('a densidade também é dita em texto — o cordão é decoração', async () => {
+    render(
+      <Settings
+        store={new FixtureProjectSettings()}
+        projectId="proj-1"
+        canEdit
+        bucket={bucketWith(['a1'])}
+        resolver={resolver}
+      />,
+    );
+
+    expect(await screen.findByText(/viram \d+ contas/)).toBeTruthy();
+  });
+
+  it('sem áudio no projeto, a amostra some em vez de mentir', async () => {
+    render(
+      <Settings
+        store={new FixtureProjectSettings()}
+        projectId="proj-1"
+        canEdit
+        bucket={bucketWith([])}
+        resolver={resolver}
+      />,
+    );
+
+    expect(await screen.findByText(pt.settings.granTitle)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: pt.settings.samplePlay })).toBeNull();
+  });
+
+  it('os bytes só descem quando alguém pede para ouvir', async () => {
+    const bucket = bucketWith(['a1']);
+    render(
+      <Settings
+        store={new FixtureProjectSettings()}
+        projectId="proj-1"
+        canEdit
+        bucket={bucket}
+        resolver={resolver}
+      />,
+    );
+
+    await screen.findByRole('button', { name: pt.settings.samplePlay });
+    expect(bucket.fetchBytes).not.toHaveBeenCalled();
+  });
+});

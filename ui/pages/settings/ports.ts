@@ -12,7 +12,15 @@ import { appProjectSettings } from '../../app/project-settings-adapter';
 
 // O papel é o mesmo nas duas telas: a trava do Setup (ENG-363) o lê para escolher a
 // variante, esta tela para oferecer ou não a confirmação. Uma definição só.
-export { defaultCanEdit, defaultProjectId } from '../setup/ports';
+// O bucket, o motor de áudio e o resolvedor também: a amostra da granularidade ouve o
+// MESMO primeiro áudio que a Setup lista, resolvido pela MESMA regra O8.
+export {
+  defaultAudioEngine,
+  defaultBucket,
+  defaultCanEdit,
+  defaultProjectId,
+  defaultResolver,
+} from '../setup/ports';
 
 export function defaultProjectSettings(): ProjectSettingsStore {
   return appProjectSettings();

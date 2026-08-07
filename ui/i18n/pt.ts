@@ -68,6 +68,13 @@ export const pt = {
     granForbidden: 'Só quem administra o projeto pode escolher o tamanho da conta.',
     granAlreadyConfirmed: 'O tamanho da conta deste projeto já foi confirmado e não muda mais.',
     granSaveError: 'Não foi possível confirmar. Tente de novo.',
+    sampleDensity_one: 'Neste tamanho, {{seconds}} segundos desta história viram 1 conta.',
+    sampleDensity_other:
+      'Neste tamanho, {{seconds}} segundos desta história viram {{count}} contas.',
+    samplePlay: '▶ ouvir esta amostra',
+    sampleStop: '⏸ parar',
+    sampleLoading: 'carregando o áudio…',
+    sampleError: 'Não deu para tocar a amostra agora. A escolha do tamanho não depende dela.',
     level: {
       small: 'Pequeno',
       medium: 'Médio',
