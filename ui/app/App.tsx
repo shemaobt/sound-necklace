@@ -18,6 +18,7 @@ import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
 import i18n from '../i18n';
+import { interviewLocale } from '../i18n/interview-language';
 import { API_BASE_URL, API_MODE } from './api-config';
 import { appAuth, authReady } from './auth-adapter';
 import { shouldGateToLogin } from './auth-gate';
@@ -534,7 +535,7 @@ export function App() {
         ? sttRegistration.real({
             baseUrl: API_BASE_URL,
             token: () => appAuth().token(),
-            language: () => (i18n.language.startsWith('en') ? 'en-US' : 'pt-BR'),
+            language: () => interviewLocale(i18n.language),
             onUnauthorized: handleUnauthorized,
           })
         : sttRegistration.fixture(),
