@@ -70,6 +70,12 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await app.walkToReport();
   await shot('09d-report');
 
+  // Esta captura GRAVA uma resposta em voz lá em cima, e resposta gravada só vira
+  // texto quando alguém confirma a transcrição (ENG-327) — sem isso o "Concluir"
+  // é recusado e a captura morria no penúltimo passo, sem nunca fotografar a
+  // Export. O gate está certo; era a captura que não passava por ele.
+  await app.confirmAllDrafts();
+
   await app.completeSession();
   await shot('10-export');
 });

@@ -166,6 +166,31 @@ describe('Triage — o colar da cena em foco (protótipo tColarRows/tapTriageBea
     expect(player.toggle).toHaveBeenCalledWith('PT1', 1, 6);
   });
 
+  /**
+   * Classificar move o foco para a PRÓXIMA cena. Se o áudio da cena anterior seguisse
+   * tocando, o ouvinte estaria olhando uma cena e ouvindo outra — o som deixaria de
+   * dizer a verdade sobre a tela, que é a única âncora que ele tem.
+   */
+  it('confirmar a classificação para o áudio da cena que estava tocando', async () => {
+    const player = spyPlayer();
+    load(triaging([lockedPart('PT1', { s: 1, e: 6 }), lockedPart('PT2', { s: 7, e: 9 })]));
+    renderStation(<Triage player={player} />);
+
+    await classifyFocused();
+
+    expect(player.stop).toHaveBeenCalled();
+  });
+
+  it('marcar “nenhum se encaixa” também para o áudio', async () => {
+    const player = spyPlayer();
+    load(triaging([lockedPart('PT1', { s: 1, e: 6 }), lockedPart('PT2', { s: 7, e: 9 })]));
+    renderStation(<Triage player={player} />);
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Nenhum se encaixa' }));
+
+    expect(player.stop).toHaveBeenCalled();
+  });
+
   it('o colar segue a cena em foco: saltar de ponto troca o span que o toque reproduz', async () => {
     const player = spyPlayer();
     load(triaging([lockedPart('PT1', { s: 1, e: 6 }), lockedPart('PT2', { s: 7, e: 9 })]));
