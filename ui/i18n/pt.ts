@@ -90,10 +90,8 @@ export const pt = {
   setup: {
     eyebrow: 'Preparação',
     title: 'Nova sessão',
-    trustLine:
-      'Seus áudios e respostas ficam guardados com segurança no seu projeto. Só a sua equipe tem acesso.',
-    aiVoiceNotice:
-      'A voz do guia é sintética, gerada por IA. As perguntas são escritas por pessoas — a ferramenta não inventa conteúdo.',
+    disclosure:
+      'Áudio e respostas ficam no seu projeto. A voz do guia é sintética; as perguntas são escritas por pessoas.',
     gridWarning: 'Trave o tamanho da conta antes de ancorar. Mudá-lo depois desloca as fronteiras.',
     noAudio: 'Escolha um arquivo de áudio primeiro.',
     bucketError: 'Não foi possível carregar os áudios do projeto. Recarregue a página.',
@@ -101,13 +99,6 @@ export const pt = {
     noBeadSec: 'Não consegui definir o tamanho da conta para este áudio.',
     createFailed: 'Não foi possível criar a sessão. Tente de novo.',
     decodeError: 'Não consegui decodificar este áudio ({{detail}}). Tente um WAV PCM.',
-    doorsAria: 'Como começar',
-    doorZeroTitle: 'Começar do zero',
-    doorZeroDesc: 'Escolher um áudio e ancorar de ouvido.',
-    doorEntregaTitle: 'Confirmar uma entrega',
-    doorEntregaDesc: 'Carregar propostas do projeto.',
-    doorRetornoTitle: 'Retomar um retorno',
-    doorRetornoDesc: 'Continuar de um retorno salvo.',
     levelPequenaTitle: 'Pequena',
     levelPequenaDesc: 'contas mais curtas',
     levelMediaTitle: 'Média',
@@ -145,9 +136,6 @@ export const pt = {
     consentCheck: 'Confirmo o consentimento de uso no pipeline do projeto.',
     creating: 'Criando…',
     create: 'Criar a sessão →',
-    importEntregaHint: 'Carregue uma entrega do projeto para confirmar de ouvido.',
-    importRetornoHint: 'Retome um retorno já salvo para continuar de onde parou.',
-    goToImports: 'Ir para os arquivos do pipeline →',
   },
   export: {
     headline: 'A história está inteira no colar.',
@@ -408,6 +396,7 @@ export const pt = {
     pauseAnswer: '⏸ pausar a resposta',
     openingAnswer: 'abrindo a resposta…',
     noAnswerYet: 'ainda sem resposta gravada',
+    noAnswerGiven: 'sem resposta',
     voicePending: 'procurando a resposta gravada',
     writeAnswer: 'escrever a resposta',
     addNote: 'acrescentar uma observação',
@@ -454,6 +443,8 @@ export const pt = {
     typedHint: 'A facilitadora pode escrever depois — nunca por você.',
     prev: '← anterior',
     next: 'Próxima pergunta',
+    skip: 'sem resposta',
+    unskip: 'voltar a perguntar',
     progressAria: 'progresso da conversa',
   },
 };

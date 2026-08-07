@@ -21,6 +21,7 @@ import {
   voiceAnswerPath,
 } from '../../../domain';
 import { sessionStore } from '../../state';
+import { markSkipped } from '../conversation/answered';
 import Report from './index';
 
 /**
@@ -238,6 +239,24 @@ describe('Relatório — a voz aparece conforme cada resposta resolve (ENG-319)'
     const card = cardFor(q.q);
     expect(await within(card).findByPlaceholderText('ainda sem resposta gravada')).toBeTruthy();
     expect(within(card).queryByLabelText('procurando a resposta gravada')).toBeNull();
+  });
+
+  /**
+   * "ainda" promete uma resposta que ainda vem. Numa pergunta que a pessoa preferiu
+   * não responder essa promessa é falsa — e o vazio é a única pista de que a marca
+   * deixada na entrevista chegou até aqui.
+   */
+  it('a pergunta marcada sem resposta na entrevista diz isso, e não "ainda"', async () => {
+    const q = L1_Q[0]!;
+    const path = voiceAnswerPath({ level: 1, k: q.k });
+    const recorder = controllableRecorder({ [path]: false });
+
+    load(markSkipped(report(), { level: 1, k: q.k }));
+    render(<Report recorder={recorder} />);
+
+    const card = cardFor(q.q);
+    expect(await within(card).findByPlaceholderText('sem resposta')).toBeTruthy();
+    expect(within(card).queryByPlaceholderText('ainda sem resposta gravada')).toBeNull();
   });
 });
 

@@ -217,6 +217,12 @@
   color: rgba(246, 245, 235, 0.6);
 }
 
+/* Encostado na dica, com a margem negativa descontando o padding do próprio botão:
+   o rótulo alinha com a linha de texto acima, e não como um segundo bloco solto. */
+.cds-conversation-stage-skip {
+  margin: 6px 0 0 -10px;
+}
+
 .cds-conversation-stage-footer {
   display: flex;
   align-items: center;

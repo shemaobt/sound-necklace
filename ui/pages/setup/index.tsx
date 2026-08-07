@@ -44,35 +44,20 @@ import './setup.css';
  * em ui/pages/project-settings) e esta tela o EXIBE. Sem campo numérico de segundos
  * (§6.1/§8.1) e sem default — projeto sem nível manda configurar.
  *
- * As três portas de entrada (§8.9) usam Radix radio-group (foco em roleta + ARIA de
- * graça); o visual são os tokens Shemá. As duas portas de importação levam à estação
- * de arquivos do pipeline (ENG-248).
+ * A escolha do áudio usa Radix radio-group (foco em roleta + ARIA de graça); o visual
+ * são os tokens Shemá. Carregar uma entrega ou retomar um retorno segue existindo como
+ * a estação de arquivos do pipeline (ENG-248), não mais como porta desta tela.
  *
  * Camada de wiring: as portas chegam por prop nos testes; em produção resolvem os
  * singletons fixture (ports.ts). O `navigate` é injetável para o teste observar a
  * navegação assíncrona sem tocar o histórico.
  */
 
-type Door = 'zero' | 'entrega' | 'anchoring';
-
-/** As portas e os níveis guardam CHAVES i18n (a cópia vive no dicionário — ENG-279). */
-/* entrega/retorno ainda não são funcionais: visíveis porém DESABILITADAS (decisão do
-   dono, ENG-311) — presentes para anunciar o caminho, sem fingir que já andam. */
-const DOORS: readonly { value: Door; titleKey: string; descKey: string; disabled?: boolean }[] = [
-  { value: 'zero', titleKey: 'setup.doorZeroTitle', descKey: 'setup.doorZeroDesc' },
-  {
-    value: 'entrega',
-    titleKey: 'setup.doorEntregaTitle',
-    descKey: 'setup.doorEntregaDesc',
-    disabled: true,
-  },
-  {
-    value: 'anchoring',
-    titleKey: 'setup.doorRetornoTitle',
-    descKey: 'setup.doorRetornoDesc',
-    disabled: true,
-  },
-];
+/* As três portas — começar do zero, confirmar uma entrega, retomar um retorno — saíram
+   da tela (decisão do dono). A ENG-311 as quis visíveis e desabilitadas, para anunciar
+   o caminho; na prática duas delas ocupavam o topo sem abrir nada, e um seletor com uma
+   opção só não escolhe. As outras duas voltam quando existirem, pela porta que a
+   estação /imports já é. */
 
 /** Rótulo de cada nível. O Setup só EXIBE — quem escolhe é a tela de configuração. */
 const LEVEL_TITLE_KEY: Record<GranularityLevel, string> = {
@@ -197,7 +182,6 @@ export function Setup({
 }: SetupProps) {
   const { t } = useTranslation();
   const [audios, setAudios] = useState<BucketAudio[] | null>(null);
-  const [door, setDoor] = useState<Door>('zero');
   const [audioId, setAudioId] = useState<string | null>(null);
   // A granularidade vem do PROJETO (ENG-352). `null` = ninguém decidiu ainda.
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
@@ -362,166 +346,137 @@ export function Setup({
         <h1 className="cds-setup-title">{t('setup.title')}</h1>
       </header>
 
-      <RadioGroup.Root
-        className="cds-setup-doors"
-        aria-label={t('setup.doorsAria')}
-        value={door}
-        onValueChange={(v) => setDoor(v as Door)}
-      >
-        {DOORS.map((d) => (
-          <RadioGroup.Item
-            key={d.value}
-            value={d.value}
-            className="cds-setup-door"
-            disabled={d.disabled ?? false}
-          >
-            <span className="cds-setup-door-title">{t(d.titleKey)}</span>
-            <span className="cds-setup-door-desc">{t(d.descKey)}</span>
-          </RadioGroup.Item>
-        ))}
-      </RadioGroup.Root>
-
-      {door === 'zero' ? (
-        <div className="cds-setup-form">
-          {/* Duas colunas da MESMA altura (ENG-386, pacote de melhorias UI item 1):
+      <div className="cds-setup-form">
+        {/* Duas colunas da MESMA altura (ENG-386, pacote de melhorias UI item 1):
               à esquerda a entrega, que é a única coisa que pode encolher; à direita,
               estreita, o que se decide e — ancorada no pé — a ação. É o arranjo que
               tira o botão da dependência do tamanho da lista, e não o teto da janela:
               um teto em pixels só resolveria em janelas altas. */}
-          <div className="cds-setup-cols">
-            <div className="cds-setup-col cds-setup-col-list">
-              <h2 id="cds-setup-audio-label" className="cds-setup-heading">
-                {t('setup.audioHeading')}
-              </h2>
-              {audios === null ? (
-                // esqueleto no formato da lista real (ENG-311): a tela nunca parece
-                // travada; o anúncio acessível segue por texto (role=status)
-                <>
-                  <p className="cds-setup-vh" role="status">
-                    {t('setup.loadingAudios')}
-                  </p>
-                  {/* mesma janela da lista real: a espera não pode ter outra altura,
+        <div className="cds-setup-cols">
+          <div className="cds-setup-col cds-setup-col-list">
+            <h2 id="cds-setup-audio-label" className="cds-setup-heading">
+              {t('setup.audioHeading')}
+            </h2>
+            {audios === null ? (
+              // esqueleto no formato da lista real (ENG-311): a tela nunca parece
+              // travada; o anúncio acessível segue por texto (role=status)
+              <>
+                <p className="cds-setup-vh" role="status">
+                  {t('setup.loadingAudios')}
+                </p>
+                {/* mesma janela da lista real: a espera não pode ter outra altura,
                       ou a tela dá um salto quando a listagem chega */}
-                  <div className="cds-setup-audios-scroll">
-                    <div className="cds-setup-audios" aria-hidden="true">
-                      {Array.from({ length: 4 }, (_, i) => (
-                        <div key={i} className="cds-setup-audio cds-setup-audio-skeleton">
-                          <Skeleton width="55%" height={15} />
-                          <Skeleton width="35%" height={12} />
-                        </div>
-                      ))}
-                    </div>
+                <div className="cds-setup-audios-scroll">
+                  <div className="cds-setup-audios" aria-hidden="true">
+                    {Array.from({ length: 4 }, (_, i) => (
+                      <div key={i} className="cds-setup-audio cds-setup-audio-skeleton">
+                        <Skeleton width="55%" height={15} />
+                        <Skeleton width="35%" height={12} />
+                      </div>
+                    ))}
                   </div>
-                </>
-              ) : (
-                /* A entrega rola AQUI DENTRO (ENG-386): numa entrega grande a lista
+                </div>
+              </>
+            ) : (
+              /* A entrega rola AQUI DENTRO (ENG-386): numa entrega grande a lista
                    crescia até empurrar o "Criar a sessão" para fora da tela, e quem
                    acabara de escolher o áudio não via mais como seguir. A ação fica
                    fora desta janela — a distância até ela não depende mais de quantos
                    áudios a entrega tem. */
-                <div className="cds-setup-audios-scroll">
-                  <RadioGroup.Root
-                    className="cds-setup-audios"
-                    aria-labelledby="cds-setup-audio-label"
-                    value={audioId ?? ''}
-                    onValueChange={setAudioId}
-                  >
-                    {audios.map((a) => (
-                      <RadioGroup.Item key={a.id} value={a.id} className="cds-setup-audio">
-                        <span className="cds-setup-audio-name">{a.filename}</span>
-                        {/* badge curto (ENG-310): a frase completa do indicador §12/O6
+              <div className="cds-setup-audios-scroll">
+                <RadioGroup.Root
+                  className="cds-setup-audios"
+                  aria-labelledby="cds-setup-audio-label"
+                  value={audioId ?? ''}
+                  onValueChange={setAudioId}
+                >
+                  {audios.map((a) => (
+                    <RadioGroup.Item key={a.id} value={a.id} className="cds-setup-audio">
+                      <span className="cds-setup-audio-name">{a.filename}</span>
+                      {/* badge curto (ENG-310): a frase completa do indicador §12/O6
                             continua no title/aria — repetida por cartão ela virava parede */}
-                        {a.consent_present ? (
-                          <span
-                            className="cds-setup-consent-ok"
-                            title={t('setup.consentOk')}
-                            aria-label={t('setup.consentOk')}
-                          >
-                            {t('setup.consentOkShort')}
-                          </span>
-                        ) : (
-                          <span
-                            className="cds-setup-consent-warn"
-                            data-role="warning"
-                            title={t('setup.consentWarn')}
-                            aria-label={t('setup.consentWarn')}
-                          >
-                            {t('setup.consentWarnShort')}
-                          </span>
-                        )}
-                      </RadioGroup.Item>
-                    ))}
-                  </RadioGroup.Root>
-                </div>
-              )}
-            </div>
+                      {a.consent_present ? (
+                        <span
+                          className="cds-setup-consent-ok"
+                          title={t('setup.consentOk')}
+                          aria-label={t('setup.consentOk')}
+                        >
+                          {t('setup.consentOkShort')}
+                        </span>
+                      ) : (
+                        <span
+                          className="cds-setup-consent-warn"
+                          data-role="warning"
+                          title={t('setup.consentWarn')}
+                          aria-label={t('setup.consentWarn')}
+                        >
+                          {t('setup.consentWarnShort')}
+                        </span>
+                      )}
+                    </RadioGroup.Item>
+                  ))}
+                </RadioGroup.Root>
+              </div>
+            )}
+          </div>
 
-            <div className="cds-setup-col cds-setup-col-side">
-              <h2 id="cds-setup-gran-label" className="cds-setup-heading">
-                {t('setup.granHeading')}
-              </h2>
-              {level === null ? null : <ProjectGranularity level={level} />}
+          <div className="cds-setup-col cds-setup-col-side">
+            <h2 id="cds-setup-gran-label" className="cds-setup-heading">
+              {t('setup.granHeading')}
+            </h2>
+            {level === null ? null : <ProjectGranularity level={level} />}
 
-              <SelectedAudio audios={audios} audioId={audioId} />
+            <SelectedAudio audios={audios} audioId={audioId} />
 
-              <label className="cds-setup-field">
-                <span>{t('setup.titleField')}</span>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder={t('setup.titlePlaceholder')}
-                />
-              </label>
+            <label className="cds-setup-field">
+              <span>{t('setup.titleField')}</span>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t('setup.titlePlaceholder')}
+              />
+            </label>
 
-              <label className="cds-setup-consent">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                />
-                <span>{t('setup.consentCheck')}</span>
-              </label>
+            <label className="cds-setup-consent">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
+              <span>{t('setup.consentCheck')}</span>
+            </label>
 
-              {/* O pé da coluna: a recusa explicada e o botão, juntos e sempre à
+            {/* O pé da coluna: a recusa explicada e o botão, juntos e sempre à
                   vista. O botão segue SEMPRE clicável e validando no clique (§9.5
                   guia, não pune) — a entrega desenha um `aria-disabled` aqui, e é a
                   única coisa dela que não seguimos. */}
-              <div className="cds-setup-foot">
-                {error ? (
-                  <p className="cds-setup-error" role="alert">
-                    {t(error.key, { detail: error.detail })}
-                  </p>
-                ) : null}
+            <div className="cds-setup-foot">
+              {error ? (
+                <p className="cds-setup-error" role="alert">
+                  {t(error.key, { detail: error.detail })}
+                </p>
+              ) : null}
 
-                <button
-                  type="button"
-                  className="cds-setup-create"
-                  onClick={() => void create()}
-                  disabled={busy}
-                >
-                  {busy ? t('setup.creating') : t('setup.create')}
-                </button>
-              </div>
+              <button
+                type="button"
+                className="cds-setup-create"
+                onClick={() => void create()}
+                disabled={busy}
+              >
+                {busy ? t('setup.creating') : t('setup.create')}
+              </button>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="cds-setup-import-door">
-          <p className="cds-setup-import-hint">
-            {door === 'entrega' ? t('setup.importEntregaHint') : t('setup.importRetornoHint')}
-          </p>
-          <button type="button" className="cds-setup-create" onClick={() => navigate('/imports')}>
-            {t('setup.goToImports')}
-          </button>
-        </div>
-      )}
+      </div>
 
-      {/* rodapé quieto (ENG-309): confiança + divulgação de IA (§12, obrigatória)
-          juntas, fora do caminho da decisão — antes eram dois avisos grandes no topo */}
+      {/* Uma linha, não dois parágrafos (decisão do dono): a tela carregava informação
+          demais. O que não encolhe é a divulgação em si — o PRD §4 conta "disclosed on
+          the setup screen" entre as condições que tornam a voz sintética aceitável, e a
+          policy do provedor de TTS pede o mesmo. Fora do caminho da decisão, no pé. */}
       <footer className="cds-setup-notes">
-        <p role="note">{t('setup.trustLine')}</p>
-        <p role="note">{t('setup.aiVoiceNotice')}</p>
+        <p role="note">{t('setup.disclosure')}</p>
       </footer>
 
       {/* Projeto sem tamanho de conta não cria sessão nenhuma (ENG-363): a trava

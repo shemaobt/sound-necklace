@@ -27,6 +27,7 @@ import {
 } from '../../organisms/conversation-stage/conversation-stage';
 import type { PaletteEntry } from '../../tokens';
 import { cardinal, sceneOrdinal } from '../cut/cutting';
+import { clearSkipped, isSkipped, markSkipped } from './answered';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
 import { StationNav } from '../../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
@@ -218,6 +219,9 @@ interface QuestionScreenProps {
   /** Toggle de som do cabeçalho: mudo = a voz nunca toca (§13 — nunca falar sem consentimento). */
   muted: boolean;
   onVoiceSaved?: (path: string) => void;
+  /** A pergunta está marcada como sem resposta (ver `./answered`). */
+  skipped: boolean;
+  onToggleSkip: () => void;
 }
 
 /**
@@ -240,6 +244,8 @@ function QuestionScreen({
   sound,
   muted,
   onVoiceSaved,
+  skipped,
+  onToggleSkip,
 }: QuestionScreenProps) {
   const { t, i18n } = useTranslation();
   const [recorderState, setRecorderState] = useState<RecorderState>('idle');
@@ -475,6 +481,8 @@ function QuestionScreen({
         trechos={trechos}
         onPrev={onPrev}
         onNext={onNext}
+        skipped={skipped}
+        onToggleSkip={onToggleSkip}
         speaking={speaking}
         onSpeakQuestion={
           // falando ⇒ pausar; calado ⇒ (re)falar — o rótulo do organismo acompanha (ENG-317)
@@ -522,13 +530,21 @@ export function Conversation({
    * dozens of clicks between the facilitator and where they actually stopped.
    * A skipped question is still reachable through "← anterior" and the bead thread.
    *
+   * Walking backwards cures the hole in the MIDDLE; the mark cures the hole at the
+   * END, which no scan can infer. An interview whose last questions went unanswered
+   * has its last answer somewhere upstream, so the cursor lands on the first refusal
+   * and stays there — every reopen, with the review out of reach. Deciding that a
+   * question goes unanswered is an act, and `./answered` is where it is recorded.
+   *
    * Mount only: from then on the cursor belongs to the user.
    */
   const lastAnswered = (): number => {
     if (!mapped || sequence.length === 0) return -1;
     const voiced = voicePaths();
     const answered = (s2: QuestionSlot): boolean =>
-      Boolean(readAnswer(mapped.mapping, s2).trim()) || voiced.includes(voiceAnswerPath(s2));
+      Boolean(readAnswer(mapped.mapping, s2).trim()) ||
+      voiced.includes(voiceAnswerPath(s2)) ||
+      isSkipped(mapped.mapping, s2);
     for (let i = sequence.length - 1; i >= 0; i--) if (answered(sequence[i]!)) return i;
     return -1;
   };
@@ -727,6 +743,25 @@ export function Conversation({
       void prepareReview();
     }
   };
+  const skipped = isSkipped(mapped.mapping, slot);
+  /**
+   * Marcar segue para a próxima pergunta: registrar a recusa e continuar parado nela
+   * pediria dois toques para uma decisão só. Desfazer NÃO navega — quem desfaz quer
+   * justamente ficar nesta pergunta.
+   */
+  const toggleSkip = (): void => {
+    sessionStore.getState().apply((s) => (skipped ? clearSkipped : markSkipped)(s, slot));
+    if (!skipped) goNext();
+  };
+  /**
+   * Gravar desfaz a marca: a pergunta foi respondida, afinal. Sem isto ela sobreviveria
+   * à resposta e voltaria a valer se a gravação fosse apagada depois — uma recusa que
+   * ninguém registrou.
+   */
+  const onAnswerRecorded = (p: string): void => {
+    if (skipped) sessionStore.getState().apply((s) => clearSkipped(s, slot));
+    noteVoiceSaved(p);
+  };
   // Os trechos (história · cenas · frases): a barra usa a lista inteira (na ordem
   // da sequência, então o marcador cai no trecho certo); o indicador ao lado do ▶
   // usa o trecho da pergunta atual — mesma cor/rótulo do segmento correspondente.
@@ -760,7 +795,9 @@ export function Conversation({
       speaker={speaker}
       sound={sound}
       muted={muted}
-      onVoiceSaved={noteVoiceSaved}
+      onVoiceSaved={onAnswerRecorded}
+      skipped={skipped}
+      onToggleSkip={toggleSkip}
     />
   );
 }

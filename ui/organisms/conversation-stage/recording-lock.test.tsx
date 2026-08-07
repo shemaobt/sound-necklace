@@ -92,6 +92,17 @@ describe('gravando: os outros controles esperam', () => {
     }
   });
 
+  it('marcar a pergunta como sem resposta também espera', async () => {
+    // Registrar a recusa avança a pergunta, que é exatamente o que a trava impede:
+    // a resposta em curso morreria no meio de si mesma.
+    const onToggleSkip = vi.fn();
+    stage({ onToggleSkip });
+
+    await userEvent.click(screen.getByRole('button', { name: 'sem resposta' }));
+
+    expect(onToggleSkip).not.toHaveBeenCalled();
+  });
+
   it('parar continua vivo — é o único caminho de saída', async () => {
     const { onStop } = stage();
 

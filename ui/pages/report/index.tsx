@@ -18,6 +18,7 @@ import { questionTextFor } from '../../i18n/conversation-questions';
 import { Button, WaveformBar } from '../../atoms';
 import { PreparingSession } from '../../organisms';
 import type { PaletteEntry } from '../../tokens';
+import { isSkipped } from '../conversation/answered';
 import { type BlockLabels, blockEyebrow } from '../conversation/trechos';
 import { sessionStore, useSessionStore } from '../../state';
 import { type SttPhase, useSttDrafts } from './use-stt-drafts';
@@ -368,6 +369,11 @@ interface ReportCardProps {
   typed: string;
   note: string;
   hasVoice: boolean;
+  /**
+   * A entrevista marcou esta pergunta como sem resposta. O vazio do cartão passa a dizer
+   * isso em vez de "ainda sem resposta gravada": "ainda" promete uma resposta que não vem.
+   */
+  skipped: boolean;
   /** A verificação da gravação ainda voa: mostra "procurando", não o vazio (ENG-319). */
   voicePending: boolean;
   /** ESTA resposta está tocando agora (eventos reais da porta, ENG-323). */
@@ -396,6 +402,7 @@ function ReportCard({
   typed,
   note,
   hasVoice,
+  skipped,
   voicePending,
   playing = false,
   opening = false,
@@ -507,7 +514,13 @@ function ReportCard({
           className="cds-report-typed"
           aria-label={t('report.answer')}
           rows={1}
-          placeholder={voiceOnly || pendingRow ? t('report.writeAnswer') : t('report.noAnswerYet')}
+          placeholder={
+            voiceOnly || pendingRow
+              ? t('report.writeAnswer')
+              : skipped
+                ? t('report.noAnswerGiven')
+                : t('report.noAnswerYet')
+          }
           value={editing === null ? typed : editing}
           onChange={(e) => setEditing(e.target.value)}
         />
@@ -846,6 +859,7 @@ export function Report({
               typed={readAnswer(mapped.mapping, slot)}
               note={readAnswer(mapped.mapping, noteSlot(slot))}
               hasVoice={voiceSet.has(path)}
+              skipped={isSkipped(mapped.mapping, slot)}
               voicePending={recorder !== null && !voiceChecked.has(path)}
               durationSec={voiceDurations.get(path)}
               onTyped={(text) => writeTyped(slot, text)}

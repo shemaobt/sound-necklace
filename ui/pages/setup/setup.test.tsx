@@ -408,19 +408,40 @@ describe('Setup — granularidade por nível, sem campo numérico (§8.1)', () =
 });
 
 describe('Setup — cópias fixadas (§8.1/O7)', () => {
-  it('mostra a linha de confiança e a nota de trava da conta', async () => {
+  it('mostra a divulgação e a nota de trava da conta', async () => {
     renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
-    expect(screen.getByText(pt.setup.trustLine)).toBeTruthy();
+    expect(screen.getByText(pt.setup.disclosure)).toBeTruthy();
     // A trava da conta deixou de ser aviso do Setup: a granularidade é do projeto e
     // esta tela diz de onde ela vem (ENG-352).
     expect(screen.getByText(pt.setup.granFromProject)).toBeTruthy();
   });
 
+  /**
+   * Dois parágrafos viraram um a pedido do dono — a tela tinha texto demais. O que
+   * NÃO pode encolher junto é a divulgação: o PRD §4 conta "disclosed on the setup
+   * screen" entre as condições que tornam a voz sintética aceitável, e a policy da
+   * ElevenLabs exige o mesmo. Uma frase curta ainda divulga; nenhuma frase, não.
+   */
   it('divulga que a voz do guia é sintética (§12; exigência da policy da ElevenLabs)', async () => {
     renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
-    expect(screen.getByText(pt.setup.aiVoiceNotice)).toBeTruthy();
+    expect(screen.getByText(/sintética/i)).toBeTruthy();
+    expect(screen.getByText(/escritas por pessoas/i)).toBeTruthy();
+  });
+
+  /**
+   * As três portas anunciavam caminhos que não andam: só "começar do zero" abre, e as
+   * outras duas ficavam ali desabilitadas ocupando o topo da tela (a ENG-311 as quis
+   * visíveis; o dono reverteu). Um seletor com uma opção só não escolhe nada.
+   */
+  it('não oferece mais o seletor de portas', async () => {
+    renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+    expect(screen.queryByRole('radiogroup', { name: 'Como começar' })).toBeNull();
+    expect(screen.queryByText('Começar do zero')).toBeNull();
+    expect(screen.queryByText('Confirmar uma entrega')).toBeNull();
+    expect(screen.queryByText('Retomar um retorno')).toBeNull();
   });
 });
 
@@ -449,20 +470,6 @@ describe('Setup — a trava cabe em janela baixa (ENG-363)', () => {
 });
 
 describe('Setup — portas de entrada (§8.9, ENG-311)', () => {
-  it('“entrega” e “retorno” ficam visíveis mas DESABILITADAS — clicar não sai do zero', async () => {
-    const p = ports();
-    renderSetup(p);
-
-    const entrega = screen.getByRole('radio', { name: /confirmar uma entrega/i });
-    const retorno = screen.getByRole('radio', { name: /retomar um retorno/i });
-    expect((entrega as HTMLButtonElement).disabled).toBe(true);
-    expect((retorno as HTMLButtonElement).disabled).toBe(true);
-
-    await userEvent.click(entrega);
-    // a porta do zero segue selecionada: o formulário de criar continua na tela
-    expect(await screen.findByRole('heading', { name: /escolha um áudio/i })).toBeTruthy();
-  });
-
   it('a lista de áudios mostra esqueleto enquanto o bucket responde (ENG-311)', async () => {
     const bucket = new FixtureBucketSource();
     const real = bucket.list.bind(bucket);

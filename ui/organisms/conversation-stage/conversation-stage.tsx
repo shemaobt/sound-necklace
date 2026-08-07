@@ -78,6 +78,13 @@ export interface ConversationStageProps {
   trechos: readonly ConversationTrecho[];
   onPrev?: () => void;
   onNext?: () => void;
+  /** A pergunta está marcada como sem resposta — o botão do rodapé oferece desfazer. */
+  skipped?: boolean;
+  /**
+   * Alterna a marca de "sem resposta" desta pergunta. Ausente = sem o botão. É ação da
+   * facilitadora, não do ouvinte: fica no rodapé, junto da navegação, longe do microfone.
+   */
+  onToggleSkip?: () => void;
   /** porta de fala (TTS): o botão "Ouvir a pergunta" só aparece quando fornecida */
   onSpeakQuestion?: () => void;
   /**
@@ -209,6 +216,8 @@ export function ConversationStage({
   trechos,
   onPrev,
   onNext,
+  skipped = false,
+  onToggleSkip,
   onSpeakQuestion,
   speaking = false,
 }: ConversationStageProps) {
@@ -366,6 +375,23 @@ export function ConversationStage({
                 <p className="cds-conversation-stage-typed-hint">
                   {t('conversationStage.typedHint')}
                 </p>
+                {/* A decisão de deixar a pergunta sem resposta é tomada AQUI, no mesmo
+                    instante em que se decidiria gravar — no rodapé, entre voltar e
+                    avançar, ela ficava escondida de quem está olhando o microfone.
+                    Fantasma e pequeno de propósito: o microfone continua sendo a única
+                    ação dominante da tela (§9.2). */}
+                {onToggleSkip ? (
+                  <p className="cds-conversation-stage-skip">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      ariaDisabled={locked}
+                      onClick={guard(onToggleSkip)}
+                    >
+                      {skipped ? t('conversationStage.unskip') : t('conversationStage.skip')}
+                    </Button>
+                  </p>
+                ) : null}
               </div>
             </div>
           </QuestionCard>
