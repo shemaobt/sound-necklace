@@ -14,7 +14,7 @@ import type { AnswerDraft, Transcriber, TranscriptionProgress } from './types';
 const POLLS_TO_FINISH = 2;
 
 interface Job {
-  paths: readonly string[];
+  paths: string[];
   polls: number;
 }
 
@@ -39,14 +39,28 @@ function draftFor(path: string): AnswerDraft {
 export class FixtureTranscriber implements Transcriber {
   readonly #jobs = new Map<string, Job>();
 
-  start(sessionId: string, paths: readonly string[], opts?: { force?: boolean }): Promise<void> {
+  start(
+    sessionId: string,
+    paths: readonly string[],
+    opts?: { force?: boolean; paths?: readonly string[] },
+  ): Promise<void> {
     const current = this.#jobs.get(sessionId);
-    // sem force, um job existente fica como está (idempotente, por contrato) —
-    // inclusive um que ainda roda: reabrir zeraria `polls` e adiaria a conclusão,
-    // e reabrir um concluído apagaria rascunhos que a facilitadora pode estar
-    // revisando. Só `force` (regravação) recomeça.
-    if (current && !opts?.force) return Promise.resolve();
-    this.#jobs.set(sessionId, { paths: [...paths], polls: 0 });
+    // Sem force, um job existente não RECOMEÇA — reabrir zeraria `polls` e adiaria a
+    // conclusão, e reabrir um concluído apagaria rascunhos que a facilitadora pode
+    // estar revisando. Mas ele CRESCE: o servidor deriva as respostas da própria
+    // sessão (o adapter HTTP ignora `paths` de propósito), então cada pedido semeia o
+    // rascunho que faltar. A entrevista dispara por resposta, uma de cada vez;
+    // congelar o job no primeiro pedido deixava todas as outras sem rascunho.
+    if (current && !opts?.force) {
+      for (const p of paths) if (!current.paths.includes(p)) current.paths.push(p);
+      return Promise.resolve();
+    }
+    // Force recomeça. O alcance (`opts.paths`) diz quais rascunhos o SERVIDOR joga
+    // fora; aqui todos são regerados de forma determinística, então o que importa
+    // preservar é a UNIÃO dos caminhos — sem ela um force nomeado encolheria o job
+    // para a única resposta regravada e sumiria com as outras.
+    const union = current ? [...new Set([...current.paths, ...paths])] : [...paths];
+    this.#jobs.set(sessionId, { paths: union, polls: 0 });
     return Promise.resolve();
   }
 
