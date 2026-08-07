@@ -1,13 +1,26 @@
 /**
  * Modelo de clique de seleção durante a DEFINIÇÃO de um segmento (cena/frase).
- * PRD v2 §8.2 e docs/segmentation-rules.md (decisão do dono; o modelo
- * de dois-cliques/nudge do reference foi substituído).
+ * Port 1:1 de `cordInteraction` (docs/reference/index.html L561–583), PRD v2 §8.2.
  *
- * Regra: o começo do segmento é FIXO na fronteira (pré-ancorado por
- * primePart/primeFrase) — o usuário NUNCA seta o começo, só o FIM. Clicar no
- * começo (ou antes) pede para OUVIR a partir dali; clicar depois define o FIM.
- * A decisão de tocar/parar/continuar depende do playhead (runtime) e vive na UI —
- * o reducer só devolve a INTENÇÃO como dado (effects-as-data) e muda a seleção.
+ * Decisão do dono, 2026-08-07: o comportamento do colar na segmentação de
+ * cenas/frases fica estritamente igual ao da referência; só o arrasto Pac-Man e o
+ * remover-com-absorção são acréscimos. Isto substituiu o modelo
+ * ouvir/definir-fim de 2026-07 — ver docs/segmentation-rules.md.
+ *
+ * Três ramos, na ordem da referência:
+ *  1. sem seleção → fixa o começo na conta e toca só ela (L571–573);
+ *  2. com `pendingStart` → fecha o trecho entre ele e a conta clicada e toca o
+ *     trecho INTEIRO (L574–577). Como `primePart`/`primeFrase` entregam o slot
+ *     pré-ancorado na emenda, é aqui que cai o PRIMEIRO clique do ouvinte;
+ *  3. trecho fechado → move a borda MAIS PRÓXIMA (o começo inclusive) e toca só
+ *     ela (L578–582).
+ *
+ * A referência é assimétrica: `primePart` só existe para cenas (L698), e
+ * `addFrase` (L776) zera a seleção, então a frase gastaria um clique a mais no
+ * ramo 1. `primeFrase` fecha essa assimetria — decisão do dono na mesma conversa:
+ * cena e frase seguem o mesmo modelo.
+ *
+ * O reducer devolve a intenção como dado (effects-as-data); quem toca é a UI.
  */
 
 import { activeAnchor } from './frontier';
@@ -16,10 +29,10 @@ import type { SessionState } from './state';
 export type PlayAction =
   /** Sem ancoragem ativa: o toque é transporte (toca a conta). */
   | { type: 'transport'; bead: number }
-  /** Clicou o começo (a fronteira): ouvir a partir de `from`. Seleção intacta. */
-  | { type: 'listen'; from: number }
-  /** Clicou além do começo: o FIM passou a ser `end` (o começo segue na fronteira). */
-  | { type: 'set-end'; end: number };
+  /** `playRange(s,e)` — a conta recém-fixada (s===e) ou o trecho recém-fechado. */
+  | { type: 'range'; s: number; e: number }
+  /** `playEdge(bead)` — a borda que acabou de se mover, ~1 s de cada lado. */
+  | { type: 'edge'; bead: number };
 
 export interface ClickResult {
   state: SessionState;
@@ -31,21 +44,30 @@ export function clickBead(state: SessionState, bead: number): ClickResult {
   const aa = activeAnchor(state);
   if (!aa) return { state, play: { type: 'transport', bead } };
 
-  // O começo é a fronteira — a menos que já tenham ARRASTADO a extremidade inicial
-  // para frente (`dragSelectionStart`), abrindo um buraco de propósito. Reler a
-  // fronteira aqui desfaria esse arrasto no clique seguinte, que é justamente o
-  // clique que fecha o segmento.
-  const start = Math.max(aa.start, state.selection?.s ?? aa.start);
-  const b = Math.min(state.whole.span.e, Math.max(0, bead));
+  // L566–567: o clique satura entre a fronteira e o fim do colar
+  const b = Math.max(aa.start, Math.min(state.whole.span.e, bead));
 
-  // clicar no começo (ou antes) → OUVIR a partir do começo; não mexe na seleção
-  if (b <= start) return { state, play: { type: 'listen', from: start } };
+  if (state.selection === null) {
+    return {
+      state: { ...state, pendingStart: b, selection: { s: b, e: b } },
+      play: { type: 'range', s: b, e: b },
+    };
+  }
 
-  // clicar além → define o FIM; o começo continua onde está (clique nunca o move)
-  return {
-    state: { ...state, selection: { s: start, e: b }, pendingStart: null },
-    play: { type: 'set-end', end: b },
-  };
+  if (state.pendingStart !== null) {
+    const s = Math.min(state.pendingStart, b);
+    const e = Math.max(state.pendingStart, b);
+    return {
+      state: { ...state, selection: { s, e }, pendingStart: null },
+      play: { type: 'range', s, e },
+    };
+  }
+
+  // borda mais próxima; no empate o COMEÇO cede (o `<=` da referência, L580)
+  const { s: selS, e: selE } = state.selection;
+  const moveStart = b <= selS || (b < selE && b - selS <= selE - b);
+  const selection = moveStart ? { s: b, e: selE } : { s: selS, e: b };
+  return { state: { ...state, selection }, play: { type: 'edge', bead: b } };
 }
 
 /**

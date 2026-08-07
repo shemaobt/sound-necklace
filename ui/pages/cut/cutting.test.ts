@@ -30,37 +30,30 @@ function spyPlayer() {
   };
 }
 
-describe('playClick — intenção do clique → player, com o playhead (regras 1–3)', () => {
-  it('transport toca a partir da conta (fallback sem ancoragem)', () => {
+describe('playClick — intenção do clique → player (cordInteraction L571–582)', () => {
+  it('transport toca a conta tocada (fallback sem ancoragem)', () => {
     const player = spyPlayer();
-    playClick(player, { type: 'transport', bead: 3 }, 23, null);
+    playClick(player, { type: 'transport', bead: 3 });
     expect(player.play).toHaveBeenCalledWith(3, 3);
   });
 
-  it('listen ouve do começo até o fim do pai (história/cena)', () => {
+  it('range toca o trecho recém-fechado, inteiro', () => {
     const player = spyPlayer();
-    playClick(player, { type: 'listen', from: 4 }, 23, null);
-    expect(player.play).toHaveBeenCalledWith(4, 23);
+    playClick(player, { type: 'range', s: 4, e: 17 });
+    expect(player.play).toHaveBeenCalledWith(4, 17);
   });
 
-  it('set-end com o playhead JÁ no ponto (ou além): para', () => {
+  it('range degenerado (a conta recém-fixada) toca só ela', () => {
     const player = spyPlayer();
-    playClick(player, { type: 'set-end', end: 10 }, 23, 10);
-    expect(player.stop).toHaveBeenCalled();
+    playClick(player, { type: 'range', s: 7, e: 7 });
+    expect(player.play).toHaveBeenCalledWith(7, 7);
+  });
+
+  it('edge toca só a borda que se moveu, nunca o trecho', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'edge', bead: 10 });
+    expect(player.playEdge).toHaveBeenCalledWith(10);
     expect(player.play).not.toHaveBeenCalled();
-  });
-
-  it('set-end com o playhead ANTES do ponto: continua (não interrompe)', () => {
-    const player = spyPlayer();
-    playClick(player, { type: 'set-end', end: 10 }, 23, 6);
-    expect(player.stop).not.toHaveBeenCalled();
-    expect(player.play).not.toHaveBeenCalled();
-  });
-
-  it('set-end sem playhead (nada tocando): não faz nada', () => {
-    const player = spyPlayer();
-    playClick(player, { type: 'set-end', end: 10 }, 23, null);
-    expect(player.stop).not.toHaveBeenCalled();
   });
 });
 

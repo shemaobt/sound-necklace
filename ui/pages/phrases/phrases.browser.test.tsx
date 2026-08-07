@@ -8,15 +8,22 @@ import {
   FixtureTransport,
   type Player,
 } from '../../../adapters/audio';
-import { buildBeads, createSession, type Frase, type SessionState } from '../../../domain';
+import {
+  buildBeads,
+  createSession,
+  type Frase,
+  primeFrase,
+  type SessionState,
+} from '../../../domain';
 import { sessionStore } from '../../state';
 import Phrases from './index';
 
 /**
  * Modelo de clique na cena EM JANELA, em Chromium real (a geometria do colar só
- * existe com layout): fraseando a cena, o 1º toque fixa o início e toca só aquela
- * conta, o 2º toca o intervalo; confirmar trava a frase na cena — provando a
- * fiação colar↔domínio↔áudio de §8.2/§8.6 que o jsdom não alcança.
+ * existe com layout). A frase segue o `cordInteraction` da referência, igual à
+ * cena: pré-ancorada na emenda, o 1º clique fecha o trecho e o toca inteiro, e do
+ * 2º em diante move a borda mais próxima tocando só ela. Confirmar trava a frase na
+ * cena — provando a fiação colar↔domínio↔áudio de §8.2/§8.6 que o jsdom não alcança.
  */
 
 const WIDTH = 500; // slot 25 → 20 contas por linha
@@ -180,27 +187,26 @@ describe('Segmentação — uma frase travada pode ser ouvida (ENG-296)', () => 
     root.unmount();
   });
 
-  it('a conta ainda livre define o FIM da próxima frase, da emenda até ela', () => {
+  it('a conta ainda livre fecha a próxima frase da emenda até ela, e toca o trecho', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(withLockedPhrase()); // P1{1,3}, pendente, fronteira 4
+    sessionStore.getState().load(primeFrase(withLockedPhrase())); // P1{1,3}, emenda 4
     const { root, el } = mount(player);
 
-    const n = calls.length;
     firePointer(el, 5); // fora da frase travada, dentro da cena
 
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 4, e: 5 }); // começo na fronteira
-    expect(calls.length).toBe(n); // head=null → só define o fim, não toca
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 4, e: 5 });
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [4, 5] });
     root.unmount();
   });
 
-  it('clicar o começo OUVE a cena a partir dali (até o fim da cena)', () => {
+  it('clicar a própria emenda fecha um trecho de uma conta e toca só ela', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(segmenting()); // cena PT1 0…6, frase aberta, fronteira 0
+    sessionStore.getState().load(primeFrase(segmenting())); // cena PT1 0…6, emenda 0
     const { root, el } = mount(player);
 
-    firePointer(el, 0); // o começo (fronteira 0) → ouvir a cena de 0 até 6
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 6] });
-    expect(sessionStore.getState().session!.selection).toBeNull();
+    firePointer(el, 0);
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 0 });
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 0] });
     root.unmount();
   });
 
@@ -239,21 +245,20 @@ describe('Segmentação — uma frase travada pode ser ouvida (ENG-296)', () => 
 });
 
 describe('Segmentação — modelo de clique com áudio na cena em janela (PRD v2 §8.2/§8.6)', () => {
-  it('só o FIM se define (regra 7): confirmar trava a frase da FRONTEIRA ao fim', () => {
+  it('confirmar trava a frase da EMENDA ao fim escolhido', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(segmenting()); // PT1 0…6, frase aberta, fronteira 0
+    sessionStore.getState().load(primeFrase(segmenting())); // PT1 0…6, emenda 0
     const { host, root, el } = mount(player);
 
-    // clicar o começo (fronteira 0) → ouvir a cena (0…6), sem selecionar
-    firePointer(el, 0);
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 6] });
-    expect(sessionStore.getState().session!.selection).toBeNull();
-
-    // clicar em 1 e depois em 4: cada um só redefine o FIM; o começo fica na fronteira 0
+    // 1º clique: fecha {0,1} e toca o trecho
     firePointer(el, 1);
     expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 1 });
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 1] });
+
+    // 2º clique além do fim: o fim cede até 4 e toca só a borda
     firePointer(el, 4);
     expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 4 });
+    expect(calls.at(-1)).toEqual({ m: 'playEdge', args: [4] });
 
     const confirm = [...host.querySelectorAll('button')].find(
       (b) => b.textContent === '✓ Confirmar esta frase',

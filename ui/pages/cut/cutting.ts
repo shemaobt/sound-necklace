@@ -36,29 +36,25 @@ const EDIT_BEFORE = 4;
 const EDIT_AFTER = 3;
 
 /**
- * Interpreta a intenção do `clickBead` ao DEFINIR um segmento (cena/frase), com o
- * playhead como entrada (docs/segmentation-rules.md):
- * - `transport` → toca a conta tocada;
- * - `listen` → ouve a partir do começo até `parentEnd` (fim da história p/ cena,
- *   fim da cena p/ frase);
- * - `set-end` → só define o FIM; se o áudio JÁ passou desse ponto, para; senão
- *   continua tocando (não interrompe). `head` é a posição corrente do playhead.
+ * Interpreta a intenção do `clickBead` ao DEFINIR um segmento (cena/frase). Espelha
+ * o que `cordInteraction` faz em cada ramo (docs/reference/index.html L571–582):
+ * - `transport` → toca a conta tocada (nosso, para a Escuta — lá o clique é inerte);
+ * - `range` → `playRange(s,e)`: a conta recém-fixada ou o trecho recém-fechado;
+ * - `edge` → `playEdge(bead)`: ~1 s de cada lado da borda que se moveu.
+ *
+ * Não recebe playhead: a referência não consulta o transporte para decidir o que
+ * tocar — todo clique de segmentação inicia uma reprodução nova.
  */
-export function playClick(
-  player: Player,
-  action: PlayAction,
-  parentEnd: number,
-  head: number | null,
-): void {
+export function playClick(player: Player, action: PlayAction): void {
   switch (action.type) {
     case 'transport':
       player.play(action.bead, action.bead);
       return;
-    case 'listen':
-      player.play(action.from, parentEnd);
+    case 'range':
+      player.play(action.s, action.e);
       return;
-    case 'set-end':
-      if (head !== null && head >= action.end) player.stop();
+    case 'edge':
+      player.playEdge(action.bead);
       return;
   }
 }

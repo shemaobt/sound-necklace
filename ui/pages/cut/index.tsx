@@ -168,16 +168,16 @@ export function Cut({ player = null, sound }: CutProps) {
     return true;
   };
 
-  // DEFININDO uma cena (regras 1–3): clicar o começo OUVE a história a partir dali;
-  // clicar além define o FIM (para se o playhead já passou, senão continua). O
-  // começo é a fronteira, nunca settável (regra 7). O playhead entra por `head`.
+  // DEFININDO uma cena: o `cordInteraction` da referência (L561–583). O slot chega
+  // pré-ancorado na emenda, então o 1º clique FECHA o trecho até a conta clicada e
+  // toca o trecho inteiro; do 2º em diante move a borda mais próxima e toca só ela.
   const onBead = (bead: number): void => {
     if (playLockedSceneAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
-    if (play && player) playClick(player, play, s.whole.span.e, head);
+    if (play && player) playClick(player, play);
   };
 
   /**

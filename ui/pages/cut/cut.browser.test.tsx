@@ -13,6 +13,7 @@ import {
   clickBead,
   confirmPart,
   createSession,
+  primePart,
   type SessionState,
 } from '../../../domain';
 import { sessionStore } from '../../state';
@@ -135,28 +136,28 @@ afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
 });
 
-describe('Escuta 2 — modelo de clique com áudio na hora (PRD v2 §8.2/§8.4)', () => {
-  it('clicar o começo OUVE a história; clicar além define só o FIM, sem interromper (regras 1–3)', () => {
+describe('Escuta 2 — modelo de clique com áudio na hora (cordInteraction L561–583)', () => {
+  it('o 1º clique fecha o trecho e toca ele inteiro; o 2º move a borda e toca só ela', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(cutting()); // fronteira 0; colar de 10 contas (0…9)
+    // como o app entrega o slot: pré-ancorado na emenda (colar de 10 contas, 0…9)
+    sessionStore.getState().load(primePart(cutting()));
     const { root, el } = mount(player);
 
-    // clicar o começo (fronteira 0) → ouvir a história a partir dali; não seleciona
-    firePointer(el, 0);
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 9] });
-    expect(sessionStore.getState().session!.selection).toBeNull();
-
-    // clicar além → define SÓ o FIM (o começo fica fixo em 0). head=null (o espião
-    // não avança) → o playhead não chegou, então nada toca (nem para)
-    const n = calls.length;
+    // 1º clique: fecha da emenda (0) até a conta 6 e toca o TRECHO
     firePointer(el, 6);
     expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 6 });
     expect(sessionStore.getState().session!.pendingStart).toBeNull();
-    expect(calls.length).toBe(n);
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 6] });
 
-    // reclicar o começo → ouvir de novo
-    firePointer(el, 0);
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 9] });
+    // 2º clique depois do fim: o fim cede e toca só a borda
+    firePointer(el, 8);
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 8 });
+    expect(calls.at(-1)).toEqual({ m: 'playEdge', args: [8] });
+
+    // clique perto do começo: é o COMEÇO que cede — a referência deixa
+    firePointer(el, 1);
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 1, e: 8 });
+    expect(calls.at(-1)).toEqual({ m: 'playEdge', args: [1] });
     root.unmount();
   });
 });
@@ -256,17 +257,16 @@ describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
     root.unmount();
   });
 
-  it('a conta ainda livre define o FIM da próxima cena, da emenda até ela', () => {
+  it('a conta ainda livre fecha a próxima cena da emenda até ela, e toca o trecho', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(withLockedScene()); // PT2 pendente, fronteira 4
+    sessionStore.getState().load(primePart(withLockedScene())); // PT2 pendente, emenda 4
     const { root, el } = mount(player);
 
-    const n = calls.length;
     firePointer(el, 6);
 
     expect(sessionStore.getState().session!.selection).toEqual({ s: 4, e: 6 });
     expect(sessionStore.getState().session!.pendingStart).toBeNull();
-    expect(calls.length).toBe(n); // head=null → só define o fim, não toca
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [4, 6] });
     root.unmount();
   });
 

@@ -181,16 +181,16 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     return true;
   };
 
-  // DEFININDO uma frase (regras 1–3): clicar o começo OUVE a cena a partir dali;
-  // clicar além define o FIM (para se o playhead já passou, senão continua). O
-  // começo é a fronteira, nunca settável (regra 7). `parentEnd` = fim da cena ativa.
+  // DEFININDO uma frase: o MESMO `cordInteraction` das cenas. A referência é
+  // assimétrica (só cena tem `primePart`); `primeFrase` fecha isso, por decisão do
+  // dono — cena e frase seguem um modelo só.
   const onBead = (bead: number): void => {
     if (playLockedPhraseAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
-    if (play && player) playClick(player, play, scSpan.e, head);
+    if (play && player) playClick(player, play);
   };
 
   /** A conta acesa pausa. Sem chave (listen/set-end/transporte tocam via `play`,
