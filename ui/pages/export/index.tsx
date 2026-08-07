@@ -27,7 +27,14 @@ import {
   type ArtifactKind,
 } from '../../organisms/artifact-cards/artifact-cards';
 import { Necklace, type NecklaceSegment, PreparingSession, SIZE_EXPORT } from '../../organisms';
-import { sessionStore, useSessionStore } from '../../state';
+import {
+  freezeClock,
+  netTimeParts,
+  readClock,
+  resumeClock,
+  sessionStore,
+  useSessionStore,
+} from '../../state';
 import './export.css';
 
 /**
@@ -93,6 +100,55 @@ function domSaveBytes(filename: string, bytes: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
+/** Ponteiros do relógio do chip — SVG inline, nunca emoji (não é da marca). */
+function ClockGlyph() {
+  return (
+    <svg
+      className="cds-export-time-glyph"
+      width={15}
+      height={15}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+/**
+ * O tempo LÍQUIDO da sessão, só na conclusão (@/ui/state/session-clock): tempo de
+ * sessão aberta e à vista, descontadas as pausas longas. Aparecer durante o
+ * trabalho o transformaria em cobrança — e a facilitadora não é cronometrada; ao
+ * fim ele responde a pergunta que ela de fato faz ("quanto isto custou?").
+ *
+ * Vive no browser e não sai dele: nenhum dos três artefatos tem campo de tempo, e
+ * não é este chip que vai abrir um.
+ */
+function SessionTimeChip({ ms }: { ms: number }) {
+  const { t } = useTranslation();
+  const { hours, minutes } = netTimeParts(ms);
+  const value =
+    hours > 0
+      ? t('export.netTimeHm', { h: hours, m: minutes })
+      : minutes > 0
+        ? t('export.netTimeM', { m: minutes })
+        : t('export.netTimeShort');
+  return (
+    <p className="cds-export-time" data-role="session-time">
+      <ClockGlyph />
+      <span className="cds-export-time-label">{t('export.netTimeLabel')}</span>
+      <span className="cds-export-time-value">{value}</span>
+    </p>
+  );
+}
+
 function filenameFor(kind: ArtifactKind, slug: string): string {
   if (kind === 'anchoring') return retornoFilename(slug);
   if (kind === 'manifest') return manifestoFilename(slug);
@@ -107,6 +163,10 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
   const [downloaded, setDownloaded] = useState<ArtifactDownloads>(NO_DOWNLOADS);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Tempo líquido CONGELADO: o número é lido no instante em que a sessão fecha e
+  // não anda mais. Lido do estado, não do relógio a cada render — senão ele
+  // escorregaria enquanto a tela de conclusão ficasse aberta.
+  const [netMs, setNetMs] = useState<number | null>(null);
 
   useEffect(() => {
     if (!store || !sessionId) return;
@@ -140,6 +200,8 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       if (!alive) return;
       setCustody({ meta, voice, ok: custodyOk });
       setPhase(concluida ? 'saved' : 'edit');
+      // revisitar uma sessão já concluída mostra o número que ela custou, não um zero
+      setNetMs(concluida ? readClock(sessionId).netMs : null);
     })();
     return () => {
       alive = false;
@@ -243,6 +305,8 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       setNotice(null);
       sound?.advance();
       setPhase('saved');
+      // a sessão fechou: o relógio para aqui e o total vira o número do chip
+      setNetMs(freezeClock(sessionId));
       // O áudio em cache existe para a janela em que ele é reproduzido — gravar,
       // revisar, exportar. Ela fechou. Depois do `complete`, e nunca antes: o cache é
       // o que faz a revisão abrir sem rede, e apagá-lo numa conclusão que falhou
@@ -267,6 +331,9 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       setDownloaded(NO_DOWNLOADS);
       setPhase('edit');
       setNotice(null);
+      // voltou a haver trabalho: o relógio recomeça daqui, sem a pausa entre as duas
+      resumeClock(sessionId, Date.now());
+      setNetMs(null);
     } catch {
       setNotice(t('export.reopenError'));
       sound?.refuse();
@@ -280,6 +347,8 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       <p className="cds-export-headline" data-role="instruction">
         {t('export.headline')}
       </p>
+
+      {phase === 'saved' && netMs !== null ? <SessionTimeChip ms={netMs} /> : null}
 
       <div className="cds-export-stage">
         <Necklace

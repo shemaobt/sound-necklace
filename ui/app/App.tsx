@@ -15,7 +15,7 @@ import { setMode, type Mode, type SessionState } from '../../domain';
 import type { SaveStatus } from '../molecules';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
-import { appStore, sessionStore, useAppStore, useSessionStore } from '../state';
+import { appStore, sessionStore, useAppStore, useSessionClock, useSessionStore } from '../state';
 import { AddonsLayer } from './addons-layer';
 import i18n from '../i18n';
 import { interviewLocale } from '../i18n/interview-language';
@@ -126,6 +126,9 @@ function SessionStations({
   // numa entrada in-SPA. O primeiro clique de navegação assume e nunca é puxado.
   const [manualExport, setManualExport] = useState<boolean | null>(null);
   const viewingExport = manualExport ?? initialExport;
+  // O relógio líquido da sessão pulsa aqui, no único lugar que sabe QUAL sessão
+  // está aberta; a Export lê o total ao concluir. Nada disto sai do browser.
+  useSessionClock(sessionId);
 
   const stations = stepperStations(session, { viewingExport });
   const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'listen';

@@ -149,6 +149,10 @@ export const pt = {
     reportBlockedUnknown:
       'Não consegui conferir quais respostas foram gravadas. Recarregue a página antes de guardar.',
     semFim: '{{n}} frase(s) ainda sem fim travado.',
+    netTimeLabel: 'Tempo de trabalho nesta sessão',
+    netTimeHm: '{{h}} h {{m}} min',
+    netTimeM: '{{m}} min',
+    netTimeShort: 'menos de 1 min',
     reopen: 'Destravar para editar',
     complete: 'Concluir e guardar os documentos',
     saving: 'Guardando…',
@@ -371,6 +375,13 @@ export const pt = {
     preparingReview: 'Trazendo os áudios de volta para a revisão…',
     toExport: 'Guardar os documentos →',
     prev: '← anterior',
+    pendingDrafts: {
+      title_one: 'Falta confirmar a transcrição de 1 resposta.',
+      title_other: 'Faltam confirmar as transcrições de {{count}} respostas.',
+      body: 'A gravação fica guardada, mas não entra no documento — só o texto confirmado entra. Guardar os documentos vai recusar enquanto faltar alguma.',
+      review: 'Revisar as respostas',
+      anyway: 'Ir mesmo assim',
+    },
   },
   seamModal: {
     headline: 'A frase passou da borda da cena.',

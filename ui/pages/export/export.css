@@ -65,3 +65,38 @@
   display: flex;
   justify-content: center;
 }
+
+/* Tempo líquido da sessão (só na conclusão): selo discreto, não placar. A cor é a
+   do texto quieto — o protagonista da tela continua sendo o trio de documentos. */
+.cds-export-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: -0.4rem 0 0;
+  padding: 0.4rem 0.9rem 0.4rem 0.75rem;
+  border: 1px solid var(--cds-ui-hairline);
+  border-radius: var(--cds-radius-pill);
+  background: var(--cds-ui-card);
+  box-shadow: var(--cds-shadow-card);
+  color: var(--cds-ui-ink-soft);
+  font-family: var(--cds-font-load-bearing);
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.cds-export-time-glyph {
+  flex: none;
+  color: var(--cds-ui-ink-faint);
+}
+
+.cds-export-time-label {
+  letter-spacing: 0.02em;
+}
+
+.cds-export-time-value {
+  padding-left: 0.55rem;
+  border-left: 1px solid var(--cds-ui-hairline);
+  color: var(--cds-ui-ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

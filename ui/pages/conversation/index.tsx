@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import type { Transcriber } from '../../../adapters/stt/types';
-import type { ResourcePath } from '../../../contracts';
+import { type ResourcePath, reportExportStatus } from '../../../contracts';
 import type { SpeechSynthesizer } from '../../../adapters/tts/types';
 import type { UiSound } from '../../../adapters/ui-sound';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
@@ -29,6 +29,7 @@ import type { PaletteEntry } from '../../tokens';
 import { cardinal, sceneOrdinal } from '../cut/cutting';
 import { clearSkipped, isSkipped, markSkipped } from './answered';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
+import { PendingDraftsDialog } from './pending-drafts-dialog';
 import { StationNav } from '../../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../../state';
@@ -106,6 +107,9 @@ interface ReportSlotProps {
  * o preparo nunca vira beco.
  */
 const PREPARE_TIMEOUT_MS = 8000;
+
+/** Nenhuma gravação descoberta ainda — identidade estável, fora do render. */
+const NO_VOICE: ReadonlySet<string> = new Set<string>();
 
 /**
  * Advancing past an answer recorded IN THIS SITTING starts its transcription.
@@ -596,6 +600,8 @@ export function Conversation({
   // The report sheet signals when the transcription wait takes over the screen; the
   // footer belongs to this station, and without the signal it survived the wait.
   const [transcribing, setTranscribing] = useState(false);
+  /** Saída para a Export pedida com transcrição por confirmar: pergunta antes de andar. */
+  const [confirmLeaving, setConfirmLeaving] = useState(false);
   const [reportVoice, setReportVoice] = useState<{
     checked: ReadonlySet<string>;
     has: ReadonlySet<string>;
@@ -705,8 +711,28 @@ export function Conversation({
         </section>
       );
     }
+    // O MESMO número do gate que recusa guardar (`reportExportStatus`, ENG-327), lido
+    // aqui uma tela antes. As gravações são as que o preparo da revisão descobriu — a
+    // Export as relê do `meta.voice` persistido, que é a mesma verdade por outro
+    // caminho. Sem descoberta ainda, o conjunto vazio diz "nada pendente": nesta tela
+    // isso só adia o aviso para a Export, que é onde ele efetivamente tranca.
+    const leaveWithPending = reportExportStatus(mapped, reportVoice?.has ?? NO_VOICE).pendingSlots;
+    const leaveToExport = (): void => {
+      sound?.advance();
+      onGoToExport?.();
+    };
     return (
       <section className="cds-conversation" aria-label={t('conversation.reportAria')}>
+        {confirmLeaving ? (
+          <PendingDraftsDialog
+            pending={leaveWithPending}
+            onReview={() => setConfirmLeaving(false)}
+            onProceed={() => {
+              setConfirmLeaving(false);
+              leaveToExport();
+            }}
+          />
+        ) : null}
         {ReportStation ? (
           // sem o recorder o relatório não acha gravação nenhuma e todo card cai no
           // "ainda sem resposta gravada" — a voz da entrevista ficava inalcançável lá
@@ -738,10 +764,12 @@ export function Conversation({
               onGoToExport
                 ? {
                     label: t('conversation.toExport'),
-                    onClick: () => {
-                      sound?.advance();
-                      onGoToExport();
-                    },
+                    // A saída não é bloqueada — é perguntada. Guardar vai recusar do
+                    // outro lado enquanto faltar transcrição confirmada, e chegar lá
+                    // para descobrir isso diante de um botão morto é o que o diálogo
+                    // evita. Quem quiser passar mesmo assim, passa (§9.5).
+                    onClick: () =>
+                      leaveWithPending > 0 ? setConfirmLeaving(true) : leaveToExport(),
                     enabled: true,
                   }
                 : undefined
