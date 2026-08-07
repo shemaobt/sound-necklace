@@ -12,6 +12,7 @@ import {
   confirmFrase,
   confirmFrasesDone,
   dragPhraseBoundary,
+  dragSelectionStart,
   enterScene,
   moveBorder,
   nextNeighbor,
@@ -36,7 +37,14 @@ import {
 } from '../../organisms';
 import { resolveWindow } from '../../organisms/necklace/geometry';
 import { sessionStore, useSessionStore } from '../../state';
-import { lockedItemAt, playClick, playEditWindow, sceneColor, sceneLabel } from '../cut/cutting';
+import {
+  lockedItemAt,
+  playClick,
+  playEditWindow,
+  sceneColor,
+  sceneLabel,
+  START_HANDLE,
+} from '../cut/cutting';
 import { phraseColor, phraseLabel } from './wiring';
 import './phrases.css';
 
@@ -102,6 +110,12 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     // NÃO arrasta; ao arrastar o fim, a frase SEGUINTE segue (Pac-Man, sem vão),
     // igual à cena. `id` = o índice global da frase.
     const dragHandles = scenePhrases.map(({ f, index }) => ({ at: f.span!.e, id: `${index}` }));
+    // …e o COMEÇO da frase em definição (decisão do dono, 2026-08-06): arrastá-lo
+    // para frente deixa o trecho anterior fora de qualquer frase — é assim que um
+    // erro de fala fica de fora sem ser removido nem excluído do artefato.
+    if (activeAnchor(session) && session.selection) {
+      dragHandles.push({ at: session.selection.s, id: START_HANDLE });
+    }
     return { sc, scSpan: sc.span, scenePhrases, segments, lockedEndBeads, dragHandles };
   }, [session]);
 
@@ -254,7 +268,13 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   // fora da grade), o clique seguinte fecharia além do colar e o confirm cospe
   // "A frase precisa terminar dentro do colar" (#3).
   const onDragBoundary = (id: string, toBead: number): void => {
-    sessionStore.getState().apply((s) => primeFrase(dragPhraseBoundary(s, Number(id), toBead)));
+    // O começo NÃO reancora: `primeFrase` o puxaria de volta para a emenda, que é
+    // exatamente o que este arrasto existe para recusar.
+    if (id === START_HANDLE) {
+      sessionStore.getState().apply((s) => dragSelectionStart(s, toBead));
+    } else {
+      sessionStore.getState().apply((s) => primeFrase(dragPhraseBoundary(s, Number(id), toBead)));
+    }
     if (player) playEditWindow(player, toBead, session.totalBeads);
   };
 
