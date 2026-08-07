@@ -66,11 +66,24 @@ voltar) continua conferindo a borda. Coberto por 2 testes novos em Chromium real
 
 | Item | Referência | Situação |
 |---|---|---|
-| `⚑ marcar para revisão` na frase | `fr.flagged`, botão no cartão da frase (L882) | **Não implementado.** O protótipo v3 §3 pede esse botão na pílula do chip de frase. Lacuna real. |
 | `pingBead` — flash de 140 ms na conta clicada (L606) | sim | **Não implementado.** Micro-feedback tátil que some. |
 | Tamanho de conta Pequeno/Médio/Grande (L256, L661) | seletor do usuário | **Não implementado** — virou preset por estação (`SIZE_M`/`SIZE_L`). Provavelmente correto no redesign; listado por completude. |
 | `Limpar seleção` (`clearSel`, L910) | sim | **Não existe** — coerente com começo fixo, não há seleção livre a limpar. |
 | `playSel` — "tocar este pedaço" como botão separado (L262) | sim | **Não existe** como botão; o equivalente é clicar o começo (ouvir dali). |
+
+### Correção desta auditoria (2026-08-07)
+
+A versão anterior listava o `⚑ marcar para revisão` da frase como "lacuna real". **Estava
+errado.** Não é lacuna: a ENG-342 o REMOVEU de propósito, trocando "reabrir + marcar" por
+arrastar a alça de fim da frase no colar. O dono confirmou em 2026-08-07 que ele não volta.
+
+Não sobrou camada a remover — `flagged` não existe em `domain/state.ts` nem no DTO de
+sessão, e nem a UI nem o domínio o mencionam a não ser em comentários que registram a
+remoção. O que permanece é **um campo só**, `flags`, no `retorno-ancoragem.json`, sempre
+vazio: a referência o emite (`index.html` L1328), então tirá-lo quebraria a identidade
+byte a byte do golden, e o Compilador o espera. `contracts/imports.ts` já IGNORA o `flags`
+de um retorno antigo, então um arquivo gravado quando o recurso existia continua abrindo
+sem ressuscitá-lo.
 
 ## 5. O que nós temos A MAIS que a referência
 

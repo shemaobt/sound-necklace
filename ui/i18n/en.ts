@@ -62,6 +62,12 @@ export const en: Dict = {
     granForbidden: 'Only a project admin can choose the bead size.',
     granAlreadyConfirmed: "This project's bead size is already confirmed and no longer changes.",
     granSaveError: 'Could not confirm. Try again.',
+    sampleDensity_one: 'At this size, {{seconds}} seconds of this story become 1 bead.',
+    sampleDensity_other: 'At this size, {{seconds}} seconds of this story become {{count}} beads.',
+    samplePlay: '▶ hear this sample',
+    sampleStop: '⏸ stop',
+    sampleLoading: 'loading the audio…',
+    sampleError: 'Could not play the sample right now. Choosing the size does not depend on it.',
     level: {
       small: 'Small',
       medium: 'Medium',

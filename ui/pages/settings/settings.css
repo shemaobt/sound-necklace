@@ -272,3 +272,47 @@
   font-size: 0.85rem;
   line-height: 1.5;
 }
+
+/* A amostra da granularidade: a linha que AFIRMA a densidade (o cordão acima é
+   decoração e `aria-hidden`) e o botão de ouvir o mesmo trecho em qualquer nível. */
+.cds-settings-sample {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.cds-settings-sample-line {
+  margin: 0;
+  max-width: 44ch;
+  font-family: var(--cds-font-quiet-voice);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--cds-cream);
+  text-align: center;
+}
+
+.cds-settings-sample-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border: 1px solid rgba(246, 245, 235, 0.35);
+  border-radius: var(--cds-radius-pill, 999px);
+  background: rgba(246, 245, 235, 0.1);
+  color: var(--cds-cream);
+  font-family: var(--cds-font-load-bearing);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cds-settings-sample-play:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.cds-settings-sample-play:focus-visible {
+  outline: 2px solid var(--cds-cream);
+  outline-offset: 2px;
+}
