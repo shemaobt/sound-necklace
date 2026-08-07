@@ -45,6 +45,7 @@ const META: SessionMeta = {
   granularityLevel: 'medium',
   bucketAudioId: 'aud-1',
   voice: [],
+  voiceVersion: {},
   pipelineConsent: true,
 };
 

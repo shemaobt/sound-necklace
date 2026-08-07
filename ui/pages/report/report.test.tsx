@@ -391,8 +391,11 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     stt: Transcriber;
     finish: () => void;
     started: string[][];
+    /** As opções de cada `start` — é onde o `force` e o seu alcance aparecem. */
+    asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[];
   } {
     const started: string[][] = [];
+    const asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[] = [];
     let release: (() => void) | null = null;
     // o job só termina quando o TESTE mandar: `progress` espera esta promessa, então
     // nenhum caso depende da ordem dos microtasks nem do atraso real do polling
@@ -405,10 +408,12 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     });
     return {
       started,
+      asked,
       finish: () => release?.(),
       stt: {
-        start: (_id, paths) => {
+        start: (_id, paths, opts) => {
           started.push([...paths]);
+          asked.push(opts);
           return Promise.resolve();
         },
         progress: async () => {
@@ -601,6 +606,109 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     // confirmar não pode escrever o transcript de um áudio descartado
     await screen.findByDisplayValue('Ele contou de novo.');
     expect(screen.queryByDisplayValue('Ele contou do boto.')).toBeNull();
+  });
+
+  /**
+   * O `recordingVersion` nasceu como estado de React, que morre no reload, enquanto a
+   * versão semeada no rascunho é persistida no answer store. Reabrir uma sessão comparava
+   * o valor persistido com um mapa vazio, concluía "a gravação mudou" e mandava `force`
+   * — e o `force` é da sessão inteira. Toda entrevista feita em mais de uma sentada
+   * re-transcrevia tudo na segunda, cobrando o provedor de novo por cada resposta.
+   */
+  it('reabrir a sessão com os rascunhos prontos não pede nada de novo', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+    finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    view.unmount();
+
+    // a volta: MESMA versão de gravação, agora vinda do meta persistido
+    const volta = controllableStt(DRAFTS);
+    volta.finish();
+    render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={volta.stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+
+    await screen.findByDisplayValue('Ele contou do boto.');
+    expect(volta.asked.some((o) => o?.force)).toBe(false);
+  });
+
+  it('sessão antiga, sem versão nenhuma guardada, também não é re-transcrita', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+    finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    view.unmount();
+
+    // gravada antes de o `voiceVersion` existir: o meta volta sem entrada nenhuma
+    const legada = controllableStt(DRAFTS);
+    legada.finish();
+    render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={legada.stt}
+        sessionId="s-1"
+        recordingVersion={{}}
+      />,
+    );
+
+    await screen.findByDisplayValue('Ele contou do boto.');
+    expect(legada.asked.some((o) => o?.force)).toBe(false);
+  });
+
+  it('regravar uma resposta força SÓ ela — as outras não são pagas de novo', async () => {
+    const outra = L1_Q[1]!;
+    const outroPath = voiceAnswerPath({ level: 1, k: outra.k });
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true, [outroPath]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1, [outroPath]: 1 }}
+      />,
+    );
+    finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    view.unmount();
+
+    // só a primeira foi regravada
+    const refeita = controllableStt(DRAFTS);
+    refeita.finish();
+    render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true, [outroPath]: true })}
+        stt={refeita.stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 2, [outroPath]: 1 }}
+      />,
+    );
+
+    await waitFor(() => expect(refeita.asked.some((o) => o?.force)).toBe(true));
+    const forced = refeita.asked.find((o) => o?.force);
+    expect(forced?.paths).toEqual([PATH]);
   });
 
   it('uma pergunta sem gravação nunca ganha rascunho', async () => {

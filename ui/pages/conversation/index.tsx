@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import type { Transcriber } from '../../../adapters/stt/types';
+import type { ResourcePath } from '../../../contracts';
 import type { SpeechSynthesizer } from '../../../adapters/tts/types';
 import type { UiSound } from '../../../adapters/ui-sound';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
@@ -103,6 +104,34 @@ interface ReportSlotProps {
  * o preparo nunca vira beco.
  */
 const PREPARE_TIMEOUT_MS = 8000;
+
+/**
+ * Advancing past a recorded answer starts its transcription.
+ *
+ * Moving on IS the acceptance: the facilitator had the take in front of them, could
+ * have redone it, and went forward instead. Firing on `stop()` would pay for every take
+ * replaced before anyone moves — the very reason the job used to wait for the report.
+ * Waiting for the report, though, meant finishing the interview and then sitting
+ * through all 41 transcriptions at once.
+ *
+ * Fire-and-forget, deliberately. This runs on the way to the next question, and the
+ * interview is what must never stall on the network (ENG-338). The report's own trigger
+ * is idempotent and seeds whatever a lost request left behind, so a failure here costs
+ * latency at the end and nothing else.
+ *
+ * A take redone AFTER advancing is not re-asked here: its draft is already `ready` and a
+ * plain POST leaves it alone. The report resolves that one, because that is where the
+ * durable record of which version was transcribed lives.
+ */
+function requestTranscription(
+  stt: Transcriber | null,
+  sessionId: string | null,
+  path: ResourcePath,
+  recorded: readonly string[],
+): void {
+  if (!stt || !sessionId || !recorded.includes(path)) return;
+  void stt.start(sessionId, [path]).catch(() => undefined);
+}
 
 /** Resolvido uma vez, no carregamento do módulo (o glob é eager e estático). */
 const ReportStation: ComponentType<ReportSlotProps> | null =
@@ -665,6 +694,7 @@ export function Conversation({
     else sessionStore.getState().apply((s) => setMode(s, 'segmentacao'));
   };
   const goNext = (): void => {
+    requestTranscription(stt, sessionId, path, voicePaths());
     if (idx < total - 1) setIndex(idx + 1);
     else {
       sound?.advance(); // a conversa acabou: a prévia do relatório é a próxima etapa

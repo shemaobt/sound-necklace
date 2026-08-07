@@ -65,6 +65,7 @@ const meta = (overrides: Partial<SessionMeta> = {}): SessionMeta => ({
   bucketAudioId: 'aud-123',
   pipelineConsent: true,
   voice: [],
+  voiceVersion: {},
   ...overrides,
 });
 
@@ -144,6 +145,9 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
     meta: meta({
       granularityLevel: 'large',
       voice: ['respostas/level1/recontar.webm', 'respostas/level3/P1/oque.webm'],
+      // quantas vezes cada resposta foi gravada: sem sobreviver ao reload, a
+      // transcrição relia toda reentrada como "regravou tudo" (ENG-327)
+      voiceVersion: { 'respostas/level1/recontar.webm': 2, 'respostas/level3/P1/oque.webm': 1 },
     }),
   },
 ];
@@ -168,6 +172,18 @@ describe('session-state DTO — round-trip domínio → DTO → domínio', () =>
 
   it('carimba schema_version = 2 (a ENG-356 mudou a forma; a ENG-357 versionou)', () => {
     expect(toSessionDto(baseSession(), meta()).schema_version).toBe(2);
+  });
+
+  /**
+   * Toda sessão gravada antes do `voiceVersion` existir precisa continuar abrindo. Se
+   * a leitura recusasse o documento sem o campo, o campo novo transformaria cada
+   * sessão em andamento num erro de hidratação.
+   */
+  it('um documento salvo antes do voiceVersion ainda abre, com o mapa vazio', () => {
+    const antigo = toSessionDto(baseSession(), meta()) as Record<string, unknown>;
+    delete antigo['voiceVersion'];
+
+    expect(fromSessionDto(antigo).meta.voiceVersion).toEqual({});
   });
 });
 
