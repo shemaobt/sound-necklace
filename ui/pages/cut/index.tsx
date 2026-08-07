@@ -16,7 +16,7 @@ import {
   type Span,
 } from '../../../domain';
 import { Button } from '../../atoms';
-import { Necklace, type NecklaceSegment, SIZE_L } from '../../organisms';
+import { Necklace, type NecklaceSegment, SIZE_L, StationNav } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import {
   lockedItemAt,
@@ -330,33 +330,26 @@ export function Cut({ player = null, sound }: CutProps) {
         </>
       ) : null}
 
-      <div className="cds-cut-controls">
-        <Button variant="ghost" size="sm" onClick={back}>
-          {t('cut.back')}
-        </Button>
-
-        {tiled ? (
-          <div className="cds-cut-confirm-scene" data-role="primary-action">
-            <Button variant="primary" onClick={confirmAll}>
-              {t('review.continue')}
-            </Button>
-          </div>
-        ) : null}
-
-        {!tiled && anchor ? (
+      {/* corpo = só os comandos DESTA página (protótipo v3 §2); trocar de página é
+          assunto do rodapé. Aqui sobra o corte da cena corrente. */}
+      {!tiled && anchor ? (
+        <div className="cds-cut-controls">
           <div className="cds-cut-confirm-scene" data-role="primary-action">
             <Button variant="primary" onClick={confirmScene}>
               {t('cut.confirmScene')}
             </Button>
           </div>
-        ) : null}
+        </div>
+      ) : null}
 
-        {hasLocked && !tiled ? (
-          <Button variant="dark" onClick={confirmAll}>
-            {t('cut.confirmAll')}
-          </Button>
-        ) : null}
-      </div>
+      <StationNav
+        back={{ label: t('cut.back'), onClick: back }}
+        next={{
+          label: tiled ? t('review.continue') : t('cut.confirmAll'),
+          onClick: confirmAll,
+          enabled: hasLocked,
+        }}
+      />
 
       {error ? (
         <p className="cds-cut-error" role="alert">

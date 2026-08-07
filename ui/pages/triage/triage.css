@@ -7,7 +7,14 @@
 /* Altura FECHADA, não mínima: quem rola é a grade do picker, nunca a estação.
    Os pontos de progresso, o estado da cena e o colar ("Ouvir esta cena") ficam
    parados em cima — na primeira validação era preciso rolar a página para
-   alcançar "Nenhum se encaixa" e o Confirmar, e o colar sumia junto. */
+   alcançar "Nenhum se encaixa" e o Confirmar, e o colar sumia junto.
+
+   `overflow-y: auto`, e não `hidden`: com o rodapé de navegação a caixa encolheu
+   74px, e `hidden` sobre uma coluna CENTRADA recorta nas DUAS pontas — numa
+   máquina de métricas de fonte um pouco maiores (o Linux do CI, não o macOS) o
+   "Confirmar" saía da área visível e virava um botão que existe no DOM e ninguém
+   alcança. Recortar o controle principal é pior que rolar: `auto` não rola
+   enquanto couber, que é o caso normal, e devolve o alcance quando não couber. */
 .cds-triage {
   position: relative;
   display: flex;
@@ -15,9 +22,11 @@
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
-  height: calc(100vh - 110px);
+  height: calc(100vh - var(--cds-shell-inset, 110px));
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
   background: var(--cds-ui-bg);
   color: var(--cds-ui-body-ink);
@@ -58,6 +67,17 @@
 .cds-triage-focus .cds-triage-picker-scroll {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+/* O estágio de CONFIANÇA ficava fora da corrente acima e, numa caixa apertada,
+   vazava POR CIMA do aviso do portão — que passava a interceptar o clique do
+   "Confirmar". Vazamento de item de flex não é erro de medida, é falta de dono:
+   aqui o próprio picker fica com ele e rola, em vez de invadir o irmão. */
+.cds-triage-focus .cds-triage-picker[data-stage='confianca'] {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 
 /* o cartão do colar da cena (protótipo tColarRows): branco translúcido sobre o

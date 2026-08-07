@@ -32,6 +32,7 @@ import {
   SeamModal,
   type SeamCordSide,
   SIZE_SEG,
+  StationNav,
 } from '../../organisms';
 import { resolveWindow } from '../../organisms/necklace/geometry';
 import { sessionStore, useSessionStore } from '../../state';
@@ -392,31 +393,31 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
         </>
       ) : null}
 
-      <div className="cds-phrases-controls">
-        <Button variant="ghost" size="sm" onClick={back}>
-          {t('phrases.back')}
-        </Button>
-
-        {!covered && anchor ? (
+      {/* corpo = só o comando desta página: fechar a frase corrente (v3 §2) */}
+      {!covered && anchor ? (
+        <div className="cds-phrases-controls">
           <div className="cds-phrases-confirm" data-role="primary-action">
             <Button variant="primary" onClick={confirmPhrase}>
               {t('phrases.confirmPhrase')}
             </Button>
           </div>
-        ) : null}
+        </div>
+      ) : null}
 
-        {covered ? (
-          <div className="cds-phrases-confirm" data-role="primary-action">
-            <Button variant="primary" onClick={done}>
-              {t('review.continue')}
-            </Button>
-          </div>
-        ) : (
-          <Button variant="dark" onClick={done}>
-            {isLast ? t('phrases.doneLast') : t('phrases.doneMore')}
-          </Button>
-        )}
-      </div>
+      <StationNav
+        back={{ label: t('phrases.back'), onClick: back }}
+        next={{
+          label: covered
+            ? t('review.continue')
+            : isLast
+              ? t('phrases.doneLast')
+              : t('phrases.doneMore'),
+          onClick: done,
+          // "Pronto com esta cena" nunca trava: cena sem frase avisa e deixa seguir
+          // no segundo clique (referência `confirmFrasesDone`, L917-925).
+          enabled: true,
+        }}
+      />
 
       {error ? (
         <p className="cds-phrases-error" role="alert" data-kind={warned ? 'warn' : 'error'}>

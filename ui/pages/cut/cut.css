@@ -13,7 +13,7 @@
      vazios gigantes entre o cabeçalho e o miolo em telas altas) */
   justify-content: center;
   gap: clamp(14px, 2.5vh, 24px);
-  min-height: calc(100vh - 110px);
+  min-height: calc(100vh - var(--cds-shell-inset, 110px));
   padding: 18px 1.5rem 3rem;
   background: var(--cds-ui-bg);
   color: var(--cds-ui-body-ink);
@@ -50,11 +50,15 @@
   color: var(--cds-ui-accent);
 }
 
+/* v3 §4: o colar assenta num prato lavado, sem moldura — raio 26px e respiro maior */
 .cds-cut-stage {
   position: relative;
   width: 100%;
   /* 28 contas por fileira no slot de 34px (protótipo _chunk(beads, 28)) */
   max-width: 952px;
+  padding: 22px 32px;
+  border-radius: 26px;
+  background: var(--cds-ui-wash);
 }
 
 /* hairline entre o colar e as cenas costuradas (protótipo) */

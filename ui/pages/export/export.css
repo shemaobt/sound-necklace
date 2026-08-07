@@ -12,7 +12,7 @@
      alto continuar acessível pelo topo em vez de estourar para fora */
   justify-content: safe center;
   gap: 1.5rem;
-  min-height: calc(100vh - 110px);
+  min-height: calc(100vh - var(--cds-shell-inset, 110px));
   padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
   background: var(--cds-ui-bg);
   color: var(--cds-ui-body-ink);
@@ -31,9 +31,13 @@
   color: var(--cds-ui-ink);
 }
 
+/* v3 §4: prato lavado sem moldura, como nos demais colares */
 .cds-export-stage {
   width: 100%;
   max-width: 880px;
+  padding: 20px 30px;
+  border-radius: 24px;
+  background: var(--cds-ui-wash);
 }
 
 .cds-export-warning,

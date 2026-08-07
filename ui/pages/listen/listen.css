@@ -11,7 +11,7 @@
   align-items: center;
   justify-content: center;
   gap: clamp(20px, 3.5vh, 40px);
-  min-height: calc(100vh - 110px);
+  min-height: calc(100vh - var(--cds-shell-inset, 110px));
   padding: 24px 1.5rem;
   background: var(--cds-olive);
   color: var(--cds-cream);
@@ -19,7 +19,10 @@
   overflow: hidden;
 
   /* o fio das fileiras do colar, claro sobre o oliva (protótipo _rowStyle dark) */
-  --cds-necklace-cord: rgba(246, 245, 235, 0.25);
+  --cds-necklace-cord: rgba(246, 245, 235, 0.16); /* v3 §4: fio mais sutil */
+  /* a estação é oliva em QUALQUER tema, então o lavado dela escurece em vez de
+     clarear — o `--cds-ui-wash` global é claro e daria um prato branco aqui */
+  --cds-ui-wash: rgba(10, 7, 3, 0.14);
 }
 
 /* marca d'água vazando no canto (protótipo: right -70, bottom -90, 380px, .05) */
@@ -42,11 +45,15 @@
   color: var(--cds-cream);
 }
 
+/* v3 §4: prato lavado sem moldura; sobre o oliva o lavado ESCURECE, não clareia */
 .cds-listen-stage {
   position: relative;
   width: 100%;
   /* 28 contas por fileira no slot de 34px (protótipo _chunk(beads, 28)) */
   max-width: 952px;
+  padding: 22px 32px;
+  border-radius: 26px;
+  background: var(--cds-ui-wash);
 }
 
 /* contas ainda não ouvidas sobre o oliva: translúcidas (protótipo unDark) */
