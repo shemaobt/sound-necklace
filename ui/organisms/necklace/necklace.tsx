@@ -375,10 +375,16 @@ export function Necklace(props: NecklaceProps) {
      * dali (docs/segmentation-rules.md regra 1). Sem esta supressão, o timer
      * atrasado — ou o tremor do mouse sobre a conta recém-clicada, que virou borda
      * ao definir o FIM — interrompe a reprodução do clique para tocar ~4 contas em
-     * volta da borda. Só um hover DELIBERADO (sair da conta e voltar) reconfere a
-     * borda; o clique manda enquanto o ponteiro não se move.
+     * volta da borda.
+     *
+     * A supressão vale pela ZONA da borda (±1 conta), não pela conta tocada: o dwell
+     * dispara em qualquer conta da zona, então suprimir só a conta exata deixava o
+     * ponteiro escorregar UMA conta — tirar a mão do mouse depois de clicar — e
+     * ressuscitar o dwell da mesma borda, cortando a escuta 280 ms depois. Só sair da
+     * zona (ou do colar) e voltar é hover DELIBERADO; o clique manda até lá.
      */
     let suppressedBead: number | null = null;
+    const inZone = (bead: number, edge: number) => Math.abs(bead - edge) <= 1;
     const clearHover = () => {
       if (hoverTimer) clearTimeout(hoverTimer);
       hoverTimer = null;
@@ -440,12 +446,14 @@ export function Necklace(props: NecklaceProps) {
       const sel = ix.selection;
       if (!ix.total || ix.transportOnly || !sel) return clearHover();
       const bead = beadFromEvent(ev);
-      // o clique manda até o ponteiro sair da conta que ele tocou
-      if (bead === suppressedBead) return;
+      const edge = inZone(bead, sel.s) ? sel.s : inZone(bead, sel.e) ? sel.e : null;
+      if (edge === null) {
+        suppressedBead = null;
+        return clearHover();
+      }
+      // o clique manda até o ponteiro sair da ZONA da borda em que ele caiu
+      if (suppressedBead !== null && inZone(suppressedBead, edge)) return;
       suppressedBead = null;
-      const near = (edge: number) => bead === edge || bead === edge - 1 || bead === edge + 1;
-      const edge = near(sel.s) ? sel.s : near(sel.e) ? sel.e : null;
-      if (edge === null) return clearHover();
       if (edge === hoverEdge) return; // já agendado/tocado nesta fronteira
       hoverEdge = edge;
       if (hoverTimer) clearTimeout(hoverTimer);

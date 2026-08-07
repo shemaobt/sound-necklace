@@ -264,6 +264,43 @@ describe('Necklace — hover na fronteira (dwell)', () => {
     root.unmount();
   });
 
+  /**
+   * O relato de 2026-08-07: "clico na conta e a história não se desenrola, toca só o
+   * início — mas depois de algumas tentativas funciona". A supressão do clique é por
+   * CONTA, o gatilho do dwell é por VIZINHANÇA (±1 conta da borda): o ponteiro
+   * escorregar uma conta — tirar a mão do mouse depois de clicar — sai da conta
+   * suprimida e continua dentro da zona da MESMA borda, re-armando o dwell que corta
+   * a escuta 280 ms depois. Intermitente porque depende de o ponteiro ficar parado.
+   * Só sair da ZONA da borda e voltar é hover deliberado.
+   */
+  it('escorregar para a conta vizinha não ressuscita o dwell da borda recém-clicada', async () => {
+    const onEdgeHover = vi.fn();
+    const onBeadPointerDown = vi.fn();
+    const { root, el } = mount({
+      totalBeads: 40,
+      beadSec: 0.25,
+      selection: { s: 0, e: 0 }, // primeira segmentação: a conta 0 É borda
+      onEdgeHover,
+      onBeadPointerDown,
+    });
+    const start = beadClient(el, 0, 0);
+    firePointer(el, 'pointerdown', start.x, start.y); // OUVIR dali até o fim da história
+    expect(onBeadPointerDown).toHaveBeenCalledWith(0);
+
+    const vizinha = beadClient(el, 1, 0); // ainda a ±1 da borda 0
+    firePointer(el, 'pointermove', vizinha.x, vizinha.y);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(onEdgeHover).not.toHaveBeenCalled();
+
+    // sair da ZONA da borda e voltar = intenção deliberada de conferir a borda
+    const fora = beadClient(el, 6, 0);
+    firePointer(el, 'pointermove', fora.x, fora.y);
+    firePointer(el, 'pointermove', vizinha.x, vizinha.y);
+    await vi.advanceTimersByTimeAsync(280);
+    expect(onEdgeHover).toHaveBeenCalledWith(0);
+    root.unmount();
+  });
+
   it('passar de raspão (< 280ms) não dispara', async () => {
     const onEdgeHover = vi.fn();
     const { root, el } = mount({

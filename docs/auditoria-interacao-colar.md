@@ -50,6 +50,23 @@ ponteiro sair dela. Sair do colar zera a supressão. Um hover deliberado (sair e
 voltar) continua conferindo a borda. Coberto por 2 testes novos em Chromium real
 (`necklace.browser.test.tsx`).
 
+### Segunda camada do mesmo bug (2026-08-07)
+
+A supressão acima fechou o caso do ponteiro **parado**, mas o dono voltou com o
+sintoma pela metade: "clico na conta e a história não se desenrola, toca só o início —
+mas depois de algumas tentativas funciona".
+
+**Causa raiz:** a supressão era por **conta**, o gatilho do dwell é por **zona** (±1
+conta em volta da borda). O ponteiro escorregar **uma** conta — o gesto normal de tirar
+a mão do mouse depois de clicar — saía da conta suprimida e continuava dentro da zona
+da **mesma** borda, re-armando o dwell que cortava a escuta 280 ms depois. Intermitente
+justamente porque dependia de o ponteiro ficar imóvel.
+
+**Correção:** a supressão passou a valer pela **zona** da borda em que o clique caiu
+(`inZone`, ±1), não pela conta. Sair da zona — ou do colar — a limpa, então o hover
+deliberado continua conferindo a borda. Reproduzido primeiro por um teste em Chromium
+real que falhava com `onEdgeHover(0)` disparando após o clique.
+
 ## 3. Buracos no colar — o que cada um permite
 
 - **Domínio:** idêntico à referência. `confirmPart` só recusa `selection.s < frontier`
