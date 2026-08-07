@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Player } from '../../../adapters/audio';
+import type { Transcriber } from '../../../adapters/stt/types';
 import { FixtureSpeechSynthesizer } from '../../../adapters/tts/fixture';
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
@@ -842,5 +843,94 @@ describe('Conversation — a duração no diálogo de regravar não traz dígito
     const dialogo = screen.getByRole('alertdialog');
     expect(dialogo.textContent ?? '').toMatch(/minuto/);
     expect(dialogo.textContent ?? '').not.toMatch(/\d/);
+  });
+});
+
+/**
+ * Transcribing only at the end meant the facilitator finished the interview and then
+ * waited on all 41 answers at once. Advancing past a recorded answer is the signal that
+ * the take is the one they meant to keep — they had the chance to redo it and moved on —
+ * so the work starts there and the report finds it mostly done.
+ *
+ * A take redone AFTER advancing is not re-asked here: the draft is already `ready`, and
+ * the idempotent POST leaves it alone. The report catches it, because that is where the
+ * durable record of which version was transcribed lives.
+ */
+describe('Conversation — a transcrição começa ao avançar, não no fim', () => {
+  function spyTranscriber(): { stt: Transcriber; started: string[] } {
+    const started: string[] = [];
+    return {
+      started,
+      stt: {
+        start: (id) => {
+          started.push(id);
+          return Promise.resolve();
+        },
+        progress: () => Promise.resolve({ done: true, drafts: {} }),
+      },
+    };
+  }
+
+  it('avançar depois de gravar pede a transcrição daquela resposta', async () => {
+    const { stt, started } = spyTranscriber();
+    const voice: string[] = [];
+    load(mapping());
+    render(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => voice}
+        onVoiceSaved={(p) => voice.push(p)}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    await next();
+
+    expect(started).toEqual(['s-1']);
+  });
+
+  it('avançar sem gravar não pede nada — não há o que transcrever', async () => {
+    const { stt, started } = spyTranscriber();
+    load(mapping());
+    render(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => []}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    await next();
+
+    expect(started).toEqual([]);
+  });
+
+  it('o pedido que falha não segura a navegação — a entrevista é o que não pode parar', async () => {
+    const voice: string[] = [];
+    const stt: Transcriber = {
+      start: () => Promise.reject(new Error('rede fora')),
+      progress: () => Promise.resolve({ done: true, drafts: {} }),
+    };
+    load(mapping());
+    const seq = questionSequence(sessionStore.getState().session!);
+    render(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => voice}
+        onVoiceSaved={(p) => voice.push(p)}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    await next();
+
+    expect(questionText()).toBe(seq[1]!.question.q);
   });
 });
