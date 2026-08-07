@@ -56,6 +56,13 @@ export interface ConversationStageProps {
   trechos: readonly ConversationTrecho[];
   onPrev?: () => void;
   onNext?: () => void;
+  /** A pergunta está marcada como sem resposta — o botão do rodapé oferece desfazer. */
+  skipped?: boolean;
+  /**
+   * Alterna a marca de "sem resposta" desta pergunta. Ausente = sem o botão. É ação da
+   * facilitadora, não do ouvinte: fica no rodapé, junto da navegação, longe do microfone.
+   */
+  onToggleSkip?: () => void;
   /** porta de fala (TTS): o botão "Ouvir a pergunta" só aparece quando fornecida */
   onSpeakQuestion?: () => void;
   /**
@@ -185,6 +192,8 @@ export function ConversationStage({
   trechos,
   onPrev,
   onNext,
+  skipped = false,
+  onToggleSkip,
   onSpeakQuestion,
   speaking = false,
 }: ConversationStageProps) {
@@ -308,6 +317,11 @@ export function ConversationStage({
           {onPrev ? (
             <Button variant="ghost" size="sm" onClick={onPrev}>
               {t('conversationStage.prev')}
+            </Button>
+          ) : null}
+          {onToggleSkip ? (
+            <Button variant="ghost" size="sm" onClick={onToggleSkip}>
+              {skipped ? t('conversationStage.unskip') : t('conversationStage.skip')}
             </Button>
           ) : null}
           {onNext ? (

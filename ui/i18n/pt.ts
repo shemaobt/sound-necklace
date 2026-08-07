@@ -400,6 +400,7 @@ export const pt = {
     pauseAnswer: '⏸ pausar a resposta',
     openingAnswer: 'abrindo a resposta…',
     noAnswerYet: 'ainda sem resposta gravada',
+    noAnswerGiven: 'sem resposta',
     voicePending: 'procurando a resposta gravada',
     writeAnswer: 'escrever a resposta',
     addNote: 'acrescentar uma observação',
@@ -432,6 +433,8 @@ export const pt = {
     typedHint: 'A facilitadora pode escrever depois — nunca por você.',
     prev: '← anterior',
     next: 'Próxima pergunta',
+    skip: 'sem resposta',
+    unskip: 'voltar a perguntar',
     progressAria: 'progresso da conversa',
   },
 };

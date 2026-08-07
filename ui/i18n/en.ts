@@ -378,6 +378,7 @@ export const en: Dict = {
     pauseAnswer: '⏸ pause the answer',
     openingAnswer: 'opening the answer…',
     noAnswerYet: 'no answer recorded yet',
+    noAnswerGiven: 'no answer',
     voicePending: 'looking for the recorded answer',
     writeAnswer: 'write the answer',
     addNote: 'add a note',
@@ -410,6 +411,8 @@ export const en: Dict = {
     typedHint: 'The facilitator can write later — never for you.',
     prev: '← previous',
     next: 'Next question',
+    skip: 'no answer',
+    unskip: 'ask again',
     progressAria: 'conversation progress',
   },
 };

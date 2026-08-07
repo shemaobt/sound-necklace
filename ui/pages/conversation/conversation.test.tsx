@@ -670,3 +670,80 @@ describe('Conversation — fronteira de IO real da resposta (ENG-247)', () => {
     expect(onVoiceSaved).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Uma pergunta que a pessoa preferiu não responder ficava para sempre "em aberto":
+ * a retomada procura a primeira sem resposta, e sem resposta ela sempre estava. A
+ * sessão voltava à mesma pergunta em toda reabertura, e a revisão — que só abre
+ * sozinha quando não há mais nada a perguntar — ficava inalcançável.
+ */
+describe('Conversation — a pergunta que ficou sem resposta', () => {
+  async function skip(): Promise<void> {
+    await userEvent.click(screen.getByRole('button', { name: 'sem resposta' }));
+  }
+
+  it('marcar sem resposta segue para a próxima pergunta', async () => {
+    const seq = questionSequence(ensureMapping(mapping()));
+    load(mapping());
+    render(<Conversation />);
+
+    await skip();
+
+    expect(questionText()).toBe(seq[1]!.question.q);
+  });
+
+  it('reabrir não devolve à pergunta marcada — a retomada segue adiante', async () => {
+    const seq = questionSequence(ensureMapping(mapping()));
+    load(mapping());
+    const view = render(<Conversation />);
+    await skip();
+    view.unmount();
+
+    render(<Conversation />);
+
+    expect(questionText()).toBe(seq[1]!.question.q);
+  });
+
+  it('com a última marcada e o resto gravado, reabrir cai na revisão', async () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = seq.slice(0, -1).map((s) => voiceAnswerPath(s));
+    load(state);
+    const view = render(<Conversation voicePaths={() => voice} />);
+    expect(questionText()).toBe(seq.at(-1)!.question.q);
+    await skip();
+    view.unmount();
+
+    render(<Conversation voicePaths={() => voice} />);
+
+    expect(screen.queryByRole('button', { name: 'Próxima pergunta' })).toBeNull();
+  });
+
+  it('voltar a perguntar desfaz a marca e a retomada para nela de novo', async () => {
+    const seq = questionSequence(ensureMapping(mapping()));
+    load(mapping());
+    const view = render(<Conversation />);
+    await skip();
+    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
+    await userEvent.click(screen.getByRole('button', { name: 'voltar a perguntar' }));
+    view.unmount();
+
+    render(<Conversation />);
+
+    expect(questionText()).toBe(seq[0]!.question.q);
+  });
+
+  it('gravar a resposta desfaz a marca — a pergunta foi respondida, afinal', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    render(<Conversation recorder={recorder} />);
+    await skip();
+    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
+    expect(screen.getByRole('button', { name: 'voltar a perguntar' })).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+
+    expect(screen.getByRole('button', { name: 'sem resposta' })).toBeTruthy();
+  });
+});
