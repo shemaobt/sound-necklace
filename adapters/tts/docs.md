@@ -14,7 +14,7 @@ Path: @/adapters/tts
 - Per @/.dependency-cruiser.cjs this folder may import @/domain and @/contracts but never `ui/`; only the wiring layer resolves the port, and only by the name `'tts'` — never by importing an implementation class.
 - @/adapters/tts/register.ts default-exports an `AdapterRegistration` **unconditionally**. It used to export `null` when the Web Speech API was missing (the graceful-absence mechanism) — that is gone: with the voice coming from the API, a browser without `speechSynthesis` would have lost the ElevenLabs clips too, which is backwards. The mechanism still exists in the composition root (`buildAdapterRegistry` guards with `mod.default?.port`); this port simply no longer uses it, and degrades **internally** instead.
 - **`onSpeaking` feeds the guide lip-sync:** the `speaking` true/false transitions drive the animated storyteller guide (ENG-232) in the conversation stage. Both the clip player and the fallback funnel into the same emitter, so the guide's mouth follows whichever one is actually speaking.
-- No third-party sinks, no telemetry. The AI-voice disclosure required by §12 lives on the Setup screen (`setup.aiVoiceNotice`), not here.
+- No third-party sinks, no telemetry. The AI-voice disclosure required by §12 lives on the Setup screen (`setup.disclosure`), not here.
 
 ### Core Implementation
 
