@@ -375,6 +375,23 @@ export function ConversationStage({
                 <p className="cds-conversation-stage-typed-hint">
                   {t('conversationStage.typedHint')}
                 </p>
+                {/* A decisão de deixar a pergunta sem resposta é tomada AQUI, no mesmo
+                    instante em que se decidiria gravar — no rodapé, entre voltar e
+                    avançar, ela ficava escondida de quem está olhando o microfone.
+                    Fantasma e pequeno de propósito: o microfone continua sendo a única
+                    ação dominante da tela (§9.2). */}
+                {onToggleSkip ? (
+                  <p className="cds-conversation-stage-skip">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      ariaDisabled={locked}
+                      onClick={guard(onToggleSkip)}
+                    >
+                      {skipped ? t('conversationStage.unskip') : t('conversationStage.skip')}
+                    </Button>
+                  </p>
+                ) : null}
               </div>
             </div>
           </QuestionCard>
@@ -386,11 +403,6 @@ export function ConversationStage({
           {onPrev ? (
             <Button variant="ghost" size="sm" ariaDisabled={locked} onClick={guard(onPrev)}>
               {t('conversationStage.prev')}
-            </Button>
-          ) : null}
-          {onToggleSkip ? (
-            <Button variant="ghost" size="sm" ariaDisabled={locked} onClick={guard(onToggleSkip)}>
-              {skipped ? t('conversationStage.unskip') : t('conversationStage.skip')}
             </Button>
           ) : null}
           {onNext ? (

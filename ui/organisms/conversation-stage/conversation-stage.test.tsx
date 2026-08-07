@@ -167,6 +167,30 @@ describe('ConversationStage — convite e gravação por voz (protótipo §9.2)'
   });
 });
 
+/**
+ * No rodapé, entre voltar e avançar, o "sem resposta" ficava escondido: quem conduz
+ * olha para o microfone, e é ali — no mesmo instante em que se decidiria gravar —
+ * que se decide deixar a pergunta sem resposta.
+ */
+describe('ConversationStage — o "sem resposta" mora junto do microfone', () => {
+  it('fica na área do gravador, não no rodapé da navegação', () => {
+    const { container } = render(<ConversationStage {...baseProps({ onToggleSkip: vi.fn() })} />);
+
+    const skip = screen.getByRole('button', { name: 'sem resposta' });
+    expect(container.querySelector('.cds-conversation-stage-recorder')?.contains(skip)).toBe(true);
+    expect(container.querySelector('.cds-conversation-stage-footer')?.contains(skip)).toBe(false);
+  });
+
+  it('o microfone segue sendo a ação dominante ao lado dele', () => {
+    render(<ConversationStage {...baseProps({ onToggleSkip: vi.fn() })} />);
+
+    const mic = screen.getByRole('button', { name: 'gravar a resposta' });
+    const skip = screen.getByRole('button', { name: 'sem resposta' });
+    expect(mic.classList.contains('cds-conversation-stage-mic')).toBe(true);
+    expect(skip.classList.contains('cds-conversation-stage-mic')).toBe(false);
+  });
+});
+
 describe('ConversationStage — movimento respeita prefers-reduced-motion (§4.5)', () => {
   it('nenhuma animação vive fora da guarda de movimento', () => {
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
