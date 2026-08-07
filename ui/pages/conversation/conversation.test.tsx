@@ -315,7 +315,16 @@ describe('Conversation — a sequência completa da conversa (PRD v2 §8.7)', ()
     expect(screen.getByRole('region', { name: 'relatório' })).toBeTruthy();
   });
 
-  it('o preparo AQUECE as respostas que existem: prefetch antes de abrir a revisão (ENG-339)', async () => {
+  /**
+   * A ENG-339 aquecia cada resposta existente aqui, para a revisão abrir com o áudio
+   * pronto de tocar. Numa entrevista de 14 cenas — ~396 perguntas — isso vira dezenas
+   * de MB baixados de uma vez, e a facilitadora toca um punhado deles.
+   *
+   * O preparo agora só DESCOBRE. O áudio desce ao tocar, e o cache persistente
+   * (@/adapters/voice/cached-store) faz a segunda vez, e toda reabertura da sessão,
+   * sair do disco. A troca é uma pequena espera no primeiro play de cada resposta.
+   */
+  it('o preparo descobre as respostas sem baixá-las', async () => {
     const recorder = new FixtureVoiceRecorder();
     const state = mapping();
     const seq = questionSequence(state);
@@ -329,9 +338,7 @@ describe('Conversation — a sequência completa da conversa (PRD v2 §8.7)', ()
     for (let i = 0; i < seq.length; i += 1) await next();
 
     expect(await screen.findByRole('region', { name: 'relatório' })).toBeTruthy();
-    // só o caminho COM resposta aquece — nada de baixar 41 inexistentes
-    expect(prefetch).toHaveBeenCalledTimes(1);
-    expect(prefetch).toHaveBeenCalledWith(answered);
+    expect(prefetch).not.toHaveBeenCalled();
   });
 
   it('com gravador, o preparo segura a revisão até as respostas serem descobertas (ENG-337)', async () => {
@@ -894,6 +901,36 @@ describe('Conversation — a transcrição começa ao avançar, não no fim', ()
     await next();
 
     expect(started).toEqual(['s-1']);
+  });
+
+  /**
+   * O sinal é "gravou AGORA", não "existe gravação". `meta.voice` acumula tudo que já
+   * foi gravado alguma vez, então reatravessar uma entrevista disparava um pedido por
+   * pergunta — numa sessão de 14 cenas passa de trezentos POSTs, cada um publicando
+   * um evento, para não pedir nada que o servidor já não tivesse.
+   */
+  it('atravessar respostas gravadas numa visita anterior não pede nada', async () => {
+    const { stt, started } = spyTranscriber();
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    // retomada: as duas primeiras vêm gravadas de antes, e o cursor abre na terceira
+    const voice = [seq[0]!, seq[1]!].map((s) => voiceAnswerPath(s));
+
+    load(state);
+    render(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => voice}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    // volta para uma resposta já gravada e avança por cima dela de novo
+    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
+    await next();
+
+    expect(started).toEqual([]);
   });
 
   it('avançar sem gravar não pede nada — não há o que transcrever', async () => {

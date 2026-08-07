@@ -107,17 +107,24 @@ interface ReportSlotProps {
 const PREPARE_TIMEOUT_MS = 8000;
 
 /**
- * Advancing past a recorded answer starts its transcription.
+ * Advancing past an answer recorded IN THIS SITTING starts its transcription.
  *
  * Moving on IS the acceptance: the facilitator had the take in front of them, could
  * have redone it, and went forward instead. Firing on `stop()` would pay for every take
  * replaced before anyone moves — the very reason the job used to wait for the report.
  * Waiting for the report, though, meant finishing the interview and then sitting
- * through all 41 transcriptions at once.
+ * through every transcription at once.
+ *
+ * "Recorded in this sitting" and not "has a recording" — that distinction is the whole
+ * guard. `meta.voice` accumulates every answer ever recorded, so keying on it made
+ * re-walking a finished interview fire one request per question: a session with 14
+ * scenes runs to ~396 questions, and each request publishes a queue event to ask for
+ * work the server already has. An answer recorded in an earlier sitting either has its
+ * draft or will get it from the report's own trigger.
  *
  * Fire-and-forget, deliberately. This runs on the way to the next question, and the
- * interview is what must never stall on the network (ENG-338). The report's own trigger
- * is idempotent and seeds whatever a lost request left behind, so a failure here costs
+ * interview is what must never stall on the network (ENG-338). The report's trigger is
+ * idempotent and seeds whatever a lost request left behind, so a failure here costs
  * latency at the end and nothing else.
  *
  * A take redone AFTER advancing is not re-asked here: its draft is already `ready` and a
@@ -128,9 +135,9 @@ function requestTranscription(
   stt: Transcriber | null,
   sessionId: string | null,
   path: ResourcePath,
-  recorded: readonly string[],
+  recordedNow: ReadonlySet<string>,
 ): void {
-  if (!stt || !sessionId || !recorded.includes(path)) return;
+  if (!stt || !sessionId || !recordedNow.has(path)) return;
   void stt.start(sessionId, [path]).catch(() => undefined);
 }
 
@@ -556,6 +563,19 @@ export function Conversation({
     has: ReadonlySet<string>;
   } | null>(null);
   const aliveRef = useRef(true);
+  /**
+   * The answers recorded in THIS sitting — what the transcription trigger keys on.
+   * `meta.voice` accumulates every answer ever recorded, so using it made re-walking a
+   * finished interview ask for work the server already has, once per question.
+   */
+  const recordedNow = useRef<Set<string>>(new Set());
+  const noteVoiceSaved = useCallback(
+    (p: string) => {
+      recordedNow.current.add(p);
+      onVoiceSaved?.(p);
+    },
+    [onVoiceSaved],
+  );
 
   useEffect(() => {
     aliveRef.current = true;
@@ -583,14 +603,17 @@ export function Conversation({
       return;
     }
     const paths = sequence.map((s2) => voiceAnswerPath(s2));
-    // descobrir E aquecer (ENG-339): a resposta que existe já baixa aqui, para a
-    // revisão abrir com o áudio pronto de tocar — não só sabido. Falha do aquecer
-    // não muda o veredito (a linha toca baixando na hora, como antes).
-    const discover = async (p: string): Promise<boolean> => {
-      const h = await recorder.has(p).catch(() => false);
-      if (h) await recorder.prefetch?.(p).catch(() => undefined);
-      return h;
-    };
+    /**
+     * Descobre, sem AQUECER. A ENG-339 baixava aqui cada resposta existente, para a
+     * revisão abrir com o áudio pronto de tocar; numa entrevista de 14 cenas isso é
+     * baixar dezenas de MB de uma vez, e a facilitadora vai tocar um punhado deles.
+     *
+     * O áudio agora é baixado ao tocar, e o cache persistente (@/adapters/voice/
+     * cached-store) faz a segunda vez — e toda reabertura da sessão — sair do disco.
+     * A troca é uma pequena espera no primeiro play de cada resposta, contra uma
+     * espera longa e a maior parte do tráfego desperdiçada ao abrir a revisão.
+     */
+    const discover = (p: string): Promise<boolean> => recorder.has(p).catch(() => false);
     const results = await Promise.all(
       paths.map((p) =>
         Promise.race([
@@ -696,7 +719,7 @@ export function Conversation({
     else sessionStore.getState().apply((s) => setMode(s, 'segmentacao'));
   };
   const goNext = (): void => {
-    requestTranscription(stt, sessionId, path, voicePaths());
+    requestTranscription(stt, sessionId, path, recordedNow.current);
     if (idx < total - 1) setIndex(idx + 1);
     else {
       sound?.advance(); // a conversa acabou: a prévia do relatório é a próxima etapa
@@ -737,7 +760,7 @@ export function Conversation({
       speaker={speaker}
       sound={sound}
       muted={muted}
-      onVoiceSaved={onVoiceSaved}
+      onVoiceSaved={noteVoiceSaved}
     />
   );
 }
