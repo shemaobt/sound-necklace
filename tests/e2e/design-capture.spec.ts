@@ -40,9 +40,12 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
 
   await app.confirmWholeStory();
   await shot('06-cut');
+  let start = 0;
   for (const end of SCENARIO.sceneEndBeads) {
-    await app.clickBead(end);
+    await app.clickBead(start); // começo
+    if (end !== start) await app.clickBead(end); // fim
     await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
+    start = end + 1;
   }
   await shot('06b-cut-revisao');
   await page.getByRole('button', { name: 'Continuar →' }).click();

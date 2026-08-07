@@ -363,8 +363,9 @@ describe('Escuta 2 — tratamento creme (redesign §6.3, §4.5)', () => {
     const { container } = renderStation(<Cut />);
 
     expect(container.querySelector('.cds-cut')).not.toBeNull();
-    // sem começo marcado, a instrução pede o COMEÇO; marcado, pediria o fim
-    expect(container.querySelector('.cds-cut-emph')?.textContent).toBe('esta cena começa');
+    // a instrução cobre os DOIS tempos numa linha só e NÃO muda com o clique: mudar
+    // texto no instante do toque é texto competindo com o som (§9.3, oral-mode e2e)
+    expect(container.querySelector('.cds-cut-emph')?.textContent).toBe('começa e termina');
     // sem cena travada não há o que reouvir: a linha não promete a afordância
     expect(screen.queryByText(/para reouvir/)).toBeNull();
     // o papel, não o token cru: tokens.test.tsx prova que --cds-ui-bg/-accent

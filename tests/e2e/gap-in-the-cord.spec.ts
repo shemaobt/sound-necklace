@@ -10,9 +10,10 @@ import { ColarApp, readPersistedState } from './support/app';
  * literal: não é remover o áudio, não é pular na escuta, não é excluir do artefato. É
  * o trecho não pertencer a cena nenhuma.
  *
- * O padrão não muda (um clique seta só o FIM); o começo cede ao ARRASTO da extremidade
- * inicial. Esta spec prova o buraco no ESTADO PERSISTIDO, não na tela: o que interessa
- * é o que o pipeline vai receber.
+ * Desde 2026-08-07 o corte leva dois toques (começo, depois fim), então o começo também
+ * pode nascer torto por clique — mas o gesto DELIBERADO continua sendo arrastar a
+ * extremidade inicial, e é ele que esta spec prova. O buraco é aferido no ESTADO
+ * PERSISTIDO, não na tela: o que interessa é o que o pipeline vai receber.
  */
 
 /** Arrasta a conta `from` até a conta `to` (o punho arma no down e anda no move). */
@@ -36,12 +37,15 @@ test('arrastar o começo deixa um trecho fora de qualquer cena', async ({ page }
   const id = await app.createSession();
   await app.confirmWholeStory();
 
-  // primeira cena: 0…3
+  // primeira cena: começo 0, fim 3
+  await app.clickBead(0);
   await app.clickBead(3);
   await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
 
-  // a próxima nasce ancorada na conta 4; arrastar o começo até a 7 deixa 4, 5 e 6
-  // sem dono — é ali que estaria o erro de fala
+  // a próxima: marca o começo na conta 4 (é o toque que faz nascer o punho do começo)
+  // e ARRASTA esse começo até a 7, deixando 4, 5 e 6 sem dono — é ali que estaria o
+  // erro de fala. Depois fecha no fim do colar.
+  await app.clickBead(4);
   await dragBead(page, 4, 7);
   await app.clickBead(11);
   await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();

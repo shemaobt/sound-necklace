@@ -370,11 +370,7 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
           {`${sceneLabel(sceneIdx)} · ${sceneKindLabel(sc.scene_kind!, i18n.language)}`}
         </p>
         <p className="cds-phrases-instruction" data-role="instruction">
-          {covered
-            ? t('phrases.reviewHeadline')
-            : session.pendingStart !== null
-              ? t('phrases.instructionEnd')
-              : t('phrases.instructionStart')}
+          {covered ? t('phrases.reviewHeadline') : t('phrases.instruction')}
           {!covered && scenePhrases.length > 0 ? t('phrases.instructionReplay') : null}
         </p>
       </div>

@@ -546,7 +546,7 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
     );
     renderStation(<Phrases />);
 
-    expect(screen.getByText(/Toque no colar onde esta frase começa/)).toBeTruthy();
+    expect(screen.getByText(/Toque no colar onde esta frase começa e termina/)).toBeTruthy();
     expect(screen.queryByText(/para reouvir/)).toBeNull();
   });
 });

@@ -30,7 +30,8 @@ export const TYPED_ANSWER = 'observação-e2e-a1b2c3';
 export const SCENARIO = {
   audioFilename: 'jornada-do-boto.wav',
   totalBeads: 12,
-  /** cortes de cena em Escuta 2: cada clique fixa o FIM da cena (o começo já está costurado). */
+  /** cortes de cena em Escuta 2: cada cena leva DOIS toques, começo e fim (2026-08-07).
+   *  Os começos saem daqui por contiguidade: 0, e depois fim anterior + 1. */
   sceneEndBeads: [3, 7, 11] as const,
   /** classificação de cada cena travada, na ordem em que a Triage as foca. */
   triage: [
@@ -159,18 +160,28 @@ export class ColarApp {
   async confirmWholeStory(): Promise<void> {
     await this.page.getByRole('button', { name: 'Já ouvi a história completa' }).click();
     // aguarda a Escuta 2 (corte de cenas) assumir — o colar da Escuta 1 é transporte.
-    await expect(this.page.getByText('já está costurado')).toBeVisible();
+    // Âncora no TÍTULO da estação, não na instrução: a instrução muda com o tempo do
+    // corte (começo/fim) e já derrubou 14 e2e de uma vez quando o texto mudou.
+    await expect(
+      this.page.getByRole('heading', { name: 'Corte a história em cenas' }),
+    ).toBeVisible();
   }
 
   /**
-   * Corta as três cenas (um clique = fim de cada cena) e segue. Cobrindo a
-   * história inteira o app entra no momento de revisão ("Continuar →");
-   * cobertura parcial mantém o "Confirmar as cenas →" do PRD.
+   * Corta as cenas e segue. Desde 2026-08-07 cada cena leva DOIS toques — o começo
+   * (a história corre dali) e o fim — porque o slot não vem mais pré-ancorado. Os
+   * começos são derivados por contiguidade para o cenário seguir ladrilhando a
+   * história inteira, que é o que a identidade byte-a-byte com o golden exige.
+   * Cobrindo tudo, o app entra no momento de revisão ("Continuar →"); cobertura
+   * parcial mantém o "Confirmar as cenas →" do PRD.
    */
   async cutScenes(endBeads: readonly number[] = SCENARIO.sceneEndBeads): Promise<void> {
+    let start = 0;
     for (const end of endBeads) {
-      await this.clickBead(end);
+      await this.clickBead(start); // marca o começo
+      if (end !== start) await this.clickBead(end); // e o fim
       await this.page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
+      start = end + 1;
     }
     const continuar = this.page.getByRole('button', { name: 'Continuar →' });
     if (await continuar.count()) await continuar.click();
@@ -197,12 +208,11 @@ export class ColarApp {
 
   // ——— Segmentação ———
 
-  /** Seleciona uma frase (clique no começo, clique no fim) e confirma. */
-  // um-toque como as cenas (primeFrase): o início já é a fronteira automática;
-  // `s` documenta o início esperado (= fronteira), só o fim `e` é tocado.
+  /** Seleciona uma frase (clique no começo, clique no fim) e confirma — dois toques,
+   *  como as cenas, desde que a pré-ancoragem saiu (2026-08-07). */
   async cutPhrase(s: number, e: number): Promise<void> {
-    void s;
-    await this.clickBead(e);
+    await this.clickBead(s);
+    if (e !== s) await this.clickBead(e);
     await this.page.getByRole('button', { name: '✓ Confirmar esta frase' }).click();
   }
 

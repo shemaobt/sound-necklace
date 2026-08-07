@@ -269,9 +269,8 @@ export const pt = {
   cut: {
     title: 'Corte a história em cenas',
     reviewHeadline: 'A história está toda em cenas. Toque numa cena para reouvir.',
-    instructionPre: 'Toque no colar onde ',
-    instructionEmphStart: 'esta cena começa',
-    instructionEmphEnd: 'esta cena termina',
+    instructionPre: 'Toque no colar onde esta cena ',
+    instructionEmph: 'começa e termina',
     instructionPost: '.',
     instructionReplay: '. Toque numa cena pronta para reouvir.',
     sceneLabel: 'Cena {{ordinal}}',
@@ -287,8 +286,7 @@ export const pt = {
   },
   phrases: {
     reviewHeadline: 'As frases desta cena estão prontas. Toque numa frase para reouvir.',
-    instructionStart: 'Toque no colar onde esta frase começa.',
-    instructionEnd: 'Agora toque onde ela termina.',
+    instruction: 'Toque no colar onde esta frase começa e termina.',
     instructionReplay: ' Toque numa frase pronta para reouvir.',
     halfSelection: 'Toque no colar onde esta frase termina.',
     stripAria: 'frases desta cena',

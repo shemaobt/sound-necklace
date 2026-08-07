@@ -79,17 +79,21 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
 
   // ——— Escuta 2: ancoragem ativa ———
   await app.confirmWholeStory();
-  await expect(page.getByText('já está costurado')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Corte a história em cenas' })).toBeVisible();
   await scan('Escuta 2 — ancoragem');
 
   // ——— Escuta 2: com uma cena travada (chips visíveis) ———
+  // dois toques por cena desde 2026-08-07: começo, depois fim
+  await app.clickBead(0);
   await app.clickBead(SCENARIO.sceneEndBeads[0]);
   await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
   await scan('Escuta 2 — cena travada');
 
   // termina o corte e confirma as cenas
+  await app.clickBead(SCENARIO.sceneEndBeads[0] + 1);
   await app.clickBead(SCENARIO.sceneEndBeads[1]);
   await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
+  await app.clickBead(SCENARIO.sceneEndBeads[1] + 1);
   await app.clickBead(SCENARIO.sceneEndBeads[2]);
   await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
   // história toda coberta → momento de revisão (uma manchete + Continuar)
@@ -117,7 +121,7 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await page.getByRole('button', { name: 'Continuar →' }).click();
 
   // ——— Segmentação: ancoragem (primeira cena produtiva, sem frases) ———
-  await expect(page.getByText(/Toque no colar onde cada frase termina/)).toBeVisible();
+  await expect(page.getByText(/Toque no colar onde esta frase começa e termina/)).toBeVisible();
   await scan('Segmentação — ancoragem');
 
   // ——— Segmentação: aviso de cena vazia ———

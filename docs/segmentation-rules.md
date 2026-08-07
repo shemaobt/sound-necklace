@@ -59,8 +59,10 @@ position they did not know yet. Now the story RUNS while they decide.
 - **Editing a confirmed boundary** (dragging the end): preview from **~4 beads before**
   the new limit to **~3 beads after** it. Post-reference (ENG-342).
 
-The instruction line follows the beat: it asks where the segment BEGINS, then where it
-ENDS (`cut.instructionEmphStart` / `EmphEnd`, `phrases.instructionStart` / `End`).
+The instruction line names BOTH beats at once and does **not** change on the click:
+"Toque no colar onde esta cena **começa e termina**." Swapping the text at the moment of
+the tap is text competing with the sound — §9.3, and `oral-mode.spec.ts` fails on it.
+One short line, both beats, no flicker.
 
 Hover keeps the reference's edge dwell (280 ms, ±1 bead, L584–597) and the click does
 **not** cancel it.

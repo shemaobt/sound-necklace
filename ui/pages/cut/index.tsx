@@ -300,11 +300,7 @@ export function Cut({ player = null, sound }: CutProps) {
         ) : (
           <p className="cds-cut-instruction" data-role="instruction">
             {t('cut.instructionPre')}
-            <span className="cds-cut-emph">
-              {session.pendingStart !== null
-                ? t('cut.instructionEmphEnd')
-                : t('cut.instructionEmphStart')}
-            </span>
+            <span className="cds-cut-emph">{t('cut.instructionEmph')}</span>
             {hasLocked ? t('cut.instructionReplay') : t('cut.instructionPost')}
           </p>
         )}

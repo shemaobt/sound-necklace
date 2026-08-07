@@ -242,9 +242,8 @@ export const en: Dict = {
   cut: {
     title: 'Cut the story into scenes',
     reviewHeadline: 'The whole story is in scenes. Tap a scene to hear it again.',
-    instructionPre: 'Tap the necklace where ',
-    instructionEmphStart: 'this scene begins',
-    instructionEmphEnd: 'this scene ends',
+    instructionPre: 'Tap the necklace where this scene ',
+    instructionEmph: 'begins and ends',
     instructionPost: '.',
     instructionReplay: '. Tap a finished scene to hear it again.',
     sceneLabel: 'Scene {{ordinal}}',
@@ -258,8 +257,7 @@ export const en: Dict = {
   },
   phrases: {
     reviewHeadline: 'The phrases of this scene are ready. Tap a phrase to hear it again.',
-    instructionStart: 'Tap the necklace where this phrase begins.',
-    instructionEnd: 'Now tap where it ends.',
+    instruction: 'Tap the necklace where this phrase begins and ends.',
     instructionReplay: ' Tap a finished phrase to hear it again.',
     halfSelection: 'Tap the necklace where this phrase ends.',
     stripAria: 'phrases in this scene',

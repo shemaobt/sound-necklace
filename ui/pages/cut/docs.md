@@ -6,7 +6,7 @@ Path: @/ui/pages/cut
 
 - The second flow station (ENG-230): "Escuta 2 — o corte de cenas" (PRD v2 §8.4, redesign §6.3), where the listener cuts the confirmed whole story into scenes by tapping where each scene BEGINS and then where it ENDS — since 2026-08-07 there is no pre-anchoring, so the start comes from the first click (and an accidental gap between scenes is therefore possible).
 - A wiring component: it reads the pure @/domain session through the @/ui/state session store, renders the @/ui/organisms `Necklace` with anchoring active, and dispatches the scene-cut/confirm/boundary-drag domain reducers.
-- Cream working stage with exactly one instruction line, which switches between "onde **esta cena começa**" and "onde **esta cena termina**" and exactly one dominant action ("✓ Confirmar esta cena"), per the listener-facing UI rules (§9.2).
+- Cream working stage with exactly one instruction line ("Toque no colar onde esta cena **começa e termina**") and exactly one dominant action ("✓ Confirmar esta cena"), per the listener-facing UI rules (§9.2).
 
 ### How it fits into the larger codebase
 
