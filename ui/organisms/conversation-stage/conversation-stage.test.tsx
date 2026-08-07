@@ -59,6 +59,43 @@ describe('ConversationStage — feedback de reprodução da resposta (ENG-322)',
   });
 });
 
+/**
+ * Saber se a pergunta já tem resposta é uma ida à rede (`recorder.has`). Até ela
+ * responder o palco caía no estado `idle`, ou seja, AFIRMAVA que não há resposta
+ * — o convite "Toque e fale a sua resposta" e a promessa do fio de som, na
+ * pergunta que já tinha uma gravada. `checking` é essa ignorância, desenhada.
+ */
+describe('ConversationStage — a procura pela resposta já gravada', () => {
+  it("em 'checking', o esqueleto da onda substitui a promessa do fio de som", () => {
+    const { container } = render(
+      <ConversationStage {...baseProps({ recorderState: 'checking' })} />,
+    );
+    expect(container.querySelector('.cds-conversation-stage-wave-skeleton')).not.toBeNull();
+    expect(container.querySelector('.cds-conversation-stage-empty-wave')).toBeNull();
+  });
+
+  it('a linha curta diz que está procurando, no lugar do convite a falar (§9.2: uma linha só)', () => {
+    const { container } = render(
+      <ConversationStage {...baseProps({ recorderState: 'checking' })} />,
+    );
+    expect(screen.getByText('procurando a resposta já gravada')).toBeTruthy();
+    expect(screen.queryByText('Toque e fale a sua resposta')).toBeNull();
+    expect(container.textContent ?? '').not.toMatch(/\d/);
+  });
+
+  it('não oferece ouvir nem regravar antes de saber que existe resposta', () => {
+    render(<ConversationStage {...baseProps({ recorderState: 'checking' })} />);
+    expect(screen.queryByRole('button', { name: 'ouvir a resposta' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'gravar de novo' })).toBeNull();
+  });
+
+  it('a procura não trava o microfone: quem quer responder já pode', () => {
+    render(<ConversationStage {...baseProps({ recorderState: 'checking' })} />);
+    const mic = screen.getByRole('button', { name: 'gravar a resposta' });
+    expect((mic as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
 /** Parar → guardar: o estado vive no botão (ENG-318) — spinner, desabilitado, sem texto novo. */
 describe('ConversationStage — guardando a resposta (ENG-318)', () => {
   it("em 'saving', o microfone vira 'guardando a resposta' e não aceita clique", () => {

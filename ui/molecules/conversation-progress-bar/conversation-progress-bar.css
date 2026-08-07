@@ -1,8 +1,8 @@
 /*
  * Barra de progresso da conversa (design "novos componentes", card "Progresso da
  * conversa"): barra segmentada por trecho + marcador, sempre sobre o oliva da
- * conversa (cores fixas para fundo escuro). O deslize do marcador e o fade dos
- * segmentos só sob prefers-reduced-motion: no-preference (§9.3).
+ * conversa (cores fixas para fundo escuro). O deslize do marcador e o crescimento
+ * do preenchimento só sob prefers-reduced-motion: no-preference (§9.3).
  */
 .cds-conv-progress {
   display: flex;
@@ -24,15 +24,29 @@
   background: rgba(246, 245, 235, 0.13);
 }
 
+/* Cada trecho é uma caixa: dentro dela o apagado ocupa tudo e o aceso cresce
+   pergunta a pergunta — é o comprimento aceso que diz a fração já andada. */
 .cds-conv-progress-seg {
   position: absolute;
   top: 0;
   bottom: 0;
-  opacity: 0.3;
+  overflow: hidden;
 }
 
-.cds-conv-progress-seg[data-past] {
-  opacity: 0.92;
+.cds-conv-progress-track {
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+}
+
+/* o aceso é a fração já andada: o contraste com o apagado é o que se LÊ como
+   "quanto falta", então ele vai cheio, sem meia-tinta */
+.cds-conv-progress-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  opacity: 1;
 }
 
 .cds-conv-progress-tick {
@@ -65,8 +79,10 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .cds-conv-progress-seg {
-    transition: opacity 0.3s;
+  /* o aceso CRESCE junto com o marcador: a barra anda, não pisca de um estado
+     para o outro — é o que faz o avanço dentro do trecho ser visível */
+  .cds-conv-progress-fill {
+    transition: width 0.3s;
   }
 
   .cds-conv-progress-marker {

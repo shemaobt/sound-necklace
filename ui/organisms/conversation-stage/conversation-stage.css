@@ -130,6 +130,22 @@
   background: #e8813e;
 }
 
+/* O esqueleto da onda enquanto se procura a resposta já gravada: mesma altura e
+   mesmo ritmo de barras da forma de onda, para o painel não pular quando o
+   veredito chega. Apagado de propósito — ele diz "ainda não sei", não "tem som". */
+.cds-conversation-stage-wave-skeleton {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 44px;
+}
+
+.cds-conversation-stage-wave-skeleton span {
+  width: 5px;
+  border-radius: 3px;
+  background: rgba(246, 245, 235, 0.14);
+}
+
 /* a promessa do fio de som antes da primeira gravação (protótipo answerEmpty) */
 .cds-conversation-stage-empty-wave {
   display: flex;
@@ -286,6 +302,22 @@
     }
     50% {
       transform: scaleY(0.45);
+    }
+  }
+
+  /* o esqueleto respira para dizer que a procura está em curso, e não que a
+     resposta é um traço morto — decorativo, então opt-in (§9.3) */
+  .cds-conversation-stage-wave-skeleton span {
+    animation: cds-cs-skeleton 1.4s ease-in-out infinite;
+  }
+
+  @keyframes cds-cs-skeleton {
+    0%,
+    100% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 1;
     }
   }
 

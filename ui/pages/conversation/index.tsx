@@ -248,7 +248,14 @@ function QuestionScreen({
   onToggleSkip,
 }: QuestionScreenProps) {
   const { t, i18n } = useTranslation();
-  const [recorderState, setRecorderState] = useState<RecorderState>('idle');
+  /**
+   * Começa em `checking` quando há porta de voz: saber se esta pergunta já tem
+   * resposta é uma ida à rede, e até ela responder a tela não sabe. Antes disto o
+   * estado inicial era `idle` — o convite a falar e a promessa do fio de som, ou
+   * seja, a AFIRMAÇÃO de que não há resposta, na pergunta que já tinha uma. Sem
+   * gravador não há o que consultar e não existe espera nenhuma.
+   */
+  const [recorderState, setRecorderState] = useState<RecorderState>(recorder ? 'checking' : 'idle');
   const [levels, setLevels] = useState<number[]>([]);
   const [speaking, setSpeaking] = useState(false);
   const [recordError, setRecordError] = useState(false);
@@ -324,18 +331,33 @@ function QuestionScreen({
     let alive = true;
     mountedRef.current = true;
     if (recorder) {
+      /**
+       * O veredito só vale enquanto ninguém agiu: quem tocou o microfone durante a
+       * procura já está gravando, e um "existe resposta" chegando depois arrancava a
+       * forma de onda ao vivo do meio da fala, com o microfone ainda captando. Sair
+       * de `checking` é o que fecha essa porta — e é também o que faz a espera não
+       * durar mais que ela mesma.
+       */
+      const settle = (next: RecorderState) =>
+        setRecorderState((prev) => (prev === 'checking' ? next : prev));
       void recorder
         .has(path)
         .then(async (h) => {
-          if (!alive || !h) return;
-          setRecorderState('recorded');
+          if (!alive) return;
+          if (!h) {
+            settle('idle');
+            return;
+          }
+          settle('recorded');
           // a duração só interessa para a pergunta de regravar; falha dela não
           // muda o estado — a confirmação abre sem o número, nunca com um falso
           const sec = await recorder.duration(path).catch(() => undefined);
           if (alive && sec !== undefined) setAnswerSeconds(sec);
         })
         // fronteira de IO real (ENG-247): consulta falhou → segue como não gravada
-        .catch(() => undefined);
+        .catch(() => {
+          if (alive) settle('idle');
+        });
     }
     // Sair da tela (trocar de pergunta remonta pela `key`) descarta a gravação em
     // curso — solta o microfone/stream do `getUserMedia` (Recording.cancel, §12).

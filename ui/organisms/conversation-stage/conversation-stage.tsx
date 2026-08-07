@@ -11,8 +11,12 @@ import './conversation-stage.css';
  * Estado da resposta em voz — a máquina vive na página; o organismo só a desenha.
  * `saving`: entre o toque de parar e a persistência confirmada (o PUT embutido no
  * stop, ENG-318) — o estado vive no botão: spinner, sem aceitar clique.
+ * `checking`: ainda não se sabe se esta pergunta tem resposta gravada (a consulta
+ * é uma ida à rede no modo real). Antes dele a tela caía em `idle` nesse intervalo,
+ * ou seja, AFIRMAVA que não há resposta — convite a falar e tudo — justamente na
+ * pergunta que já tinha uma. Ignorância desenhada é melhor que uma certeza falsa.
  */
-export type RecorderState = 'idle' | 'recording' | 'saving' | 'recorded';
+export type RecorderState = 'checking' | 'idle' | 'recording' | 'saving' | 'recorded';
 
 /**
  * Barras da forma de onda (protótipo recBars). Exportado porque quem alimenta
@@ -289,7 +293,15 @@ export function ConversationStage({
             <div className="cds-conversation-stage-divider" aria-hidden="true" />
 
             <div className="cds-conversation-stage-wave-row">
-              {recorderState === 'idle' ? (
+              {recorderState === 'checking' ? (
+                // enquanto não se sabe, o esqueleto ocupa o lugar da onda: prometer
+                // o fio de som aqui seria dizer "não há resposta" antes de saber
+                <div className="cds-conversation-stage-wave-skeleton" aria-hidden="true">
+                  {Array.from({ length: WAVE_BARS }, (_, i) => (
+                    <span key={i} style={{ height: 10 + ((i * 7) % 34) }} />
+                  ))}
+                </div>
+              ) : recorderState === 'idle' ? (
                 // sem resposta ainda, o protótipo promete o fio de som em palavras —
                 // barras chapadas aqui viravam um traço morto espremendo o microfone
                 <p className="cds-conversation-stage-empty-wave">
@@ -362,12 +374,20 @@ export function ConversationStage({
               </button>
 
               <div className="cds-conversation-stage-hint">
-                <p className="cds-conversation-stage-hint-strong">
+                {/* A linha continua sendo UMA só (§9.2): a procura toma o lugar do
+                    convite, não se soma a ele. É `role="status"` porque quem conduz
+                    pode estar olhando para o microfone quando ela aparece. */}
+                <p
+                  className="cds-conversation-stage-hint-strong"
+                  role={recorderState === 'checking' ? 'status' : undefined}
+                >
                   {locked ? (
                     <>
                       <span className="cds-conversation-stage-rec-dot" aria-hidden="true" />
                       {t('conversationStage.recordingLabel')}
                     </>
+                  ) : recorderState === 'checking' ? (
+                    t('conversationStage.checkingAnswer')
                   ) : (
                     t('conversationStage.idleHint')
                   )}
