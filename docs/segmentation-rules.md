@@ -5,6 +5,14 @@ Where they diverge from `docs/reference/index.html` or the original PRD v2, **th
 rules win** for segmentation interaction (scene and phrase). Byte-identity with the
 reference (the golden harness) is preserved — see "Why this stays golden-safe".
 
+**Provenance — read this before "restoring fidelity" to the reference.** The
+reference is the source of truth for domain, contracts and artifacts; segmentation
+INTERACTION is the documented exception, and the divergences here are not drift. The
+Pac-Man drag (rule 3) and remove-with-absorption (rule 4) were **recommended by the
+system's author**, confirmed by the owner on 2026-08-07; rule 1's listen-from-the-start
+is the owner's own decision and is what the owner expects when clicking the first bead.
+Reverting any of them to `cordInteraction` is a product decision, never a bug fix.
+
 **Single principle:** **scene** segmentation (Escuta 2 / Cortar) and **phrase**
 segmentation (Segmentação) behave **identically**. Every rule below holds for both,
 swapping "scene↔phrase" and "necklace↔parent-scene". If they ever differ, it's a bug.

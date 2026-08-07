@@ -29,6 +29,17 @@ Consequência direta: **a referência permite deixar buracos no meio do colar** 
 clique pode cair depois da fronteira), o nosso modelo **não** — o começo é sempre a
 emenda. Ver §3.
 
+**Confirmado pelo dono em 2026-08-07**, ao rever esta tabela: o arrasto Pac-Man e o
+remover-com-absorção ficam — foram **recomendados pela autora do sistema**. E a regra 1
+(clicar o começo OUVE dali até o fim) é o que o dono espera ao clicar na primeira
+conta: na referência esse clique toca **uma conta só** (`playRange(b,b)`), nunca
+desenrola a história. Nenhuma das três volta a `cordInteraction` sem ser uma decisão de
+produto explícita.
+
+Uma consequência que se paga: a supressão do dwell descrita na §2 **afasta** o código da
+referência (lá hover e clique concordam, então nada precisa se calar). Ela existe para
+servir à regra 1, não por infidelidade acidental.
+
 ## 2. O bug real de reprodução (corrigido nesta branch)
 
 Relato: "clico na primeira conta e ele só toca as três primeiras; depois seleciono um
