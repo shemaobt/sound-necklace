@@ -19,27 +19,29 @@ frases). Não cobre Triagem, Conversa, Relatório nem Documentos.
 
 ---
 
-## 1. O modelo de clique: agora É o da referência
+## 1. O modelo de clique: nem o antigo, nem o da referência
 
-**Decisão do dono, 2026-08-07:** _"o comportamento do colar para a segmentação de
-cenas/frases fica estritamente igual; só o Pac-Man e o remover-absorve são
-acréscimos."_ O modelo ouvir/definir-fim de 2026-07 foi **revogado**;
-`domain/selection.ts` é porte 1:1 de `cordInteraction` (L561–583).
+O clique mudou DUAS vezes em 2026-08-07. De manhã o dono pediu fidelidade estrita e o
+`cordInteraction` foi restaurado. À noite, com o app rodando, ele viu o efeito real e
+mudou de novo: _"o intuito é ele escutar a cena completamente, não só as extremidades,
+que ele nem sabe onde vão ser"_.
 
-| | Referência (`cordInteraction`) | Nosso app, desde 2026-08-07 |
+| | Referência (`cordInteraction`) | Nosso app, forma atual |
 |---|---|---|
-| Sem ancoragem ativa (Escuta) | clique **não faz nada** (`if(!aa) return`) | clique **toca a conta** — a única divergência que resta aqui (CLAUDE.md; a Escuta não é segmentação) |
-| Slot recém-aberto | cena vem pré-ancorada (`primePart`); **frase não** (`addFrase` zera a seleção) | as **duas** vêm pré-ancoradas (`primeFrase`) — cena e frase são um modelo só |
-| 1º clique definindo | fecha o trecho da emenda até a conta e toca **o trecho inteiro** | idem |
-| 2º clique em diante | move a borda **mais próxima** (o começo inclusive) e toca **só ela** (`playEdge`) | idem |
-| Empate no meio | o **começo** cede (`<=`, L580) | idem |
-| Clique na conta de **começo** | move o começo, toca só a borda | **retoca o trecho fechado inteiro**, sem mexer nele — o `playSel` que a ENG-291 tirou daqui (decisão do dono, 2026-08-07) |
-| Saturação do clique | entre a fronteira e o fim do colar (L566–567) | idem |
+| Sem ancoragem ativa (Escuta) | clique **não faz nada** | clique **toca a conta** (CLAUDE.md; a Escuta não é segmentação) |
+| Slot recém-aberto | cena pré-ancorada (`primePart`); frase não | **nenhuma** pré-ancoragem, nas duas camadas |
+| 1º clique | fixa o começo, toca **1 conta** (`playRange(b,b)`) | marca o começo e o áudio **CORRE** dali até o fim do pai |
+| 2º clique | fecha o trecho, toca o trecho | fecha o trecho; **para** se o playhead passou do fim, **continua** se não chegou |
+| 3º em diante | move a borda mais próxima, toca **só a borda** (`playEdge`) | move a borda mais próxima e toca o **trecho resultante inteiro** |
+| Clique na conta de começo | move o começo, toca a borda | **reouve o trecho** (o `playSel` que a ENG-291 tirou) |
+| Empate no meio / saturação | começo cede (`<=`); entre fronteira e fim do colar | idem |
 
-A versão anterior desta seção descrevia a divergência como "deliberada, já decidida".
-Era — e foi desfeita pelo mesmo dono. Fica registrado o gatilho: o relato de que a
-história não se desenrolava ao clicar na primeira conta. Na referência, esse clique
-**toca da emenda até onde se clicou** — que é justamente o que faltava.
+O que sobrou da referência no ramo 3 é a escolha da borda mais próxima e o clamp.
+
+**O preço, registrado:** sem pré-ancoragem, o começo vem do clique — então **vão
+acidental entre cenas passa a ser possível**. A contiguidade era de graça (o começo era
+sempre a emenda) e agora é algo que o usuário pode errar. O vão deliberado da §3 deixa
+de se distinguir de um clique impreciso.
 
 ## 2. O bug de reprodução que abriu esta investigação (histórico)
 
@@ -47,20 +49,16 @@ Relato: "clico na primeira conta e ele só toca as três primeiras; depois selec
 trecho maior e ele toca só as extremidades." Depois: "funciona, mas só depois de
 algumas tentativas."
 
-**Causa:** o *dwell* de hover de borda (280 ms → `playEdge`, ~1 s de cada lado)
-interrompia a reprodução que o clique tinha começado. Sob o modelo de 2026-07 isso era
-bug real, porque hover e clique **discordavam**: o clique ouvia até o fim do pai, o
-hover tocava só a borda. Duas correções tentaram reconciliá-los — #164 suprimindo o
-dwell na **conta** clicada, #172 na **zona** da borda (a supressão por conta ainda
-deixava o ponteiro escorregar uma conta e ressuscitar o dwell, daí a intermitência).
+**Causa:** o *dwell* de hover de borda (280 ms → `playEdge`) interrompia a reprodução
+que o clique tinha começado. Sob o modelo de 2026-07 isso era bug real, porque hover e
+clique **discordavam**. Duas correções tentaram reconciliá-los — #164 suprimindo o dwell
+na **conta** clicada, #172 na **zona** da borda —, e ambas foram **descartadas** quando
+o `cordInteraction` foi restaurado, porque ali hover e clique concordam.
 
-**As duas foram descartadas em 2026-08-07.** Com o `cordInteraction` restaurado, hover
-e clique voltam a concordar — do segundo clique em diante o clique também toca só a
-borda —, então não há o que suprimir, e suprimir seria divergir sem motivo. O dwell é
-porte fiel de L584–597 e o `pointerdown` não o cancela, como lá.
-
-Consequência aceita pelo dono: parar o ponteiro a ±1 conta de uma borda **corta** o
-trecho que estiver tocando. É o comportamento do `index.html`.
+Na forma atual eles voltam a discordar em parte (o clique toca trechos, o hover toca a
+borda), mas o dwell segue sem supressão: o 1º e o 2º clique não competem com ele, e do
+3º em diante o hover é justamente a lupa de borda que o ajuste pede. **Se o dono
+relatar de novo áudio cortado ao parar o mouse perto de uma borda, é aqui que se olha.**
 
 ## 3. Buracos no colar — o que cada um permite
 

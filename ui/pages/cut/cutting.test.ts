@@ -30,30 +30,44 @@ function spyPlayer() {
   };
 }
 
-describe('playClick — intenção do clique → player (cordInteraction L571–582)', () => {
+describe('playClick — intenção do clique → player, com o playhead', () => {
   it('transport toca a conta tocada (fallback sem ancoragem)', () => {
     const player = spyPlayer();
-    playClick(player, { type: 'transport', bead: 3 });
+    playClick(player, { type: 'transport', bead: 3 }, 23, null);
     expect(player.play).toHaveBeenCalledWith(3, 3);
   });
 
-  it('range toca o trecho recém-fechado, inteiro', () => {
+  it('run toca do começo marcado até o fim do pai, e deixa correr', () => {
     const player = spyPlayer();
-    playClick(player, { type: 'range', s: 4, e: 17 });
-    expect(player.play).toHaveBeenCalledWith(4, 17);
+    playClick(player, { type: 'run', from: 4 }, 23, null);
+    expect(player.play).toHaveBeenCalledWith(4, 23);
   });
 
-  it('range degenerado (a conta recém-fixada) toca só ela', () => {
+  it('set-end com o playhead JÁ no fim marcado (ou além): para', () => {
     const player = spyPlayer();
-    playClick(player, { type: 'range', s: 7, e: 7 });
-    expect(player.play).toHaveBeenCalledWith(7, 7);
-  });
-
-  it('edge toca só a borda que se moveu, nunca o trecho', () => {
-    const player = spyPlayer();
-    playClick(player, { type: 'edge', bead: 10 });
-    expect(player.playEdge).toHaveBeenCalledWith(10);
+    playClick(player, { type: 'set-end', end: 10 }, 23, 10);
+    expect(player.stop).toHaveBeenCalled();
     expect(player.play).not.toHaveBeenCalled();
+  });
+
+  it('set-end com o playhead ANTES do fim marcado: não interrompe', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'set-end', end: 10 }, 23, 6);
+    expect(player.stop).not.toHaveBeenCalled();
+    expect(player.play).not.toHaveBeenCalled();
+  });
+
+  it('set-end sem nada tocando: não faz nada', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'set-end', end: 10 }, 23, null);
+    expect(player.stop).not.toHaveBeenCalled();
+  });
+
+  it('range toca o trecho resultante inteiro, não a borda', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'range', s: 4, e: 17 }, 23, null);
+    expect(player.play).toHaveBeenCalledWith(4, 17);
+    expect(player.playEdge).not.toHaveBeenCalled();
   });
 });
 

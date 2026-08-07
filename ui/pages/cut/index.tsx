@@ -11,7 +11,6 @@ import {
   confirmParts,
   dragSceneBoundary,
   dragSelectionStart,
-  primePart,
   removePart,
   setMode,
   type Span,
@@ -33,10 +32,9 @@ import './cut.css';
 
 /**
  * Escuta 2 — o corte de cenas (PRD v2 §8.4, redesign §6.3): palco creme, o colar
- * com ancoragem ativa e a instrução única "Toque no colar onde ESTA CENA TERMINA.
- * O começo já está costurado." O usuário decide só o FIM — o início vem
- * pré-ancorado na emenda pelo domínio (`primePart`). Cada clique dá áudio na hora
- * (§8.2): a conta, o intervalo ou só a janela da fronteira ajustada.
+ * com ancoragem ativa e a instrução em dois tempos: toque onde a cena COMEÇA (a
+ * história corre dali) e depois onde ela TERMINA. Desde 2026-08-07 não há
+ * pré-ancoragem — o começo vem do 1º clique. Cada clique dá áudio na hora (§8.2).
  *
  * Camada de wiring: o modelo de clique delega ao redutor `clickBead`; travar
  * (`confirmPart`), arrastar a fronteira entre cenas (`dragSceneBoundary`, ENG-342 —
@@ -157,7 +155,7 @@ export function Cut({ player = null, sound }: CutProps) {
    * Tocar numa cena já CONFIRMADA (travada) reproduz A PARTIR da conta clicada até
    * o fim da cena (regra 4, docs/segmentation-rules.md). Chave por conta:
    * tocar OUTRA conta pula para ela; a MESMA pausa/retoma. Vem ANTES do `clickBead`
-   * porque o redutor consumiria a pré-ancoragem da próxima cena. Devolve true
+   * porque senão o redutor tomaria o toque como marcação de começo/fim. Devolve true
    * quando a conta era de cena travada (o corte não corre).
    */
   const playLockedSceneAt = (bead: number): boolean => {
@@ -168,16 +166,16 @@ export function Cut({ player = null, sound }: CutProps) {
     return true;
   };
 
-  // DEFININDO uma cena: o `cordInteraction` da referência (L561–583). O slot chega
-  // pré-ancorado na emenda, então o 1º clique FECHA o trecho até a conta clicada e
-  // toca o trecho inteiro; do 2º em diante move a borda mais próxima e toca só ela.
+  // DEFININDO uma cena (decisão do dono, 2026-08-07): o 1º clique marca o COMEÇO e a
+  // história CORRE dali; o 2º marca o fim (parando só se o playhead já passou); daí em
+  // diante o clique move a borda mais próxima e reouve o trecho resultante inteiro.
   const onBead = (bead: number): void => {
     if (playLockedSceneAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
-    if (play && player) playClick(player, play);
+    if (play && player) playClick(player, play, s.whole.span.e, head);
   };
 
   /**
@@ -244,15 +242,14 @@ export function Cut({ player = null, sound }: CutProps) {
   };
 
   // Arrastar o fim de uma cena (ENG-342): a cena `id` cresce/encolhe até `toBead`,
-  // a seguinte SEGUE (Pac-Man). `primePart` reancora a pendente na nova fronteira.
+  // a seguinte SEGUE (Pac-Man). Sem reprime: desde 2026-08-07 o slot pendente não é
+  // mais pré-ancorado — quem fixa o começo é o 1º clique.
   // Enquanto edita, toca a prévia ~4 contas antes do limite até ~3 depois (regra 5).
   const onDragBoundary = (id: string, toBead: number): void => {
-    // O começo NÃO reancora: `primePart` o puxaria de volta para a emenda, que é
-    // exatamente o que este arrasto existe para recusar.
     if (id === START_HANDLE) {
       sessionStore.getState().apply((s) => dragSelectionStart(s, toBead));
     } else {
-      sessionStore.getState().apply((s) => primePart(dragSceneBoundary(s, id, toBead)));
+      sessionStore.getState().apply((s) => dragSceneBoundary(s, id, toBead));
     }
     if (player) playEditWindow(player, toBead, session.totalBeads);
   };
@@ -303,7 +300,11 @@ export function Cut({ player = null, sound }: CutProps) {
         ) : (
           <p className="cds-cut-instruction" data-role="instruction">
             {t('cut.instructionPre')}
-            <span className="cds-cut-emph">{t('cut.instructionEmph')}</span>
+            <span className="cds-cut-emph">
+              {session.pendingStart !== null
+                ? t('cut.instructionEmphEnd')
+                : t('cut.instructionEmphStart')}
+            </span>
             {hasLocked ? t('cut.instructionReplay') : t('cut.instructionPost')}
           </p>
         )}

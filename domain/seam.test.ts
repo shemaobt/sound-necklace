@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { frontier } from './frontier';
 import { buildBeads } from './grid';
-import { primePart } from './scenes';
 import { createSession, type Frase, type ScenePart, type SessionState, type Span } from './state';
 import {
   classifyBorderMove,
@@ -330,8 +330,13 @@ describe('dragSceneBoundary — arrastar o FIM, Pac-Man/ladrilhado (ENG-342, #2/
     expect(dragSceneBoundary(s, 'PT3', 39)).toBe(s);
   });
 
-  it('cena única cobrindo o colar: arrastar de volta + primePart reancora a pendente na grade', () => {
-    // uma cena só cobre 0…39; a próxima está primada na emenda (clampada em 39)
+  /**
+   * O reprime pós-arrasto (`primePart(dragSceneBoundary(...))`) existiu enquanto a
+   * pendente vinha pré-ancorada na emenda: encolher a cena movia a emenda e o slot
+   * seguinte tinha de segui-la. Sem pré-ancoragem (2026-08-07) não há o que reancorar
+   * — o arrasto só mexe nas travadas, e a fronteira é lida no clique.
+   */
+  it('cena única cobrindo o colar: encolhê-la libera o rabo, sem tocar na pendente', () => {
     const solo = mkPart('PT1', { s: 0, e: 39 }, { tag_state: 'tagged', scene_kind: 'MEAL_SCENE' });
     const pending: ScenePart = {
       part_id: 'PT2',
@@ -342,10 +347,10 @@ describe('dragSceneBoundary — arrastar o FIM, Pac-Man/ladrilhado (ENG-342, #2/
       tag_state: 'pending',
     };
     const s = sess({ parts: [solo, pending], current: { layer: 'parts', index: 1 } });
-    const reprimed = primePart(dragSceneBoundary(s, 'PT1', 19)); // encolhe para metade
-    expect(reprimed.parts[0]!.span).toEqual({ s: 0, e: 19 });
-    expect(reprimed.pendingStart).toBe(20); // nova fronteira, dentro da grade
-    expect(reprimed.selection).toEqual({ s: 20, e: 20 });
+    const depois = dragSceneBoundary(s, 'PT1', 19); // encolhe para metade
+    expect(depois.parts[0]!.span).toEqual({ s: 0, e: 19 });
+    expect(depois.selection).toBeNull();
+    expect(frontier(depois, 'parts')).toBe(20); // o clique seguinte satura aqui
   });
 });
 

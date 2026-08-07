@@ -17,7 +17,6 @@ import {
   moveBorder,
   nextNeighbor,
   prevNeighbor,
-  primeFrase,
   productiveScenes,
   reanchorFrase,
   removeFrase,
@@ -51,8 +50,8 @@ import './phrases.css';
 /**
  * Segmentação — as frases dentro de uma cena (PRD v2 §8.6, redesign §6.5): palco
  * creme, o colar em JANELA na cena produtiva ativa (cena ± margem, fora escurecido,
- * banda tracejada) e a frase ancorada pela fronteira do domínio (incl. back-reach
- * da 1ª frase). Cada clique dá áudio na hora (§8.2); "▶ ouvir a cena" toca só a
+ * banda tracejada) e a frase marcada em dois toques (começo, depois fim), com o
+ * clique saturado na fronteira do domínio (incl. back-reach da 1ª frase). Cada clique dá áudio na hora (§8.2); "▶ ouvir a cena" toca só a
  * cena. A travessia de borda abre o seam-modal com a oferta que o domínio
  * classificou (mover desliza a costura e trava; reancorar limpa; escalada volta à
  * Triage). Fio de contas das frases travadas: Remover; ajuste pós-fato é arrastar
@@ -181,16 +180,16 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     return true;
   };
 
-  // DEFININDO uma frase: o MESMO `cordInteraction` das cenas. A referência é
-  // assimétrica (só cena tem `primePart`); `primeFrase` fecha isso, por decisão do
-  // dono — cena e frase seguem um modelo só.
+  // DEFININDO uma frase: o MESMO modelo das cenas — 1º clique marca o começo e a cena
+  // corre dali, 2º marca o fim, e daí em diante a borda mais próxima cede e o trecho
+  // resultante toca inteiro.
   const onBead = (bead: number): void => {
     if (playLockedPhraseAt(bead)) return;
     const s = sessionStore.getState().session;
     if (!s) return;
     const { state, play } = clickBead(s, bead);
     sessionStore.getState().apply(() => state);
-    if (play && player) playClick(player, play);
+    if (play && player) playClick(player, play, scSpan.e, head);
   };
 
   /** A conta acesa pausa. Sem chave (listen/set-end/transporte tocam via `play`,
@@ -213,9 +212,8 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   const confirmPhrase = (): void => {
     const s = sessionStore.getState().session;
     if (!s || s.current.layer !== 'frases' || s.current.index < 0) return;
-    // Um-toque como as cenas: o início já vem pré-ancorado na fronteira (primeFrase),
-    // então confirmar SEM tocar o fim (pendingStart ainda semeado) travaria uma frase
-    // de UMA conta — o guarda pede o toque do fim, espelhando confirmPart das cenas.
+    // Confirmar com o começo marcado e o fim ainda não (pendingStart não-nulo)
+    // travaria uma frase de UMA conta — o guarda pede o 2º toque, como confirmPart.
     if (s.pendingStart !== null) {
       setError(t('phrases.halfSelection'));
       sound?.refuse();
@@ -268,12 +266,10 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   // fora da grade), o clique seguinte fecharia além do colar e o confirm cospe
   // "A frase precisa terminar dentro do colar" (#3).
   const onDragBoundary = (id: string, toBead: number): void => {
-    // O começo NÃO reancora: `primeFrase` o puxaria de volta para a emenda, que é
-    // exatamente o que este arrasto existe para recusar.
     if (id === START_HANDLE) {
       sessionStore.getState().apply((s) => dragSelectionStart(s, toBead));
     } else {
-      sessionStore.getState().apply((s) => primeFrase(dragPhraseBoundary(s, Number(id), toBead)));
+      sessionStore.getState().apply((s) => dragPhraseBoundary(s, Number(id), toBead));
     }
     if (player) playEditWindow(player, toBead, session.totalBeads);
   };
@@ -374,7 +370,11 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
           {`${sceneLabel(sceneIdx)} · ${sceneKindLabel(sc.scene_kind!, i18n.language)}`}
         </p>
         <p className="cds-phrases-instruction" data-role="instruction">
-          {covered ? t('phrases.reviewHeadline') : t('phrases.instruction')}
+          {covered
+            ? t('phrases.reviewHeadline')
+            : session.pendingStart !== null
+              ? t('phrases.instructionEnd')
+              : t('phrases.instructionStart')}
           {!covered && scenePhrases.length > 0 ? t('phrases.instructionReplay') : null}
         </p>
       </div>

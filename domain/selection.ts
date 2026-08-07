@@ -1,26 +1,29 @@
 /**
  * Modelo de clique de seleção durante a DEFINIÇÃO de um segmento (cena/frase).
- * Port 1:1 de `cordInteraction` (docs/reference/index.html L561–583), PRD v2 §8.2.
  *
- * Decisão do dono, 2026-08-07: o comportamento do colar na segmentação de
- * cenas/frases fica estritamente igual ao da referência; só o arrasto Pac-Man e o
- * remover-com-absorção são acréscimos. Isto substituiu o modelo
- * ouvir/definir-fim de 2026-07 — ver docs/segmentation-rules.md.
+ * **Decisão do dono, 2026-08-07 (à noite), com o app rodando na frente.** Substitui o
+ * `cordInteraction` restaurado horas antes; o que sobreviveu dele é a escolha da borda
+ * MAIS PRÓXIMA (L578–582) e a saturação entre fronteira e fim do colar (L566–567). O
+ * motivo é de ouvido, não de código: com o slot pré-ancorado e `playEdge`, quem corta
+ * só escutava ~1 s solto em volta de bordas cuja posição ainda não conhecia. Agora a
+ * história CORRE enquanto ele decide.
  *
- * Três ramos, na ordem da referência:
- *  1. sem seleção → fixa o começo na conta e toca só ela (L571–573);
- *  2. com `pendingStart` → fecha o trecho entre ele e a conta clicada e toca o
- *     trecho INTEIRO (L574–577). Como `primePart`/`primeFrase` entregam o slot
- *     pré-ancorado na emenda, é aqui que cai o PRIMEIRO clique do ouvinte;
- *  3. trecho fechado → move a borda MAIS PRÓXIMA (o começo inclusive) e toca só
- *     ela (L578–582).
+ * Três tempos:
+ *  1. **sem seleção** → o clique fixa o COMEÇO ali e o áudio SEGUE dali em diante
+ *     (`run`), até o fim do pai;
+ *  2. **com `pendingStart`** → fecha o trecho; o áudio PARA se o playhead já passou do
+ *     fim marcado e CONTINUA se ainda não chegou (`set-end` — a decisão depende do
+ *     playhead, que é runtime, então mora na UI);
+ *  3. **trecho fechado** → move a borda mais próxima e toca o TRECHO RESULTANTE
+ *     inteiro (`range`), não só a borda.
  *
- * A referência é assimétrica: `primePart` só existe para cenas (L698), e
- * `addFrase` (L776) zera a seleção, então a frase gastaria um clique a mais no
- * ramo 1. `primeFrase` fecha essa assimetria — decisão do dono na mesma conversa:
- * cena e frase seguem o mesmo modelo.
- *
- * O reducer devolve a intenção como dado (effects-as-data); quem toca é a UI.
+ * Duas consequências que vale nomear:
+ * - clicar a própria conta de COMEÇO cai no ramo 3, move o começo para onde ele já
+ *   está e reouve o trecho — é o que faz as vezes do botão `▶ tocar este pedaço`
+ *   (`playSel`, L262) que a ENG-291 tirou destas estações;
+ * - sem pré-ancoragem, o começo vem do clique, então vão acidental entre cenas passa a
+ *   ser possível. Era uma garantia que a emenda dava de graça (docs/segmentation-rules.md
+ *   regra 2).
  */
 
 import { activeAnchor } from './frontier';
@@ -29,10 +32,12 @@ import type { SessionState } from './state';
 export type PlayAction =
   /** Sem ancoragem ativa: o toque é transporte (toca a conta). */
   | { type: 'transport'; bead: number }
-  /** `playRange(s,e)` — a conta recém-fixada (s===e) ou o trecho recém-fechado. */
-  | { type: 'range'; s: number; e: number }
-  /** `playEdge(bead)` — a borda que acabou de se mover, ~1 s de cada lado. */
-  | { type: 'edge'; bead: number };
+  /** Marcou o começo: tocar dali em diante, até o fim do pai. */
+  | { type: 'run'; from: number }
+  /** Fechou o trecho: parar se o playhead já passou de `end`, senão deixar correr. */
+  | { type: 'set-end'; end: number }
+  /** Ajustou uma borda: tocar o trecho resultante inteiro. */
+  | { type: 'range'; s: number; e: number };
 
 export interface ClickResult {
   state: SessionState;
@@ -50,7 +55,7 @@ export function clickBead(state: SessionState, bead: number): ClickResult {
   if (state.selection === null) {
     return {
       state: { ...state, pendingStart: b, selection: { s: b, e: b } },
-      play: { type: 'range', s: b, e: b },
+      play: { type: 'run', from: b },
     };
   }
 
@@ -59,23 +64,15 @@ export function clickBead(state: SessionState, bead: number): ClickResult {
     const e = Math.max(state.pendingStart, b);
     return {
       state: { ...state, selection: { s, e }, pendingStart: null },
-      play: { type: 'range', s, e },
+      play: { type: 'set-end', end: e },
     };
   }
 
-  const { s: selS, e: selE } = state.selection;
-
-  // ÚNICA exceção ao ramo 3 (decisão do dono, 2026-08-07): a conta de COMEÇO reouve
-  // o trecho fechado, sem mexer nele. A referência faz isso pelo botão `▶ tocar este
-  // pedaço` (`playSel`, L262), que a ENG-291 tirou desta estação — o som aqui vem das
-  // contas. Sem substituto, quem corta só ouviria ~1 s em volta de bordas cuja posição
-  // ele ainda nem conhece. Uma conta, não uma zona: a vizinha segue movendo a borda.
-  if (b === selS) return { state, play: { type: 'range', s: selS, e: selE } };
-
   // borda mais próxima; no empate o COMEÇO cede (o `<=` da referência, L580)
-  const moveStart = b < selS || (b < selE && b - selS <= selE - b);
+  const { s: selS, e: selE } = state.selection;
+  const moveStart = b <= selS || (b < selE && b - selS <= selE - b);
   const selection = moveStart ? { s: b, e: selE } : { s: selS, e: b };
-  return { state: { ...state, selection }, play: { type: 'edge', bead: b } };
+  return { state: { ...state, selection }, play: { type: 'range', ...selection } };
 }
 
 /**

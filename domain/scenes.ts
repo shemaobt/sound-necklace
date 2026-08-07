@@ -75,16 +75,13 @@ export function addPart(state: SessionState): SessionState {
     tag_state: 'pending',
   };
   const parts = [...state.parts, novo];
-  return primePart({ ...state, parts, current: { layer: 'parts', index: parts.length - 1 } });
-}
-
-/** Pré-ancora o início da cena corrente na emenda (fim da anterior + 1). */
-export function primePart(state: SessionState): SessionState {
-  if (state.current.layer !== 'parts' || state.current.index < 0) return state;
-  const pt = state.parts[state.current.index];
-  if (!pt || pt.locked) return state;
-  const f = frontier(state, 'parts');
-  return { ...state, pendingStart: f, selection: { s: f, e: f } };
+  return {
+    ...state,
+    parts,
+    current: { layer: 'parts', index: parts.length - 1 },
+    selection: null,
+    pendingStart: null,
+  };
 }
 
 export function confirmPart(state: SessionState, i: number): SceneResult {
@@ -110,7 +107,7 @@ export function confirmPart(state: SessionState, i: number): SceneResult {
   // completou o bloco: vai para o próximo destravado, já primado — ou auto-add
   const next = parts.findIndex((p) => !p.locked);
   if (next >= 0) {
-    return { ok: true, state: primePart({ ...base, current: { layer: 'parts', index: next } }) };
+    return { ok: true, state: { ...base, current: { layer: 'parts' as const, index: next } } };
   }
   return { ok: true, state: addPart({ ...base, current: { layer: 'parts', index: -1 } }) };
 }
@@ -156,7 +153,7 @@ export function removePart(state: SessionState, i: number): SessionState {
   parts.forEach((p, k) => {
     if (!p.locked) lu = k;
   });
-  if (lu >= 0) return primePart({ ...base, current: { layer: 'parts', index: lu } });
+  if (lu >= 0) return { ...base, current: { layer: 'parts' as const, index: lu } };
   return addPart({ ...base, current: { layer: 'parts', index: -1 } });
 }
 
@@ -191,7 +188,7 @@ function enterPartsLayer(state: SessionState): SessionState {
     if (!p.locked) lu = k;
   });
   const limpo = { ...state, selection: null, pendingStart: null };
-  if (lu >= 0) return primePart({ ...limpo, current: { layer: 'parts', index: lu } });
+  if (lu >= 0) return { ...limpo, current: { layer: 'parts' as const, index: lu } };
   if (state.partsConfirmed) return { ...limpo, current: { layer: 'parts', index: -1 } };
   return addPart({ ...limpo, current: { layer: 'parts', index: -1 } });
 }

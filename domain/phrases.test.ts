@@ -14,7 +14,6 @@ import {
   enterSegmentacao,
   moveBorder,
   phraseFrontier,
-  primeFrase,
   reanchorFrase,
   removeFrase,
   sceneIndexOf,
@@ -151,15 +150,14 @@ describe('phraseFrontier — fronteira com back-reach (§6.4)', () => {
 });
 
 describe('addFrase — slot com menor P# livre', () => {
-  it('cria o slot, vira corrente e prima o início na fronteira da cena (um-toque)', () => {
+  it('cria o slot, vira corrente e o abre SEM seleção (o começo vem do 1º clique)', () => {
     const s = sess({ selection: { s: 1, e: 2 }, pendingStart: 1 });
     const next = addFrase(s);
     expect(next.frases).toHaveLength(1);
     expect(next.frases[0]).toMatchObject({ prop_id: 'P1', locked: false, span: null });
     expect(next.current).toEqual({ layer: 'frases', index: 0 });
-    // primeFrase: início da 1ª frase = início da cena (PT1 = 0)
-    expect(next.selection).toEqual({ s: 0, e: 0 });
-    expect(next.pendingStart).toBe(0);
+    expect(next.selection).toBeNull();
+    expect(next.pendingStart).toBeNull();
   });
 
   it('com âncora ativa é no-op (o slot aberto já espera)', () => {
@@ -304,12 +302,11 @@ describe('moveBorder / reanchorFrase — as saídas da oferta', () => {
     expect(moveBorder(semProdutiva, r.offer)).toBe(semProdutiva);
   });
 
-  it('reancorar re-ancora o início na fronteira da cena (um-toque)', () => {
+  it('reancorar descarta a seleção e devolve o slot vazio', () => {
     const s = anchoring({ selection: { s: 12, e: 32 }, pendingStart: 12 });
     const next = reanchorFrase(s);
-    // primeFrase: início da 1ª frase da PT2 = início da cena (10)
-    expect(next.selection).toEqual({ s: 10, e: 10 });
-    expect(next.pendingStart).toBe(10);
+    expect(next.selection).toBeNull();
+    expect(next.pendingStart).toBeNull();
     expect(next.frases).toBe(s.frases);
   });
 });
@@ -426,11 +423,11 @@ describe('dragPhraseBoundary — arrastar o FIM, Pac-Man/ladrilhado (ENG-342, #2
   });
 
   // O bug do print (#3): uma frase cobrindo o FIM do colar deixa a fronteira FORA
-  // da grade (quirk de phraseFrontier). Arrastá-la de volta e reancorar tem de
-  // trazer a âncora pendente para dentro do colar — senão o próximo clique fecha
-  // uma seleção com fim = totalBeads e o confirm cospe "A frase precisa terminar
-  // dentro do colar." A página compõe primeFrase(dragPhraseBoundary(...)).
-  it('frase cobrindo o fim do colar, arrastada de volta + primeFrase, reancora na grade', () => {
+  // da grade (quirk de phraseFrontier). Sem pré-ancoragem (2026-08-07) não há mais
+  // âncora pendente a trazer de volta — o que protege o próximo clique é a saturação
+  // do `clickBead` em `activeAnchor().start`. Arrastar de volta continua liberando o
+  // rabo, e o corte seguinte fecha dentro do colar.
+  it('frase cobrindo o fim do colar, arrastada de volta, libera o rabo para cortar', () => {
     const solo = mkPart('PT1', { s: 0, e: 39 }, { tag_state: 'tagged', scene_kind: 'MEAL_SCENE' });
     const s = sess({
       parts: [solo],
@@ -443,19 +440,18 @@ describe('dragPhraseBoundary — arrastar o FIM, Pac-Man/ladrilhado (ENG-342, #2
     });
     expect(phraseFrontier(s)).toBe(40); // sanity: quirk deixa a fronteira fora da grade
 
-    const reprimed = primeFrase(dragPhraseBoundary(s, 0, 19));
-    expect(reprimed.frases[0]!.span).toEqual({ s: 0, e: 19 });
-    expect(reprimed.pendingStart).toBe(20);
-    expect(reprimed.selection).toEqual({ s: 20, e: 20 });
+    const depois = dragPhraseBoundary(s, 0, 19);
+    expect(depois.frases[0]!.span).toEqual({ s: 0, e: 19 });
+    expect(phraseFrontier(depois)).toBe(20); // de volta para dentro da grade
 
     // e agora dá pra fechar uma nova frase até o fim, sem FRASE_BEYOND_STORY
-    const clicked = { ...reprimed, selection: { s: 20, e: 39 }, pendingStart: null };
+    const clicked = { ...depois, selection: { s: 20, e: 39 }, pendingStart: null };
     expect(confirmFrase(clicked, 1).kind).toBe('locked');
   });
 });
 
 describe('enterScene — foco numa cena produtiva', () => {
-  it('assume o PRIMEIRO slot destravado e prima o início na fronteira da cena', () => {
+  it('assume o PRIMEIRO slot destravado, sem seleção', () => {
     const s = sess({
       frases: [mkFrase('P1'), mkFrase('P2')],
       selection: { s: 1, e: 2 },
@@ -465,9 +461,8 @@ describe('enterScene — foco numa cena produtiva', () => {
     const next = enterScene(s, 'PT2');
     expect(next.activeSceneId).toBe('PT2');
     expect(next.current).toEqual({ layer: 'frases', index: 0 });
-    // primeFrase: início da 1ª frase da PT2 = início da cena (10)
-    expect(next.selection).toEqual({ s: 10, e: 10 });
-    expect(next.pendingStart).toBe(10);
+    expect(next.selection).toBeNull();
+    expect(next.pendingStart).toBeNull();
   });
 
   it('sem slot destravado: auto-add (slot dangling por cena visitada)', () => {
@@ -483,16 +478,15 @@ describe('enterScene — foco numa cena produtiva', () => {
 });
 
 describe('enterFrasesLayer / enterSegmentacao — entrada na camada', () => {
-  it('enterFrasesLayer assume o ÚLTIMO destravado e prima o início na fronteira', () => {
+  it('enterFrasesLayer assume o ÚLTIMO destravado, sem seleção', () => {
     const s = sess({
       frases: [mkFrase('P1'), mkFrase('P2')],
       selection: { s: 1, e: 2 },
     });
     const next = enterFrasesLayer(s);
     expect(next.current).toEqual({ layer: 'frases', index: 1 });
-    // primeFrase: sem cena travada antes, a fronteira é o início da 1ª cena (0)
-    expect(next.selection).toEqual({ s: 0, e: 0 });
-    expect(next.pendingStart).toBe(0);
+    expect(next.selection).toBeNull();
+    expect(next.pendingStart).toBeNull();
   });
 
   it('enterFrasesLayer sem destravado: auto-add', () => {

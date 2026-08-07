@@ -7,7 +7,6 @@ import {
   confirmPart,
   confirmParts,
   confirmWhole,
-  primePart,
   removePart,
   type SceneResult,
 } from './scenes';
@@ -78,8 +77,8 @@ describe('confirmWhole (referência L685–694 + enterLayer L930–935)', () => 
       tag_state: 'pending',
     });
     expect(s.current).toEqual({ layer: 'parts', index: 0 });
-    expect(s.pendingStart).toBe(0);
-    expect(s.selection).toEqual({ s: 0, e: 0 });
+    expect(s.pendingStart).toBeNull(); // sem pré-ancoragem: o começo vem do 1º clique
+    expect(s.selection).toBeNull();
     expect(s.mode).toBe('escuta');
   });
 
@@ -103,8 +102,8 @@ describe('confirmWhole (referência L685–694 + enterLayer L930–935)', () => 
     );
     expect(s.parts).toHaveLength(3); // nenhum slot novo
     expect(s.current).toEqual({ layer: 'parts', index: 2 });
-    expect(s.pendingStart).toBe(10); // primado na fronteira
-    expect(s.selection).toEqual({ s: 10, e: 10 });
+    expect(s.pendingStart).toBeNull();
+    expect(s.selection).toBeNull();
   });
 
   it('com todas as cenas travadas, cria slot novo com o menor PT# livre', () => {
@@ -121,7 +120,7 @@ describe('confirmWhole (referência L685–694 + enterLayer L930–935)', () => 
     expect(s.parts).toHaveLength(3);
     expect(s.parts[2]?.part_id).toBe('PT2'); // PT2 estava livre
     expect(s.current).toEqual({ layer: 'parts', index: 2 });
-    expect(s.pendingStart).toBe(23); // fronteira capada na última conta
+    expect(s.pendingStart).toBeNull();
   });
 
   it('com cenas já confirmadas (partsConfirmed) e todas travadas, só entra na camada sem slot novo', () => {
@@ -140,13 +139,13 @@ describe('confirmWhole (referência L685–694 + enterLayer L930–935)', () => 
   });
 });
 
-describe('addPart / primePart (referência L698–711)', () => {
+describe('addPart (referência L705–711, sem a pré-ancoragem)', () => {
   it('addPart é no-op quando já há uma ancoragem ativa', () => {
     const s = okState(confirmWhole(sess()));
     expect(addPart(s)).toBe(s);
   });
 
-  it('addPart aloca o menor PT# livre e prima o início na fronteira', () => {
+  it('addPart aloca o menor PT# livre e abre o slot SEM seleção', () => {
     const s = addPart(
       sess({
         parts: [part({ part_id: 'PT1', span: { s: 0, e: 9 }, locked: true })],
@@ -161,18 +160,9 @@ describe('addPart / primePart (referência L698–711)', () => {
       tag_state: 'pending',
     });
     expect(s.current).toEqual({ layer: 'parts', index: 1 });
-    expect(s.pendingStart).toBe(10);
-    expect(s.selection).toEqual({ s: 10, e: 10 });
-  });
-
-  it('primePart é no-op fora da camada de cenas ou com alvo travado', () => {
-    const emWhole = sess();
-    expect(primePart(emWhole)).toBe(emWhole);
-    const travada = sess({
-      parts: [part({ span: { s: 0, e: 9 }, locked: true })],
-      current: { layer: 'parts', index: 0 },
-    });
-    expect(primePart(travada)).toBe(travada);
+    // desde 2026-08-07 o começo vem do 1º clique, não da emenda
+    expect(s.pendingStart).toBeNull();
+    expect(s.selection).toBeNull();
   });
 });
 
@@ -221,8 +211,8 @@ describe('confirmPart (referência L713–724)', () => {
     expect(s.parts).toHaveLength(2); // auto-addPart deixou um slot fresco
     expect(s.parts[1]?.part_id).toBe('PT2');
     expect(s.current).toEqual({ layer: 'parts', index: 1 });
-    expect(s.pendingStart).toBe(10);
-    expect(s.selection).toEqual({ s: 10, e: 10 });
+    expect(s.pendingStart).toBeNull();
+    expect(s.selection).toBeNull();
   });
 
   it('sucesso avança para o primeiro slot destravado existente, sem criar slot novo', () => {
@@ -244,8 +234,8 @@ describe('confirmPart (referência L713–724)', () => {
     expect(s.parts).toHaveLength(2);
     expect(s.parts[0]?.locked).toBe(true);
     expect(s.current).toEqual({ layer: 'parts', index: 1 });
-    expect(s.pendingStart).toBe(6); // primado na nova fronteira
-    expect(s.selection).toEqual({ s: 6, e: 6 });
+    expect(s.pendingStart).toBeNull();
+    expect(s.selection).toBeNull();
   });
 });
 
@@ -302,14 +292,13 @@ describe('pureza dos reducers', () => {
     confirmPart(pronto, 0);
     confirmParts(pronto);
     addPart(pronto);
-    primePart(pronto);
     removePart(pronto, 0);
     expect(JSON.stringify(pronto)).toBe(before);
   });
 });
 
-describe('removePart — libera o PT# e reancora no ÚLTIMO destravado (espelho de removeFrase)', () => {
-  it('remove a cena travada, libera o PT# e reancora a pendente na nova fronteira', () => {
+describe('removePart — libera o PT# e assume o ÚLTIMO destravado (espelho de removeFrase)', () => {
+  it('remove a cena travada, libera o PT# e abre o próximo slot sem seleção', () => {
     const s = sess({
       parts: [
         part({ part_id: 'PT1', span: { s: 0, e: 4 }, locked: true }),
@@ -322,8 +311,8 @@ describe('removePart — libera o PT# e reancora no ÚLTIMO destravado (espelho 
     const next = removePart(s, 1); // remove PT2
     expect(next.parts.map((p) => p.part_id)).toEqual(['PT1', 'PT3']);
     expect(next.current).toEqual({ layer: 'parts', index: 1 }); // PT3, último destravado
-    expect(next.pendingStart).toBe(5); // fronteira = PT1.fim + 1
-    expect(next.selection).toEqual({ s: 5, e: 5 });
+    expect(next.pendingStart).toBeNull();
+    expect(next.selection).toBeNull();
   });
 
   it('sem destravado restante: auto-add com o menor PT# livre', () => {

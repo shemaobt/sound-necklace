@@ -13,7 +13,6 @@ import {
   clickBead,
   confirmPart,
   createSession,
-  primePart,
   type SessionState,
 } from '../../../domain';
 import { sessionStore } from '../../state';
@@ -136,28 +135,30 @@ afterEach(() => {
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
 });
 
-describe('Escuta 2 — modelo de clique com áudio na hora (cordInteraction L561–583)', () => {
-  it('o 1º clique fecha o trecho e toca ele inteiro; o 2º move a borda e toca só ela', () => {
+describe('Escuta 2 — modelo de clique com áudio na hora (decisão do dono, 2026-08-07)', () => {
+  it('1º clique marca o começo e a história corre; o 2º fecha; o 3º ajusta e reouve', () => {
     const { player, calls } = spyPlayer();
-    // como o app entrega o slot: pré-ancorado na emenda (colar de 10 contas, 0…9)
-    sessionStore.getState().load(primePart(cutting()));
+    // o slot chega VAZIO: o começo vem do 1º clique (colar de 10 contas, 0…9)
+    sessionStore.getState().load(cutting());
     const { root, el } = mount(player);
 
-    // 1º clique: fecha da emenda (0) até a conta 6 e toca o TRECHO
+    // 1º clique: marca o começo em 2 e a história corre dali até o fim (9)
+    firePointer(el, 2);
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 2, e: 2 });
+    expect(sessionStore.getState().session!.pendingStart).toBe(2);
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [2, 9] });
+
+    // 2º clique: fecha em 6. head=null (o espião não avança) → não interrompe
+    const n = calls.length;
     firePointer(el, 6);
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 6 });
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 2, e: 6 });
     expect(sessionStore.getState().session!.pendingStart).toBeNull();
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 6] });
+    expect(calls.length).toBe(n);
 
-    // 2º clique depois do fim: o fim cede e toca só a borda
+    // 3º clique depois do fim: o fim cede e o trecho RESULTANTE toca inteiro
     firePointer(el, 8);
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 8 });
-    expect(calls.at(-1)).toEqual({ m: 'playEdge', args: [8] });
-
-    // clique perto do começo: é o COMEÇO que cede — a referência deixa
-    firePointer(el, 1);
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 1, e: 8 });
-    expect(calls.at(-1)).toEqual({ m: 'playEdge', args: [1] });
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 2, e: 8 });
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [2, 8] });
     root.unmount();
   });
 });
@@ -248,25 +249,24 @@ describe('Escuta 2 — uma cena travada pode ser ouvida (ENG-293)', () => {
     // toca de 2 até o fim da cena (3), pela chave por conta (regra 4); o log inteiro,
     // não só a última: um toggle seguido de play seriam dois sons
     expect(calls).toEqual([{ m: 'toggle', key: 'PT1:2', args: [2, 3] }]);
-    // e a emenda costurada sobrevive: sem isto o clique é clampado até a emenda e
-    // CONSOME a pré-ancoragem, fechando uma cena degenerada de uma conta só onde a
-    // próxima ia começar (o toggle acima é quem prova que o toque de fato chegou)
+    // e o corte da próxima cena continua intocado: o toque numa cena travada é só
+    // escuta, nunca marca começo nem fim (o toggle acima prova que o toque chegou)
     const depois = sessionStore.getState().session!;
-    expect(depois.pendingStart).toBe(4);
-    expect(depois.selection).toEqual({ s: 4, e: 4 });
+    expect(depois.pendingStart).toBeNull();
+    expect(depois.selection).toBeNull();
     root.unmount();
   });
 
-  it('a conta ainda livre fecha a próxima cena da emenda até ela, e toca o trecho', () => {
+  it('a conta ainda livre marca o começo da próxima cena e a história corre dali', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(primePart(withLockedScene())); // PT2 pendente, emenda 4
+    sessionStore.getState().load(withLockedScene()); // PT2 pendente, emenda 4
     const { root, el } = mount(player);
 
     firePointer(el, 6);
 
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 4, e: 6 });
-    expect(sessionStore.getState().session!.pendingStart).toBeNull();
-    expect(calls.at(-1)).toEqual({ m: 'play', args: [4, 6] });
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 6, e: 6 });
+    expect(sessionStore.getState().session!.pendingStart).toBe(6);
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [6, 9] });
     root.unmount();
   });
 

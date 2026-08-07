@@ -105,7 +105,7 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
     });
   });
 
-  it('confirmPhrase com borderDecision=reanchor re-ancora na fronteira sem travar', () => {
+  it('confirmPhrase com borderDecision=reanchor limpa a seleção sem travar', () => {
     const { steps } = minimalFlow();
     const replayed = replaySessionSteps([
       ...toSegmentacao(steps[0] as GoldenStep),
@@ -113,9 +113,9 @@ describe('replaySessionSteps — passos de cena + triagem + frases do golden cas
       { type: 'confirmPhrase', borderDecision: 'reanchor' },
     ]);
     expect(replayed.state.frases[0]!.locked).toBe(false);
-    // um-toque (primeFrase): reancorar re-semeia o início na fronteira (0), não null
-    expect(replayed.state.selection).toEqual({ s: 0, e: 0 });
-    expect(replayed.state.pendingStart).toBe(0);
+    // sem pré-ancoragem (2026-08-07): reancorar apenas descarta a seleção
+    expect(replayed.state.selection).toBeNull();
+    expect(replayed.state.pendingStart).toBeNull();
     expect(replayed.state.parts[0]!.span).toEqual({ s: 0, e: 9 }); // costura intacta
   });
 

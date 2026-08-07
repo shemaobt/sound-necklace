@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildBeads } from './grid';
-import { primeFrase } from './phrases';
-import { primePart } from './scenes';
 import { clickBead, dragSelectionStart } from './selection';
 import { createSession, type Frase, type ScenePart, type SessionState } from './state';
 
@@ -53,125 +51,99 @@ function afterPT1(over: Partial<SessionState> = {}): SessionState {
 }
 
 /**
- * O modelo de clique é o `cordInteraction` da referência (index.html L561–583),
- * restaurado por decisão do dono em 2026-08-07: "o comportamento do colar para a
- * segmentação de cenas/frases fica estritamente igual; só Pac-Man e
- * remover-absorve são acréscimos".
+ * Modelo de clique — decisão do dono, 2026-08-07 (à noite), depois de rodar o app.
+ * Substitui o `cordInteraction` restaurado nesta mesma branch; o que sobrou dele é a
+ * escolha da borda mais próxima. O motivo foi de ouvido: sem a pré-ancoragem e com
+ * áudio contínuo, quem corta escuta a história correr e marca onde a cena acaba, em
+ * vez de ouvir ~1 s solto em volta de bordas que ainda não conhece.
  *
- * Com a pré-ancoragem (`primePart`/`primeFrase`) o slot já chega com
- * `selection={f,f}` e `pendingStart=f`, então o PRIMEIRO clique cai no ramo de
- * fechar o trecho: da emenda até a conta clicada, tocando-o inteiro. Do segundo em
- * diante o clique move a borda MAIS PRÓXIMA — inclusive o começo — e toca só ela.
+ * Três tempos:
+ *  1. sem seleção → o clique fixa o COMEÇO e o áudio SEGUE dali (`run`);
+ *  2. com `pendingStart` → fecha o trecho e PARA se o playhead já passou do fim
+ *     marcado; se não chegou, deixa correr (`set-end`, decisão do playhead na UI);
+ *  3. trecho fechado → move a borda mais próxima e toca o TRECHO RESULTANTE inteiro
+ *     (`range`), não só a borda.
  */
-describe('clickBead — fecha o trecho, depois ajusta a borda mais próxima (L561–583)', () => {
-  /** Como o app entrega o slot ao ouvinte: pré-ancorado na emenda. */
-  const priming = (over: Partial<SessionState> = {}) => primePart(anchored(over));
+describe('clickBead — marca o começo ouvindo, fecha no fim, e reouve ao ajustar', () => {
+  const aberto = (over: Partial<SessionState> = {}) =>
+    anchored({ selection: null, pendingStart: null, ...over });
 
-  it('o 1º clique fecha da emenda até a conta e toca o TRECHO inteiro', () => {
-    const r = clickBead(priming(), 7); // pré-ancorado em 0
-    expect(r.state.selection).toEqual({ s: 0, e: 7 });
+  it('o 1º clique fixa o COMEÇO e o áudio segue dali', () => {
+    const r = clickBead(aberto(), 7);
+    expect(r.state.selection).toEqual({ s: 7, e: 7 });
+    expect(r.state.pendingStart).toBe(7);
+    expect(r.play).toEqual({ type: 'run', from: 7 });
+  });
+
+  it('o 2º clique fecha o trecho e devolve a decisão do playhead à UI', () => {
+    const s = aberto({ selection: { s: 7, e: 7 }, pendingStart: 7 });
+    const r = clickBead(s, 20);
+    expect(r.state.selection).toEqual({ s: 7, e: 20 });
     expect(r.state.pendingStart).toBeNull();
-    expect(r.play).toEqual({ type: 'range', s: 0, e: 7 });
+    expect(r.play).toEqual({ type: 'set-end', end: 20 });
   });
 
-  it('fechado o trecho, clicar DEPOIS do fim move o fim e toca só a borda', () => {
-    const r = clickBead(anchored({ selection: { s: 0, e: 7 }, pendingStart: null }), 12);
-    expect(r.state.selection).toEqual({ s: 0, e: 12 });
-    expect(r.play).toEqual({ type: 'edge', bead: 12 });
+  it('fechar ATRÁS do começo marcado inverte as pontas, como na referência', () => {
+    const s = aberto({ selection: { s: 10, e: 10 }, pendingStart: 10 });
+    const r = clickBead(s, 4);
+    expect(r.state.selection).toEqual({ s: 4, e: 10 });
+    expect(r.play).toEqual({ type: 'set-end', end: 10 });
   });
 
-  it('clicar ANTES do começo move o COMEÇO — a referência deixa (fronteira 4)', () => {
-    const r = clickBead(afterPT1({ selection: { s: 6, e: 12 }, pendingStart: null }), 5);
-    expect(r.state.selection).toEqual({ s: 5, e: 12 });
-    expect(r.play).toEqual({ type: 'edge', bead: 5 });
+  it('fechado o trecho, clicar além do fim move o FIM e reouve o trecho todo', () => {
+    const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 20);
+    expect(r.state.selection).toEqual({ s: 0, e: 20 });
+    expect(r.play).toEqual({ type: 'range', s: 0, e: 20 });
   });
 
-  it('clique NO MEIO puxa a borda mais próxima: perto do começo, o começo cede', () => {
-    const r = clickBead(anchored({ selection: { s: 0, e: 12 }, pendingStart: null }), 4);
+  it('clicar perto do começo move o COMEÇO e reouve o trecho encurtado', () => {
+    const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 4);
     expect(r.state.selection).toEqual({ s: 4, e: 12 }); // 4−0=4 ≤ 12−4=8
-    expect(r.play).toEqual({ type: 'edge', bead: 4 });
+    expect(r.play).toEqual({ type: 'range', s: 4, e: 12 });
   });
 
-  it('clique NO MEIO perto do fim: o fim cede', () => {
-    const r = clickBead(anchored({ selection: { s: 0, e: 12 }, pendingStart: null }), 9);
+  it('clicar perto do fim move o FIM', () => {
+    const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 9);
     expect(r.state.selection).toEqual({ s: 0, e: 9 }); // 9−0=9 > 12−9=3
-    expect(r.play).toEqual({ type: 'edge', bead: 9 });
+    expect(r.play).toEqual({ type: 'range', s: 0, e: 9 });
   });
 
-  it('empate no meio vai para o COMEÇO (`<=` da referência)', () => {
-    const r = clickBead(anchored({ selection: { s: 0, e: 10 }, pendingStart: null }), 5);
+  it('empate no meio vai para o COMEÇO (o `<=` da referência)', () => {
+    const r = clickBead(aberto({ selection: { s: 0, e: 10 } }), 5);
     expect(r.state.selection).toEqual({ s: 5, e: 10 });
   });
 
   /**
-   * Exceção deliberada ao `cordInteraction` (decisão do dono, 2026-08-07). A
-   * referência reouve o trecho inteiro pelo botão `▶ tocar este pedaço` (`playSel`,
-   * L262), que a ENG-291 removeu daqui — o som desta estação vem das contas. Sem
-   * substituto, quem está cortando só conseguiria ouvir ~1 s em volta de bordas que
-   * ele ainda nem sabe onde ficaram. A conta de COMEÇO passa a ser esse botão.
+   * Cai fora do modelo por consequência, não por exceção: clicar a própria conta de
+   * começo move o começo para onde ele já está, e o `range` do ramo 3 reouve o trecho.
+   * É o que faz as vezes do botão `▶ tocar este pedaço` (`playSel`, L262) que a
+   * ENG-291 tirou destas estações.
    */
-  describe('a conta de começo reouve o trecho fechado (o `playSel` que não temos)', () => {
-    it('clicar exatamente o começo toca o trecho inteiro e não mexe na seleção', () => {
-      const s = anchored({ selection: { s: 0, e: 12 }, pendingStart: null });
-      const r = clickBead(s, 0);
-      expect(r.state).toBe(s);
-      expect(r.play).toEqual({ type: 'range', s: 0, e: 12 });
-    });
-
-    it('a conta VIZINHA do começo continua movendo a borda — a exceção é de uma conta só', () => {
-      const r = clickBead(anchored({ selection: { s: 0, e: 12 }, pendingStart: null }), 1);
-      expect(r.state.selection).toEqual({ s: 1, e: 12 });
-      expect(r.play).toEqual({ type: 'edge', bead: 1 });
-    });
-
-    it('clicar antes da fronteira satura nela; sendo ela o começo, reouve o trecho', () => {
-      const s = afterPT1({ selection: { s: 4, e: 12 }, pendingStart: null }); // fronteira 4
-      const r = clickBead(s, 1);
-      expect(r.state).toBe(s);
-      expect(r.play).toEqual({ type: 'range', s: 4, e: 12 });
-    });
-
-    it('com o começo ARRASTADO à frente da emenda, clicar atrás ainda o traz de volta', () => {
-      const s = afterPT1({ selection: { s: 7, e: 12 }, pendingStart: null }); // fronteira 4
-      const r = clickBead(s, 1); // satura em 4, que é ANTES do começo 7
-      expect(r.state.selection).toEqual({ s: 4, e: 12 });
-      expect(r.play).toEqual({ type: 'edge', bead: 4 });
-    });
-
-    it('o trecho ainda não fechado não usa a exceção: o clique fecha, como na referência', () => {
-      const r = clickBead(primePart(anchored()), 0); // pendingStart=0, seleção {0,0}
-      expect(r.state.pendingStart).toBeNull();
-      expect(r.play).toEqual({ type: 'range', s: 0, e: 0 });
-    });
-  });
-
-  it('sem pré-ancoragem, o 1º clique fixa o começo e toca UMA conta', () => {
-    const r = clickBead(anchored({ selection: null, pendingStart: null }), 7);
-    expect(r.state.selection).toEqual({ s: 7, e: 7 });
-    expect(r.state.pendingStart).toBe(7);
-    expect(r.play).toEqual({ type: 'range', s: 7, e: 7 });
+  it('clicar a conta de começo reouve o trecho sem mexer nele', () => {
+    const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 0);
+    expect(r.state.selection).toEqual({ s: 0, e: 12 });
+    expect(r.play).toEqual({ type: 'range', s: 0, e: 12 });
   });
 
   it('clique abaixo da fronteira satura NELA (floor = aa.start; fronteira 4)', () => {
-    const r = clickBead(primePart(afterPT1()), 1);
+    const r = clickBead(afterPT1({ selection: null, pendingStart: null }), 1);
     expect(r.state.selection).toEqual({ s: 4, e: 4 });
-    expect(r.play).toEqual({ type: 'range', s: 4, e: 4 });
+    expect(r.play).toEqual({ type: 'run', from: 4 });
   });
 
   it('clique além do fim da história satura na última conta', () => {
-    const r = clickBead(priming(), 99);
-    expect(r.state.selection).toEqual({ s: 0, e: 23 });
-    expect(r.play).toEqual({ type: 'range', s: 0, e: 23 });
+    const r = clickBead(aberto(), 99);
+    expect(r.state.selection).toEqual({ s: 23, e: 23 });
+    expect(r.play).toEqual({ type: 'run', from: 23 });
   });
 });
 
 /**
- * Decisão do dono (2026-08-07): cena e frase seguem o MESMO modelo. A referência é
- * assimétrica aqui — `primePart` só existe para cenas (L698), e `addFrase` (L776)
- * zera a seleção, de modo que a frase gasta um clique a mais fixando o começo.
- * `primeFrase` fecha essa assimetria; o resto do `cordInteraction` é idêntico.
+ * Cena e frase seguem o MESMO modelo — e agora isso sai de graça: sem pré-ancoragem,
+ * a assimetria da referência (só a cena tinha `primePart`) deixou de existir. As duas
+ * camadas abrem sem seleção e gastam os mesmos dois cliques.
  */
-describe('clickBead — a frase se comporta como a cena (primeFrase, §8.6)', () => {
+describe('clickBead — a frase se comporta como a cena', () => {
   function frase(over: Partial<Frase>): Frase {
     return {
       prop_id: 'P1',
@@ -213,43 +185,39 @@ describe('clickBead — a frase se comporta como a cena (primeFrase, §8.6)', ()
     };
   }
 
-  it('1ª frase: pré-ancorada no início da CENA (10) — um clique fecha e toca o trecho', () => {
-    const s = primeFrase(fraseando([frase({})], 0)); // PT2 {10,19} ativa, 1ª frase
-    const r = clickBead(s, 12);
-    expect(r.state.selection).toEqual({ s: 10, e: 12 });
-    expect(r.play).toEqual({ type: 'range', s: 10, e: 12 });
+  it('o 1º clique fixa o começo da frase e o áudio segue dali', () => {
+    const r = clickBead(fraseando([frase({})], 0), 12); // PT2 {10,19} ativa
+    expect(r.state.selection).toEqual({ s: 12, e: 12 });
+    expect(r.play).toEqual({ type: 'run', from: 12 });
   });
 
   it('clicar antes do início da cena satura nele — a frase não recua à vizinha', () => {
-    const s = primeFrase(fraseando([frase({})], 0));
-    const r = clickBead(s, 1);
+    const r = clickBead(fraseando([frase({})], 0), 1);
     expect(r.state.selection).toEqual({ s: 10, e: 10 });
-    expect(r.play).toEqual({ type: 'range', s: 10, e: 10 });
+    expect(r.play).toEqual({ type: 'run', from: 10 });
   });
 
-  it('o piso da cena (fim da última frase DELA +1) é o começo pré-ancorado', () => {
-    const s = primeFrase(
-      fraseando(
-        [
-          frase({ prop_id: 'P1', span: { s: 5, e: 6 }, locked: true, part_link: 'PT1' }),
-          frase({ prop_id: 'P2', span: { s: 12, e: 13 }, locked: true, part_link: 'PT2' }),
-          frase({ prop_id: 'P3' }),
-        ],
-        2,
-        'PT1',
-      ),
+  it('o piso é a fronteira DENTRO da cena (fim da última frase dela + 1)', () => {
+    const s = fraseando(
+      [
+        frase({ prop_id: 'P1', span: { s: 5, e: 6 }, locked: true, part_link: 'PT1' }),
+        frase({ prop_id: 'P2', span: { s: 12, e: 13 }, locked: true, part_link: 'PT2' }),
+        frase({ prop_id: 'P3' }),
+      ],
+      2,
+      'PT1',
     );
     // fronteira na cena PT1 = 7 (fim da P1 +1); o ramo genérico daria 14
-    const r = clickBead(s, 9);
-    expect(r.state.selection).toEqual({ s: 7, e: 9 });
-    expect(r.play).toEqual({ type: 'range', s: 7, e: 9 });
+    const r = clickBead(s, 5);
+    expect(r.state.selection).toEqual({ s: 7, e: 7 });
+    expect(r.play).toEqual({ type: 'run', from: 7 });
   });
 
-  it('fechado o trecho, a frase também ajusta a borda mais próxima', () => {
+  it('fechado o trecho, a frase também ajusta a borda e reouve o resultado', () => {
     const s = fraseando([frase({})], 0);
     const r = clickBead({ ...s, selection: { s: 10, e: 16 }, pendingStart: null }, 15);
     expect(r.state.selection).toEqual({ s: 10, e: 15 }); // 15−10=5 > 16−15=1
-    expect(r.play).toEqual({ type: 'edge', bead: 15 });
+    expect(r.play).toEqual({ type: 'range', s: 10, e: 15 });
   });
 });
 
@@ -354,19 +322,18 @@ describe('clickBead — depois de arrastar o começo, o clique fecha COM ele', (
     expect(r.state.pendingStart).toBeNull();
   });
 
-  it('tocar o começo arrastado toca a conta — o trecho ainda é degenerado', () => {
+  it('tocar o começo arrastado fecha um trecho de uma conta', () => {
     const arrastado = dragSelectionStart(
       afterPT1({ selection: { s: 4, e: 4 }, pendingStart: 4 }),
       7,
     );
-    expect(clickBead(arrastado, 7).play).toEqual({ type: 'range', s: 7, e: 7 });
+    expect(clickBead(arrastado, 7).play).toEqual({ type: 'set-end', end: 7 });
   });
 
   /**
-   * O preço de restaurar o `cordInteraction`: fechado o trecho, o clique volta a
-   * mover a borda mais próxima — e o começo é uma delas. Um clique atrás do começo
-   * arrastado reancora na fronteira e FECHA o buraco. Na referência é assim; abrir
-   * o buraco continua sendo o arrasto, mantê-lo é não clicar antes dele.
+   * O preço do modelo de borda mais próxima: fechado o trecho, um clique atrás do
+   * começo arrastado o reancora na fronteira e FECHA o buraco. Abrir o buraco é o
+   * arrasto; mantê-lo é não clicar atrás dele.
    */
   it('um clique antes do começo arrastado fecha o buraco de volta na fronteira', () => {
     const arrastado = dragSelectionStart(
@@ -376,6 +343,6 @@ describe('clickBead — depois de arrastar o começo, o clique fecha COM ele', (
     const fechado = clickBead(arrastado, 15).state; // trecho {7,15}
     const r = clickBead(fechado, 2); // satura na fronteira 4
     expect(r.state.selection).toEqual({ s: 4, e: 15 });
-    expect(r.play).toEqual({ type: 'edge', bead: 4 });
+    expect(r.play).toEqual({ type: 'range', s: 4, e: 15 });
   });
 });

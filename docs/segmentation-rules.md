@@ -1,17 +1,20 @@
 # Segmentation rules — scene and phrase are ONE model
 
-**Status:** owner decisions. **Reset on 2026-08-07:** _"the necklace's behaviour for
-scene/phrase segmentation stays strictly identical to the reference; only the Pac-Man
-drag and remove-with-absorption are additions."_ The click model of 2026-07 (listen /
-set-end) is revoked — rule 1 is now `cordInteraction` verbatim. Byte-identity with the
-reference (the golden harness) is preserved — see "Why this stays golden-safe".
+**Status:** owner decisions, and rule 1 changed TWICE on 2026-08-07. Morning: _"the
+necklace's behaviour for scene/phrase segmentation stays strictly identical to the
+reference"_ — the listen/set-end model of 2026-07 was revoked and `cordInteraction`
+restored verbatim. Evening, after running the app: the pre-anchoring was dropped and
+playback made continuous, because strict fidelity left the listener hearing only the
+extremities. Rule 1 below is the current, third form. Byte-identity with the reference
+(the golden harness) is preserved throughout — see "Why this stays golden-safe".
 
 **Provenance — read before changing any of this.** `docs/reference/index.html` is the
-source of truth for the necklace, and what remains here is the short list of things the
-owner deliberately put on top of it. The Pac-Man drag (rule 3) and
-remove-with-absorption (rule 4) stay because **the system's author recommended them**.
-The four smaller ones are named where they occur, each with its date. Anything not
-listed as a divergence should match the reference; if it does not, that is a bug.
+source of truth for the necklace's DATA and rules; the segmentation INTERACTION is the
+documented exception, and every divergence here is deliberate and dated. The Pac-Man
+drag (rule 3) and remove-with-absorption (rule 4) stay because **the system's author
+recommended them**. Rule 1's three beats are the owner's design, reached by using the
+app. Anything NOT named here as a divergence should match the reference; if it does
+not, that is a bug, not a preference.
 
 **Single principle:** **scene** segmentation (Escuta 2 / Cortar) and **phrase**
 segmentation (Segmentação) behave **identically**. Every rule below holds for both,
@@ -25,47 +28,47 @@ end + 1`, with the phrase first-phrase back-reach of PRD §6.4).
 
 ---
 
-## 1. Clicking and playback while segmenting — the reference, verbatim
+## 1. Clicking and playback while segmenting — three beats
 
-**Rewritten on 2026-08-07 by owner decision.** The listen/set-end model of 2026-07 is
-**revoked**. The click model is `cordInteraction` (`docs/reference/index.html`
-L561–583) exactly as written, in both layers:
+**Rewritten on 2026-08-07 (evening) by owner decision, with the app running.** This
+replaces the `cordInteraction` restoration made earlier the same day; what survives of
+it is the NEAREST-boundary choice (L578–582) and the clamp between frontier and
+necklace end (L566–567). The reason was an ear-first one: with the slot pre-anchored
+and `playEdge`, whoever is cutting only ever heard ~1 s around boundaries whose
+position they did not know yet. Now the story RUNS while they decide.
 
-- **No active anchor** (Escuta) → the tap plays that bead. _(The only divergence in
-  this rule: the reference does nothing here. Kept because CLAUDE.md requires "bead
-  click plays the bead" — the Escuta is not segmentation.)_
-- **Defining a segment.** Slots arrive **pre-anchored** at the seam (`primePart` /
-  `primeFrase` set `selection={f,f}` and `pendingStart=f`), so:
-  - **1st click** → closes the segment from the seam to the clicked bead and plays
-    **the whole stretch** (`playRange(s,e)`). This is the `pendingStart` branch, L574.
-  - **2nd click onward** → moves the **nearest** boundary — the START included — and
-    plays **only it** (`playEdge`, ~1 s each side). Ties go to the start (`<=`, L580).
-  - **Except the START bead itself**, which replays the **whole closed stretch** and
-    changes nothing. _(Owner decision 2026-08-07 — the ONE divergence inside this rule.
-    The reference replays a stretch through the `▶ tocar este pedaço` button
-    (`playSel`, L262), which ENG-291 removed from these stations: sound here comes from
-    the beads. Without a stand-in, someone cutting could only ever hear ~1 s around
-    boundaries whose position they do not know yet. Exactly one bead — the neighbour
-    still moves the boundary.)_
-  - Without pre-anchoring, the 1st click would fix the start and play that single bead
-    (L571). Reachable only if some path leaves `selection` null.
-  - The click is clamped between the frontier and the necklace end (L566–567).
-- **A confirmed (locked) segment:** click any of its beads → play **FROM that bead**
-  to the segment's end; the same bead pauses/resumes. _(Divergence, kept by owner
-  decision 2026-08-07: the reference plays the whole segment from a ▶ button per card,
-  and our listener stations carry no such list.)_
+- **No active anchor** (Escuta) → the tap plays that bead. _(Divergence: the reference
+  does nothing here. Kept because CLAUDE.md requires "bead click plays the bead" — the
+  Escuta is not segmentation.)_
+- **Defining a segment.** The slot arrives EMPTY — there is no pre-anchoring:
+  - **1st click** → marks the **START** there and the audio **runs from it** to the
+    parent end (story end for a scene, scene end for a phrase).
+  - **2nd click** → closes the segment. The audio **stops if the playhead already
+    passed** the marked end, and **keeps going if it has not** — marking the end early
+    must not punish someone who is still listening.
+  - **From the 3rd on** → moves the **nearest** boundary (the start included) and plays
+    the **resulting stretch whole**, not just the boundary. Ties go to the start (`<=`).
+  - Clicking the **start bead** falls out of that same branch: it moves the start onto
+    itself and replays the stretch — which is what stands in for the reference's
+    `▶ tocar este pedaço` button (`playSel`, L262) that ENG-291 removed from here.
+  - The click is clamped between the frontier and the necklace end (L566–567), so a
+    click before the seam saturates at it.
+- **A confirmed (locked) segment:** click any of its beads → play **FROM that bead** to
+  the segment's end; the same bead pauses/resumes. _(Divergence: the reference plays
+  the whole segment from a ▶ button per card, and our listener stations carry no list.)_
 - **Editing a confirmed boundary** (dragging the end): preview from **~4 beads before**
   the new limit to **~3 beads after** it. Post-reference (ENG-342).
 
-Hover keeps the reference's edge dwell (280 ms, ±1 bead, L584–597) and the click does
-**not** cancel it — they agree again, because from the 2nd click on the click also
-plays just the boundary. The click-suppression that existed while rule 1 meant "listen
-to the parent end" is gone with the rule that needed it.
+The instruction line follows the beat: it asks where the segment BEGINS, then where it
+ENDS (`cut.instructionEmphStart` / `EmphEnd`, `phrases.instructionStart` / `End`).
 
-**The one asymmetry we do not copy:** the reference pre-anchors **scenes only**
-(`primePart`, L698); `addFrase` (L776) clears the selection, so a phrase spends an
-extra click fixing its start. `primeFrase` closes that — scene and phrase stay ONE
-model, per the single principle above.
+Hover keeps the reference's edge dwell (280 ms, ±1 bead, L584–597) and the click does
+**not** cancel it.
+
+**Cost of dropping the pre-anchoring, stated plainly:** the start now comes from a
+click, so an ACCIDENTAL gap between scenes is possible. Contiguity used to be free —
+the start was always the seam. It is now a thing the user can get wrong, and the
+deliberate gap of rule 2 is no longer distinguishable from an imprecise click.
 
 ## 2. The START yields to a drag — that is how a stretch is left out
 
@@ -126,7 +129,7 @@ rule 2, before the segment is locked — not as a side effect of adjusting a bou
 | Rule | Domain (pure) | Composed in the UI |
 |---|---|---|
 | 2 — start drag | `dragSelectionStart` (@/domain/selection.ts) | the `START_HANDLE` drag handle (@/ui/pages/cut/cutting.ts, wired in cut and phrases) |
-| 1 — click + playback | `clickBead` returns the intent (`transport`/`range`/`edge`), @/domain/selection.ts | `playClick(player, action)`, `playEditWindow`, `playLockedSceneAt`/`playLockedPhraseAt` (@/ui/pages/cut/cutting.ts, pages) |
+| 1 — click + playback | `clickBead` returns the intent (`transport`/`run`/`set-end`/`range`), @/domain/selection.ts | `playClick(player, action, parentEnd, head)`, `playEditWindow`, `playLockedSceneAt`/`playLockedPhraseAt` (@/ui/pages/cut/cutting.ts, pages) |
 | 2 — end-only drag | — | `dragHandles` only at the end (@/ui/pages/cut, @/ui/pages/phrases) |
 | 3 — Pac-Man + re-anchor | `dragSceneBoundary` (@/domain/seam.ts), `dragPhraseBoundary` (@/domain/phrases.ts) | `primePart(dragSceneBoundary(...))` / `primeFrase(dragPhraseBoundary(...))` |
 | 4 — remove + absorb | `removePart`/`removeFrase` (PURE, reference-faithful) + `absorbNextScene`/`absorbNextFrase` | `absorbNextScene(removePart(...), gapStart)` / same for phrase |
