@@ -195,49 +195,54 @@ export function Triage({ player = null, sound }: TriageProps) {
         </div>
       ) : (
         <div className="cds-triage-focus">
-          <p className="cds-triage-instruction" data-role="instruction">
-            {t('triage.instruction')}
-          </p>
-          <p className="cds-triage-tag" data-tag={scene.tag_state}>
-            {tagShow(scene, t, i18n.language)}
-          </p>
+          {/* A cena em foco — o que se está ouvindo — é uma coluna própria: numa
+              janela larga ela sai de cima da grade e vai para o lado, devolvendo ao
+              picker a altura que a pilha vertical comia (ver triage.css). */}
+          <div className="cds-triage-scene">
+            <p className="cds-triage-instruction" data-role="instruction">
+              {t('triage.instruction')}
+            </p>
+            <p className="cds-triage-tag" data-tag={scene.tag_state}>
+              {tagShow(scene, t, i18n.language)}
+            </p>
 
-          {/* o colar da cena em foco (protótipo tColarRows): sem play na estação, é
-              daqui que sai o som — qualquer conta reproduz a cena inteira. Só a cena
-              (windowMargin 0), sem a banda tracejada, que é afordância da Segmentação. */}
-          {scene.span ? (
-            <div className="cds-triage-colar">
-              <div
-                className="cds-triage-colar-card"
-                // o cartão abraça a cena (protótipo: fit-content), em vez de virar uma
-                // barra larga com quatro contas perdidas no meio. Teto de 30 contas por
-                // fileira = o `_rowsWithFill(beads, 30)` do protótipo.
-                style={{
-                  maxWidth: Math.min(30, scene.span.e - scene.span.s + 1) * SIZE_L.slot + 44,
-                }}
-              >
-                <Necklace
-                  totalBeads={session.totalBeads}
-                  beadSec={session.beadSec}
-                  segments={[{ span: scene.span, tint: sceneColor(idx) }]}
-                  window={scene.span}
-                  windowMargin={0}
-                  sceneBand={false}
-                  size={SIZE_L}
-                  /* Cinco fileiras (ENG-387): aqui o colar é lembrete da cena
-                     dentro de um cartão que já vive acima da grade de tipos, e
-                     com windowMargin 0 uma cena longa renderiza inteira, sem
-                     nada que a apare. */
-                  maxHeight={5 * SIZE_L.row + 12}
-                  transportOnly
-                  playbackHead={head}
-                  onBeadPointerDown={playScene}
-                  onHeadTap={playScene}
-                />
+            {/* o colar da cena em foco (protótipo tColarRows): sem play na estação, é
+                daqui que sai o som — qualquer conta reproduz a cena inteira. Só a cena
+                (windowMargin 0), sem a banda tracejada, que é afordância da Segmentação. */}
+            {scene.span ? (
+              <div className="cds-triage-colar">
+                <div
+                  className="cds-triage-colar-card"
+                  // o cartão abraça a cena (protótipo: fit-content), em vez de virar uma
+                  // barra larga com quatro contas perdidas no meio. Teto de 30 contas por
+                  // fileira = o `_rowsWithFill(beads, 30)` do protótipo.
+                  style={{
+                    maxWidth: Math.min(30, scene.span.e - scene.span.s + 1) * SIZE_L.slot + 44,
+                  }}
+                >
+                  <Necklace
+                    totalBeads={session.totalBeads}
+                    beadSec={session.beadSec}
+                    segments={[{ span: scene.span, tint: sceneColor(idx) }]}
+                    window={scene.span}
+                    windowMargin={0}
+                    sceneBand={false}
+                    size={SIZE_L}
+                    /* Cinco fileiras (ENG-387): aqui o colar é lembrete da cena
+                       dentro de um cartão que já vive ao lado da grade de tipos, e
+                       com windowMargin 0 uma cena longa renderiza inteira, sem
+                       nada que a apare. */
+                    maxHeight={5 * SIZE_L.row + 12}
+                    transportOnly
+                    playbackHead={head}
+                    onBeadPointerDown={playScene}
+                    onHeadTap={playScene}
+                  />
+                </div>
+                <p className="cds-triage-colar-hint">{t('triage.colarHint')}</p>
               </div>
-              <p className="cds-triage-colar-hint">{t('triage.colarHint')}</p>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
           <TriagePicker key={scene.part_id} onConfirm={classify} onNoneFit={noneFit} />
         </div>
