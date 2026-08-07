@@ -657,23 +657,40 @@ export function Report({
   // começar parcial. Esperar a descoberta inteira seria pior — um único `has()`
   // pendurado travaria a transcrição de todas as outras.
   const recordedPaths = voicePaths.filter((p) => voiceSet.has(p));
-  // Reprocessar (force) quando ALGUMA resposta gravada e ainda-não-confirmada não
-  // está transcrita NA VERSÃO atual: gravação nova (nunca transcrita) ou regravada
-  // (a versão subiu). É DURÁVEL porque compara com `enver__` no mapping — sobrevive a
-  // remontar/sair e voltar à sessão, que era o furo do contador só-em-memória. Uma
-  // resposta já confirmada por texto não precisa de rascunho, então não força.
-  const needsTranscription = recordedPaths.some((p) => {
+  /**
+   * The answers whose stored draft belongs to a take that no longer exists — the ONLY
+   * ones a `force` is allowed to touch.
+   *
+   * Both sides of this comparison have to survive a reload, and for a long time only
+   * one did. `enver__` is persisted in the answer store; `recordingVersion` was React
+   * state that reset to `{}` on every load. So reopening a session compared a stored
+   * "1" against a fresh "0", concluded every answer had been re-recorded, and sent a
+   * session-wide force: an interview spread over two sittings paid the provider for
+   * all of its answers again, every time. `recordingVersion` now comes from the
+   * persisted session meta, which is what makes the comparison mean anything.
+   *
+   * Two absences read as "nothing to redo", and both matter. No `enver__` means the
+   * answer was never transcribed — there is no stale draft to throw away, and the
+   * ordinary idempotent POST already seeds it; forcing here would reset the drafts of
+   * every OTHER answer to do it. And no entry in `recordingVersion` means a session
+   * saved before `voiceVersion` existed, where the stored draft is the only truth
+   * available — treating it as changed would re-transcribe every legacy session once.
+   */
+  const stalePaths = recordedPaths.filter((p) => {
     const slot = sequence.find((s) => voiceAnswerPath(s) === p);
     if (!slot) return false;
     if (readAnswer(mapped?.mapping ?? null, slot).trim()) return false;
-    const want = String(recordingVersion?.[p] ?? 0);
-    return readAnswer(mapped?.mapping ?? null, draftVerSlot(slot)) !== want;
+    const seeded = readAnswer(mapped?.mapping ?? null, draftVerSlot(slot));
+    if (!seeded) return false;
+    const recorded = recordingVersion?.[p];
+    if (recorded === undefined) return false;
+    return seeded !== String(recorded);
   });
   const {
     phase: sttPhase,
     drafts,
     retry,
-  } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion, needsTranscription);
+  } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion, stalePaths);
 
   const waiting = sttPhase === 'running';
   // Layout, not a plain effect: the signal goes up BEFORE paint. With `useEffect` the

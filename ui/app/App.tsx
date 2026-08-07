@@ -267,6 +267,8 @@ function useAuthGate(routeName: string): void {
 function useSessionHydration(
   routeId: string | null,
   metaRef: MutableRefObject<SessionMeta | null>,
+  /** Seeds the render-readable mirror of `meta.voiceVersion` from the loaded session. */
+  onVoiceVersion: (versions: Record<string, number>) => void,
 ): boolean {
   const loadedId = useRef<string | null>(null);
   // Sessão concluída reabre na Export (§7.3), não no último modo salvo do domínio
@@ -290,6 +292,9 @@ function useSessionHydration(
         // gravar voz muta `meta.voice`, e a próxima persistência (do domínio ou da
         // própria voz) já o reflete (ENG-276).
         metaRef.current = meta;
+        // sem isto o contador persistido nunca chegaria ao relatório, que continuaria
+        // comparando o `enver__` durável com um mapa vazio e re-transcrevendo tudo
+        onVoiceVersion({ ...meta.voiceVersion });
         sessionStore.getState().load(state);
         // Revisão é POR SESSÃO, mas o store é singleton e `load` não a reseta:
         // estabeleço do zero a cada (re)hidratação para a revisão de uma sessão não
@@ -411,7 +416,15 @@ export function App() {
 
   const routeId = route.name === 'session' ? route.id : null;
   const metaRef = useRef<SessionMeta | null>(null);
-  const completed = useSessionHydration(routeId, metaRef);
+  // Mirrors `meta.voiceVersion` so the stations can read it in render — the meta itself
+  // lives in a ref, and reading a ref in render is forbidden. The ref is what gets
+  // persisted; this is the copy React is allowed to see, seeded below from the loaded
+  // session. It used to be state and NOTHING else, which is the whole bug: the report
+  // compares it against the durable `enver__` of each draft, so a counter that reset to
+  // `{}` on every load made every reopened session look re-recorded, and the entire
+  // interview was transcribed — and paid for — again.
+  const [recordingVersion, setRecordingVersion] = useState<Record<string, number>>({});
+  const completed = useSessionHydration(routeId, metaRef, setRecordingVersion);
   // A trava consultiva (§7.3) tem dono único: adquire ao abrir, renova a cada 15 s,
   // solta ao sair — e abre em revisão se outra pessoa a detém. Vale nos dois modos
   // (a fixture também serve trava), então há UM caminho de código, não dois.
@@ -438,14 +451,16 @@ export function App() {
   // o mesmo caminho canônico, então sem este contador nada distingue a gravação
   // nova da antiga — e o rascunho velho continuaria de pé, pronto para ser
   // confirmado e escrever no artefato a tradução de um áudio descartado.
-  const [recordingVersion, setRecordingVersion] = useState<Record<string, number>>({});
-
   const onVoiceSaved = useCallback(
     (path: string) => {
       const meta = metaRef.current;
       const live = sessionStore.getState().session;
       if (!meta || !live || routeId === null) return;
-      setRecordingVersion((v) => ({ ...v, [path]: (v[path] ?? 0) + 1 }));
+      // both sides move together: the ref is what the autosave serializes, the state is
+      // what the stations render from
+      const next = (meta.voiceVersion[path] ?? 0) + 1;
+      meta.voiceVersion = { ...meta.voiceVersion, [path]: next };
+      setRecordingVersion((v) => ({ ...v, [path]: next }));
       if (!meta.voice.includes(path)) meta.voice = [...meta.voice, path];
       const store = appSessionStore();
       store.autosave(routeId, toSessionDto(live, meta));

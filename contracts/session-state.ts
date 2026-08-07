@@ -112,6 +112,10 @@ export const SessionStateDtoSchema = z.strictObject({
   bucketAudioId: z.string(),
   pipelineConsent: z.boolean(),
   voice: z.array(z.string()),
+  // `.default({})`: documentos salvos antes deste campo existirem continuam abrindo.
+  // Sem isso, acrescentá-lo transformaria cada sessão em andamento num erro de
+  // hidratação.
+  voiceVersion: z.record(z.string(), z.int().nonnegative()).default({}),
 });
 
 export type SessionStateDto = z.infer<typeof SessionStateDtoSchema>;
@@ -142,6 +146,9 @@ function upgradeV1(dto: z.infer<typeof SessionStateDtoV1Schema>): SessionStateDt
   return {
     ...dto,
     schema_version: 2,
+    // o v1 é anterior ao contador; nasce vazio, e "sem versão" é lido como
+    // "não regravou" pelo relatório, que assim respeita o rascunho já guardado
+    voiceVersion: {},
     parts: dto.parts.map((p) => ({
       ...p,
       scene_kind_confidence: p.scene_kind_confidence
@@ -172,6 +179,15 @@ export interface SessionMeta {
   bucketAudioId: string;
   /** referências de recurso de voz já gravadas (§10.4/O5), ex.: respostas/level1/<k>.webm */
   voice: string[];
+  /**
+   * How many times each answer has been RECORDED. Re-recording reuses the same path,
+   * so this counter is the only thing that tells a new take from an old one — and it
+   * is why the counter has to be persisted. It is compared against a durable value
+   * (the draft's `enver__`), and while it lived in React state it reset to empty on
+   * every load: reopening a session looked exactly like re-recording every answer,
+   * and the whole interview was transcribed again (ENG-327).
+   */
+  voiceVersion: Record<string, number>;
   pipelineConsent: boolean;
 }
 
@@ -214,6 +230,7 @@ export function toSessionDto(state: SessionState, meta: SessionMeta): SessionSta
     bucketAudioId: meta.bucketAudioId,
     pipelineConsent: meta.pipelineConsent,
     voice: [...meta.voice],
+    voiceVersion: { ...meta.voiceVersion },
   };
 }
 
@@ -268,6 +285,7 @@ export function fromSessionDto(raw: unknown): { state: SessionState; meta: Sessi
     bucketAudioId: dto.bucketAudioId,
     pipelineConsent: dto.pipelineConsent,
     voice: [...dto.voice],
+    voiceVersion: { ...dto.voiceVersion },
   };
   return { state, meta };
 }

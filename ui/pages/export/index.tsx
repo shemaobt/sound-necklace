@@ -75,6 +75,7 @@ const DEFAULT_META: SessionMeta = {
   granularityLevel: 'medium',
   bucketAudioId: '',
   voice: [],
+  voiceVersion: {},
   pipelineConsent: true,
 };
 
@@ -121,6 +122,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
           granularityLevel: dto.granularityLevel,
           bucketAudioId: dto.bucketAudioId,
           voice: dto.voice,
+          voiceVersion: dto.voiceVersion,
           pipelineConsent: dto.pipelineConsent,
         };
         voice = new Set(dto.voice);

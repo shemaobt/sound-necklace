@@ -317,6 +317,7 @@ export function Setup({
           granularityLevel: projectLevel,
           bucketAudioId: chosen.id,
           voice: [],
+          voiceVersion: {},
           pipelineConsent: consent,
         }),
       );
