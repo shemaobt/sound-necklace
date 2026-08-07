@@ -44,17 +44,34 @@ model of `clickBead` (§8.2) is replaced by the above; the scene used a per-bead
 "play from tapped bead" and the phrase played "the whole phrase" — both now follow
 rule 1 uniformly.
 
-## 2. Adjust a boundary — only the END drags
+## 2. The click only ever sets the END; the START yields to a drag
 
-- Each locked segment has **one drag handle: its END**. The **start never** has a
-  handle — the start is the seam (the previous segment's end + 1).
-- Holds **whether it is the first or the last** segment. The first segment's start
-  (bead 0 / the parent's start) is fixed.
-- To move a segment's start, drag the **previous** segment's end.
-- **The user can never set the start — only the end** (this is also rule 7 of the
-  original brief; it falls out of rules 1 and 2).
+**Amended by the owner on 2026-08-06** — the earlier form of this rule ("the user
+can never set the start") is revoked. What replaced it, and why:
 
-## 3. Dragging is Pac-Man / tiled — the NEXT segment follows (no gaps)
+The story audio is **raw**. Whoever recorded it sometimes stumbles, repeats, hesitates.
+For that stretch not to become noise in the training, the user has to be able to leave
+it **out of every scene and phrase**. Out is literal: not removed from the audio, not
+skipped during playback, not excluded from the artifact — simply belonging to no
+segment. Pushing the start forward is what opens that hole: the stretch between the
+previous segment's end and the new start has no owner.
+
+- A **click** still sets only the END. Nothing about the one-touch flow changes.
+- The segment being defined also carries a drag handle on its **START**. Dragging it
+  forward opens the hole; moving the start is a deliberate gesture, never a stray tap.
+- Each locked segment still has **one** handle: its END.
+- Clamps, and they are the ones `confirmPart` already charged: the start never goes
+  **before the frontier** (overlapping the previous segment stays forbidden) and never
+  **past the end** already chosen.
+- With no end chosen yet, the selection is the degenerate `{frontier, frontier}` and
+  the start drags the whole thing; the ceiling is then the parent's end.
+- To move a **locked** segment's start, still drag the **previous** segment's end
+  (rule 3) — the start handle belongs to the segment being defined.
+
+## 3. Dragging a locked END is Pac-Man / tiled — the NEXT segment follows
+
+(Between LOCKED neighbours there is still no gap: a hole is opened deliberately, by
+rule 2, before the segment is locked — not as a side effect of adjusting a boundary.)
 
 - Dragging a segment's end makes the **next segment follow** in both directions
   (its start becomes `newEnd + 1`):
@@ -81,6 +98,7 @@ rule 1 uniformly.
 
 | Rule | Domain (pure) | Composed in the UI |
 |---|---|---|
+| 2 — start drag | `dragSelectionStart` (@/domain/selection.ts) | the `START_HANDLE` drag handle (@/ui/pages/cut/cutting.ts, wired in cut and phrases) |
 | 1 — playback | `clickBead` returns the intent (`transport`/`listen`/`set-end`), @/domain/selection.ts | `playClick(player, action, parentEnd, head)`, `playEditWindow`, `playLockedSceneAt`/`playLockedPhraseAt` (@/ui/pages/cut/cutting.ts, pages) |
 | 2 — end-only drag | — | `dragHandles` only at the end (@/ui/pages/cut, @/ui/pages/phrases) |
 | 3 — Pac-Man + re-anchor | `dragSceneBoundary` (@/domain/seam.ts), `dragPhraseBoundary` (@/domain/phrases.ts) | `primePart(dragSceneBoundary(...))` / `primeFrase(dragPhraseBoundary(...))` |
@@ -93,8 +111,10 @@ pure domain functions directly. The functions the golden touches stay
 **reference-faithful**:
 
 - The golden **does not use `clickBead`** — its `cutScene`/`phraseSelect` steps set
-  `selection` directly (@/tests/golden/registry.ts). So the new click model is free
-  to change (verified: golden 16/16, expected files untouched).
+  `selection` directly (@/tests/golden/registry.ts). So the click model, and now
+  `dragSelectionStart` with it, is free to change (verified: golden 16/16, expected
+  files untouched). A hole in the cord needs no new contract either: the artifacts
+  describe the spans that EXIST, and never claimed the spans tile the story.
 - `removePart` / `removeFrase` **do not absorb** — absorption is a **separate** step
   (`absorbNextScene` / `absorbNextFrase`) composed **only in the UI**, outside the
   golden's scope, just like the post-drag re-anchor.

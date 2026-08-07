@@ -31,15 +31,57 @@ export function clickBead(state: SessionState, bead: number): ClickResult {
   const aa = activeAnchor(state);
   if (!aa) return { state, play: { type: 'transport', bead } };
 
-  const start = aa.start; // fronteira = começo fixo do segmento
+  // O começo é a fronteira — a menos que já tenham ARRASTADO a extremidade inicial
+  // para frente (`dragSelectionStart`), abrindo um buraco de propósito. Reler a
+  // fronteira aqui desfaria esse arrasto no clique seguinte, que é justamente o
+  // clique que fecha o segmento.
+  const start = Math.max(aa.start, state.selection?.s ?? aa.start);
   const b = Math.min(state.whole.span.e, Math.max(0, bead));
 
   // clicar no começo (ou antes) → OUVIR a partir do começo; não mexe na seleção
   if (b <= start) return { state, play: { type: 'listen', from: start } };
 
-  // clicar além → define o FIM; o começo permanece na fronteira (nunca settável)
+  // clicar além → define o FIM; o começo continua onde está (clique nunca o move)
   return {
     state: { ...state, selection: { s: start, e: b }, pendingStart: null },
     play: { type: 'set-end', end: b },
+  };
+}
+
+/**
+ * Arrasta o COMEÇO do segmento em definição (decisão do dono, 2026-08-06).
+ *
+ * O áudio é CRU: quem gravou às vezes erra, repete, hesita. Para esse trecho não
+ * virar ruído no treinamento, o usuário precisa deixá-lo FORA de qualquer cena ou
+ * frase — não removê-lo, não pulá-lo na escuta, não excluí-lo do artefato. Só não
+ * selecionar. Empurrar o começo para frente é o que abre esse buraco: o trecho
+ * entre o fim do segmento anterior e o novo começo não pertence a ninguém.
+ *
+ * Isto revoga a parte "o começo NUNCA é settável" da regra 2 de
+ * docs/segmentation-rules.md; o resto dela continua — o clique segue setando só o
+ * fim, e mover o começo exige o gesto deliberado do arrasto.
+ *
+ * Dois limites, e os dois são o que o `confirmPart` já cobrava: nunca antes da
+ * fronteira (sobrepor o segmento anterior segue proibido) e nunca depois do fim já
+ * escolhido. `pendingStart` acompanha o começo em vez de zerar: arrastar não
+ * escolhe fim nenhum, e é o `pendingStart` não-nulo que faz o confirmar pedir
+ * "clique onde termina".
+ */
+export function dragSelectionStart(state: SessionState, bead: number): SessionState {
+  if (!state.totalBeads || state.review) return state;
+  const aa = activeAnchor(state);
+  if (!aa || !state.selection) return state;
+
+  // Sem fim escolhido a seleção é o degenerado {fronteira, fronteira}: o começo
+  // arrasta a coisa inteira, e o teto é o fim do colar. Com fim escolhido, ele é o
+  // teto — o começo não passa por cima do que já foi decidido.
+  const pending = state.pendingStart !== null;
+  const ceil = pending ? state.whole.span.e : state.selection.e;
+  const s = Math.min(ceil, Math.max(aa.start, bead));
+  if (s === state.selection.s) return state;
+  return {
+    ...state,
+    selection: { s, e: pending ? s : state.selection.e },
+    pendingStart: pending ? s : null,
   };
 }

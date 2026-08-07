@@ -10,6 +10,7 @@ import {
   confirmPart,
   confirmParts,
   dragSceneBoundary,
+  dragSelectionStart,
   primePart,
   removePart,
   setMode,
@@ -25,6 +26,7 @@ import {
   rankLockedScenes,
   sceneColor,
   sceneOrdinal,
+  START_HANDLE,
 } from './cutting';
 import { BeadStrip, type BeadStripItem } from '../../molecules';
 import './cut.css';
@@ -93,10 +95,14 @@ export function Cut({ player = null, sound }: CutProps) {
   // (#2 — como a frase, o fim arrasta livre até o fim do colar). `id` = a cena
   // cujo fim se move; o domínio (`dragSceneBoundary`) empurra a vizinha por span
   // ou, na última, deixa a cobertura ficar esparsa.
-  const dragHandles = useMemo(
-    () => lockedScenes.map((sc) => ({ at: sc.span.e, id: sc.part.part_id })),
-    [lockedScenes],
-  );
+  // …e o COMEÇO da cena em definição (decisão do dono, 2026-08-06): arrastá-lo para
+  // frente deixa o trecho anterior fora de qualquer cena. É assim que um erro de
+  // fala do áudio cru fica de fora sem ser removido nem excluído do artefato.
+  const anchoredStart = session && activeAnchor(session) ? (session.selection?.s ?? null) : null;
+  const dragHandles = useMemo(() => {
+    const ends = lockedScenes.map((sc) => ({ at: sc.span.e, id: sc.part.part_id }));
+    return anchoredStart === null ? ends : [...ends, { at: anchoredStart, id: START_HANDLE }];
+  }, [lockedScenes, anchoredStart]);
 
   useEffect(() => {
     if (!player) return;
@@ -241,7 +247,13 @@ export function Cut({ player = null, sound }: CutProps) {
   // a seguinte SEGUE (Pac-Man). `primePart` reancora a pendente na nova fronteira.
   // Enquanto edita, toca a prévia ~4 contas antes do limite até ~3 depois (regra 5).
   const onDragBoundary = (id: string, toBead: number): void => {
-    sessionStore.getState().apply((s) => primePart(dragSceneBoundary(s, id, toBead)));
+    // O começo NÃO reancora: `primePart` o puxaria de volta para a emenda, que é
+    // exatamente o que este arrasto existe para recusar.
+    if (id === START_HANDLE) {
+      sessionStore.getState().apply((s) => dragSelectionStart(s, toBead));
+    } else {
+      sessionStore.getState().apply((s) => primePart(dragSceneBoundary(s, id, toBead)));
+    }
     if (player) playEditWindow(player, toBead, session.totalBeads);
   };
 

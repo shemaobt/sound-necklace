@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildBeads } from './grid';
-import { clickBead } from './selection';
+import { clickBead, dragSelectionStart } from './selection';
 import { createSession, type Frase, type ScenePart, type SessionState } from './state';
 
 /** Sessão de teste: 12 s a 0.5 s/conta → 24 contas (0…23). */
@@ -205,5 +205,70 @@ describe('clickBead — pureza', () => {
     clickBead(s, 2);
     clickBead(s, 10);
     expect(JSON.stringify(s)).toBe(before);
+  });
+});
+
+/**
+ * Buraco no meio do colar (decisão do dono, 2026-08-06). O áudio é CRU: quem gravou
+ * às vezes erra, repete, hesita. Para esse trecho não virar ruído no treinamento, o
+ * usuário precisa poder deixá-lo FORA de qualquer cena/frase — não removê-lo, não
+ * pulá-lo na escuta, não excluí-lo do artefato. Só não selecionar.
+ *
+ * O padrão não muda: um clique segue setando só o FIM. O começo passa a ceder ao
+ * ARRASTO da extremidade inicial, e é isso que abre o buraco — o trecho entre o fim
+ * da cena anterior e o novo começo não pertence a ninguém.
+ */
+describe('dragSelectionStart — o começo cede ao arrasto, e o buraco aparece', () => {
+  it('arrastar o começo para frente deixa o trecho anterior fora do segmento', () => {
+    const s = dragSelectionStart(afterPT1({ selection: { s: 4, e: 4 }, pendingStart: 4 }), 7);
+    // PT1 termina em 3, este segmento passa a começar em 7 → 4,5,6 ficam sem dono
+    expect(s.selection).toEqual({ s: 7, e: 7 });
+  });
+
+  it('nunca recua antes da fronteira — sobrepor a cena anterior continua proibido', () => {
+    const s = dragSelectionStart(afterPT1({ selection: { s: 6, e: 9 }, pendingStart: null }), 1);
+    expect(s.selection).toEqual({ s: 4, e: 9 });
+  });
+
+  it('nunca passa do fim já escolhido', () => {
+    const s = dragSelectionStart(afterPT1({ selection: { s: 4, e: 9 }, pendingStart: null }), 20);
+    expect(s.selection).toEqual({ s: 9, e: 9 });
+  });
+
+  it('sem ancoragem ativa não há o que arrastar', () => {
+    const parado = anchored({ current: { layer: 'parts', index: -1 }, selection: { s: 2, e: 5 } });
+    expect(dragSelectionStart(parado, 4)).toBe(parado);
+  });
+
+  it('o fim ainda não escolhido segue não escolhido: arrastar não confirma nada', () => {
+    const s = dragSelectionStart(afterPT1({ selection: { s: 4, e: 4 }, pendingStart: 4 }), 7);
+    expect(s.pendingStart).toBe(7);
+  });
+
+  it('não muta o estado de entrada', () => {
+    const s = afterPT1({ selection: { s: 4, e: 9 }, pendingStart: null });
+    const before = JSON.stringify(s);
+    dragSelectionStart(s, 6);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+});
+
+describe('clickBead — depois de arrastar o começo, o clique fecha COM ele', () => {
+  it('o fim clicado se emparelha com o começo arrastado, não com a fronteira', () => {
+    const arrastado = dragSelectionStart(
+      afterPT1({ selection: { s: 4, e: 4 }, pendingStart: 4 }),
+      7,
+    );
+    const r = clickBead(arrastado, 15);
+    expect(r.state.selection).toEqual({ s: 7, e: 15 });
+    expect(r.state.pendingStart).toBeNull();
+  });
+
+  it('tocar o começo arrastado ouve DALI, não da fronteira', () => {
+    const arrastado = dragSelectionStart(
+      afterPT1({ selection: { s: 4, e: 4 }, pendingStart: 4 }),
+      7,
+    );
+    expect(clickBead(arrastado, 7).play).toEqual({ type: 'listen', from: 7 });
   });
 });

@@ -26,7 +26,7 @@ export {
   type Whole,
 } from './state';
 export { activeAnchor, frontier, type ActiveAnchor } from './frontier';
-export { clickBead, type ClickResult, type PlayAction } from './selection';
+export { clickBead, dragSelectionStart, type ClickResult, type PlayAction } from './selection';
 export {
   absorbNextScene,
   addPart,
