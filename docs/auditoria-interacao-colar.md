@@ -33,6 +33,7 @@ acréscimos."_ O modelo ouvir/definir-fim de 2026-07 foi **revogado**;
 | 1º clique definindo | fecha o trecho da emenda até a conta e toca **o trecho inteiro** | idem |
 | 2º clique em diante | move a borda **mais próxima** (o começo inclusive) e toca **só ela** (`playEdge`) | idem |
 | Empate no meio | o **começo** cede (`<=`, L580) | idem |
+| Clique na conta de **começo** | move o começo, toca só a borda | **retoca o trecho fechado inteiro**, sem mexer nele — o `playSel` que a ENG-291 tirou daqui (decisão do dono, 2026-08-07) |
 | Saturação do clique | entre a fronteira e o fim do colar (L566–567) | idem |
 
 A versão anterior desta seção descrevia a divergência como "deliberada, já decidida".
@@ -84,8 +85,8 @@ Ver §8 — isto era uma decisão pendente e já foi resolvida.
 | `pingBead` — flash de 140 ms na conta clicada (L606) | sim | **Não implementado.** Micro-feedback tátil que some. |
 | Tamanho de conta Pequeno/Médio/Grande (L256, L661) | seletor do usuário | **Não implementado** — virou preset por estação (`SIZE_M`/`SIZE_L`). Provavelmente correto no redesign; listado por completude. |
 | `Limpar seleção` (`clearSel`, L910) | sim | **Não existe** — coerente com começo fixo, não há seleção livre a limpar. |
-| `playSel` — "tocar este pedaço" como botão separado (L262) | sim | **Não existe** como botão; o equivalente é clicar o começo (ouvir dali). |
-| `playAll` — botão que troca de alvo por modo: "ouvir a história" fora da segmentação, "ouvir **a cena**" dentro dela (L658, L910) | sim | **Não existe** nas estações Cortar e Frases. O colar É o controle (regra de UI: uma ação dominante, o áudio responde ao toque). Ouvir tudo de novo = clicar o começo. |
+| `playSel` — "tocar este pedaço" como botão separado (L262) | sim | **Não existe como botão** (ENG-291 tirou os play das estações do ouvinte). Desde 2026-08-07 o equivalente é **clicar a conta de começo**, que retoca o trecho fechado inteiro — foi o dono notar que, sem isso, quem corta só ouviria as extremidades. |
+| `playAll` — botão que troca de alvo por modo: "ouvir a história" fora da segmentação, "ouvir **a cena**" dentro dela (L658, L910) | sim | **Não existe** nas estações Cortar e Frases. O colar É o controle (regra de UI: uma ação dominante, o áudio responde ao toque). Clicar o começo reouve **o trecho em definição**, não a história/cena inteira — reouvir o pai continua sem equivalente aqui. |
 | `scrollToActive` — rola a PÁGINA até o cartão da camada ativa (L1386) | sim | **Não existe**, e não deve: a referência empilha cartões numa página longa. Aqui cada estação é uma tela, e quem rola é a janela do colar atrás da conta acesa (ENG-387) — resolve a mesma necessidade num layout diferente. |
 
 ### Correção desta auditoria (2026-08-07)

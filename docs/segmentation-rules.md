@@ -10,7 +10,7 @@ reference (the golden harness) is preserved — see "Why this stays golden-safe"
 source of truth for the necklace, and what remains here is the short list of things the
 owner deliberately put on top of it. The Pac-Man drag (rule 3) and
 remove-with-absorption (rule 4) stay because **the system's author recommended them**.
-The three smaller ones are named where they occur, each with its date. Anything not
+The four smaller ones are named where they occur, each with its date. Anything not
 listed as a divergence should match the reference; if it does not, that is a bug.
 
 **Single principle:** **scene** segmentation (Escuta 2 / Cortar) and **phrase**
@@ -40,6 +40,13 @@ L561–583) exactly as written, in both layers:
     **the whole stretch** (`playRange(s,e)`). This is the `pendingStart` branch, L574.
   - **2nd click onward** → moves the **nearest** boundary — the START included — and
     plays **only it** (`playEdge`, ~1 s each side). Ties go to the start (`<=`, L580).
+  - **Except the START bead itself**, which replays the **whole closed stretch** and
+    changes nothing. _(Owner decision 2026-08-07 — the ONE divergence inside this rule.
+    The reference replays a stretch through the `▶ tocar este pedaço` button
+    (`playSel`, L262), which ENG-291 removed from these stations: sound here comes from
+    the beads. Without a stand-in, someone cutting could only ever hear ~1 s around
+    boundaries whose position they do not know yet. Exactly one bead — the neighbour
+    still moves the boundary.)_
   - Without pre-anchoring, the 1st click would fix the start and play that single bead
     (L571). Reachable only if some path leaves `selection` null.
   - The click is clamped between the frontier and the necklace end (L566–567).

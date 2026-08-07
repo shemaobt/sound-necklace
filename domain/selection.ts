@@ -63,9 +63,17 @@ export function clickBead(state: SessionState, bead: number): ClickResult {
     };
   }
 
-  // borda mais próxima; no empate o COMEÇO cede (o `<=` da referência, L580)
   const { s: selS, e: selE } = state.selection;
-  const moveStart = b <= selS || (b < selE && b - selS <= selE - b);
+
+  // ÚNICA exceção ao ramo 3 (decisão do dono, 2026-08-07): a conta de COMEÇO reouve
+  // o trecho fechado, sem mexer nele. A referência faz isso pelo botão `▶ tocar este
+  // pedaço` (`playSel`, L262), que a ENG-291 tirou desta estação — o som aqui vem das
+  // contas. Sem substituto, quem corta só ouviria ~1 s em volta de bordas cuja posição
+  // ele ainda nem conhece. Uma conta, não uma zona: a vizinha segue movendo a borda.
+  if (b === selS) return { state, play: { type: 'range', s: selS, e: selE } };
+
+  // borda mais próxima; no empate o COMEÇO cede (o `<=` da referência, L580)
+  const moveStart = b < selS || (b < selE && b - selS <= selE - b);
   const selection = moveStart ? { s: b, e: selE } : { s: selS, e: b };
   return { state: { ...state, selection }, play: { type: 'edge', bead: b } };
 }

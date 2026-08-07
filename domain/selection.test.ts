@@ -103,6 +103,48 @@ describe('clickBead — fecha o trecho, depois ajusta a borda mais próxima (L56
     expect(r.state.selection).toEqual({ s: 5, e: 10 });
   });
 
+  /**
+   * Exceção deliberada ao `cordInteraction` (decisão do dono, 2026-08-07). A
+   * referência reouve o trecho inteiro pelo botão `▶ tocar este pedaço` (`playSel`,
+   * L262), que a ENG-291 removeu daqui — o som desta estação vem das contas. Sem
+   * substituto, quem está cortando só conseguiria ouvir ~1 s em volta de bordas que
+   * ele ainda nem sabe onde ficaram. A conta de COMEÇO passa a ser esse botão.
+   */
+  describe('a conta de começo reouve o trecho fechado (o `playSel` que não temos)', () => {
+    it('clicar exatamente o começo toca o trecho inteiro e não mexe na seleção', () => {
+      const s = anchored({ selection: { s: 0, e: 12 }, pendingStart: null });
+      const r = clickBead(s, 0);
+      expect(r.state).toBe(s);
+      expect(r.play).toEqual({ type: 'range', s: 0, e: 12 });
+    });
+
+    it('a conta VIZINHA do começo continua movendo a borda — a exceção é de uma conta só', () => {
+      const r = clickBead(anchored({ selection: { s: 0, e: 12 }, pendingStart: null }), 1);
+      expect(r.state.selection).toEqual({ s: 1, e: 12 });
+      expect(r.play).toEqual({ type: 'edge', bead: 1 });
+    });
+
+    it('clicar antes da fronteira satura nela; sendo ela o começo, reouve o trecho', () => {
+      const s = afterPT1({ selection: { s: 4, e: 12 }, pendingStart: null }); // fronteira 4
+      const r = clickBead(s, 1);
+      expect(r.state).toBe(s);
+      expect(r.play).toEqual({ type: 'range', s: 4, e: 12 });
+    });
+
+    it('com o começo ARRASTADO à frente da emenda, clicar atrás ainda o traz de volta', () => {
+      const s = afterPT1({ selection: { s: 7, e: 12 }, pendingStart: null }); // fronteira 4
+      const r = clickBead(s, 1); // satura em 4, que é ANTES do começo 7
+      expect(r.state.selection).toEqual({ s: 4, e: 12 });
+      expect(r.play).toEqual({ type: 'edge', bead: 4 });
+    });
+
+    it('o trecho ainda não fechado não usa a exceção: o clique fecha, como na referência', () => {
+      const r = clickBead(primePart(anchored()), 0); // pendingStart=0, seleção {0,0}
+      expect(r.state.pendingStart).toBeNull();
+      expect(r.play).toEqual({ type: 'range', s: 0, e: 0 });
+    });
+  });
+
   it('sem pré-ancoragem, o 1º clique fixa o começo e toca UMA conta', () => {
     const r = clickBead(anchored({ selection: null, pendingStart: null }), 7);
     expect(r.state.selection).toEqual({ s: 7, e: 7 });
