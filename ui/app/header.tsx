@@ -3,6 +3,7 @@ import * as Popover from '@radix-ui/react-popover';
 
 import { SaveChip, type SaveStatus } from '../molecules';
 import { ShemaIcon } from '../tokens';
+import type { Theme } from './theme';
 import './header.css';
 
 /**
@@ -24,12 +25,32 @@ export function Header({
   volume = 1,
   onVolume,
   autosave,
+  theme = 'light',
+  onToggleTheme,
+  backDisabled = false,
+  onBackBlocked,
 }: {
   muted: boolean;
   onToggleMuted: () => void;
   onBack: () => void;
+  /**
+   * Gravando, sair da estação perde a resposta em curso (ENG-393). Este é o
+   * único caminho de saída fora do palco da conversa, então a trava precisa
+   * chegar até aqui.
+   */
+  backDisabled?: boolean;
+  /**
+   * O clique recusado, para quem sabe fazer barulho: a recusa devolve som, não
+   * texto. Por isso o botão continua clicável e o handler é que decide — uma
+   * subárvore inerte não despacharia clique nenhum, e a recusa ficaria muda.
+   */
+  onBackBlocked?: () => void;
   /** Estado do autosave; presente numa sessão aberta, mostra o selo de salvamento. */
   autosave?: SaveStatus;
+  /** Tema em vigor — decide o glifo (lua no claro, sol no escuro) e o rótulo. */
+  theme?: Theme;
+  /** Ausente, o botão de tema não aparece: nenhum controle que não faz nada. */
+  onToggleTheme?: () => void;
   /** Volume da história (0–2; 1 = neutro) — só faz sentido com sessão aberta. */
   volume?: number;
   /**
@@ -47,7 +68,8 @@ export function Header({
           type="button"
           className="cds-header-back"
           aria-label={t('header.backAria')}
-          onClick={onBack}
+          aria-disabled={backDisabled || undefined}
+          onClick={backDisabled ? onBackBlocked : onBack}
         >
           <svg
             width={17}
@@ -77,6 +99,16 @@ export function Header({
             savingLabel={t('autosave.saving')}
             savedLabel={t('autosave.saved')}
           />
+        ) : null}
+        {onToggleTheme ? (
+          <button
+            type="button"
+            className="cds-header-theme"
+            aria-label={theme === 'dark' ? t('header.themeToLight') : t('header.themeToDark')}
+            onClick={onToggleTheme}
+          >
+            <ThemeGlyph theme={theme} />
+          </button>
         ) : null}
         {onVolume ? (
           <Popover.Root>
@@ -125,6 +157,47 @@ export function Header({
         )}
       </div>
     </header>
+  );
+}
+
+/**
+ * Glifo de tema (Feather stroke, viewBox 24) — decorativo, sem palavras: mostra o
+ * DESTINO do clique, lua no claro e sol no escuro, como no pacote de design.
+ */
+function ThemeGlyph({ theme }: { theme: Theme }) {
+  return theme === 'dark' ? (
+    <svg
+      className="cds-ico-sun"
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6" />
+    </svg>
+  ) : (
+    <svg
+      className="cds-ico-moon"
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.8 6.8 0 0 0 10.8 10.8z" />
+    </svg>
   );
 }
 

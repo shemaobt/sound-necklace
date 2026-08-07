@@ -9,6 +9,8 @@
  * gravações. Fixture (e fora de sessão): Map em memória por sessão, na aba.
  */
 
+import { CachedVoiceStore } from '../../adapters/voice/cached-store';
+import { idbAudioCache } from '../../adapters/voice/idb-cache';
 import { MemoryVoiceStore } from '../../adapters/voice/memory-store';
 import { SessionVoiceStore } from '../../adapters/voice/session-store';
 import type { VoiceResourceStore } from '../../adapters/voice/types';
@@ -26,8 +28,16 @@ function memoryStoreFor(key: string): MemoryVoiceStore {
   return store;
 }
 
+/**
+ * Só o armazém REAL ganha cache: o de memória já É o cache, e envolvê-lo em IndexedDB
+ * guardaria em disco o que a fixture inventou.
+ */
 export function voiceStoreFor(sessionId: string | null): VoiceResourceStore {
   if (API_MODE === 'real' && sessionId !== null)
-    return new SessionVoiceStore(appSessionStore(), sessionId);
+    return new CachedVoiceStore(
+      new SessionVoiceStore(appSessionStore(), sessionId),
+      idbAudioCache(),
+      sessionId,
+    );
   return memoryStoreFor(sessionId ?? '__fora-de-sessao__');
 }

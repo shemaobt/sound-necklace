@@ -12,10 +12,10 @@
      alto continuar acessível pelo topo em vez de estourar para fora */
   justify-content: safe center;
   gap: 1.5rem;
-  min-height: calc(100vh - 110px);
+  min-height: calc(100vh - var(--cds-shell-inset, 110px));
   padding: clamp(1.5rem, 5vh, 3rem) 1.5rem;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
   text-align: center;
 }
 
@@ -28,12 +28,16 @@
   font-weight: 300;
   font-size: clamp(26px, 3.6vh, 34px);
   line-height: 1.2;
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
 }
 
+/* v3 §4: prato lavado sem moldura, como nos demais colares */
 .cds-export-stage {
   width: 100%;
   max-width: 880px;
+  padding: 20px 30px;
+  border-radius: 24px;
+  background: var(--cds-ui-wash);
 }
 
 .cds-export-warning,
@@ -53,8 +57,8 @@
 }
 
 .cds-export-notice {
-  background: rgba(143, 55, 1, 0.1);
-  color: var(--cds-telha-deep);
+  background: var(--cds-ui-error-bg);
+  color: var(--cds-ui-error-fg);
 }
 
 .cds-export-action {

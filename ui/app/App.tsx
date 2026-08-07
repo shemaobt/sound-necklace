@@ -24,14 +24,30 @@ import { shouldGateToLogin } from './auth-gate';
 import { buildSessionPlayer, createDeferredPlayer, type SessionAudio } from './audio-player';
 import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
+import { NavFooterOutlet, NavFooterProvider } from '../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../organisms/preparing-session/preparing-session';
 import { buildAdapterRegistry, buildStationRegistry, type StationComponent } from './registries';
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
 import { StationHost } from './station-host';
+import { initTheme, readTheme, toggleTheme, type Theme } from './theme';
 import { useEditorLock } from './use-editor-lock';
 import { voiceStoreFor } from './voice-adapter';
 import { Stepper } from './stepper';
+
+/**
+ * Tema em vigor (ENG-391). A verdade mora no atributo do `<html>`, posto pelo script
+ * de boot antes da primeira pintura; este estado só existe para o cabeçalho saber
+ * qual glifo desenhar. O `initTheme` no efeito reaplica o mesmo valor — é o que
+ * cobre o dev server e os testes, onde o boot do index.html não passou.
+ */
+function useTheme(): [Theme, () => void] {
+  const [theme, setTheme] = useState<Theme>(readTheme);
+  useEffect(() => {
+    initTheme();
+  }, []);
+  return [theme, useCallback(() => setTheme(toggleTheme()), [])];
+}
 
 /** Assina o estado do autosave da store (saving/saved) para o selo do header. */
 function useAutosaveStatus(): SaveStatus {
@@ -252,6 +268,8 @@ function useAuthGate(routeName: string): void {
 function useSessionHydration(
   routeId: string | null,
   metaRef: MutableRefObject<SessionMeta | null>,
+  /** Seeds the render-readable mirror of `meta.voiceVersion` from the loaded session. */
+  onVoiceVersion: (versions: Record<string, number>) => void,
 ): boolean {
   const loadedId = useRef<string | null>(null);
   // Sessão concluída reabre na Export (§7.3), não no último modo salvo do domínio
@@ -275,6 +293,9 @@ function useSessionHydration(
         // gravar voz muta `meta.voice`, e a próxima persistência (do domínio ou da
         // própria voz) já o reflete (ENG-276).
         metaRef.current = meta;
+        // sem isto o contador persistido nunca chegaria ao relatório, que continuaria
+        // comparando o `enver__` durável com um mapa vazio e re-transcrevendo tudo
+        onVoiceVersion({ ...meta.voiceVersion });
         sessionStore.getState().load(state);
         // Revisão é POR SESSÃO, mas o store é singleton e `load` não a reseta:
         // estabeleço do zero a cada (re)hidratação para a revisão de uma sessão não
@@ -384,6 +405,8 @@ function useSessionPlayer(routeId: string | null): {
 export function App() {
   const route = useRoute();
   const muted = useAppStore((s) => s.muted);
+  const recording = useAppStore((s) => s.recording);
+  const [theme, onToggleTheme] = useTheme();
   const online = useOnline();
   useAuthExpiry();
   useAuthGate(route.name);
@@ -394,7 +417,15 @@ export function App() {
 
   const routeId = route.name === 'session' ? route.id : null;
   const metaRef = useRef<SessionMeta | null>(null);
-  const completed = useSessionHydration(routeId, metaRef);
+  // Mirrors `meta.voiceVersion` so the stations can read it in render — the meta itself
+  // lives in a ref, and reading a ref in render is forbidden. The ref is what gets
+  // persisted; this is the copy React is allowed to see, seeded below from the loaded
+  // session. It used to be state and NOTHING else, which is the whole bug: the report
+  // compares it against the durable `enver__` of each draft, so a counter that reset to
+  // `{}` on every load made every reopened session look re-recorded, and the entire
+  // interview was transcribed — and paid for — again.
+  const [recordingVersion, setRecordingVersion] = useState<Record<string, number>>({});
+  const completed = useSessionHydration(routeId, metaRef, setRecordingVersion);
   // A trava consultiva (§7.3) tem dono único: adquire ao abrir, renova a cada 15 s,
   // solta ao sair — e abre em revisão se outra pessoa a detém. Vale nos dois modos
   // (a fixture também serve trava), então há UM caminho de código, não dois.
@@ -421,14 +452,16 @@ export function App() {
   // o mesmo caminho canônico, então sem este contador nada distingue a gravação
   // nova da antiga — e o rascunho velho continuaria de pé, pronto para ser
   // confirmado e escrever no artefato a tradução de um áudio descartado.
-  const [recordingVersion, setRecordingVersion] = useState<Record<string, number>>({});
-
   const onVoiceSaved = useCallback(
     (path: string) => {
       const meta = metaRef.current;
       const live = sessionStore.getState().session;
       if (!meta || !live || routeId === null) return;
-      setRecordingVersion((v) => ({ ...v, [path]: (v[path] ?? 0) + 1 }));
+      // both sides move together: the ref is what the autosave serializes, the state is
+      // what the stations render from
+      const next = (meta.voiceVersion[path] ?? 0) + 1;
+      meta.voiceVersion = { ...meta.voiceVersion, [path]: next };
+      setRecordingVersion((v) => ({ ...v, [path]: next }));
       if (!meta.voice.includes(path)) meta.voice = [...meta.voice, path];
       const store = appSessionStore();
       store.autosave(routeId, toSessionDto(live, meta));
@@ -540,6 +573,12 @@ export function App() {
       muted={muted}
       onToggleMuted={() => appStore.getState().toggleMuted()}
       onBack={() => navigate('/dashboard')}
+      // gravando, sair da estação perderia a resposta em curso (ENG-393)
+      backDisabled={recording}
+      onBackBlocked={() => sound.refuse()}
+      // o tema é global e sem consequência de conteúdo: pode trocar em qualquer estação
+      theme={theme}
+      onToggleTheme={onToggleTheme}
       // o booster só faz sentido com uma sessão tocável aberta (ENG-314)
       volume={storyVolume}
       onVolume={route.name === 'session' ? onStoryVolume : undefined}
@@ -591,11 +630,17 @@ export function App() {
     body = ownsHeader ? station : <main className="cds-app-main">{station}</main>;
   }
 
+  // O rodapé de navegação (protótipo v3 §1) fica no fim do shell e só existe quando
+  // a estação ativa publica a sua navegação — login, painel e telas de espera não
+  // publicam nada e simplesmente não o têm, sem lista de exceções aqui.
   return (
-    <div className="cds-app">
-      {header}
-      {body}
-      <AddonsLayer />
-    </div>
+    <NavFooterProvider>
+      <div className="cds-app">
+        {header}
+        {body}
+        <NavFooterOutlet />
+        <AddonsLayer />
+      </div>
+    </NavFooterProvider>
   );
 }

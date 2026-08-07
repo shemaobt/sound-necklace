@@ -13,7 +13,7 @@
      centrar vertical em TODO contexto: filho direto do shell (abertura de sessão) OU
      dentro de `.cds-app-main` de uma estação (guardar documentos), onde o flex não
      propaga altura. */
-  min-height: calc(100vh - 110px);
+  min-height: calc(100vh - var(--cds-shell-inset, 110px));
   overflow: hidden;
   background: var(--cds-olive);
   color: var(--cds-cream);

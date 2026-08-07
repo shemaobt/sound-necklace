@@ -61,12 +61,15 @@ export function useSttDrafts(
   paths: readonly string[],
   versions: Record<string, number> = {},
   /**
-   * Reprocessar em vez de reusar o job guardado no servidor. Quem decide é a
-   * página (@/ui/pages/report), que tem o dado DURÁVEL de qual versão de cada
-   * resposta já foi transcrita; o hook, por não persistir nada entre montagens,
-   * não saberia sozinho que uma resposta foi regravada desde a última vez.
+   * The answers whose stored draft is of a take that no longer exists. Empty means
+   * reuse whatever the server already has. The page decides (@/ui/pages/report),
+   * because it holds the durable record of which version of each answer was
+   * transcribed; the hook persists nothing between mounts and could not know.
+   *
+   * A LIST rather than a flag: the force it produces resets exactly these answers,
+   * so redoing one re-recorded take no longer discards the drafts of all the others.
    */
-  force = false,
+  stale: readonly string[] = [],
 ): SttDrafts {
   const pathsKey = keyOf(paths, versions);
   const [result, setResult] = useState<JobResult | null>(null);
@@ -78,10 +81,13 @@ export function useSttDrafts(
   // laço não deve reiniciar. Todo caso que EXIGE reprocessar (regravação, nova
   // gravação, retry) já muda o pathsKey ou o attempt e re-roda por si, lendo o ref
   // já atualizado. Ref escrito em efeito, nunca no render (regra da casa).
-  const forceRef = useRef(force);
+  // A lista vira string ordenada para o ref ter uma dependência PRIMITIVA: um array
+  // é novo a cada render e faria o efeito abaixo disparar sem parar.
+  const staleKey = [...stale].sort().join('|');
+  const staleRef = useRef(staleKey);
   useEffect(() => {
-    forceRef.current = force;
-  }, [force]);
+    staleRef.current = staleKey;
+  }, [staleKey]);
 
   const active = Boolean(stt && sessionId && pathsKey !== '');
   const jobKey = `${pathsKey}#${attempt}`;
@@ -128,10 +134,16 @@ export function useSttDrafts(
     const run = async (): Promise<void> => {
       startedAt = Date.now();
       try {
-        // force quando a página sinaliza reprocessar (regravação/nova gravação) ou
-        // num retry explícito; senão o job idempotente do servidor é reusado
-        const reprocess = attempt > 0 || forceRef.current;
-        await stt.start(sessionId, list, reprocess ? { force: true } : undefined);
+        // force when the page names a stale draft, or on an explicit retry; otherwise
+        // the server's idempotent job is reused as-is.
+        //
+        // A retry carries no paths, so it stays session-wide. The button that raises
+        // `attempt` sits on a failed card but tells us nothing about WHICH — narrowing
+        // it needs the caller to say, and that is not this change.
+        const stalePaths = staleRef.current ? staleRef.current.split('|') : [];
+        const reprocess = attempt > 0 || stalePaths.length > 0;
+        const scope = attempt > 0 ? undefined : stalePaths;
+        await stt.start(sessionId, list, reprocess ? { force: true, paths: scope } : undefined);
       } catch {
         if (!cancelled && requestId.current === mine) {
           setResult({ key: jobKey, status: 'failed', drafts: {} });

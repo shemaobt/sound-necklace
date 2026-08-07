@@ -71,9 +71,13 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     const before = await readPersistedState(page, id);
     expect(before?.parts).toHaveLength(SCENARIO.sceneEndBeads.length);
 
-    // reapontar o MESMO fim retoca o intervalo e recai no mesmo estado da régua
-    // (reabrir a seleção e refechá-la na mesma borda) — som tocando na hora da queda.
-    await app.clickBead(phraseE);
+    // Põe som para tocar na hora da queda do jeito que o app REALMENTE produz som ao
+    // segmentar: tocar o COMEÇO (a fronteira) ouve dali em diante e não mexe na
+    // seleção — docs/segmentation-rules.md regra 1. Antes este passo re-tocava o FIM
+    // e só soava por acidente, pelo dwell atrasado da borda que sequestrava a
+    // reprodução do clique (o bug relatado pelo dono); corrigido isso, retocar o fim
+    // é mudo, como a regra sempre mandou.
+    await app.clickBead(phraseStart);
     await expect(headBead).toBeVisible();
     const startHead = await headIndex();
 

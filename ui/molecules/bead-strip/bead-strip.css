@@ -1,0 +1,119 @@
+/*
+ * Fio de contas do rodapé (entrega de design §3, .cds-fio): o mesmo vocabulário
+ * visual do colar — pérolas sobre um fio fino — para que a lista salva se leia
+ * como um mini-colar e não como uma barra de botões. A cápsula é a única
+ * superfície branca da faixa: é ela que diz de qual item são as ações.
+ */
+
+.cds-bead-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.cds-bead-strip-cord {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 11px;
+  height: 40px;
+  padding: 0 6px;
+}
+
+/* o fio passa POR TRÁS das contas, sobrando um pouco de cada lado */
+.cds-bead-strip-cord::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: var(--cds-ui-hairline, var(--cds-hairline));
+}
+
+.cds-bead-strip-bead {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.cds-bead-strip-bead:focus-visible {
+  outline: 2px solid var(--cds-ui-accent, var(--cds-telha));
+  outline-offset: 3px;
+}
+
+/* a conta escolhida cresce e ganha o anel telha: a cápsula ao lado é dela */
+.cds-bead-strip-bead[aria-pressed='true'] {
+  z-index: 2;
+  transform: scale(1.22);
+  box-shadow:
+    0 0 0 3px var(--cds-ui-accent, var(--cds-telha)),
+    0 2px 8px rgba(10, 7, 3, 0.25);
+}
+
+.cds-bead-strip-capsule {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 14px;
+  border-radius: var(--cds-radius-pill);
+  background: var(--cds-ui-card, #ffffff);
+  box-shadow: var(--cds-shadow-card);
+}
+
+.cds-bead-strip-name {
+  font-family: var(--cds-font-load-bearing);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--cds-ui-ink, var(--cds-ink));
+  white-space: nowrap;
+}
+
+.cds-bead-strip-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cds-bead-strip-empty {
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--cds-ui-ink-faint, var(--cds-ink-subtle));
+}
+
+/* motion decorativo é opt-in: quem prefere menos movimento nunca o recebe (§4.5) */
+@media (prefers-reduced-motion: no-preference) {
+  .cds-bead-strip-bead {
+    transition:
+      transform 180ms var(--cds-motion-easing),
+      box-shadow 180ms var(--cds-motion-easing);
+  }
+
+  .cds-bead-strip-capsule {
+    animation: cds-bead-strip-capsule-in 0.18s var(--cds-motion-easing) both;
+  }
+
+  @keyframes cds-bead-strip-capsule-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

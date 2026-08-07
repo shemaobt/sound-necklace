@@ -1,8 +1,9 @@
-import { type ComponentType, useEffect, useMemo, useRef, useState } from 'react';
+import { type ComponentType, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import type { Transcriber } from '../../../adapters/stt/types';
+import type { ResourcePath } from '../../../contracts';
 import type { SpeechSynthesizer } from '../../../adapters/tts/types';
 import type { UiSound } from '../../../adapters/ui-sound';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
@@ -25,11 +26,12 @@ import {
   WAVE_BARS,
 } from '../../organisms/conversation-stage/conversation-stage';
 import type { PaletteEntry } from '../../tokens';
-import { sceneOrdinal } from '../cut/cutting';
+import { cardinal, sceneOrdinal } from '../cut/cutting';
 import { clearSkipped, isSkipped, markSkipped } from './answered';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
+import { StationNav } from '../../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
-import { sessionStore, useAppStore, useSessionStore } from '../../state';
+import { appStore, sessionStore, useAppStore, useSessionStore } from '../../state';
 import './conversation.css';
 
 /**
@@ -94,6 +96,8 @@ interface ReportSlotProps {
   stt?: Transcriber | null;
   sessionId?: string | null;
   recordingVersion?: Record<string, number>;
+  /** The transcription wait took the screen: this station's footer leaves with it. */
+  onWaitingChange?: (waiting: boolean) => void;
 }
 
 /**
@@ -102,6 +106,41 @@ interface ReportSlotProps {
  * o preparo nunca vira beco.
  */
 const PREPARE_TIMEOUT_MS = 8000;
+
+/**
+ * Advancing past an answer recorded IN THIS SITTING starts its transcription.
+ *
+ * Moving on IS the acceptance: the facilitator had the take in front of them, could
+ * have redone it, and went forward instead. Firing on `stop()` would pay for every take
+ * replaced before anyone moves — the very reason the job used to wait for the report.
+ * Waiting for the report, though, meant finishing the interview and then sitting
+ * through every transcription at once.
+ *
+ * "Recorded in this sitting" and not "has a recording" — that distinction is the whole
+ * guard. `meta.voice` accumulates every answer ever recorded, so keying on it made
+ * re-walking a finished interview fire one request per question: a session with 14
+ * scenes runs to ~396 questions, and each request publishes a queue event to ask for
+ * work the server already has. An answer recorded in an earlier sitting either has its
+ * draft or will get it from the report's own trigger.
+ *
+ * Fire-and-forget, deliberately. This runs on the way to the next question, and the
+ * interview is what must never stall on the network (ENG-338). The report's trigger is
+ * idempotent and seeds whatever a lost request left behind, so a failure here costs
+ * latency at the end and nothing else.
+ *
+ * A take redone AFTER advancing is not re-asked here: its draft is already `ready` and a
+ * plain POST leaves it alone. The report resolves that one, because that is where the
+ * durable record of which version was transcribed lives.
+ */
+function requestTranscription(
+  stt: Transcriber | null,
+  sessionId: string | null,
+  path: ResourcePath,
+  recordedNow: ReadonlySet<string>,
+): void {
+  if (!stt || !sessionId || !recordedNow.has(path)) return;
+  void stt.start(sessionId, [path]).catch(() => undefined);
+}
 
 /** Resolvido uma vez, no carregamento do módulo (o glob é eager e estático). */
 const ReportStation: ComponentType<ReportSlotProps> | null =
@@ -213,6 +252,32 @@ function QuestionScreen({
   const [levels, setLevels] = useState<number[]>([]);
   const [speaking, setSpeaking] = useState(false);
   const [recordError, setRecordError] = useState(false);
+
+  // O "← Histórias" do cabeçalho vive fora desta estação e é o único caminho de
+  // saída que o palco não desenha (ENG-393). Espelhar o estado num efeito, em vez
+  // de acender e apagar a bandeira em cada transição, cobre TODA saída de graça —
+  // inclusive a falha de salvamento e o desmonte ao trocar de pergunta.
+  useEffect(() => {
+    appStore.getState().setRecording(recorderState === 'recording');
+    return () => appStore.getState().setRecording(false);
+  }, [recorderState]);
+  // Quanto tempo de resposta existe hoje — a confirmação de regravar diz o que
+  // está em risco (ENG-392). `undefined` = ainda não se sabe (ou a consulta falhou).
+  const [answerSeconds, setAnswerSeconds] = useState<number | undefined>(undefined);
+
+  /* Segundos → palavras, no idioma da UI (§9.2: a tela do ouvinte não mostra
+     dígito). Acima de 99 minutos `cardinal` devolve '' e o diálogo cai na frase
+     sem tamanho — melhor omitir do que imprimir um número solto. */
+  const answerLength = ((): string | undefined => {
+    if (answerSeconds === undefined) return undefined;
+    if (answerSeconds < 60) return t('conversationStage.answerLengthUnderMinute');
+    const minutos = Math.round(answerSeconds / 60);
+    if (minutos === 1) return t('conversationStage.answerLengthOneMinute');
+    const porExtenso = cardinal(minutos, i18n.language);
+    return porExtenso
+      ? t('conversationStage.answerLengthMinutes', { minutos: porExtenso })
+      : undefined;
+  })();
   // A RESPOSTA desta pergunta está tocando — dos eventos reais da porta (ENG-322).
   const [answerPlaying, setAnswerPlaying] = useState(false);
   // Entre o toque e o som há fetch+decode no modo real (ENG-336): o botão diz
@@ -261,8 +326,13 @@ function QuestionScreen({
     if (recorder) {
       void recorder
         .has(path)
-        .then((h) => {
-          if (alive && h) setRecorderState('recorded');
+        .then(async (h) => {
+          if (!alive || !h) return;
+          setRecorderState('recorded');
+          // a duração só interessa para a pergunta de regravar; falha dela não
+          // muda o estado — a confirmação abre sem o número, nunca com um falso
+          const sec = await recorder.duration(path).catch(() => undefined);
+          if (alive && sec !== undefined) setAnswerSeconds(sec);
         })
         // fronteira de IO real (ENG-247): consulta falhou → segue como não gravada
         .catch(() => undefined);
@@ -296,6 +366,13 @@ function QuestionScreen({
 
   const onRecord = async (): Promise<void> => {
     if (!recorder) return;
+    // O microfone abre num silêncio: a história tocando no colar, a pergunta na
+    // voz do guia e a resposta anterior em reprodução entravam TODAS pelo mesmo
+    // ar — a gravação saía com a fala da pessoa por baixo do som do app.
+    player?.stop();
+    setSpanPlaying(false);
+    speaker?.stop();
+    recorder.stopPlayback();
     const rec = await recorder.start(path);
     // desmontou durante o await (navegou depressa) → descarta e não escreve estado
     if (!mountedRef.current) {
@@ -319,8 +396,9 @@ function QuestionScreen({
     // "guardando" — spinner no botão, sem aceitar clique (ENG-318); antes disto a
     // tela dizia "Gravando…" enquanto na verdade persistia.
     setRecorderState('saving');
+    let answer;
     try {
-      await rec.stop();
+      answer = await rec.stop();
     } catch {
       // fronteira de IO real (ENG-247): no modo real o stop embute o PUT da resposta
       // (rede/413 podem falhar) — a gravação se perdeu; volta ao microfone com a
@@ -340,6 +418,7 @@ function QuestionScreen({
     // esta resposta na sessão errada (contaminação cross-sessão). Espelha `onRecord`.
     if (!mountedRef.current) return;
     sound?.recordStop();
+    setAnswerSeconds(answer.durationSec);
     setRecorderState('recorded');
     // Voz salva no caminho canônico: avisa o shell para registrá-lo em meta.voice (§10.4).
     onVoiceSaved?.(path);
@@ -354,9 +433,16 @@ function QuestionScreen({
       sound?.refuse();
     });
   };
+  /**
+   * Só chega aqui depois da confirmação (ENG-392) — e então é uma intenção só:
+   * a resposta antiga sai e a nova gravação começa na hora. Devolver o microfone
+   * parado obrigaria a um segundo toque para fazer o que já foi decidido.
+   */
   const onRerecord = (): void => {
     setLevels([]);
+    setAnswerSeconds(undefined);
     setRecorderState('idle');
+    void onRecord();
   };
 
   return (
@@ -385,6 +471,9 @@ function QuestionScreen({
         onStop={onStop}
         onPlay={onPlay}
         onRerecord={onRerecord}
+        answerLength={answerLength}
+        // toque recusado durante a gravação: responde ao ouvido, não com texto (§9.4)
+        onBlocked={() => sound?.refuse()}
         answerPlaying={answerPlaying}
         answerOpening={answerOpening}
         onStopPlay={() => recorder?.stopPlayback()}
@@ -430,44 +519,79 @@ export function Conversation({
   }, [session]);
   const sequence = useMemo(() => (mapped ? questionSequence(mapped) : []), [mapped]);
 
-  // Resume (ENG-321): the conversation reopens on the first question with NO
-  // answer at all — text in the answer store OR voice persisted in `meta.voice`.
-  // Whoever stopped at the 5th returns to the 5th; everything answered reopens
-  // on the last one (the report is one step away). Mount only: from then on the
-  // cursor belongs to the user.
-  // Uma pergunta MARCADA como sem resposta não está em aberto: a pessoa já decidiu.
-  // Sem isso a recusa era indistinguível do "ainda não perguntei", e a retomada
-  // devolvia a sessão à mesma pergunta para sempre (ver `./answered`).
-  const firstUnanswered = (): number => {
-    if (!mapped || sequence.length === 0) return 0;
-    const voiced = voicePaths();
-    return sequence.findIndex(
-      (s2) =>
-        !readAnswer(mapped.mapping, s2).trim() &&
-        !voiced.includes(voiceAnswerPath(s2)) &&
-        !isSkipped(mapped.mapping, s2),
-    );
-  };
-  const [index, setIndex] = useState(() => {
-    const first = firstUnanswered();
-    return first === -1 ? sequence.length - 1 : first;
-  });
   /**
-   * ENG-367: sair e voltar não devolve à entrevista quando não há mais o que perguntar.
-   * Toda pergunta já respondida ou gravada significa que a conversa acabou — reabrir na
-   * última pergunta convidava a regravar uma resposta que já existia. Com pergunta em
-   * aberto, a entrevista continua sendo o lugar certo.
+   * Resume (ENG-321): the cursor follows the LAST answer — text in the answer store
+   * OR voice persisted in `meta.voice` — and reopens on the question after it.
+   *
+   * It used to open on the FIRST question with no answer, which read a skipped
+   * question as a pending one. Skipping is deliberate: not recording IS the answer,
+   * an empty one. So one skip early in the interview became a permanent hole, and a
+   * session recorded up to the 40th reopened on the 2nd, every single time, with
+   * dozens of clicks between the facilitator and where they actually stopped.
+   * A skipped question is still reachable through "← anterior" and the bead thread.
+   *
+   * Walking backwards cures the hole in the MIDDLE; the mark cures the hole at the
+   * END, which no scan can infer. An interview whose last questions went unanswered
+   * has its last answer somewhere upstream, so the cursor lands on the first refusal
+   * and stays there — every reopen, with the review out of reach. Deciding that a
+   * question goes unanswered is an act, and `./answered` is where it is recorded.
+   *
+   * Mount only: from then on the cursor belongs to the user.
    */
-  const [atReport, setAtReport] = useState(() => firstUnanswered() === -1);
+  const lastAnswered = (): number => {
+    if (!mapped || sequence.length === 0) return -1;
+    const voiced = voicePaths();
+    const answered = (s2: QuestionSlot): boolean =>
+      Boolean(readAnswer(mapped.mapping, s2).trim()) ||
+      voiced.includes(voiceAnswerPath(s2)) ||
+      isSkipped(mapped.mapping, s2);
+    for (let i = sequence.length - 1; i >= 0; i--) if (answered(sequence[i]!)) return i;
+    return -1;
+  };
+  const [index, setIndex] = useState(() =>
+    Math.min(lastAnswered() + 1, Math.max(sequence.length - 1, 0)),
+  );
+  /**
+   * The session was RESUMED at the end, rather than reaching it through this mount's
+   * `goNext` — a distinction `atReport` alone loses the moment anyone advances. Frozen
+   * as initial state because recording an answer changes what `lastAnswered` returns.
+   */
+  const [resumedAtReport] = useState(
+    () => sequence.length > 0 && lastAnswered() === sequence.length - 1,
+  );
+  /**
+   * ENG-367: leaving and coming back does not return to the interview when there is
+   * nothing left to ask. The LAST question answered means the conversation reached its
+   * end — reopening on it invited re-recording an answer that already existed. Holes
+   * behind it are deliberate skips, not pending work, and do not hold the session in
+   * the interview.
+   */
+  const [atReport, setAtReport] = useState(() => resumedAtReport);
   // Preparo pré-revisão (ENG-337): a descoberta das respostas roda ANTES de abrir
   // o relatório — ele chega pronto, sem "procurando" pipocando linha a linha. Uma
   // vez pronto, re-entradas abrem direto (o preparo re-roda por baixo, silencioso).
   const [reportReady, setReportReady] = useState(false);
+  // The report sheet signals when the transcription wait takes over the screen; the
+  // footer belongs to this station, and without the signal it survived the wait.
+  const [transcribing, setTranscribing] = useState(false);
   const [reportVoice, setReportVoice] = useState<{
     checked: ReadonlySet<string>;
     has: ReadonlySet<string>;
   } | null>(null);
   const aliveRef = useRef(true);
+  /**
+   * The answers recorded in THIS sitting — what the transcription trigger keys on.
+   * `meta.voice` accumulates every answer ever recorded, so using it made re-walking a
+   * finished interview ask for work the server already has, once per question.
+   */
+  const recordedNow = useRef<Set<string>>(new Set());
+  const noteVoiceSaved = useCallback(
+    (p: string) => {
+      recordedNow.current.add(p);
+      onVoiceSaved?.(p);
+    },
+    [onVoiceSaved],
+  );
 
   useEffect(() => {
     aliveRef.current = true;
@@ -482,6 +606,63 @@ export function Conversation({
     if (!player) return;
     return () => player.stop();
   }, [player]);
+
+  /**
+   * Descobre as respostas gravadas ANTES da revisão (ENG-337). Um caminho que não
+   * responder no teto entra sem veredito (a linha re-descobre); falha resolve como
+   * "sem gravação" pelo catch — o preparo nunca segura a revisão para sempre. É
+   * também onde os rascunhos de transcrição (ENG-327) serão aguardados.
+   */
+  const prepareReview = useCallback(async (): Promise<void> => {
+    if (!recorder) {
+      setReportReady(true);
+      return;
+    }
+    const paths = sequence.map((s2) => voiceAnswerPath(s2));
+    /**
+     * Descobre, sem AQUECER. A ENG-339 baixava aqui cada resposta existente, para a
+     * revisão abrir com o áudio pronto de tocar; numa entrevista de 14 cenas isso é
+     * baixar dezenas de MB de uma vez, e a facilitadora vai tocar um punhado deles.
+     *
+     * O áudio agora é baixado ao tocar, e o cache persistente (@/adapters/voice/
+     * cached-store) faz a segunda vez — e toda reabertura da sessão — sair do disco.
+     * A troca é uma pequena espera no primeiro play de cada resposta, contra uma
+     * espera longa e a maior parte do tráfego desperdiçada ao abrir a revisão.
+     */
+    const discover = (p: string): Promise<boolean> => recorder.has(p).catch(() => false);
+    const results = await Promise.all(
+      paths.map((p) =>
+        Promise.race([
+          discover(p),
+          new Promise<null>((res) => setTimeout(() => res(null), PREPARE_TIMEOUT_MS)),
+        ]),
+      ),
+    );
+    if (!aliveRef.current) return;
+    const checked = new Set<string>();
+    const has = new Set<string>();
+    results.forEach((r, i) => {
+      if (r === null) return; // sem veredito: a linha da revisão re-descobre
+      checked.add(paths[i]!);
+      if (r) has.add(paths[i]!);
+    });
+    setReportVoice({ checked, has });
+    setReportReady(true);
+  }, [recorder, sequence]);
+
+  /**
+   * Reopening STRAIGHT into the review has to prepare on its own. Preparation was only
+   * ever triggered by `goNext`, so a session resumed with everything answered sat on
+   * "bringing the audio back" forever — a dead end. Mount only: from there on `goNext`
+   * owns the transition, and re-preparing on every render would redo the whole
+   * discovery pass.
+   */
+  const preparedOnMount = useRef(false);
+  useEffect(() => {
+    if (!resumedAtReport || preparedOnMount.current) return;
+    preparedOnMount.current = true;
+    void prepareReview();
+  }, [resumedAtReport, prepareReview]);
 
   if (!session || !mapped || !sequence.length) return null;
 
@@ -513,29 +694,38 @@ export function Conversation({
             stt={stt}
             sessionId={sessionId}
             recordingVersion={recordingVersion}
+            onWaitingChange={setTranscribing}
           />
         ) : (
           <div className="cds-conversation-report-fallback">
             <p>{t('conversation.reportFallback')}</p>
           </div>
         )}
-        <div className="cds-conversation-controls">
-          <Button variant="ghost" size="sm" onClick={() => setAtReport(false)}>
-            {t('conversation.prev')}
-          </Button>
-          {onGoToExport ? (
-            <Button
-              variant="primary"
-              data-role="primary-action"
-              onClick={() => {
-                sound?.advance();
-                onGoToExport();
-              }}
-            >
-              {t('conversation.toExport')}
-            </Button>
-          ) : null}
-        </div>
+        {/* A prévia do relatório troca de PÁGINA (voltar à conversa / guardar os
+            documentos), então vai ao rodapé — protótipo v3 §1. A navegação por
+            PERGUNTA fica no corpo: ela anda dentro desta página.
+
+            A guarda da ENG-367 continua: durante a espera da transcrição não se
+            publica navegação nenhuma, senão a saída para a Export ficaria oferecida
+            com os rascunhos ainda em voo. Não publicar é mais forte que esconder —
+            o `hidden` de lá perdia para o `display: flex` da folha de estilo. */}
+        {transcribing ? null : (
+          <StationNav
+            back={{ label: t('conversation.prev'), onClick: () => setAtReport(false) }}
+            next={
+              onGoToExport
+                ? {
+                    label: t('conversation.toExport'),
+                    onClick: () => {
+                      sound?.advance();
+                      onGoToExport();
+                    },
+                    enabled: true,
+                  }
+                : undefined
+            }
+          />
+        )}
       </section>
     );
   }
@@ -544,47 +734,8 @@ export function Conversation({
     if (idx > 0) setIndex(idx - 1);
     else sessionStore.getState().apply((s) => setMode(s, 'segmentacao'));
   };
-  /**
-   * Descobre as respostas gravadas ANTES da revisão (ENG-337). Um caminho que não
-   * responder no teto entra sem veredito (a linha re-descobre); falha resolve como
-   * "sem gravação" pelo catch — o preparo nunca segura a revisão para sempre. É
-   * também onde os rascunhos de transcrição (ENG-327) serão aguardados.
-   */
-  const prepareReview = async (): Promise<void> => {
-    if (!recorder) {
-      setReportReady(true);
-      return;
-    }
-    const paths = sequence.map((s2) => voiceAnswerPath(s2));
-    // descobrir E aquecer (ENG-339): a resposta que existe já baixa aqui, para a
-    // revisão abrir com o áudio pronto de tocar — não só sabido. Falha do aquecer
-    // não muda o veredito (a linha toca baixando na hora, como antes).
-    const discover = async (p: string): Promise<boolean> => {
-      const h = await recorder.has(p).catch(() => false);
-      if (h) await recorder.prefetch?.(p).catch(() => undefined);
-      return h;
-    };
-    const results = await Promise.all(
-      paths.map((p) =>
-        Promise.race([
-          discover(p),
-          new Promise<null>((res) => setTimeout(() => res(null), PREPARE_TIMEOUT_MS)),
-        ]),
-      ),
-    );
-    if (!aliveRef.current) return;
-    const checked = new Set<string>();
-    const has = new Set<string>();
-    results.forEach((r, i) => {
-      if (r === null) return; // sem veredito: a linha da revisão re-descobre
-      checked.add(paths[i]!);
-      if (r) has.add(paths[i]!);
-    });
-    setReportVoice({ checked, has });
-    setReportReady(true);
-  };
-
   const goNext = (): void => {
+    requestTranscription(stt, sessionId, path, recordedNow.current);
     if (idx < total - 1) setIndex(idx + 1);
     else {
       sound?.advance(); // a conversa acabou: a prévia do relatório é a próxima etapa
@@ -609,7 +760,7 @@ export function Conversation({
    */
   const onAnswerRecorded = (p: string): void => {
     if (skipped) sessionStore.getState().apply((s) => clearSkipped(s, slot));
-    onVoiceSaved?.(p);
+    noteVoiceSaved(p);
   };
   // Os trechos (história · cenas · frases): a barra usa a lista inteira (na ordem
   // da sequência, então o marcador cai no trecho certo); o indicador ao lado do ▶

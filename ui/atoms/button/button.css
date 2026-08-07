@@ -36,37 +36,43 @@
 }
 
 .cds-button[data-variant='dark'] {
-  background: var(--cds-olive);
-  color: var(--cds-cream);
+  background: var(--cds-ui-strong-bg);
+  color: var(--cds-ui-strong-fg);
   letter-spacing: 0.03em;
 }
 
 .cds-button[data-variant='dark']:hover:enabled,
 .cds-button[data-variant='dark']:active:enabled,
 .cds-button[data-variant='dark']:focus-visible:enabled {
-  background: color-mix(in srgb, var(--cds-olive) 80%, black);
+  background: color-mix(in srgb, var(--cds-ui-strong-bg) 80%, var(--cds-ui-strong-shade));
 }
 
 .cds-button[data-variant='ghost'] {
   background: transparent;
-  border-color: var(--cds-hairline);
-  color: var(--cds-olive);
+  border-color: var(--cds-ui-hairline);
+  color: var(--cds-ui-body-ink);
   letter-spacing: 0.03em;
 }
 
 .cds-button[data-variant='ghost']:hover:enabled,
 .cds-button[data-variant='ghost']:active:enabled,
 .cds-button[data-variant='ghost']:focus-visible:enabled {
-  background: color-mix(in srgb, var(--cds-olive) 6%, transparent);
+  background: color-mix(in srgb, var(--cds-ui-body-ink) 6%, transparent);
 }
 
 .cds-button:disabled {
   cursor: default;
 }
 
+/* indisponível e ainda assim clicável: apagado como o desabilitado, sem ficar mudo */
+.cds-button[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.45;
+}
+
 /* primário inelegível: telha lavado no creme (protótipo confirmSceneBg) */
 .cds-button[data-variant='primary']:disabled {
-  background: color-mix(in srgb, var(--cds-telha) 45%, var(--cds-cream));
+  background: color-mix(in srgb, var(--cds-telha) 45%, var(--cds-ui-bg));
   box-shadow: none;
 }
 

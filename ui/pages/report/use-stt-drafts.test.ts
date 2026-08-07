@@ -21,9 +21,9 @@ const draft = (en: string): TranscriptionProgress => ({
 function deferredTranscriber(): {
   stt: Transcriber;
   answer: (p: TranscriptionProgress) => Promise<void>;
-  starts: { paths: readonly string[]; force: boolean }[];
+  starts: { paths: readonly string[]; force: boolean; scope?: readonly string[] }[];
 } {
-  const starts: { paths: readonly string[]; force: boolean }[] = [];
+  const starts: { paths: readonly string[]; force: boolean; scope?: readonly string[] }[] = [];
   const pending: ((p: TranscriptionProgress) => void)[] = [];
   return {
     starts,
@@ -36,7 +36,7 @@ function deferredTranscriber(): {
     },
     stt: {
       start: (_id, paths, opts) => {
-        starts.push({ paths, force: Boolean(opts?.force) });
+        starts.push({ paths, force: Boolean(opts?.force), scope: opts?.paths });
         return Promise.resolve();
       },
       progress: () => new Promise<TranscriptionProgress>((res) => pending.push(res)),
@@ -86,15 +86,23 @@ describe('useSttDrafts — o job de rascunhos do relatório', () => {
     const { stt, starts } = deferredTranscriber();
     // é o que a página envia numa remontagem após regravar: a versão nova ainda
     // não foi transcrita, então força já no primeiro start desta montagem
-    renderHook(() => useSttDrafts(stt, 's-1', [P1], { [P1]: 2 }, true));
+    renderHook(() => useSttDrafts(stt, 's-1', [P1], { [P1]: 2 }, [P1]));
 
     await waitFor(() => expect(starts.length).toBe(1));
     expect(starts[0]?.force).toBe(true);
   });
 
+  it('o force nomeia as respostas obsoletas, e só elas', async () => {
+    const { stt, starts } = deferredTranscriber();
+    renderHook(() => useSttDrafts(stt, 's-1', [P1, P2], { [P1]: 2, [P2]: 1 }, [P1]));
+
+    await waitFor(() => expect(starts.length).toBe(1));
+    expect(starts[0]?.scope).toEqual([P1]);
+  });
+
   it('sem sinal de reprocessar, o primeiro pedido reusa o job (sem force)', async () => {
     const { stt, starts } = deferredTranscriber();
-    renderHook(() => useSttDrafts(stt, 's-1', [P1], {}, false));
+    renderHook(() => useSttDrafts(stt, 's-1', [P1], {}, []));
 
     await waitFor(() => expect(starts.length).toBe(1));
     expect(starts[0]?.force).toBe(false);

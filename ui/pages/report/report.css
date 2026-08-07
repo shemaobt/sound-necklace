@@ -12,12 +12,20 @@
   width: min(760px, 92%);
   margin: 0 auto;
   padding: 36px 0 44px;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
   /* o relatório mora dentro da `.cds-conversation`, que centra tudo para a conversa
      — aqui isso vira prosa centralizada, que se lê mal e não é o protótipo. Um
      documento se lê a partir da margem; só o cabeçalho abaixo fica centrado. */
   text-align: left;
+}
+
+/* While transcription runs the body leaves and the box remains: 760px of background
+   and 80px of padding drawn over the olive of the wait — a band across the screen. The
+   sheet drops the document surface and lets the wait own it, which is what ENG-367 meant. */
+.cds-report--waiting {
+  background: none;
+  padding: 0;
 }
 
 .cds-report-header {
@@ -34,7 +42,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-report-headline {
@@ -43,7 +51,7 @@
   font-style: italic;
   font-weight: 300;
   font-size: clamp(26px, 3.4vh, 34px);
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
 }
 
 /* cabeçalho de bloco (protótipo `showHeader`): bolinha colorida + eyebrow versalete
@@ -72,7 +80,7 @@
 .cds-report-blockhead-rule {
   flex: 1;
   height: 1px;
-  background: rgba(63, 62, 32, 0.12);
+  background: rgba(var(--cds-ui-line-rgb), 0.12);
 }
 
 /* cartão branco do protótipo: radius 18, sombra baixa, respiro generoso */
@@ -82,7 +90,7 @@
   gap: 16px;
   padding: 24px 26px;
   border-radius: var(--cds-radius-card-sm);
-  background: #ffffff;
+  background: var(--cds-ui-card);
   box-shadow: var(--cds-shadow-card);
 }
 
@@ -110,7 +118,7 @@
   font-family: var(--cds-font-quiet-voice);
   font-size: 19px;
   line-height: 1.45;
-  color: var(--cds-ink);
+  color: var(--cds-ui-ink);
 }
 
 /* marcador de papel do protótipo: disco areia com o glifo de caderno, junto da
@@ -123,8 +131,8 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #ede7d6;
-  color: var(--cds-ink-subtle);
+  background: var(--cds-ui-chip);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-report-role-glyph {
@@ -141,7 +149,7 @@
   border-left: 2px solid #d9c9a6;
   border-radius: 0;
   background: transparent;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
   font-family: var(--cds-font-quiet-voice);
   font-size: 15px;
   line-height: 1.6;
@@ -162,10 +170,10 @@
 .cds-report-typed:focus-visible,
 .cds-report-note:focus-visible {
   outline: none;
-  border-left-color: var(--cds-telha);
+  border-left-color: var(--cds-ui-accent);
   border-left-width: 3px;
   padding-left: 13px; /* compensa o filete mais grosso: o texto não pula ao focar */
-  background: color-mix(in srgb, var(--cds-telha) 5%, transparent);
+  background: color-mix(in srgb, var(--cds-ui-accent) 5%, transparent);
 }
 
 /* vazio, o campo LÊ-SE como a linha em itálico do protótipo (r.noAnswer) — quem
@@ -189,7 +197,7 @@
   padding: 2px;
   border: none;
   background: none;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
   font-family: var(--cds-font-load-bearing);
   font-weight: 600;
   font-size: 13px;
@@ -212,7 +220,7 @@
   gap: 14px;
   padding: 12px 16px;
   border-radius: var(--cds-radius-tile);
-  background: #f6f1e6;
+  background: var(--cds-ui-paper);
 }
 
 .cds-report-wave {
@@ -241,7 +249,7 @@
   font-family: var(--cds-font-load-bearing);
   font-size: 13px;
   font-weight: 600;
-  color: var(--cds-telha-deep);
+  color: var(--cds-ui-accent-deep);
   flex: none;
 }
 
@@ -275,7 +283,7 @@
   padding: 10px 12px;
   border: 1px dashed #d9c9a6;
   border-radius: 10px;
-  background: #f6f1e4;
+  background: var(--cds-ui-paper);
 }
 
 .cds-report-draft-badge {
@@ -283,8 +291,8 @@
   margin: 0 0 8px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #ede7d6;
-  color: var(--cds-ink-subtle);
+  background: var(--cds-ui-chip);
+  color: var(--cds-ui-ink-faint);
   font-size: 11.5px;
   letter-spacing: 0.04em;
   text-transform: lowercase;
@@ -293,7 +301,7 @@
 .cds-report-draft-label {
   display: block;
   margin: 6px 0 2px;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
   font-size: 11.5px;
   letter-spacing: 0.03em;
 }
@@ -301,7 +309,7 @@
 /* a origem é REFERÊNCIA, não campo: quem confere o inglês olha para cá */
 .cds-report-draft-source {
   margin: 0 0 4px;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
   font-family: var(--cds-font-quiet-voice);
   font-size: 14.5px;
   font-style: italic;
@@ -315,7 +323,7 @@
   border-left: 2px solid #c9b98f;
   border-radius: 0;
   background: transparent;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
   font-family: var(--cds-font-quiet-voice);
   font-size: 15px;
   line-height: 1.6;
@@ -327,7 +335,7 @@
 /* "transcrevendo…" / a falha: uma linha quieta, nunca um alarme (§9 nunca punir) */
 .cds-report-draft-status {
   margin: 8px 0 2px;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
   font-size: 13px;
   font-style: italic;
 }
@@ -337,7 +345,7 @@
    existir no DOM desde o início para ser anunciada, mas não deve abrir um buraco. */
 .cds-report-drafts-live {
   margin: 0 0 6px;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
   font-size: 13.5px;
 }
 
@@ -374,7 +382,7 @@
   border: none;
   border-radius: var(--cds-radius-pill);
   background: transparent;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
   cursor: pointer;
   opacity: 0.55;
   transition: all 0.14s;
@@ -383,11 +391,11 @@
 .cds-report-act:hover,
 .cds-report-act:focus-visible {
   opacity: 1;
-  background: var(--cds-surface-muted);
-  color: var(--cds-ink);
+  background: var(--cds-ui-chip);
+  color: var(--cds-ui-ink);
 }
 
 .cds-report-act.is-accept:hover,
 .cds-report-act.is-accept:focus-visible {
-  color: var(--cds-telha);
+  color: var(--cds-ui-accent);
 }

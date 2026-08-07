@@ -100,6 +100,93 @@ describe('resolveProjectId — conta multi-projeto fica com quem tem áudio', ()
     expect(calls.filter((p) => p.includes('/audios'))).toHaveLength(0);
   });
 
+  it('platform admin sem acesso a projeto resolve pela lista geral, e o que tem áudio vence', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.test/api');
+    stubApi({
+      '/auth/my-project-roles': { is_platform_admin: true, project_roles: {} },
+      '/projects': [{ id: 'p-vazio' }, { id: 'p-piloto' }],
+      '/sound-necklace/projects/p-vazio/audios': { audios: [] },
+      '/sound-necklace/projects/p-piloto/audios': {
+        audios: [
+          {
+            id: 'ruth-cicatriz',
+            filename: 'cicatriz',
+            duration_sec: 174,
+            consent_present: true,
+            acousteme: null,
+          },
+        ],
+      },
+    });
+    vi.resetModules();
+    const { resolveProjectId } = await import('./bucket-adapter');
+
+    expect(await resolveProjectId()).toBe('p-piloto');
+  });
+
+  it('conta comum sem projeto continua estourando, sem pedir a lista geral', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.test/api');
+    const calls = stubApi({
+      '/auth/my-project-roles': { is_platform_admin: false, project_roles: {} },
+    });
+    vi.resetModules();
+    const { resolveProjectId } = await import('./bucket-adapter');
+
+    await expect(resolveProjectId()).rejects.toThrow(/sem projeto/);
+    expect(calls.filter((p) => p.endsWith('/projects'))).toHaveLength(0);
+  });
+
+  it('platform admin COM projeto concedido fica com ele, sem varrer a instância', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.test/api');
+    const calls = stubApi({
+      '/auth/my-project-roles': { is_platform_admin: true, project_roles: { 'p-meu': 'member' } },
+    });
+    vi.resetModules();
+    const { resolveProjectId } = await import('./bucket-adapter');
+
+    expect(await resolveProjectId()).toBe('p-meu');
+    expect(calls.filter((p) => p.endsWith('/projects'))).toHaveLength(0);
+  });
+
+  it('lista geral respondendo 404 não vira "sem projeto" — o admin recebe a falha real', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.test/api');
+    stubApi({ '/auth/my-project-roles': { is_platform_admin: true, project_roles: {} } });
+    vi.resetModules();
+    const { resolveProjectId } = await import('./bucket-adapter');
+
+    await expect(resolveProjectId()).rejects.toThrow(/^projects →/);
+  });
+
+  it('lista geral em formato inesperado também não vira "sem projeto"', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.test/api');
+    stubApi({
+      '/auth/my-project-roles': { is_platform_admin: true, project_roles: {} },
+      '/projects': { items: [{ id: 'p-1' }] }, // envelope paginado, não o array cru
+    });
+    vi.resetModules();
+    const { resolveProjectId } = await import('./bucket-adapter');
+
+    await expect(resolveProjectId()).rejects.toThrow(/projects → resposta inesperada/);
+  });
+
+  it('projeto sem id na lista geral é descartado, não derruba a resolução', async () => {
+    vi.stubEnv('VITE_API_MODE', 'real');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.test/api');
+    stubApi({
+      '/auth/my-project-roles': { is_platform_admin: true, project_roles: {} },
+      '/projects': [{ nome: 'sem id' }, { id: 'p-bom' }],
+    });
+    vi.resetModules();
+    const { resolveProjectId } = await import('./bucket-adapter');
+
+    expect(await resolveProjectId()).toBe('p-bom');
+  });
+
   it('todos vazios: fica com o primeiro (a Setup mostra a lista vazia honesta)', async () => {
     vi.stubEnv('VITE_API_MODE', 'real');
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.test/api');

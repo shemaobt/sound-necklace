@@ -105,6 +105,34 @@ describe('FixtureTranscriber — o job assíncrono de transcrição + tradução
     expect((await stt.progress(SESSION)).done).toBe(true);
   });
 
+  /**
+   * O servidor deriva as respostas da SESSÃO, não do corpo do pedido — o adapter HTTP
+   * ignora `paths` de propósito — então cada POST semeia o rascunho que faltar. O
+   * fixture congelava o job nos caminhos do PRIMEIRO pedido, o que só não doía
+   * enquanto o relatório era o único a disparar, uma vez, com a lista inteira. Com a
+   * entrevista disparando por resposta, o primeiro pedido traz UM caminho e todos os
+   * seguintes eram descartados: as outras respostas nunca ganhavam rascunho.
+   */
+  it('um pedido novo semeia a resposta que chegou depois, sem force', async () => {
+    const stt = new FixtureTranscriber();
+    await stt.start(SESSION, [P1]);
+
+    await stt.start(SESSION, [P2]);
+    const { drafts } = await runToDone(stt);
+
+    expect(Object.keys(drafts).sort()).toEqual([P1, P2].sort());
+  });
+
+  it('o pedido novo não zera o progresso de quem já corria', async () => {
+    const stt = new FixtureTranscriber();
+    await stt.start(SESSION, [P1]);
+    await stt.progress(SESSION); // um poll: avançou, não terminou
+
+    await stt.start(SESSION, [P2]);
+
+    expect((await stt.progress(SESSION)).done).toBe(true);
+  });
+
   it('sessões diferentes não compartilham job', async () => {
     const stt = new FixtureTranscriber();
     await stt.start(SESSION, [P1]);

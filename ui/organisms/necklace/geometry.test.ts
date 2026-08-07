@@ -7,7 +7,9 @@ import {
   beadsPerRow,
   bandRects,
   cordRects,
+  followScrollTop,
   resolveWindow,
+  rowShift,
   SIZE_M,
 } from './geometry';
 
@@ -49,20 +51,59 @@ describe('beadsPerRow — contas por linha a partir da largura', () => {
 
 describe('beadPosition — centro da conta na grade absoluta (referência L525–526)', () => {
   it('posiciona a primeira conta da janela no topo-esquerda', () => {
-    expect(beadPosition(12, 12, 20, SIZE_M)).toEqual({ left: 12.5, top: 21.5 });
+    expect(beadPosition(12, 12, 51, 20, SIZE_M)).toEqual({ left: 12.5, top: 21.5 });
   });
 
   it('quebra para a linha seguinte após bpr contas', () => {
     // local 20 com bpr 20 → linha 1, coluna 0
-    expect(beadPosition(32, 12, 20, SIZE_M)).toEqual({ left: 12.5, top: 52.5 });
+    expect(beadPosition(32, 12, 51, 20, SIZE_M)).toEqual({ left: 12.5, top: 52.5 });
   });
 
   it('avança a coluna dentro da linha', () => {
-    expect(beadPosition(13, 12, 20, SIZE_M)).toEqual({ left: 37.5, top: 21.5 });
+    expect(beadPosition(13, 12, 51, 20, SIZE_M)).toEqual({ left: 37.5, top: 21.5 });
+  });
+});
+
+/**
+ * Protótipo v3 §4: "as linhas do colar são centralizadas horizontalmente (a última
+ * fileira, incompleta, fica centrada em vez de alinhada à esquerda)". O deslocamento
+ * é POR FILEIRA e relativo à largura do campo (`min(count, bpr)` contas), não à
+ * largura do container — quem centra o campo inteiro é o `centerOffset`, e somar os
+ * dois sem cuidado empurraria um colar curto para a direita.
+ */
+describe('rowShift — a fileira incompleta fica centrada (protótipo v3 §4)', () => {
+  it('não desloca fileira cheia', () => {
+    expect(rowShift(0, 45, 20, SIZE_M)).toBe(0);
+    expect(rowShift(1, 45, 20, SIZE_M)).toBe(0);
+  });
+
+  it('centra a última fileira pela metade das colunas que faltam', () => {
+    // 45 contas, bpr 20 → última fileira com 5; faltam 15 colunas → 7,5 slots
+    expect(rowShift(2, 45, 20, SIZE_M)).toBe((15 * SIZE_M.slot) / 2);
+  });
+
+  it('colar mais curto que uma fileira não desloca (o centerOffset já o centra)', () => {
+    expect(rowShift(0, 6, 20, SIZE_M)).toBe(0);
+  });
+});
+
+describe('beadPosition — a fileira incompleta acompanha o rowShift', () => {
+  it('desloca as contas da última fileira e deixa as cheias no lugar', () => {
+    const shift = rowShift(2, 45, 20, SIZE_M);
+    expect(beadPosition(40, 0, 44, 20, SIZE_M).left).toBe(shift + SIZE_M.slot / 2);
+    expect(beadPosition(0, 0, 44, 20, SIZE_M).left).toBe(SIZE_M.slot / 2);
   });
 });
 
 describe('beadAtXY — pointer (relativo ao container) → índice, clampeado à janela', () => {
+  it('acerta a conta na fileira incompleta, que está deslocada (desenho e clique juntos)', () => {
+    // 45 contas (0…44), bpr 20: a conta 40 abre a 3ª fileira, centrada
+    const pos = beadPosition(40, 0, 44, 20, SIZE_M);
+    expect(beadAtXY(pos.left, pos.top, 0, 44, 20, SIZE_M)).toBe(40);
+    const last = beadPosition(44, 0, 44, 20, SIZE_M);
+    expect(beadAtXY(last.left, last.top, 0, 44, 20, SIZE_M)).toBe(44);
+  });
+
   it('mapeia coluna e linha a partir das coordenadas', () => {
     expect(beadAtXY(12.5, 21.5, 0, 99, 20, SIZE_M)).toBe(0);
     expect(beadAtXY(37.5, 21.5, 0, 99, 20, SIZE_M)).toBe(1);
@@ -82,17 +123,17 @@ describe('beadAtXY — pointer (relativo ao container) → índice, clampeado à
 
 describe('bandRects — retângulos por linha de uma banda (referência drawBand L485–498)', () => {
   it('uma banda dentro de uma linha rende um retângulo', () => {
-    expect(bandRects(0, 2, 0, 20, SIZE_M, 3)).toEqual([
+    expect(bandRects(0, 2, 0, 39, 20, SIZE_M, 3)).toEqual([
       { left: 0.5, width: 74, top: 9.5, height: 24 },
     ]);
   });
 
   it('uma banda que cruza a quebra de linha rende um retângulo por linha', () => {
-    expect(bandRects(18, 22, 0, 20, SIZE_M, 3)).toHaveLength(2);
+    expect(bandRects(18, 22, 0, 39, 20, SIZE_M, 3)).toHaveLength(2);
   });
 
   it('intervalo vazio (e < s) não rende retângulo', () => {
-    expect(bandRects(5, 4, 0, 20, SIZE_M, 3)).toEqual([]);
+    expect(bandRects(5, 4, 0, 39, 20, SIZE_M, 3)).toEqual([]);
   });
 });
 
@@ -102,7 +143,7 @@ describe('cordRects — fio atrás de cada fileira (referência _rowStyle)', () 
     expect(rects).toEqual([
       { left: 3.5, width: 693, top: 20.5, height: 2 },
       { left: 3.5, width: 693, top: 51.5, height: 2 },
-      { left: 3.5, width: 93, top: 82.5, height: 2 },
+      { left: 3.5 + (28 - 4) * (SIZE_M.slot / 2), width: 93, top: 82.5, height: 2 },
     ]);
   });
 
@@ -125,5 +166,59 @@ describe('centerOffset — colar sempre centrado (feedback do dono)', () => {
     expect(centerOffset(40, 16, 400, SIZE_M)).toBe(0);
     // container mais estreito que a fileira → nunca negativo
     expect(centerOffset(20, 20, 100, SIZE_M)).toBe(0);
+  });
+});
+
+/**
+ * ENG-387 — a janela acompanha a conta acesa.
+ *
+ * O colar agora rola dentro de uma janela em vez de fazer a página crescer. Quem
+ * decide o quanto rolar é esta função pura: jsdom não tem layout, e no organismo
+ * o playhead é aplicado imperativamente (o campo de contas é memoizado de
+ * propósito, para não re-renderizar a 60fps). Aqui se testa a decisão; que a
+ * conta acesa termine visível de verdade é asserção do teste em Chromium.
+ */
+describe('seguir a conta acesa dentro da janela', () => {
+  const VIEWPORT = 200;
+
+  it('não mexe quando a conta acesa já está à vista', () => {
+    const { top } = beadPosition(3, 0, 29, 10, SIZE_M);
+
+    expect(followScrollTop(top, SIZE_M, VIEWPORT, 0)).toBeNull();
+  });
+
+  it('rola quando a conta acesa passou abaixo da borda', () => {
+    const { top } = beadPosition(300, 0, 29, 10, SIZE_M);
+
+    const next = followScrollTop(top, SIZE_M, VIEWPORT, 0);
+
+    expect(next).not.toBeNull();
+    expect(next!).toBeGreaterThan(0);
+    expect(top).toBeGreaterThanOrEqual(next!);
+    expect(top).toBeLessThanOrEqual(next! + VIEWPORT);
+  });
+
+  it('rola de volta quando o usuário voltou para uma conta acima da janela', () => {
+    const { top } = beadPosition(2, 0, 29, 10, SIZE_M);
+
+    const next = followScrollTop(top, SIZE_M, VIEWPORT, 900);
+
+    expect(next).not.toBeNull();
+    expect(next!).toBeLessThan(900);
+    expect(top).toBeGreaterThanOrEqual(next!);
+  });
+
+  it('nas primeiras fileiras nunca pede posição negativa', () => {
+    const { top } = beadPosition(0, 0, 29, 10, SIZE_M);
+
+    const next = followScrollTop(top, SIZE_M, VIEWPORT, 400);
+
+    expect(next).toBe(0);
+  });
+
+  it('janela mais alta que o conteúdo: não há o que rolar', () => {
+    const { top } = beadPosition(5, 0, 29, 10, SIZE_M);
+
+    expect(followScrollTop(top, SIZE_M, 10_000, 0)).toBeNull();
   });
 });

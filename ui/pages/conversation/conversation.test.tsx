@@ -1,8 +1,10 @@
 import { act, render, screen } from '@testing-library/react';
+import { renderStation } from '../../organisms/nav-footer/testing';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Player } from '../../../adapters/audio';
+import type { Transcriber } from '../../../adapters/stt/types';
 import { FixtureSpeechSynthesizer } from '../../../adapters/tts/fixture';
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
@@ -140,7 +142,7 @@ describe('Conversation — resume where the interview stopped (ENG-321)', () => 
     for (const slot of seq.slice(0, 3)) state = setAnswer(state, slot, 'answered');
 
     load(state);
-    render(<Conversation />);
+    renderStation(<Conversation />);
     expect(questionText()).toBe(seq[3]!.question.q);
   });
 
@@ -150,7 +152,7 @@ describe('Conversation — resume where the interview stopped (ENG-321)', () => 
     const voice = seq.slice(0, 5).map((s) => voiceAnswerPath(s));
 
     load(state);
-    render(<Conversation voicePaths={() => voice} />);
+    renderStation(<Conversation voicePaths={() => voice} />);
     expect(questionText()).toBe(seq[5]!.question.q);
   });
 
@@ -165,7 +167,7 @@ describe('Conversation — resume where the interview stopped (ENG-321)', () => 
     const voice = seq.map((s) => voiceAnswerPath(s));
 
     load(state);
-    const view = render(<Conversation voicePaths={() => voice} />);
+    const view = renderStation(<Conversation voicePaths={() => voice} />);
 
     expect(view.container.querySelector('.cds-conversation-question')).toBeNull();
     expect(screen.queryByRole('button', { name: /Próxima pergunta/i })).toBeNull();
@@ -173,8 +175,109 @@ describe('Conversation — resume where the interview stopped (ENG-321)', () => 
 
   it('with no answer at all, starts on the first question', () => {
     load(mapping());
-    render(<Conversation />);
+    renderStation(<Conversation />);
     expect(questionText()).toBe(questionSequence(ensureMapping(mapping()))[0]!.question.q);
+  });
+});
+
+/**
+ * A SKIPPED question is an empty answer, not a pending one: not recording is itself
+ * the decision. Resuming on the FIRST hole pinned the session to the beginning — with
+ * audio recorded up to the 40th, reopening landed on the 2nd, every time, with dozens
+ * of clicks between the facilitator and where they had stopped. The cursor now follows
+ * the LAST answer, which is where the conversation actually stopped; skipped questions
+ * stay reachable through "← anterior" and the bead thread.
+ */
+describe('Conversation — resume follows the last answer, not the first hole', () => {
+  it('with questions skipped in the middle, reopens AFTER the last answered one', () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = [seq[0]!, seq[2]!, seq[5]!].map((s) => voiceAnswerPath(s));
+
+    load(state);
+    render(<Conversation voicePaths={() => voice} />);
+
+    expect(questionText()).toBe(seq[6]!.question.q);
+  });
+
+  it('with the LAST question answered, reopens the review even with holes behind', () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = [seq[1]!, seq[seq.length - 1]!].map((s) => voiceAnswerPath(s));
+
+    load(state);
+    const view = render(<Conversation voicePaths={() => voice} />);
+
+    expect(view.container.querySelector('.cds-conversation-question')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Próxima pergunta/i })).toBeNull();
+  });
+
+  /**
+   * The pre-review preparation (ENG-337) was only ever triggered by `goNext`. A session
+   * REOPENED straight into the review never triggered it, and the screen sat on
+   * "bringing the audio back" forever — a dead end. With the rule above sending more
+   * sessions there, mount has to prepare on its own.
+   */
+  it('reopening straight into the review, preparation runs — the wait is not a dead end', async () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = seq.map((s) => voiceAnswerPath(s));
+
+    load(state);
+    // renderStation: a saída da prévia é o Avançar do RODAPÉ desde o v3 §1
+    renderStation(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => voice}
+        onGoToExport={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Guardar os documentos →' })).toBeTruthy();
+  });
+});
+
+/**
+ * ENG-367 turned the transcription wait into the screen, but the footer lives in the
+ * PARENT and never found out: "← anterior" and "Guardar os documentos →" stayed under
+ * the wait, offering the way out to the Export with the drafts still in flight.
+ */
+describe('Conversation — the footer does not survive the transcription wait', () => {
+  it('while transcription runs, neither the back link nor the CTA stay on screen', async () => {
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    const voice = seq.map((s) => voiceAnswerPath(s));
+    // a job that never finishes: the screen stays on the wait for the whole test
+    const stt = {
+      start: () => Promise.resolve(),
+      progress: () => Promise.resolve({ done: false, drafts: {} }),
+    };
+    // the report discovers recordings through the recorder, not through `meta.voice`:
+    // without one that answers "it exists", nothing is transcribed and the wait never starts
+    const recorder: VoiceRecorder = {
+      start: () => Promise.reject(new Error('unused in this test')),
+      play: () => Promise.resolve(),
+      duration: () => Promise.resolve(9),
+      stopPlayback: () => {},
+      has: () => Promise.resolve(true),
+      delete: () => Promise.resolve(),
+      onPlayback: () => () => {},
+    };
+
+    load(state);
+    render(
+      <Conversation
+        recorder={recorder}
+        voicePaths={() => voice}
+        onGoToExport={vi.fn()}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    await screen.findByText(/transcrevendo/i);
+    expect(screen.queryByRole('button', { name: 'Guardar os documentos →' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '← anterior' })).toBeNull();
   });
 });
 
@@ -189,7 +292,7 @@ describe('Conversation — a sequência completa da conversa (PRD v2 §8.7)', ()
     expect(expected.filter((q) => q === L3_Q[0]!.q)).toHaveLength(2);
 
     load(state);
-    render(<Conversation />);
+    renderStation(<Conversation />);
 
     const seen: string[] = [];
     for (let i = 0; i < expected.length; i += 1) {
@@ -203,7 +306,7 @@ describe('Conversation — a sequência completa da conversa (PRD v2 §8.7)', ()
     const state = mapping();
     const total = questionSequence(state).length;
     load(state);
-    render(<Conversation />);
+    renderStation(<Conversation />);
 
     for (let i = 0; i < total - 1; i += 1) await next();
     // ainda numa pergunta
@@ -212,7 +315,16 @@ describe('Conversation — a sequência completa da conversa (PRD v2 §8.7)', ()
     expect(screen.getByRole('region', { name: 'relatório' })).toBeTruthy();
   });
 
-  it('o preparo AQUECE as respostas que existem: prefetch antes de abrir a revisão (ENG-339)', async () => {
+  /**
+   * A ENG-339 aquecia cada resposta existente aqui, para a revisão abrir com o áudio
+   * pronto de tocar. Numa entrevista de 14 cenas — ~396 perguntas — isso vira dezenas
+   * de MB baixados de uma vez, e a facilitadora toca um punhado deles.
+   *
+   * O preparo agora só DESCOBRE. O áudio desce ao tocar, e o cache persistente
+   * (@/adapters/voice/cached-store) faz a segunda vez, e toda reabertura da sessão,
+   * sair do disco. A troca é uma pequena espera no primeiro play de cada resposta.
+   */
+  it('o preparo descobre as respostas sem baixá-las', async () => {
     const recorder = new FixtureVoiceRecorder();
     const state = mapping();
     const seq = questionSequence(state);
@@ -222,13 +334,11 @@ describe('Conversation — a sequência completa da conversa (PRD v2 §8.7)', ()
     (recorder as VoiceRecorder).prefetch = prefetch;
 
     load(state);
-    render(<Conversation recorder={recorder} />);
+    renderStation(<Conversation recorder={recorder} />);
     for (let i = 0; i < seq.length; i += 1) await next();
 
     expect(await screen.findByRole('region', { name: 'relatório' })).toBeTruthy();
-    // só o caminho COM resposta aquece — nada de baixar 41 inexistentes
-    expect(prefetch).toHaveBeenCalledTimes(1);
-    expect(prefetch).toHaveBeenCalledWith(answered);
+    expect(prefetch).not.toHaveBeenCalled();
   });
 
   it('com gravador, o preparo segura a revisão até as respostas serem descobertas (ENG-337)', async () => {
@@ -243,7 +353,7 @@ describe('Conversation — a sequência completa da conversa (PRD v2 §8.7)', ()
     const state = mapping();
     const total = questionSequence(state).length;
     load(state);
-    render(<Conversation recorder={recorder} />);
+    renderStation(<Conversation recorder={recorder} />);
 
     for (let i = 0; i < total - 1; i += 1) await next();
     await next();
@@ -262,7 +372,7 @@ describe('Conversation — o ▶ do span de cada nível (PRD v2 §8.7)', () => {
   it('nível 1 toca a história inteira, nível 2 a cena e nível 3 a frase', async () => {
     const player = spyPlayer();
     load(mapping());
-    render(<Conversation player={player} />);
+    renderStation(<Conversation player={player} />);
 
     await userEvent.click(screen.getByRole('button', { name: '▶ ouvir a história' }));
     expect(player.toggle).toHaveBeenLastCalledWith('historia', 0, 29);
@@ -283,17 +393,17 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
   it('ouvir a resposta gravada mostra pausar enquanto toca; pausar volta a ouvir (ENG-322)', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
-    render(<Conversation recorder={recorder} />);
+    renderStation(<Conversation recorder={recorder} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
 
-    await userEvent.click(await screen.findByRole('button', { name: /^ouvir$/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /^ouvir a resposta$/ }));
     expect(recorder.playing).not.toBeNull();
     // tocando: o botão oferece pausar
     await userEvent.click(screen.getByRole('button', { name: 'pausar' }));
     expect(recorder.playing).toBeNull();
-    expect(screen.getByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
   });
 
   it('ouvir mostra "abrindo…" até a porta confirmar o início da reprodução (ENG-336)', async () => {
@@ -313,11 +423,11 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
         }),
     );
     load(mapping());
-    render(<Conversation recorder={recorder} />);
+    renderStation(<Conversation recorder={recorder} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
-    await userEvent.click(await screen.findByRole('button', { name: /^ouvir$/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /^ouvir a resposta$/ }));
 
     // em voo: abrindo, e sem segundo clique acumulando outra reprodução
     const opening = screen.getByRole('button', { name: 'abrindo a resposta…' });
@@ -334,7 +444,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     await act(async () => {
       playbackCbs.forEach((cb) => cb(null));
     });
-    expect(screen.getByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
   });
 
   it('parar entra em "guardando" até a persistência confirmar (ENG-318)', async () => {
@@ -358,7 +468,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
       onPlayback: () => () => {},
     };
     load(mapping());
-    render(<Conversation recorder={recorder} />);
+    renderStation(<Conversation recorder={recorder} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
@@ -368,13 +478,13 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     expect((saving as HTMLButtonElement).disabled).toBe(true);
 
     await act(async () => release?.());
-    expect(await screen.findByRole('button', { name: /^ouvir$/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
   });
 
-  it('gravar guarda no caminho exato da pergunta; "de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
+  it('gravar guarda no caminho exato da pergunta; "gravar de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
-    render(<Conversation recorder={recorder} />);
+    renderStation(<Conversation recorder={recorder} />);
 
     const path = 'respostas/level1/recontar.webm';
     expect(await recorder.has(path)).toBe(false);
@@ -383,14 +493,15 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     expect(await recorder.has(path)).toBe(true);
 
-    // "de novo" volta ao microfone e regrava no MESMO caminho
-    await userEvent.click(screen.getByRole('button', { name: 'de novo' }));
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    // "gravar de novo" pergunta antes (ENG-392) e, confirmado, já está gravando de
+    // volta no MESMO caminho — uma intenção, um toque
+    await userEvent.click(screen.getByRole('button', { name: 'gravar de novo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar e gravar de novo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     expect(await recorder.has(path)).toBe(true);
 
     // "listen" toca a gravação deste caminho
-    await userEvent.click(screen.getByRole('button', { name: 'ouvir' }));
+    await userEvent.click(screen.getByRole('button', { name: 'ouvir a resposta' }));
     expect(recorder.playing).toBe(path);
 
     // a digitação saiu do palco da entrevista — vive só no relatório (ui/pages/report)
@@ -401,7 +512,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     const recorder = new FixtureVoiceRecorder();
     const onVoiceSaved = vi.fn();
     load(mapping());
-    render(<Conversation recorder={recorder} onVoiceSaved={onVoiceSaved} />);
+    renderStation(<Conversation recorder={recorder} onVoiceSaved={onVoiceSaved} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
@@ -413,7 +524,9 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     const startSpy = vi.spyOn(recorder, 'start');
     const onVoiceSaved = vi.fn();
     load(mapping());
-    const { unmount } = render(<Conversation recorder={recorder} onVoiceSaved={onVoiceSaved} />);
+    const { unmount } = renderStation(
+      <Conversation recorder={recorder} onVoiceSaved={onVoiceSaved} />,
+    );
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     const rec = await startSpy.mock.results[0]!.value;
@@ -431,18 +544,29 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     expect(onVoiceSaved).not.toHaveBeenCalled();
   });
 
-  it('navegar durante a gravação cancela a gravação em curso (libera o microfone)', async () => {
+  /**
+   * ENG-393 mudou o gatilho: com o microfone aberto, "Próxima pergunta" não anda
+   * mais — era exatamente por aí que uma resposta se perdia no meio de uma frase.
+   * O contrato de limpeza continua valendo para quem SAI da estação (o voltar do
+   * cabeçalho, uma troca de sessão): desmontar cancela a gravação órfã e devolve
+   * o microfone.
+   */
+  it('gravando, a próxima pergunta espera; sair da estação cancela a gravação em curso', async () => {
     const recorder = new FixtureVoiceRecorder();
     const startSpy = vi.spyOn(recorder, 'start');
     load(mapping());
-    render(<Conversation recorder={recorder} />);
+    const state = ensureMapping(mapping());
+    const { unmount } = renderStation(<Conversation recorder={recorder} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     const rec = await startSpy.mock.results[0]!.value;
     const cancelSpy = vi.spyOn(rec, 'cancel');
 
-    // trocar de pergunta remonta a tela; a gravação órfã tem de ser cancelada
     await next();
+    expect(questionText()).toBe(questionSequence(state)[0]!.question.q);
+    expect(cancelSpy).not.toHaveBeenCalled();
+
+    unmount();
     expect(cancelSpy).toHaveBeenCalled();
   });
 });
@@ -450,7 +574,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
 describe('Conversation — perguntas conduzidas pela facilitadora (PRD v2 §8.7)', () => {
   it('a pergunta de ausência (nível 1) mostra o marcador de papel', async () => {
     load(mapping());
-    render(<Conversation />);
+    renderStation(<Conversation />);
 
     // a 11ª pergunta de L1 é "ausencia" (índice 10)
     for (let i = 0; i < 10; i += 1) await next();
@@ -462,7 +586,7 @@ describe('Conversation — perguntas conduzidas pela facilitadora (PRD v2 §8.7)
 describe('Conversation — navegação entre níveis (referência mapNav L1099–1133)', () => {
   it('“Anterior” na primeira pergunta volta à Segmentação', async () => {
     load(mapping());
-    render(<Conversation />);
+    renderStation(<Conversation />);
 
     await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
     expect(sessionStore.getState().session!.mode).toBe('segmentacao');
@@ -472,7 +596,7 @@ describe('Conversation — navegação entre níveis (referência mapNav L1099�
     const state = mapping();
     const total = questionSequence(state).length;
     load(state);
-    render(<Conversation />);
+    renderStation(<Conversation />);
 
     for (let i = 0; i < total; i += 1) await next();
     expect(screen.getByRole('region', { name: 'relatório' })).toBeTruthy();
@@ -485,7 +609,7 @@ describe('Conversation — navegação entre níveis (referência mapNav L1099�
 describe('Conversation — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
   it('não mostra dígito e tem ≤1 linha de instrução — incluindo as telas de cena e de frase', async () => {
     load(mapping());
-    const { container } = render(<Conversation />);
+    const { container } = renderStation(<Conversation />);
 
     const assertNoDigits = (): void => {
       expect(container.textContent ?? '').not.toMatch(/\d/);
@@ -510,7 +634,7 @@ describe('Conversation — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
 
   it('o palco é full-bleed: a página não pinta fundo próprio (o oliva vem do shell)', () => {
     load(mapping());
-    const { container } = render(<Conversation />);
+    const { container } = renderStation(<Conversation />);
     expect(container.querySelector('.cds-conversation')).not.toBeNull();
     // Protótipo: a tela INTEIRA é oliva — pintado pelo shell via :has(); um fundo
     // aqui criaria a "faixa escura dentro de moldura clara" que não existe lá.
@@ -529,7 +653,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
   it('com o som ligado, o guia fala a pergunta ao chegar nela, em pt-BR', () => {
     const tts = new FixtureSpeechSynthesizer();
     load(mapping());
-    render(<Conversation speaker={tts} />);
+    renderStation(<Conversation speaker={tts} />);
 
     expect(tts.spoken).toEqual([{ text: questionText(), lang: 'pt-BR' }]);
   });
@@ -537,7 +661,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
   it('falando, o botão pausa; pausado, "Ouvir a pergunta" repete (ENG-317)', async () => {
     const tts = new FixtureSpeechSynthesizer();
     load(mapping());
-    render(<Conversation speaker={tts} />);
+    renderStation(<Conversation speaker={tts} />);
 
     // chegar na pergunta já fala → o botão oferece pausar, e pausar NÃO fala de novo
     await userEvent.click(screen.getByRole('button', { name: 'Pausar a pergunta' }));
@@ -552,7 +676,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
   it('avançar fala a pergunta NOVA', async () => {
     const tts = new FixtureSpeechSynthesizer();
     load(mapping());
-    render(<Conversation speaker={tts} />);
+    renderStation(<Conversation speaker={tts} />);
     const primeira = questionText();
 
     await next();
@@ -565,7 +689,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
     const tts = new FixtureSpeechSynthesizer();
     await act(() => i18n.changeLanguage('en'));
     load(mapping());
-    render(<Conversation speaker={tts} />);
+    renderStation(<Conversation speaker={tts} />);
 
     expect(tts.spoken).toEqual([
       {
@@ -579,7 +703,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
   it('o guia anima enquanto a VOZ fala (não enquanto o gravador está ocioso)', async () => {
     const tts = new FixtureSpeechSynthesizer();
     load(mapping());
-    render(<Conversation speaker={tts} />);
+    renderStation(<Conversation speaker={tts} />);
     const speaking = () => document.querySelector('[data-speaking]')?.getAttribute('data-speaking');
 
     // a fala de chegada já acendeu o lip-sync
@@ -594,7 +718,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
     const tts = new FixtureSpeechSynthesizer();
     appStore.getState().toggleMuted(); // som desligado
     load(mapping());
-    render(<Conversation speaker={tts} />);
+    renderStation(<Conversation speaker={tts} />);
 
     expect(tts.spoken).toEqual([]);
     expect(screen.queryByRole('button', { name: 'Ouvir a pergunta' })).toBeNull();
@@ -606,7 +730,7 @@ describe('Conversation — a passagem para o relatório (ENG-250)', () => {
   it('a resposta em VOZ chega tocável ao relatório: o card promete voz, não um campo vazio', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
-    render(<Conversation recorder={recorder} />);
+    renderStation(<Conversation recorder={recorder} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
@@ -629,7 +753,7 @@ describe('Conversation — o relatório não é o fim do fluxo (protótipo toExp
   it('a prévia oferece "Guardar os documentos →": a última tela do protótipo não fica só no fio de contas', async () => {
     const onGoToExport = vi.fn();
     load(mapping());
-    render(<Conversation onGoToExport={onGoToExport} />);
+    renderStation(<Conversation onGoToExport={onGoToExport} />);
 
     const total = questionSequence(sessionStore.getState().session!).length;
     for (let i = 0; i < total; i++) {
@@ -658,7 +782,7 @@ describe('Conversation — fronteira de IO real da resposta (ENG-247)', () => {
     });
     const onVoiceSaved = vi.fn();
     load(mapping());
-    render(<Conversation recorder={recorder} onVoiceSaved={onVoiceSaved} />);
+    renderStation(<Conversation recorder={recorder} onVoiceSaved={onVoiceSaved} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
@@ -745,5 +869,186 @@ describe('Conversation — a pergunta que ficou sem resposta', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
 
     expect(screen.getByRole('button', { name: 'sem resposta' })).toBeTruthy();
+  });
+});
+
+/**
+ * ENG-393, o elo que faltava. O "← Histórias" mora em `ui/app`, fora desta
+ * estação, e é a única saída que o palco da conversa não desenha. O cabeçalho já
+ * sabe recusar (header.test.tsx) e a estação já sabe travar o que é dela — o que
+ * ninguém provava é que uma coisa avisa a outra. Sem isto, os dois lados podem
+ * estar certos e a pessoa ainda sair da sessão no meio de uma resposta.
+ */
+describe('Conversation — o cabeçalho fica sabendo da gravação (ENG-393)', () => {
+  it('gravando, a bandeira global sobe; parando, desce', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    render(<Conversation recorder={recorder} />);
+
+    expect(appStore.getState().recording).toBe(false);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    expect(appStore.getState().recording).toBe(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    expect(appStore.getState().recording).toBe(false);
+  });
+
+  it('sair da estação no meio da gravação não deixa a bandeira presa', async () => {
+    /* Uma bandeira presa em true travaria o voltar da pessoa PARA SEMPRE, numa
+       tela onde nem existe gravação — o modo mais cruel de falhar desta feature. */
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    const { unmount } = render(<Conversation recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    expect(appStore.getState().recording).toBe(true);
+
+    unmount();
+
+    expect(appStore.getState().recording).toBe(false);
+  });
+});
+
+/**
+ * ENG-392 — o tamanho da resposta em risco chega por extenso.
+ *
+ * O organismo só sabe interpolar a frase que recebe; quem converte segundos em
+ * palavras é esta página. Sem um teste aqui, ela poderia voltar a mandar "1:12"
+ * e o §9.2 cairia sem nada reclamar — o diálogo abre num portal, fora da raiz
+ * que o scanner de minimalismo varre.
+ */
+describe('Conversation — a duração no diálogo de regravar não traz dígito (ENG-392)', () => {
+  it('grava, para, e a confirmação descreve o tamanho por palavras', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    render(<Conversation recorder={recorder} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'gravar de novo' }));
+
+    const dialogo = screen.getByRole('alertdialog');
+    expect(dialogo.textContent ?? '').toMatch(/minuto/);
+    expect(dialogo.textContent ?? '').not.toMatch(/\d/);
+  });
+});
+
+/**
+ * Transcribing only at the end meant the facilitator finished the interview and then
+ * waited on all 41 answers at once. Advancing past a recorded answer is the signal that
+ * the take is the one they meant to keep — they had the chance to redo it and moved on —
+ * so the work starts there and the report finds it mostly done.
+ *
+ * A take redone AFTER advancing is not re-asked here: the draft is already `ready`, and
+ * the idempotent POST leaves it alone. The report catches it, because that is where the
+ * durable record of which version was transcribed lives.
+ */
+describe('Conversation — a transcrição começa ao avançar, não no fim', () => {
+  function spyTranscriber(): { stt: Transcriber; started: string[] } {
+    const started: string[] = [];
+    return {
+      started,
+      stt: {
+        start: (id) => {
+          started.push(id);
+          return Promise.resolve();
+        },
+        progress: () => Promise.resolve({ done: true, drafts: {} }),
+      },
+    };
+  }
+
+  it('avançar depois de gravar pede a transcrição daquela resposta', async () => {
+    const { stt, started } = spyTranscriber();
+    const voice: string[] = [];
+    load(mapping());
+    render(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => voice}
+        onVoiceSaved={(p) => voice.push(p)}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    await next();
+
+    expect(started).toEqual(['s-1']);
+  });
+
+  /**
+   * O sinal é "gravou AGORA", não "existe gravação". `meta.voice` acumula tudo que já
+   * foi gravado alguma vez, então reatravessar uma entrevista disparava um pedido por
+   * pergunta — numa sessão de 14 cenas passa de trezentos POSTs, cada um publicando
+   * um evento, para não pedir nada que o servidor já não tivesse.
+   */
+  it('atravessar respostas gravadas numa visita anterior não pede nada', async () => {
+    const { stt, started } = spyTranscriber();
+    const state = ensureMapping(mapping());
+    const seq = questionSequence(state);
+    // retomada: as duas primeiras vêm gravadas de antes, e o cursor abre na terceira
+    const voice = [seq[0]!, seq[1]!].map((s) => voiceAnswerPath(s));
+
+    load(state);
+    render(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => voice}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    // volta para uma resposta já gravada e avança por cima dela de novo
+    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
+    await next();
+
+    expect(started).toEqual([]);
+  });
+
+  it('avançar sem gravar não pede nada — não há o que transcrever', async () => {
+    const { stt, started } = spyTranscriber();
+    load(mapping());
+    render(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => []}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    await next();
+
+    expect(started).toEqual([]);
+  });
+
+  it('o pedido que falha não segura a navegação — a entrevista é o que não pode parar', async () => {
+    const voice: string[] = [];
+    const stt: Transcriber = {
+      start: () => Promise.reject(new Error('rede fora')),
+      progress: () => Promise.resolve({ done: true, drafts: {} }),
+    };
+    load(mapping());
+    const seq = questionSequence(sessionStore.getState().session!);
+    render(
+      <Conversation
+        recorder={new FixtureVoiceRecorder()}
+        voicePaths={() => voice}
+        onVoiceSaved={(p) => voice.push(p)}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    await next();
+
+    expect(questionText()).toBe(seq[1]!.question.q);
   });
 });

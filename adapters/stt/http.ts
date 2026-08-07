@@ -81,12 +81,17 @@ export class HttpTranscriber implements Transcriber {
   async start(
     sessionId: string,
     _paths: readonly string[],
-    opts?: { force?: boolean },
+    opts?: { force?: boolean; paths?: readonly string[] },
   ): Promise<void> {
     const res = await this.#fetch(this.#url(sessionId), {
       method: 'POST',
       headers: this.#headers(),
-      body: JSON.stringify({ language: this.#language(), force: opts?.force ?? false }),
+      body: JSON.stringify({
+        language: this.#language(),
+        force: opts?.force ?? false,
+        // null = a sessão inteira, que é o alcance que o servidor sempre entendeu
+        paths: opts?.paths ? [...opts.paths] : null,
+      }),
     });
     if (res.status === 401) this.#onUnauthorized?.();
     if (!res.ok) throw new Error(`POST ${this.#url(sessionId)} → ${res.status}`);

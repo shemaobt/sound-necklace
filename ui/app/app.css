@@ -10,6 +10,13 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
+
+  /* Altura do chrome que a estação NÃO ocupa: cabeçalho 64px + fio de contas 46px.
+     As estações medem a altura útil por esta variável, em vez do 110px literal — o
+     rodapé de navegação (74px), quando existe, entra sozinho na conta abaixo. */
+  --cds-shell-inset: 110px;
 
   /* chrome claro (default) */
   --cds-chrome-bg: rgba(255, 255, 255, 0.5);
@@ -19,12 +26,42 @@
   --cds-chrome-fg-soft: var(--cds-ink-subtle);
   --cds-chrome-pill-bg: var(--cds-surface-muted);
   --cds-chrome-mark: var(--cds-telha);
+  /* o realce do cabeçalho (hover do voltar, som ligado): telha sobre superfície
+     clara, e sobre o oliva cerimonial — só o escuro do TEMA precisa clarear */
+  --cds-chrome-accent: var(--cds-telha);
   --cds-chrome-hairline: var(--cds-hairline);
   --cds-chrome-dot-future-bg: var(--cds-frame);
   --cds-chrome-dot-future-border: rgba(63, 62, 32, 0.24);
   --cds-chrome-save-bg: rgba(119, 125, 69, 0.14);
   --cds-chrome-save-fg: #585d31;
   --cds-chrome-save-dot: #c58a1e;
+}
+
+/*
+ * Chrome escuro do TEMA (ENG-391) — não confundir com o chrome escuro das telas
+ * cerimoniais logo abaixo: aquele é o momento da história, este é conforto de
+ * tela. Os defaults acima assumem uma página clara (branco a 50%, olive sobre
+ * creme) e ficariam um véu branco sobre a página escura.
+ *
+ * ORDEM IMPORTA: este seletor e o `:has()` cerimonial têm a MESMA
+ * especificidade (0,2,0), então quem vem depois vence. O cerimonial precisa
+ * vencer — ele é igual nos dois temas — e por isso este bloco fica ANTES. Não
+ * mova nenhum dos dois.
+ */
+[data-cds-theme='dark'] .cds-app {
+  --cds-chrome-bg: rgba(246, 245, 235, 0.05);
+  --cds-chrome-band-bg: rgba(246, 245, 235, 0.03);
+  --cds-chrome-fg: var(--cds-ui-body-ink);
+  --cds-chrome-fg-soft: var(--cds-ui-ink-faint);
+  --cds-chrome-pill-bg: var(--cds-ui-chip);
+  --cds-chrome-mark: var(--cds-ui-accent);
+  --cds-chrome-accent: var(--cds-ui-accent);
+  --cds-chrome-hairline: var(--cds-ui-hairline);
+  --cds-chrome-dot-future-bg: var(--cds-ui-elevated);
+  --cds-chrome-dot-future-border: var(--cds-ui-hairline-strong);
+  --cds-chrome-save-bg: rgba(119, 125, 69, 0.24);
+  --cds-chrome-save-fg: #cfd6a6;
+  --cds-chrome-save-dot: #d9a441;
 }
 
 .cds-app:has(.cds-listen),
@@ -38,12 +75,18 @@
   --cds-chrome-fg-soft: rgba(246, 245, 235, 0.7);
   --cds-chrome-pill-bg: rgba(246, 245, 235, 0.1);
   --cds-chrome-mark: var(--cds-cream);
+  --cds-chrome-accent: var(--cds-telha);
   --cds-chrome-hairline: rgba(246, 245, 235, 0.2);
   --cds-chrome-dot-future-bg: rgba(246, 245, 235, 0.1);
   --cds-chrome-dot-future-border: rgba(246, 245, 235, 0.3);
   --cds-chrome-save-bg: rgba(119, 125, 69, 0.24);
   --cds-chrome-save-fg: #cfd6a6;
   --cds-chrome-save-dot: #d9a441;
+}
+
+/* estação com rodapé publicado: a barra de 74px sai da altura útil sozinha */
+.cds-app:has(.cds-nav-footer) {
+  --cds-shell-inset: 184px;
 }
 
 .cds-app-main {

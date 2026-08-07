@@ -61,7 +61,7 @@ function byText(el: HTMLElement, text: string): HTMLButtonElement {
 }
 
 describe('ConversationStage — fluxo do gravador (Chromium real; CLAUDE.md gate 4)', () => {
-  it('idle→gravando→gravado→de novo, callbacks na ordem, forma de onda pelos níveis', () => {
+  it('idle→gravando→gravado→gravar de novo, callbacks na ordem, forma de onda pelos níveis', async () => {
     const calls: string[] = [];
     const handlers = {
       onRecord: vi.fn(() => calls.push('record')),
@@ -89,14 +89,44 @@ describe('ConversationStage — fluxo do gravador (Chromium real; CLAUDE.md gate
     byText(el, 'Parar').click();
     expect(handlers.onStop).toHaveBeenCalledTimes(1);
 
-    // gravado → ouvir / de novo
-    update(base({ recorderState: 'recorded', ...handlers }));
-    byText(el, 'ouvir').click();
-    byText(el, 'de novo').click();
+    // gravado → ouvir a resposta / gravar de novo
+    update(base({ recorderState: 'recorded', answerLength: 'cerca de um minuto', ...handlers }));
+    byText(el, 'ouvir a resposta').click();
+    byText(el, 'gravar de novo').click();
+    // regravar passa pela confirmação (ENG-392): abrir ainda não apaga nada
+    expect(handlers.onRerecord).not.toHaveBeenCalled();
+    // o portal do Radix monta num segundo passe — esperar é o contrato, não flake
+    const apagar = await vi.waitFor(() => byText(document.body, 'Apagar e gravar de novo'));
+    apagar.click();
     expect(handlers.onPlay).toHaveBeenCalledTimes(1);
     expect(handlers.onRerecord).toHaveBeenCalledTimes(1);
 
     expect(calls).toEqual(['record', 'stop', 'play', 'rerecord']);
+  });
+
+  /**
+   * ENG-392 — foco inicial na ação SEGURA. Fica no Chromium real porque é foco de
+   * verdade dentro do focus scope do Radix: no jsdom isso não é a mesma coisa.
+   */
+  it('a confirmação de regravar abre com o foco em "Manter a gravação"', async () => {
+    const onRerecord = vi.fn();
+    const el = mount(
+      base({ recorderState: 'recorded', answerLength: 'cerca de um minuto', onRerecord }),
+    );
+
+    byText(el, 'gravar de novo').click();
+
+    const dialog = await vi.waitFor(() => {
+      const found = document.body.querySelector<HTMLElement>('[role="alertdialog"]');
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    const manter = byText(dialog, 'Manter a gravação');
+    const apagar = byText(dialog, 'Apagar e gravar de novo');
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(manter));
+    expect(document.activeElement).not.toBe(apagar);
+    expect(onRerecord).not.toHaveBeenCalled();
   });
 
   it('a navegação dispara prev/próxima', () => {

@@ -4,9 +4,38 @@
  * iluminação de playback entra por `data-play` (escrito de forma imperativa, fora
  * do JSX); a banda de seleção e a banda de cena são sobreposições sem hit-test.
  */
+
+/* a janela do colar (ENG-387): com um teto de altura, as contas rolam AQUI e a
+   página fica quieta — título, botão de tocar e confirmação nunca saem da tela.
+   `overscroll-behavior` impede que chegar ao fim das contas continue rolando o
+   documento atrás. */
+.cds-necklace-window {
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  /* a barra clássica (Windows/Linux, ou macOS com "sempre mostrar") aparece
+     assim que o conteúdo passa do teto e ESTREITA o container — o que muda
+     contas-por-fileira, o que muda a altura, o que faz a barra ir e vir. Reservar
+     a calha corta o laço antes que ele exista. */
+  scrollbar-gutter: stable;
+}
+
+/* pan-y, e não `none`: reservar o eixo vertical ao navegador é o que deixa o
+   dedo rolar a janela pousando em qualquer conta. */
 .cds-necklace {
   position: relative;
   width: 100%;
+  touch-action: pan-y;
+}
+
+/* Punho de arrasto: aqui o eixo vertical NÃO é do navegador.
+   A grade quebra em fileiras, então arrastar a fronteira da conta 40 para a 65 é
+   um gesto para BAIXO. Sob `pan-y` o Chrome reivindica esse gesto para rolagem e
+   dispara `pointercancel` — o arrasto morre no meio e a fronteira fica onde o
+   dedo passou por último. `none` só na conta que se arrasta: a rolagem por toque
+   segue viva em todo o resto da janela. */
+.cds-necklace-bead[data-drag-handle] {
   touch-action: none;
 }
 
@@ -17,11 +46,13 @@
 }
 
 /* o fio atrás de cada fileira (protótipo _rowStyle); escuro sobre creme,
-   claro sobre oliva — quem pinta oliva define --cds-necklace-cord */
+   claro sobre oliva — quem pinta oliva define --cds-necklace-cord.
+   Protótipo v3 §4 baixou a opacidade (claro .2 → .12) mantendo os 2px: o fio
+   sustenta as contas, não compete com elas. */
 .cds-necklace-cord {
   position: absolute;
   z-index: 0;
-  background: var(--cds-necklace-cord, rgba(63, 62, 32, 0.2));
+  background: var(--cds-necklace-cord, rgba(var(--cds-ui-line-rgb), 0.12));
   pointer-events: none;
 }
 
@@ -73,7 +104,7 @@
 .cds-necklace-scene-band {
   position: absolute;
   z-index: 0;
-  border: 1.5px dashed color-mix(in srgb, var(--cds-olive, #3f3e20) 45%, transparent);
+  border: 1.5px dashed color-mix(in srgb, var(--cds-ui-body-ink) 45%, transparent);
   border-radius: 999px;
   pointer-events: none;
 }

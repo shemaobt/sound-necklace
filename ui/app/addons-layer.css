@@ -14,6 +14,14 @@
   pointer-events: none;
 }
 
+/* "nunca atrapalha a estação" vale também para o rodapé de navegação: ancorado em
+   bottom 24px, o balão sentava EM CIMA do botão de avançar — e um botão coberto não
+   é só feio, é inclicável (o e2e travava esperando o alvo receber o ponteiro).
+   Com rodapé, a camada sobe os 74px da barra. */
+.cds-app:has(.cds-nav-footer) .cds-addons-layer {
+  bottom: calc(74px + 24px);
+}
+
 .cds-addons-layer > * {
   pointer-events: auto;
 }

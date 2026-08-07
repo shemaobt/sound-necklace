@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import baseCss from '../../tokens/base.css?raw';
 import reportCss from './report.css?raw';
 import userEvent from '@testing-library/user-event';
@@ -410,8 +410,11 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     stt: Transcriber;
     finish: () => void;
     started: string[][];
+    /** As opções de cada `start` — é onde o `force` e o seu alcance aparecem. */
+    asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[];
   } {
     const started: string[][] = [];
+    const asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[] = [];
     let release: (() => void) | null = null;
     // o job só termina quando o TESTE mandar: `progress` espera esta promessa, então
     // nenhum caso depende da ordem dos microtasks nem do atraso real do polling
@@ -424,10 +427,12 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     });
     return {
       started,
+      asked,
       finish: () => release?.(),
       stt: {
-        start: (_id, paths) => {
+        start: (_id, paths, opts) => {
           started.push([...paths]);
+          asked.push(opts);
           return Promise.resolve();
         },
         progress: async () => {
@@ -459,6 +464,54 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     // a região live continua montada e vazia: criada junto com o conteúdo, não seria
     // anunciada quando os rascunhos chegassem
     expect(view.container.querySelector('.cds-report-drafts-live')).not.toBeNull();
+  });
+
+  it('the wait speaks the interface language, not the name of the key', async () => {
+    const { stt } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />,
+    );
+
+    await screen.findByText(/transcrevendo/i);
+    expect(view.container.textContent).not.toMatch(/transcribingEyebrow/i);
+  });
+
+  /**
+   * The report sheet paints its own document surface (`--cds-ui-bg`, a 760px column,
+   * 36+44 of breathing room). With the body swapped for the wait, that box was still
+   * drawn — a band across the screen under the animation, exactly the width of the
+   * column. The state owns the surface, so it has to reach the sheet.
+   */
+  it('while the job runs, the sheet does not paint its own box', async () => {
+    const { stt } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />,
+    );
+
+    await screen.findByText(/transcrevendo/i);
+    expect(view.container.querySelector('.cds-report')?.className).toContain('cds-report--waiting');
+  });
+
+  it('with the drafts in hand, the sheet becomes the document surface again', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />,
+    );
+
+    finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    expect(view.container.querySelector('.cds-report')?.className).not.toContain(
+      'cds-report--waiting',
+    );
+  });
+
+  it('the waiting sheet zeroes background and padding — the band has nowhere to come from', () => {
+    const waiting = reportCss.slice(reportCss.indexOf('.cds-report--waiting'));
+    expect(waiting).toMatch(/background:\s*none/);
+    expect(waiting).toMatch(/padding:\s*0/);
   });
 
   it('o rascunho chega marcado como sugestão, e ainda NÃO é a resposta', async () => {
@@ -574,6 +627,109 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     expect(screen.queryByDisplayValue('Ele contou do boto.')).toBeNull();
   });
 
+  /**
+   * O `recordingVersion` nasceu como estado de React, que morre no reload, enquanto a
+   * versão semeada no rascunho é persistida no answer store. Reabrir uma sessão comparava
+   * o valor persistido com um mapa vazio, concluía "a gravação mudou" e mandava `force`
+   * — e o `force` é da sessão inteira. Toda entrevista feita em mais de uma sentada
+   * re-transcrevia tudo na segunda, cobrando o provedor de novo por cada resposta.
+   */
+  it('reabrir a sessão com os rascunhos prontos não pede nada de novo', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+    finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    view.unmount();
+
+    // a volta: MESMA versão de gravação, agora vinda do meta persistido
+    const volta = controllableStt(DRAFTS);
+    volta.finish();
+    render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={volta.stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+
+    await screen.findByDisplayValue('Ele contou do boto.');
+    expect(volta.asked.some((o) => o?.force)).toBe(false);
+  });
+
+  it('sessão antiga, sem versão nenhuma guardada, também não é re-transcrita', async () => {
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+    finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    view.unmount();
+
+    // gravada antes de o `voiceVersion` existir: o meta volta sem entrada nenhuma
+    const legada = controllableStt(DRAFTS);
+    legada.finish();
+    render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={legada.stt}
+        sessionId="s-1"
+        recordingVersion={{}}
+      />,
+    );
+
+    await screen.findByDisplayValue('Ele contou do boto.');
+    expect(legada.asked.some((o) => o?.force)).toBe(false);
+  });
+
+  it('regravar uma resposta força SÓ ela — as outras não são pagas de novo', async () => {
+    const outra = L1_Q[1]!;
+    const outroPath = voiceAnswerPath({ level: 1, k: outra.k });
+    const { stt, finish } = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true, [outroPath]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1, [outroPath]: 1 }}
+      />,
+    );
+    finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    view.unmount();
+
+    // só a primeira foi regravada
+    const refeita = controllableStt(DRAFTS);
+    refeita.finish();
+    render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true, [outroPath]: true })}
+        stt={refeita.stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 2, [outroPath]: 1 }}
+      />,
+    );
+
+    await waitFor(() => expect(refeita.asked.some((o) => o?.force)).toBe(true));
+    const forced = refeita.asked.find((o) => o?.force);
+    expect(forced?.paths).toEqual([PATH]);
+  });
+
   it('uma pergunta sem gravação nunca ganha rascunho', async () => {
     const { stt, finish } = controllableStt(DRAFTS);
     const outra = L1_Q[1]!;
@@ -593,8 +749,9 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     load(report());
     render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
 
-    await screen.findByText(/transcrevendo/i);
-    expect(started.flat()).toEqual([PATH]);
+    // esperar o rótulo "transcrevendo" não serve aqui: ele aparece antes de `start`
+    // ser chamado, e num runner lento a asserção corria antes do pedido sair
+    await waitFor(() => expect(started.flat()).toEqual([PATH]));
   });
 
   it('a chegada dos rascunhos é anunciada por uma região registrada vazia de antemão', async () => {
@@ -633,7 +790,7 @@ describe('Relatório — foco do campo de resposta (ENG-372)', () => {
   it('mas mantém um indicador de foco visível — geometria E cor, não só cor', () => {
     // o filete da esquerda engrossa E vira telha: quem não distingue cor ainda vê a mudança
     expect(rule).toContain('border-left-width: 3px');
-    expect(rule).toContain('var(--cds-telha)');
+    expect(rule).toContain('var(--cds-ui-accent)');
   });
 
   it('não mexe na regra global de foco', () => {

@@ -63,12 +63,18 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await page.getByRole('button', { name: 'gravar a resposta' }).click();
   await shot('09b-conversation-gravando');
   await page.getByRole('button', { name: 'Parar' }).click();
-  await expect(page.getByRole('button', { name: 'ouvir', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ouvir a resposta', exact: true })).toBeVisible();
   await shot('09c-conversation-resposta-pronta');
 
   // a prévia do relatório (a "revisão"): a conversa reunida, antes de guardar
   await app.walkToReport();
   await shot('09d-report');
+
+  // Esta captura GRAVA uma resposta em voz lá em cima, e resposta gravada só vira
+  // texto quando alguém confirma a transcrição (ENG-327) — sem isso o "Concluir"
+  // é recusado e a captura morria no penúltimo passo, sem nunca fotografar a
+  // Export. O gate está certo; era a captura que não passava por ele.
+  await app.confirmAllDrafts();
 
   await app.completeSession();
   await shot('10-export');

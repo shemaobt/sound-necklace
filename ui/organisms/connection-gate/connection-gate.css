@@ -29,7 +29,7 @@
 .cds-connection-gate-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(63, 62, 32, 0.06);
+  background: rgba(var(--cds-ui-line-rgb), 0.06);
   cursor: not-allowed;
   z-index: 2;
 }

@@ -42,7 +42,7 @@ describe('ConversationStage — marcador de papel (§8.7)', () => {
 
 /** Reproduzindo a resposta gravada: ouvir ⇄ pausar + as barras acesas (ENG-322). */
 describe('ConversationStage — feedback de reprodução da resposta (ENG-322)', () => {
-  it("tocando, 'ouvir' vira 'pausar' e a forma de onda acende", () => {
+  it("tocando, 'ouvir a resposta' vira 'pausar' e a forma de onda acende", () => {
     const { container, rerender } = render(
       <ConversationStage
         {...baseProps({ recorderState: 'recorded', answerPlaying: true, onStopPlay: vi.fn() })}
@@ -54,7 +54,7 @@ describe('ConversationStage — feedback de reprodução da resposta (ENG-322)',
     ).toBeGreaterThan(0);
 
     rerender(<ConversationStage {...baseProps({ recorderState: 'recorded' })} />);
-    expect(screen.getByRole('button', { name: 'ouvir' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'ouvir a resposta' })).toBeTruthy();
     expect(container.querySelectorAll('.cds-waveform-bar[data-state="active"]').length).toBe(0);
   });
 });
@@ -162,7 +162,7 @@ describe('ConversationStage — convite e gravação por voz (protótipo §9.2)'
     );
     const stopButton = screen.getByRole('button', { name: 'Parar' });
     expect(stopButton.classList.contains('cds-conversation-stage-mic')).toBe(true);
-    expect(screen.getByText('Gravando…')).toBeTruthy();
+    expect(screen.getByText('gravando — os outros botões esperam a resposta')).toBeTruthy();
     expect(container.textContent ?? '').not.toMatch(/\d/);
   });
 });

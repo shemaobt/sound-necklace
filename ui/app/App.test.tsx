@@ -32,6 +32,7 @@ async function persistCuttingSession(): Promise<string> {
       granularityLevel: 'medium',
       bucketAudioId: 'a1',
       voice: [],
+      voiceVersion: {},
       pipelineConsent: true,
     }),
   );
@@ -185,6 +186,7 @@ describe('App shell', () => {
         granularityLevel: 'medium',
         bucketAudioId: 'a1',
         voice: [],
+        voiceVersion: {},
         pipelineConsent: true,
       }),
     );
@@ -261,6 +263,7 @@ describe('App shell', () => {
       granularityLevel: 'medium',
       bucketAudioId: 'a1',
       voice: [],
+      voiceVersion: {},
       pipelineConsent: true,
     });
     store.autosave(summary.id, dto);
@@ -300,6 +303,7 @@ describe('App shell', () => {
         granularityLevel: 'medium',
         bucketAudioId: 'a1',
         voice: [],
+        voiceVersion: {},
         pipelineConsent: true,
       }),
     );
@@ -365,6 +369,7 @@ describe('App shell', () => {
         granularityLevel: 'medium',
         bucketAudioId: 'a1',
         voice: [],
+        voiceVersion: {},
         pipelineConsent: true,
       }),
     );
@@ -431,6 +436,7 @@ describe('App shell', () => {
           granularityLevel: 'medium',
           bucketAudioId: 'aud_conto_do_boto',
           voice: [],
+          voiceVersion: {},
           pipelineConsent: true,
         }),
       );

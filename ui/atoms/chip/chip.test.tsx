@@ -66,6 +66,6 @@ describe('Chip — pílula de cena/frase (redesign §6.3)', () => {
       (r) => r.selector.includes("data-variant='dashed'") && r.selector.includes('data-selected'),
     );
     expect(rule, 'regra combinada dashed + selected').toBeDefined();
-    expect(rule?.body).toContain('--cds-telha');
+    expect(rule?.body).toContain('--cds-ui-accent');
   });
 });

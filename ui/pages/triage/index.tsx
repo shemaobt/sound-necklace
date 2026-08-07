@@ -16,9 +16,8 @@ import {
 } from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { sceneColor } from '../cut/cutting';
-import { Button } from '../../atoms';
 import { ProgressDots } from '../../molecules';
-import { Necklace, SIZE_L } from '../../organisms';
+import { Necklace, SIZE_L, StationNav } from '../../organisms';
 import { CoverageDrawer } from '../../organisms/coverage-drawer/coverage-drawer';
 import { TriagePicker } from '../../organisms/triage-picker/triage-picker';
 import { sessionStore, useSessionStore } from '../../state';
@@ -120,8 +119,12 @@ export function Triage({ player = null, sound }: TriageProps) {
     if (nx >= 0) setFocusIdx(nx);
   };
 
+  // Classificar move o foco para a PRÓXIMA cena, então o áudio da anterior tem de
+  // calar junto: seguir tocando deixaria o ouvinte olhando uma cena e ouvindo outra,
+  // e o som é a única âncora que ele tem sobre a tela.
   const classify = (kind: string, confidence: Confidence): void => {
     const id = scene.part_id;
+    player?.stop();
     sound?.lock();
     sessionStore.getState().apply((s) => tagScene(s, id, kind, confidence));
     setInspecting(null);
@@ -137,10 +140,17 @@ export function Triage({ player = null, sound }: TriageProps) {
 
   const noneFit = (): void => {
     const id = scene.part_id;
+    player?.stop();
     sound?.lock();
     sessionStore.getState().apply((s) => markNoneFit(s, id));
     setInspecting(null);
     advanceFocus();
+  };
+
+  // Voltar ao Cortar (protótipo v3 §1): `escuta` com a história ainda confirmada é
+  // exatamente a Escuta 2 (`stepper-model`), o mesmo destino do fio de contas.
+  const back = (): void => {
+    sessionStore.getState().apply((s) => setMode(s, 'escuta'));
   };
 
   // O gate compõe o `setMode` puro com a entrada de camada da referência
@@ -174,17 +184,14 @@ export function Triage({ player = null, sound }: TriageProps) {
           setFocusIdx(i);
           setInspecting(i);
         }}
-        dotLabel={t('progressDots.dotLabel')}
+        dotLabel={(i) => t('progressDots.sceneDot', { n: i + 1 })}
       />
 
       {reviewing ? (
-        <div className="cds-triage-review" data-role="primary-action">
+        <div className="cds-triage-review">
           <p className="cds-triage-review-headline" data-role="instruction">
             {t('triage.reviewHeadline')}
           </p>
-          <Button variant="primary" onClick={advance}>
-            {t('review.continue')}
-          </Button>
         </div>
       ) : (
         <div className="cds-triage-focus">
@@ -217,6 +224,11 @@ export function Triage({ player = null, sound }: TriageProps) {
                   windowMargin={0}
                   sceneBand={false}
                   size={SIZE_L}
+                  /* Cinco fileiras (ENG-387): aqui o colar é lembrete da cena
+                     dentro de um cartão que já vive acima da grade de tipos, e
+                     com windowMargin 0 uma cena longa renderiza inteira, sem
+                     nada que a apare. */
+                  maxHeight={5 * SIZE_L.row + 12}
                   transportOnly
                   playbackHead={head}
                   onBeadPointerDown={playScene}
@@ -239,7 +251,10 @@ export function Triage({ player = null, sound }: TriageProps) {
         </p>
       ) : null}
 
-      {/* o CTA antigo virou o Continuar da revisão; aqui fica só o guia do gate */}
+      {/* o CTA de avanço vive agora no rodapé (protótipo v3 §2); no corpo sobra só o
+          guia do gate. Isso também resolve por construção o problema que motivou o
+          CTA duplicado: inspecionar uma cena com o gate já aberto não some mais com
+          a saída, porque a saída nunca esteve no corpo. */}
       {!gate.enabled && gate.message ? (
         <div className="cds-triage-gate">
           <p className="cds-triage-gate-msg" role="status">
@@ -248,18 +263,10 @@ export function Triage({ player = null, sound }: TriageProps) {
         </div>
       ) : null}
 
-      {/* Inspecionando uma cena com o gate JÁ aberto, a saída fica aqui — como o CTA
-          do protótipo, que vive no rodapé e não depende do picker. Sem isto, tocar
-          num ponto só para reouvir a cena (que é para isso que o colar está lá)
-          sumia com a única ação de avanço, e o único jeito de voltar a ela era
-          RECLASSIFICAR uma cena que ninguém queria mexer. */}
-      {gate.enabled && !reviewing ? (
-        <div className="cds-triage-gate" data-role="primary-action">
-          <Button variant="primary" onClick={advance}>
-            {t('review.continue')}
-          </Button>
-        </div>
-      ) : null}
+      <StationNav
+        back={{ label: t('triage.back'), onClick: back }}
+        next={{ label: t('review.continue'), onClick: advance, enabled: gate.enabled }}
+      />
 
       <CoverageDrawer coverage={coverage} />
     </section>

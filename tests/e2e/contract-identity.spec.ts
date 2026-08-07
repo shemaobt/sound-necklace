@@ -30,13 +30,12 @@ function goldenBytes(caseName: string, file: string): Buffer {
 }
 
 /**
- * Triage de um caso golden GLEANING+none_fit. `GLEANING_SCENE` é tier ALTA (label
- * "Respiga"), fora da grade "mais comuns" — alcançado expandindo "Ver todos os tipos
- * por tema". A confiança "high" do caso é o rádio "Certeza". A 2ª parte é "Nenhum se
- * encaixa".
+ * Triage de um caso golden GLEANING+none_fit. `GLEANING_SCENE` tem o label
+ * "Respiga" e desde a ENG-390 está na grade desde a primeira renderização — não há
+ * mais disclosure a abrir. A confiança "high" do caso é o rádio "Certeza". A 2ª
+ * parte é "Nenhum se encaixa".
  */
 async function triageGleaningThenNoneFit(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Ver todos os tipos por tema' }).click();
   await page.getByRole('radio', { name: 'Respiga', exact: true }).click();
   await page.getByRole('radio', { name: 'Certeza', exact: true }).click();
   await page.getByRole('button', { name: 'Confirmar', exact: true }).click();

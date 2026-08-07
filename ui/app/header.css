@@ -52,7 +52,7 @@
 }
 
 .cds-header-back:hover {
-  color: var(--cds-telha);
+  color: var(--cds-chrome-accent);
 }
 
 .cds-header-icon {
@@ -83,7 +83,27 @@
 }
 
 .cds-header-sound[aria-pressed='true'] {
-  color: var(--cds-telha);
+  color: var(--cds-chrome-accent);
+}
+
+/* botão de tema (ENG-391): mesmo círculo de 38px do som, ao lado dele. As cores
+   saem do chrome, então nas telas cerimoniais ele acompanha o olive sem regra
+   extra — e o botão continua existindo lá, o tema é global. */
+.cds-header-theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  background: var(--cds-chrome-pill-bg);
+  color: var(--cds-chrome-fg);
+  transition: color 0.16s;
+}
+
+.cds-header-theme:hover {
+  color: var(--cds-chrome-accent);
 }
 
 /* popover de som e volume (ENG-314): cartão creme, o reforço num range nativo */
@@ -94,8 +114,8 @@
   min-width: 220px;
   padding: 16px;
   border-radius: 14px;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  background: var(--cds-ui-elevated);
+  color: var(--cds-ui-body-ink);
   box-shadow: 0 10px 30px rgba(10, 7, 3, 0.22);
   z-index: 40;
 }
@@ -105,7 +125,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border: 1px solid var(--cds-hairline);
+  border: 1px solid var(--cds-ui-hairline);
   border-radius: 10px;
   background: transparent;
   color: inherit;
@@ -125,10 +145,17 @@
   font-family: var(--cds-font-load-bearing);
   font-weight: 600;
   font-size: 13px;
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-header-volume input[type='range'] {
   width: 100%;
   accent-color: var(--cds-telha);
+}
+
+/* Voltar travado durante a gravação (ENG-393): apagado mas ainda clicável — o
+   clique recusado é o que dispara o bip, e por isso não vira `disabled`. */
+.cds-header-back[aria-disabled='true'] {
+  opacity: 0.32;
+  cursor: default;
 }

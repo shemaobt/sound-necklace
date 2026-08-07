@@ -30,8 +30,16 @@ export interface Transcriber {
    * Dispara o job para as gravações da sessão. Idempotente: repetir com o mesmo
    * pedido não reprocessa — só `force` reabre (é o caso de regravar uma resposta,
    * que invalida o rascunho antigo).
+   *
+   * `opts.paths` limita o alcance do `force` às respostas nomeadas. Sem ele o force
+   * vale para a sessão inteira, que é o que o relatório quer quando não sabe dizer
+   * nada mais fino — e é caro demais para uma regravação só.
    */
-  start(sessionId: string, paths: readonly string[], opts?: { force?: boolean }): Promise<void>;
+  start(
+    sessionId: string,
+    paths: readonly string[],
+    opts?: { force?: boolean; paths?: readonly string[] },
+  ): Promise<void>;
   /** Pergunta o progresso. Sessão que nunca começou responde concluída e vazia. */
   progress(sessionId: string): Promise<TranscriptionProgress>;
 }

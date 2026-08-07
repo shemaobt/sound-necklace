@@ -23,6 +23,14 @@ export function lockedItemAt<T extends { locked: boolean; span: Span | null }>(
   return items.find((i) => i.locked && i.span && bead >= i.span.s && bead <= i.span.e) ?? null;
 }
 
+/**
+ * Id do punho que arrasta o COMEÇO do segmento em definição (cena ou frase). Não é
+ * id de item nenhum: os outros punhos carregam a identidade do segmento cujo FIM se
+ * move, e este carrega a intenção. O `@` mantém a colisão impossível — nenhum
+ * `part_id`/índice de frase começa assim.
+ */
+export const START_HANDLE = '@start';
+
 /** Contas de prévia de cada lado do limite ao EDITAR a fronteira (§ regra 5). */
 const EDIT_BEFORE = 4;
 const EDIT_AFTER = 3;
@@ -134,7 +142,7 @@ const DEZENAS_EN = [
  * chamador omite o número). EN une dezena+unidade com hífen ("twenty-one"),
  * PT-BR com " e " ("vinte e um").
  */
-function cardinal(n: number, lang: string): string {
+export function cardinal(n: number, lang: string): string {
   if (n < 1 || n > 99) return '';
   const en = lang.startsWith('en');
   const unidades = en ? UNIDADES_EN : UNIDADES_PT;

@@ -7,8 +7,8 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--cds-cream);
-  color: var(--cds-olive);
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
 }
 
 /* ---------- cabeçalho próprio: marca · usuária · sair ---------- */
@@ -23,7 +23,7 @@
   padding: 0 clamp(1rem, 4vw, 3rem);
   min-height: 66px;
   background: var(--cds-chrome-bg, rgba(255, 255, 255, 0.5));
-  border-bottom: 1px solid var(--cds-hairline);
+  border-bottom: 1px solid var(--cds-ui-hairline);
 }
 
 .cds-dashboard-brand {
@@ -39,7 +39,7 @@
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: var(--cds-ink, #0a0703);
+  color: var(--cds-ui-ink);
 }
 
 /* a engrenagem das Configurações — a CASA é o único caminho para lá (ENG-375;
@@ -51,17 +51,17 @@
   width: 34px;
   height: 34px;
   padding: 0;
-  border: 1px solid var(--cds-hairline);
+  border: 1px solid var(--cds-ui-hairline);
   border-radius: var(--cds-radius-pill);
   background: transparent;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
   cursor: pointer;
   transition: all 0.14s;
 }
 
 .cds-dashboard-settings:hover {
-  border-color: var(--cds-telha);
-  color: var(--cds-telha);
+  border-color: var(--cds-ui-accent);
+  color: var(--cds-ui-accent);
 }
 
 .cds-dashboard-user {
@@ -73,7 +73,7 @@
 .cds-dashboard-username {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--cds-ink, #0a0703);
+  color: var(--cds-ui-ink);
 }
 
 .cds-dashboard-avatar {
@@ -125,7 +125,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #6d6c56;
+  color: var(--cds-ui-ink-faint);
 }
 
 .cds-dashboard-title {
@@ -135,7 +135,7 @@
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.05;
-  color: var(--cds-ink, #0a0703);
+  color: var(--cds-ui-ink);
 }
 
 .cds-dashboard-count {
@@ -143,13 +143,13 @@
   font-family: var(--cds-font-quiet-voice);
   font-style: italic;
   font-size: 0.95rem;
-  color: #5a5a3e;
+  color: var(--cds-ui-ink-soft);
 }
 
 .cds-dashboard-loading {
   margin: 0;
   font-family: var(--cds-font-quiet-voice);
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
 }
 
 /* ---------- downloads diretos das concluídas (§7.2/§10.5) ---------- */
@@ -163,7 +163,7 @@
   margin: 0 0 0.75rem;
   font-family: var(--cds-font-quiet-voice);
   font-size: 1rem;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
 }
 
 /* ---------- esqueleto do carregamento (ENG-308) ---------- */
@@ -198,10 +198,10 @@
   flex: none;
   align-self: stretch;
   padding: 0;
-  border: 1px solid var(--cds-hairline);
+  border: 1px solid var(--cds-ui-hairline);
   border-radius: var(--cds-radius-pill);
   background: transparent;
-  color: var(--cds-olive);
+  color: var(--cds-ui-body-ink);
   font-family: var(--cds-font-load-bearing);
   font-weight: 700;
   font-size: 17px;
@@ -220,8 +220,8 @@
   min-width: 240px;
   padding: 10px;
   border-radius: 14px;
-  background: #ffffff;
-  color: var(--cds-olive);
+  background: var(--cds-ui-card);
+  color: var(--cds-ui-body-ink);
   box-shadow: 0 10px 30px rgba(10, 7, 3, 0.2);
   z-index: 40;
 }
@@ -243,9 +243,9 @@
 }
 
 .cds-dashboard-dl-item:hover {
-  background: var(--cds-cream);
+  background: var(--cds-ui-chip);
 }
 
 .cds-dashboard-dl-item[data-downloaded] {
-  color: var(--cds-ink-subtle);
+  color: var(--cds-ui-ink-faint);
 }

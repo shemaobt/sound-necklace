@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { Player } from '../../../adapters/audio';
 import type { UiSound } from '../../../adapters/ui-sound';
 import { confirmWhole } from '../../../domain';
-import { Necklace, SIZE_L } from '../../organisms';
+import { Necklace, SIZE_L, StationNav } from '../../organisms';
 import { sessionStore, useSessionStore } from '../../state';
 import { ShemaIcon } from '../../tokens';
 import { makeTransportHandlers } from './transport';
@@ -20,6 +20,13 @@ import './listen.css';
  * de transporte por prop (injeção da estação/teste; o áudio só é ligado pelo Setup
  * — ENG-243 — então em runtime, sem player, o colar renderiza sem playback).
  */
+/**
+ * Teto da janela de contas (ENG-387): a história inteira cabe em 9 fileiras e o
+ * resto rola ali dentro — a decisão "Já ouvi a história completa" nunca é
+ * empurrada para fora da tela por uma história longa.
+ */
+const NECKLACE_MAX_H = 9 * SIZE_L.row + 12;
+
 export interface ListenProps {
   player?: Player | null;
   /** A voz da UI (§9): confirmar a escuta avança; sem ouvir tudo, recusa. */
@@ -87,6 +94,7 @@ export function Listen({ player = null, sound }: ListenProps) {
           totalBeads={totalBeads}
           beadSec={session.beadSec}
           size={SIZE_L}
+          maxHeight={NECKLACE_MAX_H}
           transportOnly
           playbackHead={head}
           onBeadPointerDown={handlers?.onBead}
@@ -94,41 +102,21 @@ export function Listen({ player = null, sound }: ListenProps) {
         />
       </div>
 
-      <div className="cds-listen-controls">
-        <div
-          className="cds-listen-decision"
-          data-role="primary-action"
-          data-heard={heardEnough || undefined}
-        >
-          {/* história confirmada → só revisão (a Escuta 2 assumiu); reabrir a
-              história vive no "← Voltar" do Cortar, não aqui (ENG-342). */}
-          {session.whole.confirmed ? null : (
-            <button type="button" className="cds-listen-confirm" onClick={confirm}>
-              <svg
-                width={18}
-                height={18}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.6}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              {t('listen.confirm')}
-            </button>
-          )}
-        </div>
-
-        {error ? (
+      {/* "Já ouvi a história completa" saiu do corpo e virou o Avançar do rodapé
+          (protótipo v3 §2): aqui ficam título, colar e o play. */}
+      {error ? (
+        <div className="cds-listen-controls">
           <p className="cds-listen-error" role="alert">
             {error}
           </p>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+
+      {/* história confirmada → só revisão (a Escuta 2 assumiu); reabrir a história
+          vive no "← Voltar" do Cortar, não aqui (ENG-342). */}
+      {session.whole.confirmed ? null : (
+        <StationNav next={{ label: t('listen.confirm'), onClick: confirm, enabled: heardEnough }} />
+      )}
     </section>
   );
 }

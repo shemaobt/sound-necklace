@@ -35,6 +35,7 @@ async function seed(bucketAudioId: string): Promise<string> {
       granularityLevel: 'medium',
       bucketAudioId,
       voice: [],
+      voiceVersion: {},
       pipelineConsent: true,
     }),
   );

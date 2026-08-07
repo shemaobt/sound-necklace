@@ -48,7 +48,12 @@ describe('HttpTranscriber — o modo real fala com o job da ENG-325', () => {
 
     expect(calls[0]?.url).toBe(URL);
     expect(calls[0]?.init?.method).toBe('POST');
-    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ language: 'pt-BR', force: true });
+    // `paths: null` = a sessão inteira, o alcance que o servidor sempre entendeu
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      language: 'pt-BR',
+      force: true,
+      paths: null,
+    });
     expect((calls[0]?.init?.headers as Record<string, string>)['authorization']).toBe(
       'Bearer tok-42',
     );
@@ -63,7 +68,19 @@ describe('HttpTranscriber — o modo real fala com o job da ENG-325', () => {
 
     await make(fetchImpl).start(SESSION, [P1]);
 
-    expect(sentBody).toEqual({ language: 'pt-BR', force: false });
+    expect(sentBody).toEqual({ language: 'pt-BR', force: false, paths: null });
+  });
+
+  it('o force nomeado leva SÓ as respostas regravadas — as outras não são refeitas', async () => {
+    let sentBody: unknown;
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      sentBody = JSON.parse(String(init?.body));
+      return json({ total: 0, ready: 0, failed: 0, pending: 0, answers: [] }, 202);
+    }) as unknown as typeof globalThis.fetch;
+
+    await make(fetchImpl).start(SESSION, [P1], { force: true, paths: [P1] });
+
+    expect(sentBody).toEqual({ language: 'pt-BR', force: true, paths: [P1] });
   });
 
   it('progress mapeia a resposta: prontas viram rascunho {source, en}, o resto fica de fora', async () => {

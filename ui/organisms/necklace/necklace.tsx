@@ -10,6 +10,7 @@ import {
   cordRects,
   beadPosition,
   beadsPerRow,
+  followScrollTop,
   type Rect,
   resolveWindow,
   type Size,
@@ -51,6 +52,11 @@ export interface NecklaceProps {
   /** modo transporte (Escuta/review): toca ao tocar, sem afordâncias de seleção */
   transportOnly?: boolean;
   size?: Size;
+  /** teto em px da janela de contas: o colar rola DENTRO dela e a página não
+   *  cresce, então título, botão de tocar e confirmação ficam sempre à vista.
+   *  Cada estação pede o seu (a Segmentação quer uma tira mais curta que a
+   *  Escuta); sem ele, o campo é inteiro e nada rola. */
+  maxHeight?: number;
   /** fronteiras arrastáveis (ENG-342): `at` = conta onde o punho fica; `id` =
    *  identidade opaca que a página interpreta (o colar não sabe de cena/frase) */
   dragHandles?: DragHandle[];
@@ -110,7 +116,7 @@ function computeField(
   const beads: BeadDescriptor[] = [];
   for (let i = winS; i <= winE; i++) {
     const dim = window !== null && (i < window.s || i > window.e);
-    const pos = beadPosition(i, winS, bpr, size);
+    const pos = beadPosition(i, winS, winE, bpr, size);
     beads.push({
       index: i,
       left: pos.left + xOff,
@@ -125,12 +131,20 @@ function computeField(
   const shift = (r: Rect): Rect => ({ ...r, left: r.left + xOff });
   const sceneBand =
     window && sceneBandOn
-      ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, bpr, size, 4).map(shift)
+      ? bandRects(Math.max(winS, window.s), Math.min(winE, window.e), winS, winE, bpr, size, 4).map(
+          shift,
+        )
       : [];
   const selectionBand = selection
-    ? bandRects(Math.max(winS, selection.s), Math.min(winE, selection.e), winS, bpr, size, 3).map(
-        shift,
-      )
+    ? bandRects(
+        Math.max(winS, selection.s),
+        Math.min(winE, selection.e),
+        winS,
+        winE,
+        bpr,
+        size,
+        3,
+      ).map(shift)
     : [];
 
   const rows = Math.ceil((winE - winS + 1) / bpr);
@@ -231,9 +245,13 @@ export function Necklace(props: NecklaceProps) {
     playbackHead = null,
     transportOnly = false,
     size = SIZE_M,
+    maxHeight,
     dragHandles,
   } = props;
 
+  const windowRef = useRef<HTMLDivElement>(null);
+  /** Última conta que a janela seguiu — ver a guarda no efeito do playhead. */
+  const lastFollowedHead = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -348,10 +366,31 @@ export function Necklace(props: NecklaceProps) {
     let pending: { id: string; startBead: number } | null = null;
     let dragging: string | null = null;
 
+    let hoverEdge: number | null = null;
+    let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+    /**
+     * A conta que acabou de receber um toque. O dwell da borda nasceu na referência
+     * (L587-596), onde clicar numa borda TAMBÉM tocava só a borda — hover e clique
+     * concordavam. No nosso modelo eles discordam: clicar o começo OUVE a partir
+     * dali (docs/segmentation-rules.md regra 1). Sem esta supressão, o timer
+     * atrasado — ou o tremor do mouse sobre a conta recém-clicada, que virou borda
+     * ao definir o FIM — interrompe a reprodução do clique para tocar ~4 contas em
+     * volta da borda. Só um hover DELIBERADO (sair da conta e voltar) reconfere a
+     * borda; o clique manda enquanto o ponteiro não se move.
+     */
+    let suppressedBead: number | null = null;
+    const clearHover = () => {
+      if (hoverTimer) clearTimeout(hoverTimer);
+      hoverTimer = null;
+      hoverEdge = null;
+    };
+
     function onPointerDown(ev: PointerEvent): void {
       const ix = ixRef.current;
       if (!ix.total) return;
       const bead = beadFromEvent(ev);
+      clearHover();
+      suppressedBead = bead;
       const handle = ix.onDragBoundary ? handleAt(bead) : null;
       if (handle !== null) {
         pending = { id: handle, startBead: bead };
@@ -372,8 +411,12 @@ export function Necklace(props: NecklaceProps) {
 
     function endDrag(ev: PointerEvent): void {
       const ix = ixRef.current;
-      if (dragging === null && pending !== null) {
-        // não chegou a arrastar: foi um tap na conta de fronteira → toca a cena
+      /* `pointercancel` NÃO é um toque. O navegador cancela quando decide levar o
+         gesto (rolagem, back-swipe) — tratá-lo como tap fazia a cena começar a
+         tocar no meio de um arrasto que o dedo nem terminou. Só o `pointerup`
+         sem arrasto é toque. */
+      const foiToque = ev.type !== 'pointercancel';
+      if (dragging === null && pending !== null && foiToque) {
         const bead = pending.startBead;
         if (ix.playbackHead !== null && bead === ix.playbackHead) ix.onHeadTap?.();
         else ix.onBeadPointerDown?.(bead);
@@ -383,14 +426,6 @@ export function Necklace(props: NecklaceProps) {
       pending = null;
       dragging = null;
     }
-
-    let hoverEdge: number | null = null;
-    let hoverTimer: ReturnType<typeof setTimeout> | null = null;
-    const clearHover = () => {
-      if (hoverTimer) clearTimeout(hoverTimer);
-      hoverTimer = null;
-      hoverEdge = null;
-    };
 
     function onPointerMove(ev: PointerEvent): void {
       const ix = ixRef.current;
@@ -405,6 +440,9 @@ export function Necklace(props: NecklaceProps) {
       const sel = ix.selection;
       if (!ix.total || ix.transportOnly || !sel) return clearHover();
       const bead = beadFromEvent(ev);
+      // o clique manda até o ponteiro sair da conta que ele tocou
+      if (bead === suppressedBead) return;
+      suppressedBead = null;
       const near = (edge: number) => bead === edge || bead === edge - 1 || bead === edge + 1;
       const edge = near(sel.s) ? sel.s : near(sel.e) ? sel.e : null;
       if (edge === null) return clearHover();
@@ -417,17 +455,23 @@ export function Necklace(props: NecklaceProps) {
       }, 280);
     }
 
+    // sair do colar zera tudo: o próximo hover é uma intenção nova
+    const onPointerLeave = () => {
+      clearHover();
+      suppressedBead = null;
+    };
+
     node.addEventListener('pointerdown', onPointerDown);
     node.addEventListener('pointermove', onPointerMove);
     node.addEventListener('pointerup', endDrag);
     node.addEventListener('pointercancel', endDrag);
-    node.addEventListener('pointerleave', clearHover);
+    node.addEventListener('pointerleave', onPointerLeave);
     return () => {
       node.removeEventListener('pointerdown', onPointerDown);
       node.removeEventListener('pointermove', onPointerMove);
       node.removeEventListener('pointerup', endDrag);
       node.removeEventListener('pointercancel', endDrag);
-      node.removeEventListener('pointerleave', clearHover);
+      node.removeEventListener('pointerleave', onPointerLeave);
       if (hoverTimer) clearTimeout(hoverTimer);
     };
   }, []);
@@ -443,7 +487,35 @@ export function Necklace(props: NecklaceProps) {
       if (head === null || idx > head) delete bead.dataset.play;
       else bead.dataset.play = idx === head ? 'head' : 'played';
     }
-  }, [playbackHead, field]);
+
+    // ...e a janela segue essa mesma cabeça (ENG-387): sem isto, numa história
+    // longa o ouvinte caça a conta acesa rolando o documento. Fica aqui, na ilha
+    // imperativa, para não passar por estado do React a 60fps.
+    //
+    // Só quando a CABEÇA anda. O efeito também roda quando o campo se recompõe
+    // (mudou a seleção, por exemplo), e a cabeça sobrevive à pausa: sem esta
+    // guarda, pausar no fim da história, rolar de volta ao começo e tocar numa
+    // conta para cortar arrastava a janela de volta para o ponto pausado — bem em
+    // cima da conta que a pessoa acabou de escolher.
+    const cabecaAndou = head !== lastFollowedHead.current;
+    lastFollowedHead.current = head;
+
+    const win = windowRef.current;
+    if (!win || head === null || !cabecaAndou || head < winS || head > winE) return;
+    const next = followScrollTop(
+      beadPosition(head, winS, winE, bpr, size).top,
+      size,
+      win.clientHeight,
+      win.scrollTop,
+    );
+    if (next === null) return;
+    // lido na hora da chamada: uma media query de folha de estilo não alcança um
+    // scroll imperativo (§4.5 — movimento decorativo é opt-in)
+    const reduce =
+      typeof globalThis.matchMedia === 'function' &&
+      globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    win.scrollTo({ top: next, behavior: reduce ? 'auto' : 'smooth' });
+  }, [playbackHead, field, winS, winE, bpr, size]);
 
   // punhos de arrasto (ENG-342): marca as contas-fronteira para o cursor. Escrita
   // imperativa como o playback — não recomputa o campo memoizado.
@@ -458,8 +530,14 @@ export function Necklace(props: NecklaceProps) {
   }, [dragHandles, field]);
 
   return (
-    <div ref={containerRef} className="cds-necklace" style={{ height: `${field.height}px` }}>
-      <BeadField field={field} size={size} />
+    <div
+      ref={windowRef}
+      className="cds-necklace-window"
+      style={maxHeight === undefined ? undefined : { maxHeight: `${maxHeight}px` }}
+    >
+      <div ref={containerRef} className="cds-necklace" style={{ height: `${field.height}px` }}>
+        <BeadField field={field} size={size} />
+      </div>
     </div>
   );
 }

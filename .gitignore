@@ -1,5 +1,6 @@
 # dependências e builds
-node_modules/
+# cobre o diretório E um symlink de worktree, que a forma com barra não pega
+node_modules
 dist/
 coverage/
 
@@ -23,3 +24,5 @@ test-results/
 .vitest-attachments/
 **/__screenshots__/
 .parity-shots/
+# capturas manuais dos dois temas (ENG-391) — inspeção, não gate
+.theme-shots/

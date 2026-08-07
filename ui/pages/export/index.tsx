@@ -18,6 +18,7 @@ import {
   serializeArtifact,
   toSessionDto,
 } from '../../../contracts';
+import { idbAudioCache } from '../../../adapters/voice/idb-cache';
 import { Button } from '../../atoms';
 import { scenePalette } from '../../tokens';
 import {
@@ -46,6 +47,13 @@ import './export.css';
  * quando a estação passa a ser alcançável — follow-up ENG). O download real
  * (Blob/anchor) é a fronteira de sistema `saveBytes`, injetável nos testes.
  */
+/**
+ * Teto da janela de contas (ENG-387): 6 fileiras na conta menor do Export. Aqui o
+ * colar é retrato da história pronta, não superfície de trabalho — o que precisa
+ * estar à vista são os três documentos e o botão de concluir.
+ */
+const NECKLACE_MAX_H = 6 * SIZE_EXPORT.row + 12;
+
 export interface ExportProps {
   store?: SessionStore;
   sessionId?: string;
@@ -68,6 +76,7 @@ const DEFAULT_META: SessionMeta = {
   granularityLevel: 'medium',
   bucketAudioId: '',
   voice: [],
+  voiceVersion: {},
   pipelineConsent: true,
 };
 
@@ -114,6 +123,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
           granularityLevel: dto.granularityLevel,
           bucketAudioId: dto.bucketAudioId,
           voice: dto.voice,
+          voiceVersion: dto.voiceVersion,
           pipelineConsent: dto.pipelineConsent,
         };
         voice = new Set(dto.voice);
@@ -233,6 +243,13 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       setNotice(null);
       sound?.advance();
       setPhase('saved');
+      // O áudio em cache existe para a janela em que ele é reproduzido — gravar,
+      // revisar, exportar. Ela fechou. Depois do `complete`, e nunca antes: o cache é
+      // o que faz a revisão abrir sem rede, e apagá-lo numa conclusão que falhou
+      // deixaria a próxima tentativa mais lenta em vez de mais limpa.
+      void idbAudioCache()
+        .clearSession(sessionId)
+        .catch(() => undefined);
     } catch {
       setNotice(t('export.saveError'));
       sound?.refuse();
@@ -267,6 +284,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       <div className="cds-export-stage">
         <Necklace
           size={SIZE_EXPORT}
+          maxHeight={NECKLACE_MAX_H}
           totalBeads={session.totalBeads}
           beadSec={session.beadSec}
           segments={segments}
