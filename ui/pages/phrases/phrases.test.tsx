@@ -222,7 +222,7 @@ describe('Segmentação — travessia de borda (seam modal, PRD v2 §8.6)', () =
     expect(locked.span).toEqual({ s: 14, e: 20 });
   });
 
-  it('“Reancorar dentro da cena” re-ancora na fronteira e não trava', async () => {
+  it('“Reancorar dentro da cena” descarta a seleção e não trava', async () => {
     load(segmenting({ selection: { s: 14, e: 20 }, pendingStart: null }));
     renderStation(<Phrases />);
 
@@ -230,9 +230,9 @@ describe('Segmentação — travessia de borda (seam modal, PRD v2 §8.6)', () =
     await userEvent.click(screen.getByRole('button', { name: 'Reancorar dentro da cena' }));
 
     const s = sessionStore.getState().session!;
-    // um-toque (primeFrase): reancorar re-semeia o início na fronteira da cena (12)
-    expect(s.selection).toEqual({ s: 12, e: 12 });
-    expect(s.pendingStart).toBe(12);
+    // sem pré-ancoragem: reancorar apenas limpa; o próximo clique marca o começo
+    expect(s.selection).toBeNull();
+    expect(s.pendingStart).toBeNull();
     expect(s.frases[0]!.locked).toBe(false);
     expect(screen.queryByText('A frase passou da borda da cena.')).toBeNull();
   });
@@ -546,7 +546,7 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
     );
     renderStation(<Phrases />);
 
-    expect(screen.getByText(/Toque no colar onde cada frase termina/)).toBeTruthy();
+    expect(screen.getByText(/Toque no colar onde esta frase começa e termina/)).toBeTruthy();
     expect(screen.queryByText(/para reouvir/)).toBeNull();
   });
 });

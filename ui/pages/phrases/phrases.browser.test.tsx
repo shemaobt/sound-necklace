@@ -14,9 +14,10 @@ import Phrases from './index';
 
 /**
  * Modelo de clique na cena EM JANELA, em Chromium real (a geometria do colar só
- * existe com layout): fraseando a cena, o 1º toque fixa o início e toca só aquela
- * conta, o 2º toca o intervalo; confirmar trava a frase na cena — provando a
- * fiação colar↔domínio↔áudio de §8.2/§8.6 que o jsdom não alcança.
+ * existe com layout). A frase segue o MESMO modelo da cena: o 1º clique marca o
+ * começo e a cena corre dali, o 2º fecha, e do 3º em diante a borda mais próxima
+ * cede e o trecho resultante toca inteiro. Confirmar trava a frase na cena —
+ * provando a fiação colar↔domínio↔áudio de §8.2/§8.6 que o jsdom não alcança.
  */
 
 const WIDTH = 500; // slot 25 → 20 contas por linha
@@ -180,27 +181,27 @@ describe('Segmentação — uma frase travada pode ser ouvida (ENG-296)', () => 
     root.unmount();
   });
 
-  it('a conta ainda livre define o FIM da próxima frase, da emenda até ela', () => {
+  it('a conta ainda livre marca o começo da próxima frase e a CENA corre dali', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(withLockedPhrase()); // P1{1,3}, pendente, fronteira 4
+    sessionStore.getState().load(withLockedPhrase()); // P1{1,3}, emenda 4
     const { root, el } = mount(player);
 
-    const n = calls.length;
     firePointer(el, 5); // fora da frase travada, dentro da cena
 
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 4, e: 5 }); // começo na fronteira
-    expect(calls.length).toBe(n); // head=null → só define o fim, não toca
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 5, e: 5 });
+    // até o fim da CENA (6), não da história — o pai da frase é a cena
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [5, 6] });
     root.unmount();
   });
 
-  it('clicar o começo OUVE a cena a partir dali (até o fim da cena)', () => {
+  it('clicar antes do início da cena satura nele e a cena corre inteira', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(segmenting()); // cena PT1 0…6, frase aberta, fronteira 0
+    sessionStore.getState().load(segmenting()); // cena PT1 0…6, emenda 0
     const { root, el } = mount(player);
 
-    firePointer(el, 0); // o começo (fronteira 0) → ouvir a cena de 0 até 6
+    firePointer(el, 0);
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 0 });
     expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 6] });
-    expect(sessionStore.getState().session!.selection).toBeNull();
     root.unmount();
   });
 
@@ -239,21 +240,21 @@ describe('Segmentação — uma frase travada pode ser ouvida (ENG-296)', () => 
 });
 
 describe('Segmentação — modelo de clique com áudio na cena em janela (PRD v2 §8.2/§8.6)', () => {
-  it('só o FIM se define (regra 7): confirmar trava a frase da FRONTEIRA ao fim', () => {
+  it('confirmar trava a frase do começo marcado ao fim escolhido', () => {
     const { player, calls } = spyPlayer();
-    sessionStore.getState().load(segmenting()); // PT1 0…6, frase aberta, fronteira 0
+    sessionStore.getState().load(segmenting()); // PT1 0…6, emenda 0
     const { host, root, el } = mount(player);
 
-    // clicar o começo (fronteira 0) → ouvir a cena (0…6), sem selecionar
+    // 1º clique: marca o começo em 0; a cena corre de 0 a 6
     firePointer(el, 0);
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 0 });
     expect(calls.at(-1)).toEqual({ m: 'play', args: [0, 6] });
-    expect(sessionStore.getState().session!.selection).toBeNull();
 
-    // clicar em 1 e depois em 4: cada um só redefine o FIM; o começo fica na fronteira 0
-    firePointer(el, 1);
-    expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 1 });
+    // 2º clique: fecha em 4 (head=null → não interrompe)
+    const n = calls.length;
     firePointer(el, 4);
     expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 4 });
+    expect(calls.length).toBe(n);
 
     const confirm = [...host.querySelectorAll('button')].find(
       (b) => b.textContent === '✓ Confirmar esta frase',

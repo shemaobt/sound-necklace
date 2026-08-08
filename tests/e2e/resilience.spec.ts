@@ -60,10 +60,10 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     // colar toca o INTERVALO. Apontar a frase aqui deixa a seleção assentar no
     // autosave (que é debounced) ANTES da régua, senão ela nasce velha e a queda
     // levaria a culpa por uma mudança que foi nossa.
-    // um-toque (primeFrase): o início da frase é a fronteira automática (0, início
-    // da 1ª cena produtiva); só o fim é tocado, e a seleção nasce {0, fim}.
+    // dois toques (2026-08-07): o 1º marca o começo e a CENA corre dali, o 2º fecha.
     const { e: phraseE } = SCENARIO.containedPhrase;
     const phraseStart = 0;
+    await app.clickBead(phraseStart);
     await app.clickBead(phraseE);
     await expect
       .poll(async () => (await readPersistedState(page, id))?.selection)
@@ -72,11 +72,10 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     expect(before?.parts).toHaveLength(SCENARIO.sceneEndBeads.length);
 
     // Põe som para tocar na hora da queda do jeito que o app REALMENTE produz som ao
-    // segmentar: tocar o COMEÇO (a fronteira) ouve dali em diante e não mexe na
-    // seleção — docs/segmentation-rules.md regra 1. Antes este passo re-tocava o FIM
-    // e só soava por acidente, pelo dwell atrasado da borda que sequestrava a
-    // reprodução do clique (o bug relatado pelo dono); corrigido isso, retocar o fim
-    // é mudo, como a regra sempre mandou.
+    // segmentar: com o trecho já fechado, tocar a conta de COMEÇO reouve o trecho
+    // inteiro sem mexer nele (docs/segmentation-rules.md regra 1). Já foi o `listen`
+    // da regra antiga, e antes disso só soava por acidente — pelo dwell atrasado da
+    // borda que sequestrava o áudio do clique, o bug que o dono relatou.
     await app.clickBead(phraseStart);
     await expect(headBead).toBeVisible();
     const startHead = await headIndex();
@@ -176,6 +175,7 @@ test.describe('acceptance 6: resiliência (§7.3/§13)', () => {
     // ação dominante não trava cena nenhuma (nenhum colar de contas nasce), e o
     // estado persistido não muda (o holder segue com a edição protegida).
     const before = await readPersistedState(page, id);
+    await app.clickBead(0);
     await app.clickBead(3);
     // Em revisão o botão fica visível-porém-inerte (o store barra a escrita, não a UI);
     // `force` clica sem depender desse invariante, para falhar rápido se ele mudar.

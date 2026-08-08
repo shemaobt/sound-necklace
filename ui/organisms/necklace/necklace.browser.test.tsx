@@ -206,15 +206,15 @@ describe('Necklace — hover na fronteira (dwell)', () => {
   });
 
   /**
-   * O dwell nasceu quando hover e clique CONCORDAVAM (referência L587-596: clicar
-   * numa borda também tocava só a borda). No nosso modelo eles discordam — clicar o
-   * começo OUVE a partir dali (docs/segmentation-rules.md regra 1) — então o timer
-   * armado antes do clique tem de morrer no clique. Sem isto, na primeira
-   * segmentação (seleção {s:0,e:0}: a conta 0 É borda) o clique começa a história
-   * inteira e 280 ms depois o dwell atrasado a interrompe para tocar ~4 contas em
-   * volta da borda — o relato "clico na primeira conta e ele só toca as primeiras".
+   * O clique NÃO cancela o dwell — porte fiel de L561-597, onde `pointerdown` não
+   * toca no `hoverTimer`. Isso é coerente lá porque hover e clique concordam: do
+   * segundo clique em diante o clique também toca só a borda.
+   *
+   * Houve uma supressão pós-clique aqui (#164/#172), necessária enquanto o clique
+   * OUVIA até o fim do pai (regra 1, 2026-07) e o dwell atrasado roubava esse áudio.
+   * Com o `cordInteraction` restaurado em 2026-08-07 ela perdeu o objeto e saiu.
    */
-  it('clicar cancela o dwell já armado — o hover atrasado não sequestra o áudio do clique', async () => {
+  it('o dwell armado sobrevive ao clique — hover e clique concordam de novo', async () => {
     const onEdgeHover = vi.fn();
     const onBeadPointerDown = vi.fn();
     const { root, el } = mount({
@@ -227,21 +227,14 @@ describe('Necklace — hover na fronteira (dwell)', () => {
     const start = beadClient(el, 0, 0);
     firePointer(el, 'pointermove', start.x, start.y); // arma o dwell na borda 0
     await vi.advanceTimersByTimeAsync(100);
-    firePointer(el, 'pointerdown', start.x, start.y); // o ouvinte clica antes do dwell
+    firePointer(el, 'pointerdown', start.x, start.y);
     expect(onBeadPointerDown).toHaveBeenCalledWith(0);
     await vi.advanceTimersByTimeAsync(400);
-    expect(onEdgeHover).not.toHaveBeenCalled();
+    expect(onEdgeHover).toHaveBeenCalledWith(0);
     root.unmount();
   });
 
-  /**
-   * Segunda metade do mesmo relato ("depois seleciona um trecho maior e ele toca só
-   * as extremidades"): o clique que define o FIM transforma a conta sob o ponteiro
-   * numa borda. Qualquer tremor do mouse vira pointermove e re-armaria o dwell ali
-   * mesmo, interrompendo a reprodução que o clique deixou correndo. Só um hover
-   * DELIBERADO — sair da conta e voltar — deve tocar a borda.
-   */
-  it('tremor sobre a conta recém-clicada não re-arma o dwell; sair e voltar re-arma', async () => {
+  it('parar na conta recém-clicada dispara o dwell dela, sem precisar sair e voltar', async () => {
     const onEdgeHover = vi.fn();
     const { root, el } = mount({
       totalBeads: 40,
@@ -250,14 +243,7 @@ describe('Necklace — hover na fronteira (dwell)', () => {
       onEdgeHover,
     });
     const end = beadClient(el, 12, 0);
-    firePointer(el, 'pointerdown', end.x, end.y); // define o FIM em 12
-    firePointer(el, 'pointermove', end.x, end.y); // tremor do mouse na mesma conta
-    await vi.advanceTimersByTimeAsync(400);
-    expect(onEdgeHover).not.toHaveBeenCalled();
-
-    // sair para longe da borda e voltar = intenção deliberada de conferir a borda
-    const far = beadClient(el, 6, 0);
-    firePointer(el, 'pointermove', far.x, far.y);
+    firePointer(el, 'pointerdown', end.x, end.y);
     firePointer(el, 'pointermove', end.x, end.y);
     await vi.advanceTimersByTimeAsync(280);
     expect(onEdgeHover).toHaveBeenCalledWith(12);

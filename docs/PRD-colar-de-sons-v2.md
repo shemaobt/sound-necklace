@@ -7,6 +7,8 @@
 - **PRD — UI/UX Redesign v2 (Shemá)** — owns the visual/interaction layer (design tokens, "fio de contas" stepper, necklace-as-transport, conversation Mapeamento, storyteller guide). This document defines *what the product does*; that one defines *how it looks and moves*. Its §11 lists the **Claude Design deliverables** — the interface is already designed and prototyped (`Colar de Sons - Protótipo.dc.html` end to end, plus the exploration/comparison boards); those prototypes are the **normative visual reference for the from-scratch build** (behavior and contracts still come from *this* document and the reference `index.html`).
 - **PRD as-built v1** — historical annex documenting the prototype implementation in code-level detail. Useful for implementers; not required to read this document.
 
+**Revised 2026-08-07 (owner):** the necklace's segmentation interaction was redesigned by using the running app — no pre-anchoring, two taps per segment, continuous playback while cutting, and boundary adjustments that play only the stretch that changed hands. It supersedes both the v1 `index.html` click model and the July "listen / set-end" rules. Affected: §6.4, §8.2, §8.4, §8.6, §9. The full rationale, including what was tried and discarded, lives in `docs/segmentation-rules.md` and `docs/auditoria-interacao-colar.md`.
+
 **PRD language:** English. **All UI copy is PT-BR** (Brazilian Portuguese). PT-BR strings quoted here are literal, contract-level UI copy. **Exported artifacts are English** — see §1.1.
 **Ecosystem:** authentication, projects, and audio are served by the **shared project API** (`tripod-api`, FastAPI/Pydantic/SQLAlchemy) — the same API that serves other systems, including **Oral Collector**, the companion field app that records/collects the oral audios. This effort spans two repos: the Colar de Sons SPA and an extension of `tripod-api` (§5, §15.2 O9).
 
@@ -134,7 +136,7 @@ FNV-1a 32-bit hash (offset basis `0x811c9dc5`, prime `0x01000193`), byte-mixed o
 
 ### 6.4 The locked frontier (frontier + seam semantics)
 Segmentation is **sequential from a locked frontier**:
-- Scenes: the frontier is `max(locked scene end) + 1` (floor 0, capped at the last bead). A new scene's start is **pre-anchored at the frontier**; the user only decides where the scene *ends*.
+- Scenes: the frontier is `max(locked scene end) + 1` (floor 0, capped at the last bead). It is a **floor, not an anchor** — a click before it saturates at it, and the scene's start comes from the user's **first tap**. Cutting a scene takes two taps: where it begins, then where it ends. This means an *accidental* gap between scenes is possible; contiguity is a result of careful cutting, not a structural guarantee.
 - Phrases (inside the active scene): the frontier is `last locked phrase end in this scene + 1`; if the scene has no phrases yet, the **first phrase may reach back** to the *start of the previous neighboring scene* (start-of-scene test) — otherwise the scene's own start.
 - Reopening item *i* unlocks *i and everything after it* (frontier integrity).
 
@@ -242,7 +244,7 @@ Facilitator-only screen. Inputs: audio source (§7.4); story title/slug (falls b
   3. Further clicks → nudge the **nearest edge** to the clicked bead; only **~1 s around the moved boundary plays** (`max(1, round(1/beadSec))` beads each side) — "the ear decides", never the whole scene again (§9.3).
   - Clicks are clamped to `[frontier, end of story]`. With no active anchoring, bead taps are transport only.
   - **A bead belonging to an already-locked item is heard, not cut:** tapping it plays that whole item (scene/phrase) as a toggle — tapping again, or tapping the glowing head, pauses. Only beads past the frontier take part in cutting. This is what makes a finished cut reviewable without reopening (and therefore destroying) it. *Built for scenes (Escuta 2, ENG-293) and phrases (Segmentação, ENG-296); the glowing-head pause holds for any playback since ENG-297.*
-- **Hover edge preview (mouse only; field-requested):** dwelling ~280 ms within ±1 bead of a selection edge plays that boundary without changing it; re-arms after the pointer leaves the edge's proximity.
+- **Hover edge preview (mouse only; field-requested):** dwelling ~280 ms within ±1 bead of a selection edge plays that boundary without changing it; re-arms after the pointer leaves the edge's proximity. **It fires only in SILENCE:** with sound in progress the sound wins, whatever that sound is. A paused playback counts as silence. This is a rule of **precedence**, not of pointer position — the preview is a lens for looking at the necklace when nothing is playing, and it must never cut off audio a tap has just started.
 - **Selection band:** a band under the pending range with the two **edge beads emphasized** — the emphasis doubles as the discoverable "touch here to hear the seam" affordance (§9.3).
 - **Playback is a toggle** (play ⇄ pause ⇄ continue) wherever it lives; exactly one thing plays at a time and every surface reflects global playback state. Re-tapping what is already playing — the same bead span, the same control — pauses it.
 - **The sound comes from the beads, not from buttons** (owner decision, ENG-291): the stations carry no play buttons and saved items carry no ▶ chip. A saved item is reviewed by tapping its beads on the necklace (above); the interview player and the report playback are the carve-outs, being neither necklace nor cut.
@@ -254,8 +256,13 @@ The full necklace renders; the whole audio plays with beads lighting progressive
 
 ### 8.4 Escuta step 2 — "Corte a história em cenas."
 
-- A new scene opens automatically with its start **pre-anchored at the seam** (previous end + 1). The user's only decision is where the scene **ends** — instruction copy: *"Toque no colar onde esta cena termina. O começo já está costurado."* Once ≥ 1 scene is locked the second sentence gives way to the replay affordance (never a third sentence — §9.2 allows one line): *"Toque no colar onde esta cena termina. Toque numa cena pronta para reouvir."*
-- **"✓ Confirmar esta cena":** requires a completed selection ("Clique onde a cena termina, no colar.") starting at/after the frontier ("A cena não pode começar antes da conta X."). On success the scene locks, its end bead turns square, and the next scene opens pre-anchored at the seam (animated).
+- A new scene opens **empty**, and the cut takes two taps. The audio is what guides the decision:
+  1. **First tap** marks where the scene **begins**, and the story **plays on from there** to the end — the listener keeps hearing while deciding.
+  2. **Second tap** marks where it **ends**. If the playhead has already passed that bead, playback stops; if it has not yet reached it, playback is **not interrupted** — marking the end early must not punish someone still listening.
+  3. **Any further tap** moves the **nearest** boundary (start included; ties go to the start) and plays back **only the stretch that changed hands** — from the boundary's old position to its new one. Growing gives back what the scene gained; shrinking, what it lost. Audio already running *inside* the resulting stretch is left alone.
+  - Tapping a boundary **without moving it** replays the whole stretch — this is the only "listen to this piece again" affordance on the station, standing in for the v1 `▶ tocar este pedaço` button that ENG-291 removed.
+  - Instruction copy names both taps in one line (§9.2 allows one): *"Toque no colar onde esta cena **começa e termina**."* It must **not** change as the taps happen — swapping text at the instant of a tap is text competing with sound (§9.3). Once ≥ 1 scene is locked the sentence gives way to the replay affordance: *"Toque numa cena pronta para reouvir."*
+- **"✓ Confirmar esta cena":** requires a completed selection ("Clique onde a cena termina, no colar.") starting at/after the frontier ("A cena não pode começar antes da conta X."). On success the scene locks, its end bead turns square, and the next scene opens **empty**.
 - **Confirmed scene list:** compact chips — swatch · "Cena N" · Reabrir. The chip is a named group, not a control: to hear a confirmed scene, tap any of its beads on the necklace (§8.2). Reopening scene *i* unlocks *i* and everything after it.
 - **"Confirmar as cenas →":** requires ≥ 1 locked scene ("Confirme ao menos uma cena."); discards any unlocked/empty trailing scene; advances to Triagem.
 - "← Voltar" returns to step 1 (scenes preserved).
@@ -274,7 +281,7 @@ The full necklace renders; the whole audio plays with beads lighting progressive
 
 - Work happens **one productive scene at a time**. Title: "Cena N · <PT-BR kind label>". Primary button: "Pronto com esta cena →" / on the last scene "Já segmentei todas as cenas →".
 - **Windowing:** the necklace shows only the active scene plus a margin of `max(3, round(2/beadSec))` beads (~2 s) each side; outside beads are dimmed/asleep; a dashed band marks the awake scene; "▶ ouvir a cena" plays the scene only.
-- **Phrase anchoring** follows the frontier logic (§6.4), including the first-phrase back-reach. Validation copy: "Clique onde a frase termina, no colar." / "A frase não pode começar antes da conta X." / "A frase precisa terminar dentro do colar."
+- **Phrase anchoring** follows the frontier logic (§6.4), including the first-phrase back-reach, and takes the **same two taps as the scene** (§8.4) — begin, then end, with the SCENE playing on from the first tap. Scene and phrase are **one model**; the v1 reference is asymmetric here (only scenes were pre-anchored) and we deliberately are not. Instruction copy: *"Toque no colar onde esta frase começa e termina."* Validation copy: "Clique onde a frase termina, no colar." / "A frase não pode começar antes da conta X." / "A frase precisa terminar dentro do colar."
 - **Border-crossing flow — logic verbatim.** If the selection crosses the scene border, the app *guides instead of blocking* (presented as the redesign's visual seam modal). With `delta` = overshoot in beads, `thr = max(3, round(0.25 × scene length))`, `consumed` = the neighbor would be fully swallowed, `twoProd` = the neighbor is productive **and already has locked phrases**:
   - **Escalation (`twoProd`):** moving the border would touch two productive scenes — options: **Voltar à Triagem** / **Reancorar dentro da cena** only.
   - **Large overshoot (`consumed` or `delta > thr`):** looks like a scene re-cut, not a border adjustment — options: **Voltar à Triagem**; **Mover mesmo assim** (only when not consumed); **Reancorar dentro da cena**.
@@ -323,7 +330,7 @@ A locked state for revisiting work: banner "🔒 Modo de revisão — a segmenta
 
 1. **Ear-first.** Every interactive element the listener uses responds with sound before (or instead of) text: single bead on first touch, full range on second, boundary window on nudge/hover, spoken questions in the conversation. Subtle UI sound design (bead click, seam lock, confirmation chime) is welcome, gated by a header sound toggle and reduced-motion/sound preferences.
 2. **Text minimalism — "quanto menos texto, melhor" (acceptance criterion).** Every listener-facing screen carries **at most one short instruction line** and one dominant action; no counters, numbers, IDs, hashes, or tables on listener surfaces. Prefer replacing text with an audio or visual equivalent wherever one exists. Dense information lives only in facilitator-scoped surfaces (coverage drawer, dashboard, imports). Design review of any new screen asks first: *"what text here can be removed or converted to audio/visual?"*
-3. **Margins-only listening in scene fine-tuning.** When adjusting a scene or phrase boundary, the user hears **only the margins (start/end)** being adjusted — never forced to re-listen to the whole segment. Mechanics per §8.2 (edge-nudge window + hover preview); the affordance must be *legible without instruction text* (emphasized edge beads on the selection band).
+3. **Never re-listen to the whole segment when fine-tuning.** When adjusting a scene or phrase boundary, the user is never forced to hear the segment again from the top. What plays is **the stretch that changed hands** — from the boundary's old position to its new one — because hearing where a boundary *is* does not tell you what the move *did*. The margins remain the mechanic for the hover lens (§8.2) and the drag preview. The affordance must be *legible without instruction text* (emphasized edge beads on the selection band).
 4. **One decision per moment.** The guided flow enforces it structurally; the visual layer enforces it optically — one dominant action, everything else quiet.
 5. **Never punish.** Errors guide ("Toque no colar onde a cena termina."); warnings allow proceeding on a second confirmation; border-crossing offers choices instead of blocking.
 6. **The necklace is the hero.** Invest the signature effort there: pearl materiality, the lit trail, square end-beads, the dimmed window, the sliding seam.
@@ -449,7 +456,7 @@ An empty slug falls back to `story` for all three — the v1 reference's split f
 | Bead duration | uniform; resolved from the audio's acoustemes at the PROJECT's granularity level small/medium/large (fallback for audios without acoustemes: 0.20 / 0.50 / 1.00 s); must be > 0, and must match the project's stamped `bead_sec` |
 | Bead count | `floor(dur/beadSec + 1e-9)` + 1 partial bead if remainder |
 | Whole-story confirm | span must be exactly `0 … N−1` |
-| Scene start | pre-anchored at frontier (previous end + 1); user sets end only |
+| Scene start | the user's first tap; the frontier is a floor, not an anchor |
 | Reopen semantics | reopening item *i* unlocks *i* and all later items |
 | First phrase back-reach | may start as early as the previous neighbor scene's start |
 | Border-move threshold | `max(3 beads, 25% of scene length)` |
@@ -463,7 +470,7 @@ An empty slug falls back to `story` for all three — the v1 reference's split f
 | All-none-fit | Segmentação/Mapeamento locked; story yields no Ruth coverage; marks kept as native-type evidence |
 | Empty scene | soft warning; second click proceeds |
 | Edge play window | ~1 s each side (`max(1, round(1/beadSec))` beads) |
-| Hover edge preview | mouse only; ±1 bead of an edge; ~280 ms dwell |
+| Hover edge preview | mouse only; ±1 bead of an edge; ~280 ms dwell; **silence only** |
 | Segmentação window margin | `max(3, round(2/beadSec))` beads (~2 s) each side |
 | IDs | `PT#` parts (lowest free), `P#` propositions (lowest free), `S#` sequential on export |
 | Artifacts require | return: whole story confirmed; manifest: grid exists |

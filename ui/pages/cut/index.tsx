@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
@@ -11,8 +11,8 @@ import {
   confirmParts,
   dragSceneBoundary,
   dragSelectionStart,
-  primePart,
   removePart,
+  type SessionState,
   setMode,
   type Span,
 } from '../../../domain';
@@ -22,7 +22,8 @@ import { sessionStore, useSessionStore } from '../../state';
 import {
   lockedItemAt,
   playClick,
-  playEditWindow,
+  playDragDelta,
+  playHoverEdge,
   rankLockedScenes,
   sceneColor,
   sceneOrdinal,
@@ -33,10 +34,9 @@ import './cut.css';
 
 /**
  * Escuta 2 — o corte de cenas (PRD v2 §8.4, redesign §6.3): palco creme, o colar
- * com ancoragem ativa e a instrução única "Toque no colar onde ESTA CENA TERMINA.
- * O começo já está costurado." O usuário decide só o FIM — o início vem
- * pré-ancorado na emenda pelo domínio (`primePart`). Cada clique dá áudio na hora
- * (§8.2): a conta, o intervalo ou só a janela da fronteira ajustada.
+ * com ancoragem ativa e a instrução em dois tempos: toque onde a cena COMEÇA (a
+ * história corre dali) e depois onde ela TERMINA. Desde 2026-08-07 não há
+ * pré-ancoragem — o começo vem do 1º clique. Cada clique dá áudio na hora (§8.2).
  *
  * Camada de wiring: o modelo de clique delega ao redutor `clickBead`; travar
  * (`confirmPart`), arrastar a fronteira entre cenas (`dragSceneBoundary`, ENG-342 —
@@ -60,6 +60,15 @@ function tilesWholeStory(spans: Span[], totalBeads: number): boolean {
     next = Math.max(next, span.e + 1);
   }
   return next >= totalBeads;
+}
+
+/** Onde a borda `id` está agora, e o span a que ela pertence — o som do fim do arrasto
+ *  precisa dos dois, e o primeiro passo do arrasto já sobrescreve a posição. */
+function boundaryOf(s: SessionState | null, id: string): { at: number | null; span: Span | null } {
+  if (!s) return { at: null, span: null };
+  if (id === START_HANDLE) return { at: s.selection?.s ?? null, span: s.selection };
+  const span = s.parts.find((p) => p.part_id === id)?.span ?? null;
+  return { at: span?.e ?? null, span };
 }
 
 export interface CutProps {
@@ -103,6 +112,10 @@ export function Cut({ player = null, sound }: CutProps) {
     const ends = lockedScenes.map((sc) => ({ at: sc.span.e, id: sc.part.part_id }));
     return anchoredStart === null ? ends : [...ends, { at: anchoredStart, id: START_HANDLE }];
   }, [lockedScenes, anchoredStart]);
+
+  /** De onde a borda saiu no gesto de arrasto em curso — o som do fim do arrasto
+   *  precisa dessa posição, e ela some assim que o domínio aplica o primeiro passo. */
+  const dragFrom = useRef<number | null>(null);
 
   useEffect(() => {
     if (!player) return;
@@ -157,7 +170,7 @@ export function Cut({ player = null, sound }: CutProps) {
    * Tocar numa cena já CONFIRMADA (travada) reproduz A PARTIR da conta clicada até
    * o fim da cena (regra 4, docs/segmentation-rules.md). Chave por conta:
    * tocar OUTRA conta pula para ela; a MESMA pausa/retoma. Vem ANTES do `clickBead`
-   * porque o redutor consumiria a pré-ancoragem da próxima cena. Devolve true
+   * porque senão o redutor tomaria o toque como marcação de começo/fim. Devolve true
    * quando a conta era de cena travada (o corte não corre).
    */
   const playLockedSceneAt = (bead: number): boolean => {
@@ -168,9 +181,9 @@ export function Cut({ player = null, sound }: CutProps) {
     return true;
   };
 
-  // DEFININDO uma cena (regras 1–3): clicar o começo OUVE a história a partir dali;
-  // clicar além define o FIM (para se o playhead já passou, senão continua). O
-  // começo é a fronteira, nunca settável (regra 7). O playhead entra por `head`.
+  // DEFININDO uma cena (decisão do dono, 2026-08-07): o 1º clique marca o COMEÇO e a
+  // história CORRE dali; o 2º marca o fim (parando só se o playhead já passou); daí em
+  // diante o clique move a borda mais próxima e reouve o trecho resultante inteiro.
   const onBead = (bead: number): void => {
     if (playLockedSceneAt(bead)) return;
     const s = sessionStore.getState().session;
@@ -196,13 +209,23 @@ export function Cut({ player = null, sound }: CutProps) {
     player.toggle(activeKey, head ?? 0, head ?? 0);
   };
 
+  // A lupa da borda só vale no SILÊNCIO: som em curso manda (decisão do dono,
+  // 2026-08-07 — o dwell vinha cortando o áudio do clique).
   const onEdgeHover = (edge: number): void => {
-    if (player) player.playEdge(edge);
+    if (player) playHoverEdge(player, edge);
   };
 
   const confirmScene = (): void => {
     const s = sessionStore.getState().session;
     if (!s || s.current.layer !== 'parts' || s.current.index < 0) return;
+    // Só o começo marcado (pendingStart não-nulo): o domínio já recusaria, mas com a
+    // copy congelada do `domain/`. As duas estações falam pelo i18n no mesmo engano
+    // — que, com dois toques, virou o mais provável da tela (decisão do dono).
+    if (s.pendingStart !== null) {
+      setError(t('cut.halfSelection'));
+      sound?.refuse();
+      return;
+    }
     const result = confirmPart(s, s.current.index);
     if (!result.ok) {
       setError(result.error.message);
@@ -243,18 +266,23 @@ export function Cut({ player = null, sound }: CutProps) {
       );
   };
 
-  // Arrastar o fim de uma cena (ENG-342): a cena `id` cresce/encolhe até `toBead`,
-  // a seguinte SEGUE (Pac-Man). `primePart` reancora a pendente na nova fronteira.
-  // Enquanto edita, toca a prévia ~4 contas antes do limite até ~3 depois (regra 5).
-  const onDragBoundary = (id: string, toBead: number): void => {
-    // O começo NÃO reancora: `primePart` o puxaria de volta para a emenda, que é
-    // exatamente o que este arrasto existe para recusar.
-    if (id === START_HANDLE) {
-      sessionStore.getState().apply((s) => dragSelectionStart(s, toBead));
-    } else {
-      sessionStore.getState().apply((s) => primePart(dragSceneBoundary(s, id, toBead)));
-    }
-    if (player) playEditWindow(player, toBead, session.totalBeads);
+  // Arrastar o fim de uma cena (ENG-342): a cena `id` cresce/encolhe até `toBead`, a
+  // seguinte SEGUE (Pac-Man). Sem reprime — desde 2026-08-07 o slot pendente não é mais
+  // pré-ancorado. O SOM sai uma vez só, no fim do gesto (`done`), e é o mesmo que o
+  // clique daria: o pedaço entre onde a borda estava e onde parou.
+  const onDragBoundary = (id: string, toBead: number, done?: boolean): void => {
+    const before = boundaryOf(sessionStore.getState().session, id);
+    if (dragFrom.current === null) dragFrom.current = before.at;
+    sessionStore
+      .getState()
+      .apply((s) =>
+        id === START_HANDLE ? dragSelectionStart(s, toBead) : dragSceneBoundary(s, id, toBead),
+      );
+    if (!done) return;
+    const from = dragFrom.current;
+    dragFrom.current = null;
+    const { span } = boundaryOf(sessionStore.getState().session, id);
+    if (player && from !== null && span) playDragDelta(player, from, toBead, span, head);
   };
 
   // Remover a cena + a SEGUINTE absorve o espaço liberado (#3): removePart é puro

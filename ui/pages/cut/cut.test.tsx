@@ -90,7 +90,31 @@ describe('Escuta 2 — título do protótipo (redesign design parity Fase 3)', (
 });
 
 describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
-  it('confirmar a cena trava o span, marca a conta final e reabre a próxima na emenda', async () => {
+  /**
+   * Com dois toques (2026-08-07) o engano mais provável da estação é confirmar depois
+   * de marcar só o COMEÇO. O domínio já recusa (`confirmPart` olha `pendingStart`),
+   * mas com a copy do `domain/` — "Clique onde a cena termina, no colar." — enquanto a
+   * estação de frases dizia outra coisa para o mesmo engano. Decisão do dono: as duas
+   * telas falam pelo i18n, com a mesma construção.
+   */
+  it('confirmar com só o começo marcado pede o segundo toque, na voz do i18n', async () => {
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: { s: 2, e: 2 },
+        pendingStart: 2,
+      }),
+    );
+    renderStation(<Cut />);
+
+    await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
+
+    expect(screen.getByText('Toque no colar onde esta cena termina.')).toBeTruthy();
+    expect(sessionStore.getState().session!.parts[0]!.locked).toBe(false);
+  });
+
+  it('confirmar a cena trava o span, marca a conta final e abre a próxima vazia', async () => {
     load(
       cutting({
         parts: [part({ part_id: 'PT1' })],
@@ -106,9 +130,10 @@ describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
     const s = sessionStore.getState().session!;
     expect(s.parts[0]!.locked).toBe(true);
     expect(s.parts[0]!.span).toEqual({ s: 0, e: 4 });
-    // uma nova cena abriu, pré-ancorada na emenda (fim anterior + 1)
+    // uma nova cena abriu, SEM seleção: o começo dela vem do 1º clique (2026-08-07)
     expect(s.parts).toHaveLength(2);
-    expect(s.pendingStart).toBe(5);
+    expect(s.pendingStart).toBeNull();
+    expect(s.selection).toBeNull();
     expect(s.current.index).toBe(1);
     // a cena travada aparece como conta no fio do rodapé
     expect(screen.getByRole('button', { name: 'Cena um' })).toBeTruthy();
@@ -350,7 +375,7 @@ describe('Escuta 2 — minimalismo para o ouvinte (PRD v2 §9.2)', () => {
 });
 
 describe('Escuta 2 — tratamento creme (redesign §6.3, §4.5)', () => {
-  it('o palco aplica o fundo creme e destaca "esta cena termina" em telha', () => {
+  it('o palco aplica o fundo creme e destaca em telha o tempo em que o corte está', () => {
     load(
       cutting({
         parts: [part({ part_id: 'PT1' })],
@@ -362,9 +387,10 @@ describe('Escuta 2 — tratamento creme (redesign §6.3, §4.5)', () => {
     const { container } = renderStation(<Cut />);
 
     expect(container.querySelector('.cds-cut')).not.toBeNull();
-    expect(container.querySelector('.cds-cut-emph')?.textContent).toBe('esta cena termina');
-    // sem cena travada não há o que reouvir: a linha explica a emenda e nada mais
-    expect(screen.getByText(/O começo já está costurado/)).toBeTruthy();
+    // a instrução cobre os DOIS tempos numa linha só e NÃO muda com o clique: mudar
+    // texto no instante do toque é texto competindo com o som (§9.3, oral-mode e2e)
+    expect(container.querySelector('.cds-cut-emph')?.textContent).toBe('começa e termina');
+    // sem cena travada não há o que reouvir: a linha não promete a afordância
     expect(screen.queryByText(/para reouvir/)).toBeNull();
     // o papel, não o token cru: tokens.test.tsx prova que --cds-ui-bg/-accent
     // resolvem creme/telha no tema claro (ENG-391)

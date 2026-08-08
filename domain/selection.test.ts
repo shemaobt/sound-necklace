@@ -50,50 +50,108 @@ function afterPT1(over: Partial<SessionState> = {}): SessionState {
   });
 }
 
-describe('clickBead — só o FIM se define; o começo é a fronteira (§8.2, novo modelo)', () => {
-  it('clicar além da fronteira define o FIM; o começo fica na fronteira', () => {
-    const r = clickBead(anchored(), 7); // fronteira 0
-    expect(r.state.selection).toEqual({ s: 0, e: 7 });
+/**
+ * Modelo de clique — decisão do dono, 2026-08-07 (à noite), depois de rodar o app.
+ * Substitui o `cordInteraction` restaurado nesta mesma branch; o que sobrou dele é a
+ * escolha da borda mais próxima. O motivo foi de ouvido: sem a pré-ancoragem e com
+ * áudio contínuo, quem corta escuta a história correr e marca onde a cena acaba, em
+ * vez de ouvir ~1 s solto em volta de bordas que ainda não conhece.
+ *
+ * Três tempos:
+ *  1. sem seleção → o clique fixa o COMEÇO e o áudio SEGUE dali (`run`);
+ *  2. com `pendingStart` → fecha o trecho e PARA se o playhead já passou do fim
+ *     marcado; se não chegou, deixa correr (`set-end`, decisão do playhead na UI);
+ *  3. trecho fechado → move a borda mais próxima e toca o TRECHO RESULTANTE inteiro
+ *     (`range`), não só a borda.
+ */
+describe('clickBead — marca o começo ouvindo, fecha no fim, e reouve ao ajustar', () => {
+  const aberto = (over: Partial<SessionState> = {}) =>
+    anchored({ selection: null, pendingStart: null, ...over });
+
+  it('o 1º clique fixa o COMEÇO e o áudio segue dali', () => {
+    const r = clickBead(aberto(), 7);
+    expect(r.state.selection).toEqual({ s: 7, e: 7 });
+    expect(r.state.pendingStart).toBe(7);
+    expect(r.play).toEqual({ type: 'run', from: 7 });
+  });
+
+  it('o 2º clique fecha o trecho e devolve a decisão do playhead à UI', () => {
+    const s = aberto({ selection: { s: 7, e: 7 }, pendingStart: 7 });
+    const r = clickBead(s, 20);
+    expect(r.state.selection).toEqual({ s: 7, e: 20 });
     expect(r.state.pendingStart).toBeNull();
-    expect(r.play).toEqual({ type: 'set-end', end: 7 });
+    expect(r.play).toEqual({ type: 'set-end', end: 20 });
   });
 
-  it('novo clique além redefine o FIM (o começo continua fixo)', () => {
-    const r = clickBead(anchored({ selection: { s: 0, e: 7 }, pendingStart: null }), 12);
-    expect(r.state.selection).toEqual({ s: 0, e: 12 });
-    expect(r.play).toEqual({ type: 'set-end', end: 12 });
+  it('fechar ATRÁS do começo marcado inverte as pontas, como na referência', () => {
+    const s = aberto({ selection: { s: 10, e: 10 }, pendingStart: 10 });
+    const r = clickBead(s, 4);
+    expect(r.state.selection).toEqual({ s: 4, e: 10 });
+    expect(r.play).toEqual({ type: 'set-end', end: 10 });
   });
 
-  it('clicar no começo (a fronteira) pede OUVIR a partir dali; a seleção fica intacta', () => {
-    const s = anchored({ selection: { s: 0, e: 7 } });
+  it('fechado o trecho, clicar além do fim move o FIM e devolve o ajuste à UI', () => {
+    const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 20);
+    expect(r.state.selection).toEqual({ s: 0, e: 20 });
+    expect(r.play).toEqual({ type: 'adjust', s: 0, e: 20, delta: { s: 12, e: 20 } });
+  });
+
+  it('clicar perto do começo move o COMEÇO, e a borda reportada é ele', () => {
+    const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 4);
+    expect(r.state.selection).toEqual({ s: 4, e: 12 }); // 4−0=4 ≤ 12−4=8
+    expect(r.play).toEqual({ type: 'adjust', s: 4, e: 12, delta: { s: 0, e: 4 } });
+  });
+
+  it('clicar perto do fim move o FIM', () => {
+    const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 9);
+    expect(r.state.selection).toEqual({ s: 0, e: 9 }); // 9−0=9 > 12−9=3
+    expect(r.play).toEqual({ type: 'adjust', s: 0, e: 9, delta: { s: 9, e: 12 } });
+  });
+
+  it('empate no meio vai para o COMEÇO (o `<=` da referência)', () => {
+    const r = clickBead(aberto({ selection: { s: 0, e: 10 } }), 5);
+    expect(r.state.selection).toEqual({ s: 5, e: 10 });
+  });
+
+  /**
+   * Cai fora do modelo por consequência, não por exceção: clicar a própria conta de
+   * começo move o começo para onde ele já está, e o `range` do ramo 3 reouve o trecho.
+   * É o que faz as vezes do botão `▶ tocar este pedaço` (`playSel`, L262) que a
+   * ENG-291 tirou destas estações.
+   */
+  it('clicar a conta de começo NÃO move nada: reouve o trecho inteiro', () => {
+    const s = aberto({ selection: { s: 0, e: 12 } });
     const r = clickBead(s, 0);
-    expect(r.state).toBe(s); // nada muda
-    expect(r.play).toEqual({ type: 'listen', from: 0 });
-  });
-
-  it('clicar ANTES da fronteira também é OUVIR — nunca puxa o começo (fronteira 4)', () => {
-    const s = afterPT1();
-    const r = clickBead(s, 1);
-    expect(r.play).toEqual({ type: 'listen', from: 4 });
     expect(r.state).toBe(s);
+    expect(r.play).toEqual({ type: 'range', s: 0, e: 12 });
   });
 
-  it('exatamente na fronteira é OUVIR; fronteira+1 define o fim', () => {
-    const s = afterPT1();
-    expect(clickBead(s, 4).play).toEqual({ type: 'listen', from: 4 });
-    const r = clickBead(s, 5);
-    expect(r.state.selection).toEqual({ s: 4, e: 5 });
-    expect(r.play).toEqual({ type: 'set-end', end: 5 });
+  it('clicar a conta de FIM também reouve, pela mesma razão', () => {
+    const s = aberto({ selection: { s: 0, e: 12 } });
+    const r = clickBead(s, 12);
+    expect(r.state).toBe(s);
+    expect(r.play).toEqual({ type: 'range', s: 0, e: 12 });
+  });
+
+  it('clique abaixo da fronteira satura NELA (floor = aa.start; fronteira 4)', () => {
+    const r = clickBead(afterPT1({ selection: null, pendingStart: null }), 1);
+    expect(r.state.selection).toEqual({ s: 4, e: 4 });
+    expect(r.play).toEqual({ type: 'run', from: 4 });
   });
 
   it('clique além do fim da história satura na última conta', () => {
-    const r = clickBead(anchored(), 99);
-    expect(r.state.selection).toEqual({ s: 0, e: 23 });
-    expect(r.play).toEqual({ type: 'set-end', end: 23 });
+    const r = clickBead(aberto(), 99);
+    expect(r.state.selection).toEqual({ s: 23, e: 23 });
+    expect(r.play).toEqual({ type: 'run', from: 23 });
   });
 });
 
-describe('clickBead — o começo da frase é a fronteira DENTRO da cena (um-toque, §8.6)', () => {
+/**
+ * Cena e frase seguem o MESMO modelo — e agora isso sai de graça: sem pré-ancoragem,
+ * a assimetria da referência (só a cena tinha `primePart`) deixou de existir. As duas
+ * camadas abrem sem seleção e gastam os mesmos dois cliques.
+ */
+describe('clickBead — a frase se comporta como a cena', () => {
   function frase(over: Partial<Frase>): Frase {
     return {
       prop_id: 'P1',
@@ -135,17 +193,19 @@ describe('clickBead — o começo da frase é a fronteira DENTRO da cena (um-toq
     };
   }
 
-  it('1ª frase: o começo é o início da CENA (10), sem back-reach à vizinha (§8.6, um-toque)', () => {
-    const s = fraseando([frase({})], 0); // PT2 {10,19} ativa, 1ª frase
-    // clicar antes do início da cena é OUVIR de lá — nunca recua à cena anterior
-    expect(clickBead(s, 1).play).toEqual({ type: 'listen', from: 10 });
-    // tocar o FIM ancora o começo na cena, não no início do colar
-    const r = clickBead(s, 12);
-    expect(r.state.selection).toEqual({ s: 10, e: 12 });
-    expect(r.play).toEqual({ type: 'set-end', end: 12 });
+  it('o 1º clique fixa o começo da frase e o áudio segue dali', () => {
+    const r = clickBead(fraseando([frase({})], 0), 12); // PT2 {10,19} ativa
+    expect(r.state.selection).toEqual({ s: 12, e: 12 });
+    expect(r.play).toEqual({ type: 'run', from: 12 });
   });
 
-  it('o piso da cena (fim da última frase DELA +1) é o começo; além dele define o fim', () => {
+  it('clicar antes do início da cena satura nele — a frase não recua à vizinha', () => {
+    const r = clickBead(fraseando([frase({})], 0), 1);
+    expect(r.state.selection).toEqual({ s: 10, e: 10 });
+    expect(r.play).toEqual({ type: 'run', from: 10 });
+  });
+
+  it('o piso é a fronteira DENTRO da cena (fim da última frase dela + 1)', () => {
     const s = fraseando(
       [
         frase({ prop_id: 'P1', span: { s: 5, e: 6 }, locked: true, part_link: 'PT1' }),
@@ -156,10 +216,16 @@ describe('clickBead — o começo da frase é a fronteira DENTRO da cena (um-toq
       'PT1',
     );
     // fronteira na cena PT1 = 7 (fim da P1 +1); o ramo genérico daria 14
-    expect(clickBead(s, 5).play).toEqual({ type: 'listen', from: 7 });
-    const r = clickBead(s, 9);
-    expect(r.state.selection).toEqual({ s: 7, e: 9 });
-    expect(r.play).toEqual({ type: 'set-end', end: 9 });
+    const r = clickBead(s, 5);
+    expect(r.state.selection).toEqual({ s: 7, e: 7 });
+    expect(r.play).toEqual({ type: 'run', from: 7 });
+  });
+
+  it('fechado o trecho, a frase também ajusta a borda', () => {
+    const s = fraseando([frase({})], 0);
+    const r = clickBead({ ...s, selection: { s: 10, e: 16 }, pendingStart: null }, 15);
+    expect(r.state.selection).toEqual({ s: 10, e: 15 }); // 15−10=5 > 16−15=1
+    expect(r.play).toEqual({ type: 'adjust', s: 10, e: 15, delta: { s: 15, e: 16 } });
   });
 });
 
@@ -264,11 +330,27 @@ describe('clickBead — depois de arrastar o começo, o clique fecha COM ele', (
     expect(r.state.pendingStart).toBeNull();
   });
 
-  it('tocar o começo arrastado ouve DALI, não da fronteira', () => {
+  it('tocar o começo arrastado fecha um trecho de uma conta', () => {
     const arrastado = dragSelectionStart(
       afterPT1({ selection: { s: 4, e: 4 }, pendingStart: 4 }),
       7,
     );
-    expect(clickBead(arrastado, 7).play).toEqual({ type: 'listen', from: 7 });
+    expect(clickBead(arrastado, 7).play).toEqual({ type: 'set-end', end: 7 });
+  });
+
+  /**
+   * O preço do modelo de borda mais próxima: fechado o trecho, um clique atrás do
+   * começo arrastado o reancora na fronteira e FECHA o buraco. Abrir o buraco é o
+   * arrasto; mantê-lo é não clicar atrás dele.
+   */
+  it('um clique antes do começo arrastado fecha o buraco de volta na fronteira', () => {
+    const arrastado = dragSelectionStart(
+      afterPT1({ selection: { s: 4, e: 4 }, pendingStart: 4 }),
+      7,
+    );
+    const fechado = clickBead(arrastado, 15).state; // trecho {7,15}
+    const r = clickBead(fechado, 2); // satura na fronteira 4
+    expect(r.state.selection).toEqual({ s: 4, e: 15 });
+    expect(r.play).toEqual({ type: 'adjust', s: 4, e: 15, delta: { s: 4, e: 7 } });
   });
 });

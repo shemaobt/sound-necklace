@@ -31,18 +31,22 @@ export function lockedItemAt<T extends { locked: boolean; span: Span | null }>(
  */
 export const START_HANDLE = '@start';
 
-/** Contas de prévia de cada lado do limite ao EDITAR a fronteira (§ regra 5). */
-const EDIT_BEFORE = 4;
-const EDIT_AFTER = 3;
-
 /**
  * Interpreta a intenção do `clickBead` ao DEFINIR um segmento (cena/frase), com o
- * playhead como entrada (docs/segmentation-rules.md):
- * - `transport` → toca a conta tocada;
- * - `listen` → ouve a partir do começo até `parentEnd` (fim da história p/ cena,
- *   fim da cena p/ frase);
- * - `set-end` → só define o FIM; se o áudio JÁ passou desse ponto, para; senão
- *   continua tocando (não interrompe). `head` é a posição corrente do playhead.
+ * playhead como entrada — decisão do dono, 2026-08-07:
+ * - `transport` → toca a conta tocada (Escuta, sem ancoragem);
+ * - `run` → marcou o começo: toca dali até `parentEnd` (fim da história para a cena,
+ *   fim da cena para a frase) e deixa correr;
+ * - `set-end` → fechou o trecho: se o playhead JÁ passou do fim marcado, para; se
+ *   ainda não chegou, não interrompe — o ouvinte marcou o fim adiantado e segue
+ *   escutando;
+ * - `range` → o trecho recém-fechado, tocado inteiro;
+ * - `adjust` → mexeu numa borda: se o playhead está DENTRO do trecho resultante, não
+ *   faz nada — interromper para recomeçar do início era o desperdício que o dono
+ *   relatou ("a reprodução não chegou no limite novo, então deveria continuar"). Fora
+ *   do trecho (ou com nada tocando), toca o `delta`: o pedaço que mudou de dono, da
+ *   posição antiga da borda à nova. Esticar dá a ouvir o que a cena ganhou; encolher,
+ *   o que ela perdeu. A cena já foi ouvida — repeti-la seria o outro desperdício.
  */
 export function playClick(
   player: Player,
@@ -54,18 +58,58 @@ export function playClick(
     case 'transport':
       player.play(action.bead, action.bead);
       return;
-    case 'listen':
+    case 'run':
       player.play(action.from, parentEnd);
       return;
     case 'set-end':
       if (head !== null && head >= action.end) player.stop();
       return;
+    case 'range':
+      player.play(action.s, action.e);
+      return;
+    case 'adjust':
+      if (head !== null && head >= action.s && head <= action.e) return;
+      player.play(action.delta.s, action.delta.e);
+      return;
   }
 }
 
-/** Prévia ao EDITAR a fronteira (arrasto): ~4 contas antes do limite até ~3 depois. */
-export function playEditWindow(player: Player, limit: number, totalBeads: number): void {
-  player.play(Math.max(0, limit - EDIT_BEFORE), Math.min(totalBeads - 1, limit + EDIT_AFTER));
+/**
+ * A lupa da borda do HOVER (dwell de 280 ms, referência L584-597) — só no silêncio.
+ *
+ * O dwell é porte fiel e o dono quer mantê-lo, mas ele sequestrava o áudio do clique:
+ * mover a borda tocava o pedaço que mudou de dono e, 280 ms depois, o ponteiro parado
+ * ali cortava tudo para tocar só a borda. Esse conflito já custou duas correções
+ * (#164, #172) sob o modelo antigo. A regra agora é de precedência, não de posição do
+ * ponteiro (decisão do dono, 2026-08-07): **havendo som em curso, o som manda**. Vale
+ * para qualquer playback — o delta, a cena, a história.
+ *
+ * Pausado conta como silêncio: nada está soando, então a lupa serve.
+ */
+export function playHoverEdge(player: Player, edge: number): void {
+  if (player.state.playing && !player.state.paused) return;
+  player.playEdge(edge);
+}
+
+/**
+ * Fim de um ARRASTO de fronteira: soa o mesmo que o clique soaria (decisão do dono,
+ * 2026-08-07) — o pedaço que mudou de dono, da posição de onde a borda saiu até onde
+ * parou. Um gesto, um som, uma regra.
+ *
+ * Só no FIM do gesto: o arrasto atravessa muitas contas, e soar a cada uma seria um
+ * estouro. E com a mesma cortesia do `adjust`: áudio que já corre DENTRO do trecho
+ * resultante não é interrompido.
+ */
+export function playDragDelta(
+  player: Player,
+  from: number,
+  to: number,
+  stretch: Span,
+  head: number | null,
+): void {
+  if (from === to) return;
+  if (head !== null && head >= stretch.s && head <= stretch.e) return;
+  player.play(Math.min(from, to), Math.max(from, to));
 }
 
 const UNIDADES_PT = [

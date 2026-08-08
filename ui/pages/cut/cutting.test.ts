@@ -5,7 +5,8 @@ import { scenePalette } from '../../tokens';
 import {
   lockedItemAt,
   playClick,
-  playEditWindow,
+  playDragDelta,
+  playHoverEdge,
   rankLockedScenes,
   sceneColor,
   sceneOrdinal,
@@ -30,53 +31,143 @@ function spyPlayer() {
   };
 }
 
-describe('playClick — intenção do clique → player, com o playhead (regras 1–3)', () => {
-  it('transport toca a partir da conta (fallback sem ancoragem)', () => {
+describe('playClick — intenção do clique → player, com o playhead', () => {
+  it('transport toca a conta tocada (fallback sem ancoragem)', () => {
     const player = spyPlayer();
     playClick(player, { type: 'transport', bead: 3 }, 23, null);
     expect(player.play).toHaveBeenCalledWith(3, 3);
   });
 
-  it('listen ouve do começo até o fim do pai (história/cena)', () => {
+  it('run toca do começo marcado até o fim do pai, e deixa correr', () => {
     const player = spyPlayer();
-    playClick(player, { type: 'listen', from: 4 }, 23, null);
+    playClick(player, { type: 'run', from: 4 }, 23, null);
     expect(player.play).toHaveBeenCalledWith(4, 23);
   });
 
-  it('set-end com o playhead JÁ no ponto (ou além): para', () => {
+  it('set-end com o playhead JÁ no fim marcado (ou além): para', () => {
     const player = spyPlayer();
     playClick(player, { type: 'set-end', end: 10 }, 23, 10);
     expect(player.stop).toHaveBeenCalled();
     expect(player.play).not.toHaveBeenCalled();
   });
 
-  it('set-end com o playhead ANTES do ponto: continua (não interrompe)', () => {
+  it('set-end com o playhead ANTES do fim marcado: não interrompe', () => {
     const player = spyPlayer();
     playClick(player, { type: 'set-end', end: 10 }, 23, 6);
     expect(player.stop).not.toHaveBeenCalled();
     expect(player.play).not.toHaveBeenCalled();
   });
 
-  it('set-end sem playhead (nada tocando): não faz nada', () => {
+  it('set-end sem nada tocando: não faz nada', () => {
     const player = spyPlayer();
     playClick(player, { type: 'set-end', end: 10 }, 23, null);
     expect(player.stop).not.toHaveBeenCalled();
   });
-});
 
-describe('playEditWindow — prévia ao editar a fronteira (regra 5)', () => {
-  it('toca ~4 contas antes do limite até ~3 depois', () => {
+  it('range toca o trecho resultante inteiro, não a borda', () => {
     const player = spyPlayer();
-    playEditWindow(player, 12, 24);
-    expect(player.play).toHaveBeenCalledWith(8, 15);
+    playClick(player, { type: 'range', s: 4, e: 17 }, 23, null);
+    expect(player.play).toHaveBeenCalledWith(4, 17);
+    expect(player.playEdge).not.toHaveBeenCalled();
   });
 
-  it('satura nas bordas do colar', () => {
+  /**
+   * Ajustar a borda com o áudio CORRENDO não pode reiniciar (relato do dono,
+   * 2026-08-07): "a reprodução não chegou no limite novo, então deveria continuar".
+   * E quando é preciso soar, o que interessa é o TRECHO QUE MUDOU DE DONO — do limite
+   * antigo ao novo —, não a cena de novo nem ~1 s solto em volta da borda.
+   */
+  it('adjust com o playhead DENTRO do novo trecho não faz nada — deixa correr', () => {
     const player = spyPlayer();
-    playEditWindow(player, 1, 24);
-    expect(player.play).toHaveBeenCalledWith(0, 4);
-    playEditWindow(player, 23, 24);
-    expect(player.play).toHaveBeenCalledWith(19, 23);
+    playClick(player, { type: 'adjust', s: 0, e: 14, delta: { s: 10, e: 14 } }, 23, 5);
+    expect(player.play).not.toHaveBeenCalled();
+    expect(player.playEdge).not.toHaveBeenCalled();
+    expect(player.stop).not.toHaveBeenCalled();
+  });
+
+  it('adjust nas pontas do trecho ainda conta como dentro (bordas inclusivas)', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 4, e: 14, delta: { s: 10, e: 14 } }, 23, 14);
+    expect(player.play).not.toHaveBeenCalled();
+    playClick(player, { type: 'adjust', s: 4, e: 14, delta: { s: 4, e: 6 } }, 23, 4);
+    expect(player.play).not.toHaveBeenCalled();
+  });
+
+  it('esticar o fim com NADA tocando toca só o pedaço GANHO', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 0, e: 14, delta: { s: 10, e: 14 } }, 23, null);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
+    expect(player.playEdge).not.toHaveBeenCalled();
+  });
+
+  it('encolher o fim toca o pedaço PERDIDO — o que saiu da cena', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 0, e: 10, delta: { s: 10, e: 14 } }, 23, null);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
+  });
+
+  it('com o playhead já ALÉM do trecho, o pedaço que mudou também soa', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 0, e: 14, delta: { s: 10, e: 14 } }, 23, 20);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
+  });
+});
+
+/**
+ * O dwell do hover (280 ms a ±1 conta de uma borda) é porte fiel da referência
+ * L584-597, e o dono quer mantê-lo. Mas ele sequestrava o áudio: mover a borda e
+ * deixar o ponteiro ali tocava o delta e, 280 ms depois, era cortado para tocar só a
+ * borda. Decisão do dono (2026-08-07): o hover é uma lupa para o SILÊNCIO — havendo
+ * som em curso, o som manda. Pausado conta como silêncio: nada está soando.
+ */
+describe('playHoverEdge — a lupa da borda só vale no silêncio', () => {
+  const player = (playing: boolean, paused = false) => ({
+    ...spyPlayer(),
+    state: { key: playing ? 'k' : null, playing, paused },
+  });
+
+  it('com áudio tocando, o hover não faz nada', () => {
+    const p = player(true);
+    playHoverEdge(p, 12);
+    expect(p.playEdge).not.toHaveBeenCalled();
+  });
+
+  it('no silêncio, confere a borda', () => {
+    const p = player(false);
+    playHoverEdge(p, 12);
+    expect(p.playEdge).toHaveBeenCalledWith(12);
+  });
+
+  it('pausado é silêncio: nada está soando, então a lupa vale', () => {
+    const p = player(true, true);
+    playHoverEdge(p, 12);
+    expect(p.playEdge).toHaveBeenCalledWith(12);
+  });
+});
+
+describe('playDragDelta — o fim do arrasto soa como o clique soaria', () => {
+  it('esticar o fim toca o pedaço ganho, uma vez só (no fim do gesto)', () => {
+    const player = spyPlayer();
+    playDragDelta(player, 10, 14, { s: 0, e: 14 }, null);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
+  });
+
+  it('encolher toca o pedaço perdido — o intervalo é ordenado', () => {
+    const player = spyPlayer();
+    playDragDelta(player, 14, 10, { s: 0, e: 10 }, null);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
+  });
+
+  it('soltar onde pegou não faz som', () => {
+    const player = spyPlayer();
+    playDragDelta(player, 10, 10, { s: 0, e: 10 }, null);
+    expect(player.play).not.toHaveBeenCalled();
+  });
+
+  it('não interrompe áudio que já corre DENTRO do trecho — a mesma cortesia do clique', () => {
+    const player = spyPlayer();
+    playDragDelta(player, 10, 14, { s: 0, e: 14 }, 5);
+    expect(player.play).not.toHaveBeenCalled();
   });
 });
 

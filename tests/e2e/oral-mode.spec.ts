@@ -207,13 +207,18 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
 
   // ——— Escuta 2: corte de cenas + nudge de borda (§9.3) ———
   const [firstEnd, ...restEnds] = SCENARIO.sceneEndBeads;
-  await app.clickBead(firstEnd); // seleciona a 1ª cena {costura, firstEnd}
+  // dois toques por cena (2026-08-07): o começo faz a história correr, o fim fecha
+  await app.clickBead(0);
+  await app.clickBead(firstEnd);
   await expect(page.locator('.cds-cut-confirm-scene[data-role="primary-action"]')).toBeVisible();
   await hoverEdgeKeepsSelection(page, firstEnd);
   await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
+  let start = firstEnd + 1;
   for (const end of restEnds) {
-    await app.clickBead(end);
+    await app.clickBead(start);
+    if (end !== start) await app.clickBead(end);
     await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
+    start = end + 1;
   }
   await page.getByRole('button', { name: 'Continuar →' }).click();
 
@@ -221,7 +226,7 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   await app.triage();
 
   // ——— Segmentação: o toque-início de frase dá som antes de qualquer confirm ———
-  await expect(page.getByText(/Toque no colar onde cada frase termina/)).toBeVisible();
+  await expect(page.getByText(/Toque no colar onde esta frase começa e termina/)).toBeVisible();
   await assertPlaysWithoutText(page, () => app.clickBead(SCENARIO.crossingPhrase.s));
   await app.clickBead(SCENARIO.crossingPhrase.e); // completa a seleção
   await page.getByRole('button', { name: '✓ Confirmar esta frase' }).click(); // cruza a borda → seam modal
