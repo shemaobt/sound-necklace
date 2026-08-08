@@ -40,6 +40,7 @@ import {
   lockedItemAt,
   playClick,
   playEditWindow,
+  playHoverEdge,
   sceneColor,
   sceneLabel,
   START_HANDLE,
@@ -205,8 +206,10 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     player.toggle(activeKey, head ?? 0, head ?? 0);
   };
 
+  // A lupa da borda só vale no SILÊNCIO: som em curso manda (decisão do dono,
+  // 2026-08-07 — o dwell vinha cortando o áudio do clique).
   const onEdgeHover = (edge: number): void => {
-    if (player) player.playEdge(edge);
+    if (player) playHoverEdge(player, edge);
   };
 
   const confirmPhrase = (): void => {

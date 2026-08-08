@@ -6,6 +6,7 @@ import {
   lockedItemAt,
   playClick,
   playEditWindow,
+  playHoverEdge,
   rankLockedScenes,
   sceneColor,
   sceneOrdinal,
@@ -109,6 +110,38 @@ describe('playClick — intenção do clique → player, com o playhead', () => 
     const player = spyPlayer();
     playClick(player, { type: 'adjust', s: 0, e: 14, delta: { s: 10, e: 14 } }, 23, 20);
     expect(player.play).toHaveBeenCalledWith(10, 14);
+  });
+});
+
+/**
+ * O dwell do hover (280 ms a ±1 conta de uma borda) é porte fiel da referência
+ * L584-597, e o dono quer mantê-lo. Mas ele sequestrava o áudio: mover a borda e
+ * deixar o ponteiro ali tocava o delta e, 280 ms depois, era cortado para tocar só a
+ * borda. Decisão do dono (2026-08-07): o hover é uma lupa para o SILÊNCIO — havendo
+ * som em curso, o som manda. Pausado conta como silêncio: nada está soando.
+ */
+describe('playHoverEdge — a lupa da borda só vale no silêncio', () => {
+  const player = (playing: boolean, paused = false) => ({
+    ...spyPlayer(),
+    state: { key: playing ? 'k' : null, playing, paused },
+  });
+
+  it('com áudio tocando, o hover não faz nada', () => {
+    const p = player(true);
+    playHoverEdge(p, 12);
+    expect(p.playEdge).not.toHaveBeenCalled();
+  });
+
+  it('no silêncio, confere a borda', () => {
+    const p = player(false);
+    playHoverEdge(p, 12);
+    expect(p.playEdge).toHaveBeenCalledWith(12);
+  });
+
+  it('pausado é silêncio: nada está soando, então a lupa vale', () => {
+    const p = player(true, true);
+    playHoverEdge(p, 12);
+    expect(p.playEdge).toHaveBeenCalledWith(12);
   });
 });
 

@@ -78,6 +78,23 @@ export function playClick(
   }
 }
 
+/**
+ * A lupa da borda do HOVER (dwell de 280 ms, referência L584-597) — só no silêncio.
+ *
+ * O dwell é porte fiel e o dono quer mantê-lo, mas ele sequestrava o áudio do clique:
+ * mover a borda tocava o pedaço que mudou de dono e, 280 ms depois, o ponteiro parado
+ * ali cortava tudo para tocar só a borda. Esse conflito já custou duas correções
+ * (#164, #172) sob o modelo antigo. A regra agora é de precedência, não de posição do
+ * ponteiro (decisão do dono, 2026-08-07): **havendo som em curso, o som manda**. Vale
+ * para qualquer playback — o delta, a cena, a história.
+ *
+ * Pausado conta como silêncio: nada está soando, então a lupa serve.
+ */
+export function playHoverEdge(player: Player, edge: number): void {
+  if (player.state.playing && !player.state.paused) return;
+  player.playEdge(edge);
+}
+
 /** Prévia ao EDITAR a fronteira (arrasto): ~4 contas antes do limite até ~3 depois. */
 export function playEditWindow(player: Player, limit: number, totalBeads: number): void {
   player.play(Math.max(0, limit - EDIT_BEFORE), Math.min(totalBeads - 1, limit + EDIT_AFTER));

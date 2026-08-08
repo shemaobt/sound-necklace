@@ -71,8 +71,13 @@ The instruction line names BOTH beats at once and does **not** change on the cli
 the tap is text competing with the sound — §9.3, and `oral-mode.spec.ts` fails on it.
 One short line, both beats, no flicker.
 
-Hover keeps the reference's edge dwell (280 ms, ±1 bead, L584–597) and the click does
-**not** cancel it.
+Hover keeps the reference's edge dwell (280 ms, ±1 bead, L584–597) — **but only in
+SILENCE**. Owner decision, 2026-08-07, after it hijacked the click's audio again: with
+sound in progress, the sound wins, whatever that sound is (the delta, the scene, the
+story). A paused playback counts as silence, since nothing is sounding. The rule is
+about precedence, not about where the pointer happens to be — which is why it replaces
+the pointer-position suppressions of #164 and #172. The click does not cancel the dwell;
+the dwell simply refuses to interrupt.
 
 **Cost of dropping the pre-anchoring, stated plainly:** the start now comes from a
 click, so an ACCIDENTAL gap between scenes is possible. Contiguity used to be free —
