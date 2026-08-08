@@ -31,10 +31,6 @@ export function lockedItemAt<T extends { locked: boolean; span: Span | null }>(
  */
 export const START_HANDLE = '@start';
 
-/** Contas de prévia de cada lado do limite ao EDITAR a fronteira (§ regra 5). */
-const EDIT_BEFORE = 4;
-const EDIT_AFTER = 3;
-
 /**
  * Interpreta a intenção do `clickBead` ao DEFINIR um segmento (cena/frase), com o
  * playhead como entrada — decisão do dono, 2026-08-07:
@@ -95,9 +91,25 @@ export function playHoverEdge(player: Player, edge: number): void {
   player.playEdge(edge);
 }
 
-/** Prévia ao EDITAR a fronteira (arrasto): ~4 contas antes do limite até ~3 depois. */
-export function playEditWindow(player: Player, limit: number, totalBeads: number): void {
-  player.play(Math.max(0, limit - EDIT_BEFORE), Math.min(totalBeads - 1, limit + EDIT_AFTER));
+/**
+ * Fim de um ARRASTO de fronteira: soa o mesmo que o clique soaria (decisão do dono,
+ * 2026-08-07) — o pedaço que mudou de dono, da posição de onde a borda saiu até onde
+ * parou. Um gesto, um som, uma regra.
+ *
+ * Só no FIM do gesto: o arrasto atravessa muitas contas, e soar a cada uma seria um
+ * estouro. E com a mesma cortesia do `adjust`: áudio que já corre DENTRO do trecho
+ * resultante não é interrompido.
+ */
+export function playDragDelta(
+  player: Player,
+  from: number,
+  to: number,
+  stretch: Span,
+  head: number | null,
+): void {
+  if (from === to) return;
+  if (head !== null && head >= stretch.s && head <= stretch.e) return;
+  player.play(Math.min(from, to), Math.max(from, to));
 }
 
 const UNIDADES_PT = [

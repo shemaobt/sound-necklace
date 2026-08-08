@@ -63,8 +63,10 @@ export interface NecklaceProps {
   onBeadPointerDown?: (bead: number) => void;
   onEdgeHover?: (edge: number) => void;
   onHeadTap?: () => void;
-  /** arrastar um punho até `toBead`; a página aplica o ajuste no domínio */
-  onDragBoundary?: (id: string, toBead: number) => void;
+  /** arrastar um punho até `toBead`; a página aplica o ajuste no domínio. `done` marca
+   *  o ÚLTIMO evento do gesto (o dedo soltou), que é quando a página pode fazer som:
+   *  soar a cada conta do arrasto seria um estouro. */
+  onDragBoundary?: (id: string, toBead: number, done?: boolean) => void;
 }
 
 /** Um punho arrastável ancorado numa conta (ENG-342). */
@@ -168,7 +170,7 @@ interface Interaction {
   onBeadPointerDown?: (bead: number) => void;
   onEdgeHover?: (edge: number) => void;
   onHeadTap?: () => void;
-  onDragBoundary?: (id: string, toBead: number) => void;
+  onDragBoundary?: (id: string, toBead: number, done?: boolean) => void;
 }
 
 const BeadField = memo(function BeadField({ field, size }: { field: Field; size: Size }) {
@@ -412,6 +414,9 @@ export function Necklace(props: NecklaceProps) {
          tocar no meio de um arrasto que o dedo nem terminou. Só o `pointerup`
          sem arrasto é toque. */
       const foiToque = ev.type !== 'pointercancel';
+      // fim do arrasto: um último aviso com `done`, para a página soar o resultado uma
+      // vez só. `pointercancel` não avisa — o gesto não terminou, foi tomado.
+      if (dragging !== null && foiToque) ix.onDragBoundary?.(dragging, beadFromEvent(ev), true);
       if (dragging === null && pending !== null && foiToque) {
         const bead = pending.startBead;
         if (ix.playbackHead !== null && bead === ix.playbackHead) ix.onHeadTap?.();

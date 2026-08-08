@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
@@ -21,7 +21,9 @@ import {
   reanchorFrase,
   removeFrase,
   sceneIndexOf,
+  type SessionState,
   setMode,
+  type Span,
 } from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button } from '../../atoms';
@@ -39,7 +41,7 @@ import { sessionStore, useSessionStore } from '../../state';
 import {
   lockedItemAt,
   playClick,
-  playEditWindow,
+  playDragDelta,
   playHoverEdge,
   sceneColor,
   sceneLabel,
@@ -70,6 +72,15 @@ import './phrases.css';
  * frases vem logo abaixo — uma cena longa rola dentro da tira, não na página.
  */
 const NECKLACE_MAX_H = 6 * SIZE_SEG.row + 12;
+
+/** Espelha `boundaryOf` da estação de cenas: onde a borda está agora e a que span
+ *  pertence — o som do fim do arrasto precisa dos dois. */
+function boundaryOf(s: SessionState | null, id: string): { at: number | null; span: Span | null } {
+  if (!s) return { at: null, span: null };
+  if (id === START_HANDLE) return { at: s.selection?.s ?? null, span: s.selection };
+  const span = s.frases[Number(id)]?.span ?? null;
+  return { at: span?.e ?? null, span };
+}
 
 export interface PhrasesProps {
   player?: Player | null;
@@ -118,6 +129,10 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
     }
     return { sc, scSpan: sc.span, scenePhrases, segments, lockedEndBeads, dragHandles };
   }, [session]);
+
+  /** De onde a borda saiu no gesto de arrasto em curso — o som do fim do arrasto
+   *  precisa dessa posição, e ela some assim que o domínio aplica o primeiro passo. */
+  const dragFrom = useRef<number | null>(null);
 
   useEffect(() => {
     if (!player) return;
@@ -268,13 +283,23 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
   // depois do ajuste — senão, com a frase antes cobrindo o fim do colar (fronteira
   // fora da grade), o clique seguinte fecharia além do colar e o confirm cospe
   // "A frase precisa terminar dentro do colar" (#3).
-  const onDragBoundary = (id: string, toBead: number): void => {
-    if (id === START_HANDLE) {
-      sessionStore.getState().apply((s) => dragSelectionStart(s, toBead));
-    } else {
-      sessionStore.getState().apply((s) => dragPhraseBoundary(s, Number(id), toBead));
-    }
-    if (player) playEditWindow(player, toBead, session.totalBeads);
+  // Som uma vez só, no fim do gesto (`done`), e igual ao do clique: o pedaço entre
+  // onde a borda estava e onde parou. Simetria com a cena.
+  const onDragBoundary = (id: string, toBead: number, done?: boolean): void => {
+    const before = boundaryOf(sessionStore.getState().session, id);
+    if (dragFrom.current === null) dragFrom.current = before.at;
+    sessionStore
+      .getState()
+      .apply((s) =>
+        id === START_HANDLE
+          ? dragSelectionStart(s, toBead)
+          : dragPhraseBoundary(s, Number(id), toBead),
+      );
+    if (!done) return;
+    const from = dragFrom.current;
+    dragFrom.current = null;
+    const { span } = boundaryOf(sessionStore.getState().session, id);
+    if (player && from !== null && span) playDragDelta(player, from, toBead, span, head);
   };
 
   // Remover a frase + a SEGUINTE da mesma cena absorve o espaço (#3): removeFrase

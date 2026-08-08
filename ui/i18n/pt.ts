@@ -281,6 +281,7 @@ export const pt = {
     remove: 'Remover',
     chipOpen: 'ver as ações desta cena',
     back: '← Ouvir de novo',
+    halfSelection: 'Toque no colar onde esta cena termina.',
     confirmScene: '✓ Confirmar esta cena',
     confirmAll: 'Confirmar as cenas →',
   },

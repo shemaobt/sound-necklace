@@ -252,6 +252,7 @@ export const en: Dict = {
     remove: 'Remove',
     chipOpen: "see this scene's actions",
     back: '← Listen again',
+    halfSelection: 'Tap the necklace where this scene ends.',
     confirmScene: '✓ Confirm this scene',
     confirmAll: 'Confirm the scenes →',
   },

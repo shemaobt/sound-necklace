@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
@@ -12,6 +12,7 @@ import {
   dragSceneBoundary,
   dragSelectionStart,
   removePart,
+  type SessionState,
   setMode,
   type Span,
 } from '../../../domain';
@@ -21,7 +22,7 @@ import { sessionStore, useSessionStore } from '../../state';
 import {
   lockedItemAt,
   playClick,
-  playEditWindow,
+  playDragDelta,
   playHoverEdge,
   rankLockedScenes,
   sceneColor,
@@ -59,6 +60,15 @@ function tilesWholeStory(spans: Span[], totalBeads: number): boolean {
     next = Math.max(next, span.e + 1);
   }
   return next >= totalBeads;
+}
+
+/** Onde a borda `id` está agora, e o span a que ela pertence — o som do fim do arrasto
+ *  precisa dos dois, e o primeiro passo do arrasto já sobrescreve a posição. */
+function boundaryOf(s: SessionState | null, id: string): { at: number | null; span: Span | null } {
+  if (!s) return { at: null, span: null };
+  if (id === START_HANDLE) return { at: s.selection?.s ?? null, span: s.selection };
+  const span = s.parts.find((p) => p.part_id === id)?.span ?? null;
+  return { at: span?.e ?? null, span };
 }
 
 export interface CutProps {
@@ -102,6 +112,10 @@ export function Cut({ player = null, sound }: CutProps) {
     const ends = lockedScenes.map((sc) => ({ at: sc.span.e, id: sc.part.part_id }));
     return anchoredStart === null ? ends : [...ends, { at: anchoredStart, id: START_HANDLE }];
   }, [lockedScenes, anchoredStart]);
+
+  /** De onde a borda saiu no gesto de arrasto em curso — o som do fim do arrasto
+   *  precisa dessa posição, e ela some assim que o domínio aplica o primeiro passo. */
+  const dragFrom = useRef<number | null>(null);
 
   useEffect(() => {
     if (!player) return;
@@ -204,6 +218,14 @@ export function Cut({ player = null, sound }: CutProps) {
   const confirmScene = (): void => {
     const s = sessionStore.getState().session;
     if (!s || s.current.layer !== 'parts' || s.current.index < 0) return;
+    // Só o começo marcado (pendingStart não-nulo): o domínio já recusaria, mas com a
+    // copy congelada do `domain/`. As duas estações falam pelo i18n no mesmo engano
+    // — que, com dois toques, virou o mais provável da tela (decisão do dono).
+    if (s.pendingStart !== null) {
+      setError(t('cut.halfSelection'));
+      sound?.refuse();
+      return;
+    }
     const result = confirmPart(s, s.current.index);
     if (!result.ok) {
       setError(result.error.message);
@@ -244,17 +266,23 @@ export function Cut({ player = null, sound }: CutProps) {
       );
   };
 
-  // Arrastar o fim de uma cena (ENG-342): a cena `id` cresce/encolhe até `toBead`,
-  // a seguinte SEGUE (Pac-Man). Sem reprime: desde 2026-08-07 o slot pendente não é
-  // mais pré-ancorado — quem fixa o começo é o 1º clique.
-  // Enquanto edita, toca a prévia ~4 contas antes do limite até ~3 depois (regra 5).
-  const onDragBoundary = (id: string, toBead: number): void => {
-    if (id === START_HANDLE) {
-      sessionStore.getState().apply((s) => dragSelectionStart(s, toBead));
-    } else {
-      sessionStore.getState().apply((s) => dragSceneBoundary(s, id, toBead));
-    }
-    if (player) playEditWindow(player, toBead, session.totalBeads);
+  // Arrastar o fim de uma cena (ENG-342): a cena `id` cresce/encolhe até `toBead`, a
+  // seguinte SEGUE (Pac-Man). Sem reprime — desde 2026-08-07 o slot pendente não é mais
+  // pré-ancorado. O SOM sai uma vez só, no fim do gesto (`done`), e é o mesmo que o
+  // clique daria: o pedaço entre onde a borda estava e onde parou.
+  const onDragBoundary = (id: string, toBead: number, done?: boolean): void => {
+    const before = boundaryOf(sessionStore.getState().session, id);
+    if (dragFrom.current === null) dragFrom.current = before.at;
+    sessionStore
+      .getState()
+      .apply((s) =>
+        id === START_HANDLE ? dragSelectionStart(s, toBead) : dragSceneBoundary(s, id, toBead),
+      );
+    if (!done) return;
+    const from = dragFrom.current;
+    dragFrom.current = null;
+    const { span } = boundaryOf(sessionStore.getState().session, id);
+    if (player && from !== null && span) playDragDelta(player, from, toBead, span, head);
   };
 
   // Remover a cena + a SEGUINTE absorve o espaço liberado (#3): removePart é puro

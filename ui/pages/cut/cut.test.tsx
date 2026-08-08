@@ -90,6 +90,30 @@ describe('Escuta 2 — título do protótipo (redesign design parity Fase 3)', (
 });
 
 describe('Escuta 2 — travar e avançar a emenda (PRD v2 §8.4)', () => {
+  /**
+   * Com dois toques (2026-08-07) o engano mais provável da estação é confirmar depois
+   * de marcar só o COMEÇO. O domínio já recusa (`confirmPart` olha `pendingStart`),
+   * mas com a copy do `domain/` — "Clique onde a cena termina, no colar." — enquanto a
+   * estação de frases dizia outra coisa para o mesmo engano. Decisão do dono: as duas
+   * telas falam pelo i18n, com a mesma construção.
+   */
+  it('confirmar com só o começo marcado pede o segundo toque, na voz do i18n', async () => {
+    load(
+      cutting({
+        parts: [part({ part_id: 'PT1' })],
+        current: { layer: 'parts', index: 0 },
+        selection: { s: 2, e: 2 },
+        pendingStart: 2,
+      }),
+    );
+    renderStation(<Cut />);
+
+    await userEvent.click(screen.getByRole('button', { name: '✓ Confirmar esta cena' }));
+
+    expect(screen.getByText('Toque no colar onde esta cena termina.')).toBeTruthy();
+    expect(sessionStore.getState().session!.parts[0]!.locked).toBe(false);
+  });
+
   it('confirmar a cena trava o span, marca a conta final e abre a próxima vazia', async () => {
     load(
       cutting({

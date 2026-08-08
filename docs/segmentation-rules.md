@@ -63,8 +63,13 @@ position they did not know yet. Now the story RUNS while they decide.
 - **A confirmed (locked) segment:** click any of its beads → play **FROM that bead** to
   the segment's end; the same bead pauses/resumes. _(Divergence: the reference plays
   the whole segment from a ▶ button per card, and our listener stations carry no list.)_
-- **Editing a confirmed boundary** (dragging the end): preview from **~4 beads before**
-  the new limit to **~3 beads after** it. Post-reference (ENG-342).
+- **Editing a confirmed boundary** (dragging the end): the drag sounds **the same as
+  the click would** — the stretch between where the boundary was and where it landed —
+  and only **once, when the gesture ends**. Sounding on every bead crossed would be a
+  racket, and a drag crosses many. Same courtesy as `adjust`: audio already running
+  inside the resulting stretch is left alone. Post-reference (ENG-342); the earlier
+  fixed ~4-before/~3-after preview window was dropped on 2026-08-07 so that one gesture
+  does not sound two different ways.
 
 The instruction line names BOTH beats at once and does **not** change on the click:
 "Toque no colar onde esta cena **começa e termina**." Swapping the text at the moment of

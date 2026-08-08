@@ -5,7 +5,7 @@ import { scenePalette } from '../../tokens';
 import {
   lockedItemAt,
   playClick,
-  playEditWindow,
+  playDragDelta,
   playHoverEdge,
   rankLockedScenes,
   sceneColor,
@@ -145,19 +145,29 @@ describe('playHoverEdge — a lupa da borda só vale no silêncio', () => {
   });
 });
 
-describe('playEditWindow — prévia ao editar a fronteira (regra 5)', () => {
-  it('toca ~4 contas antes do limite até ~3 depois', () => {
+describe('playDragDelta — o fim do arrasto soa como o clique soaria', () => {
+  it('esticar o fim toca o pedaço ganho, uma vez só (no fim do gesto)', () => {
     const player = spyPlayer();
-    playEditWindow(player, 12, 24);
-    expect(player.play).toHaveBeenCalledWith(8, 15);
+    playDragDelta(player, 10, 14, { s: 0, e: 14 }, null);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
   });
 
-  it('satura nas bordas do colar', () => {
+  it('encolher toca o pedaço perdido — o intervalo é ordenado', () => {
     const player = spyPlayer();
-    playEditWindow(player, 1, 24);
-    expect(player.play).toHaveBeenCalledWith(0, 4);
-    playEditWindow(player, 23, 24);
-    expect(player.play).toHaveBeenCalledWith(19, 23);
+    playDragDelta(player, 14, 10, { s: 0, e: 10 }, null);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
+  });
+
+  it('soltar onde pegou não faz som', () => {
+    const player = spyPlayer();
+    playDragDelta(player, 10, 10, { s: 0, e: 10 }, null);
+    expect(player.play).not.toHaveBeenCalled();
+  });
+
+  it('não interrompe áudio que já corre DENTRO do trecho — a mesma cortesia do clique', () => {
+    const player = spyPlayer();
+    playDragDelta(player, 10, 14, { s: 0, e: 14 }, 5);
+    expect(player.play).not.toHaveBeenCalled();
   });
 });
 
