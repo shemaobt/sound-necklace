@@ -1152,59 +1152,85 @@ describe('Conversation — sair da revisão com transcrição por confirmar', ()
     await walkToReport();
   }
 
-  it('o clique abre o diálogo em vez de guardar, e conta quantas faltam', async () => {
-    const onGoToExport = vi.fn();
-    await recordedButUnconfirmed(onGoToExport);
+  /**
+   * Estes casos gravam uma resposta e depois ANDAM pelas 21 perguntas com cliques
+   * reais, e cada pergunta agora espera a consulta "já existe resposta gravada aqui?"
+   * (o estado `checking` do #175). Só o caminhar já custa ~3 s numa máquina de CI, e o
+   * padrão de 5 s do Vitest passou a estourar quando os dois PRs se encontraram na
+   * main. O trabalho é legítimo: o teto sobe para caber nele, em vez de o teste ser
+   * afinado até caber no teto.
+   */
+  const ANDAR = 20_000;
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
+  it(
+    'o clique abre o diálogo em vez de guardar, e conta quantas faltam',
+    async () => {
+      const onGoToExport = vi.fn();
+      await recordedButUnconfirmed(onGoToExport);
 
-    expect(await screen.findByRole('dialog')).toBeTruthy();
-    expect(screen.getByText(/falta confirmar a transcrição de 1 resposta/i)).toBeTruthy();
-    expect(onGoToExport).not.toHaveBeenCalled();
-  });
+      await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
 
-  it('"Revisar as respostas" fecha e deixa quem revisa onde ele revisa', async () => {
-    const onGoToExport = vi.fn();
-    await recordedButUnconfirmed(onGoToExport);
-    await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
+      expect(await screen.findByRole('dialog')).toBeTruthy();
+      expect(screen.getByText(/falta confirmar a transcrição de 1 resposta/i)).toBeTruthy();
+      expect(onGoToExport).not.toHaveBeenCalled();
+    },
+    ANDAR,
+  );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Revisar as respostas' }));
+  it(
+    '"Revisar as respostas" fecha e deixa quem revisa onde ele revisa',
+    async () => {
+      const onGoToExport = vi.fn();
+      await recordedButUnconfirmed(onGoToExport);
+      await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
 
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(onGoToExport).not.toHaveBeenCalled();
-  });
+      await userEvent.click(screen.getByRole('button', { name: 'Revisar as respostas' }));
 
-  it('"Ir mesmo assim" passa: o aviso guia, não tranca', async () => {
-    const onGoToExport = vi.fn();
-    await recordedButUnconfirmed(onGoToExport);
-    await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(onGoToExport).not.toHaveBeenCalled();
+    },
+    ANDAR,
+  );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ir mesmo assim' }));
+  it(
+    '"Ir mesmo assim" passa: o aviso guia, não tranca',
+    async () => {
+      const onGoToExport = vi.fn();
+      await recordedButUnconfirmed(onGoToExport);
+      await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
 
-    expect(onGoToExport).toHaveBeenCalled();
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
+      await userEvent.click(screen.getByRole('button', { name: 'Ir mesmo assim' }));
 
-  it('confirmada a transcrição, o diálogo não aparece — ele espelha o gate, não duplica regra', async () => {
-    const onGoToExport = vi.fn();
-    load(mapping());
-    const recorder = new FixtureVoiceRecorder();
-    renderStation(<Conversation recorder={recorder} onGoToExport={onGoToExport} />);
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
-    // o texto confirmado é exatamente o que `reportExportStatus` procura
-    act(() => {
-      sessionStore
-        .getState()
-        .apply((s) =>
-          setAnswer(ensureMapping(s), { level: 1, k: L1_Q[0]!.k }, 'He told of the dolphin.'),
-        );
-    });
-    await walkToReport();
+      expect(onGoToExport).toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).toBeNull();
+    },
+    ANDAR,
+  );
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
+  it(
+    'confirmada a transcrição, o diálogo não aparece — ele espelha o gate, não duplica regra',
+    async () => {
+      const onGoToExport = vi.fn();
+      load(mapping());
+      const recorder = new FixtureVoiceRecorder();
+      renderStation(<Conversation recorder={recorder} onGoToExport={onGoToExport} />);
+      await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+      // o texto confirmado é exatamente o que `reportExportStatus` procura
+      act(() => {
+        sessionStore
+          .getState()
+          .apply((s) =>
+            setAnswer(ensureMapping(s), { level: 1, k: L1_Q[0]!.k }, 'He told of the dolphin.'),
+          );
+      });
+      await walkToReport();
 
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(onGoToExport).toHaveBeenCalled();
-  });
+      await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
+
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(onGoToExport).toHaveBeenCalled();
+    },
+    ANDAR,
+  );
 });
