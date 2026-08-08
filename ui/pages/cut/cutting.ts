@@ -44,8 +44,12 @@ const EDIT_AFTER = 3;
  * - `set-end` → fechou o trecho: se o playhead JÁ passou do fim marcado, para; se
  *   ainda não chegou, não interrompe — o ouvinte marcou o fim adiantado e segue
  *   escutando;
- * - `range` → ajustou uma borda: toca o trecho resultante inteiro, para ele ouvir
- *   como a cena ficou (e não ~1 s solto em volta da borda).
+ * - `range` → o trecho recém-fechado, tocado inteiro;
+ * - `adjust` → mexeu numa borda: se o playhead está DENTRO do trecho resultante, não
+ *   faz nada — interromper para recomeçar do início era o desperdício que o dono
+ *   relatou ("a reprodução não chegou no limite novo, então deveria continuar"). Fora
+ *   do trecho (ou com nada tocando), confere a borda movida com `playEdge`: a cena já
+ *   foi ouvida, o que falta saber é se o CORTE caiu no lugar.
  */
 export function playClick(
   player: Player,
@@ -65,6 +69,10 @@ export function playClick(
       return;
     case 'range':
       player.play(action.s, action.e);
+      return;
+    case 'adjust':
+      if (head !== null && head >= action.s && head <= action.e) return;
+      player.playEdge(action.edge);
       return;
   }
 }

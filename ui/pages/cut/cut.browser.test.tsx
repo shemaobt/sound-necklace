@@ -155,8 +155,14 @@ describe('Escuta 2 — modelo de clique com áudio na hora (decisão do dono, 20
     expect(sessionStore.getState().session!.pendingStart).toBeNull();
     expect(calls.length).toBe(n);
 
-    // 3º clique depois do fim: o fim cede e o trecho RESULTANTE toca inteiro
+    // 3º clique depois do fim: o fim cede. Com NADA tocando (o espião não avança), a
+    // borda é conferida — a cena não é repetida do início.
     firePointer(el, 8);
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 2, e: 8 });
+    expect(calls.at(-1)).toEqual({ m: 'playEdge', args: [8] });
+
+    // tocar uma borda SEM movê-la é pedido de escuta: reouve o trecho
+    firePointer(el, 2);
     expect(sessionStore.getState().session!.selection).toEqual({ s: 2, e: 8 });
     expect(calls.at(-1)).toEqual({ m: 'play', args: [2, 8] });
     root.unmount();
@@ -185,6 +191,40 @@ function advanceBy(transport: FixtureTransport, seconds: number, step = 0.05): v
     left -= dt;
   }
 }
+
+/**
+ * Relato do dono, 2026-08-07: "se eu mudo o limite final e a reprodução ainda está na
+ * primeira linha, ele volta pro início. Não precisaria, porque a reprodução não chegou
+ * no limite novo — deveria continuar."
+ *
+ * Espião não serve aqui: ele não tem playhead, e é o playhead que decide. Player real
+ * sobre transport de avanço manual.
+ */
+describe('Escuta 2 — ajustar a borda não reinicia o áudio que já corre', () => {
+  it('com o playhead DENTRO do novo trecho, mover o fim não mexe no que está tocando', () => {
+    const { player, transport } = realPlayer();
+    sessionStore.getState().load(cutting()); // colar 0…9
+    const { root, el } = mount(player);
+
+    firePointer(el, 0); // marca o começo: a história corre de 0 ao fim
+    advanceBy(transport, 0.3); // ~conta 1
+    firePointer(el, 6); // fecha o trecho em 6 — playhead ainda atrás, não interrompe
+    advanceBy(transport, 0.2);
+    const antes = player.state;
+    const headAntes = el.querySelector('.cds-necklace-bead[data-play="head"]');
+    const idxAntes = Number(headAntes!.getAttribute('data-idx'));
+
+    firePointer(el, 8); // ajusta o FIM para 8, com o playhead ainda dentro de {0,8}
+
+    // o áudio NÃO reiniciou: segue tocando, e a cabeça não voltou para trás
+    expect(player.state.playing).toBe(true);
+    expect(player.state.key).toBe(antes.key);
+    const headDepois = el.querySelector('.cds-necklace-bead[data-play="head"]');
+    expect(Number(headDepois!.getAttribute('data-idx'))).toBeGreaterThanOrEqual(idxAntes);
+    expect(sessionStore.getState().session!.selection).toEqual({ s: 0, e: 8 });
+    root.unmount();
+  });
+});
 
 describe('Escuta 2 — a conta acesa pausa, venha o playback de onde vier (ENG-297)', () => {
   it('durante uma prévia de borda, tocar a conta acesa PARA — não reinicia a cena', () => {

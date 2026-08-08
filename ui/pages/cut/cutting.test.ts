@@ -69,6 +69,41 @@ describe('playClick — intenção do clique → player, com o playhead', () => 
     expect(player.play).toHaveBeenCalledWith(4, 17);
     expect(player.playEdge).not.toHaveBeenCalled();
   });
+
+  /**
+   * Ajustar a borda com o áudio CORRENDO não pode reiniciar do começo (relato do
+   * dono, 2026-08-07): "a reprodução não chegou no limite novo, então ele deveria
+   * continuar". Só quando o que está soando já não pertence ao trecho é que vale
+   * gastar som — e aí a lupa da borda basta, porque a cena já foi ouvida.
+   */
+  it('adjust com o playhead DENTRO do novo trecho não faz nada — deixa correr', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 0, e: 14, edge: 14 }, 23, 5);
+    expect(player.play).not.toHaveBeenCalled();
+    expect(player.playEdge).not.toHaveBeenCalled();
+    expect(player.stop).not.toHaveBeenCalled();
+  });
+
+  it('adjust nas pontas do trecho ainda conta como dentro (bordas inclusivas)', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 4, e: 14, edge: 14 }, 23, 14);
+    expect(player.playEdge).not.toHaveBeenCalled();
+    playClick(player, { type: 'adjust', s: 4, e: 14, edge: 4 }, 23, 4);
+    expect(player.playEdge).not.toHaveBeenCalled();
+  });
+
+  it('adjust com o playhead JÁ ALÉM do novo fim confere a borda', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 0, e: 14, edge: 14 }, 23, 20);
+    expect(player.playEdge).toHaveBeenCalledWith(14);
+  });
+
+  it('adjust com NADA tocando confere a borda, sem repetir a cena', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 0, e: 14, edge: 14 }, 23, null);
+    expect(player.playEdge).toHaveBeenCalledWith(14);
+    expect(player.play).not.toHaveBeenCalled();
+  });
 });
 
 describe('playEditWindow — prévia ao editar a fronteira (regra 5)', () => {

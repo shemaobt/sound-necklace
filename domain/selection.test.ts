@@ -90,22 +90,22 @@ describe('clickBead — marca o começo ouvindo, fecha no fim, e reouve ao ajust
     expect(r.play).toEqual({ type: 'set-end', end: 10 });
   });
 
-  it('fechado o trecho, clicar além do fim move o FIM e reouve o trecho todo', () => {
+  it('fechado o trecho, clicar além do fim move o FIM e devolve o ajuste à UI', () => {
     const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 20);
     expect(r.state.selection).toEqual({ s: 0, e: 20 });
-    expect(r.play).toEqual({ type: 'range', s: 0, e: 20 });
+    expect(r.play).toEqual({ type: 'adjust', s: 0, e: 20, edge: 20 });
   });
 
-  it('clicar perto do começo move o COMEÇO e reouve o trecho encurtado', () => {
+  it('clicar perto do começo move o COMEÇO, e a borda reportada é ele', () => {
     const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 4);
     expect(r.state.selection).toEqual({ s: 4, e: 12 }); // 4−0=4 ≤ 12−4=8
-    expect(r.play).toEqual({ type: 'range', s: 4, e: 12 });
+    expect(r.play).toEqual({ type: 'adjust', s: 4, e: 12, edge: 4 });
   });
 
   it('clicar perto do fim move o FIM', () => {
     const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 9);
     expect(r.state.selection).toEqual({ s: 0, e: 9 }); // 9−0=9 > 12−9=3
-    expect(r.play).toEqual({ type: 'range', s: 0, e: 9 });
+    expect(r.play).toEqual({ type: 'adjust', s: 0, e: 9, edge: 9 });
   });
 
   it('empate no meio vai para o COMEÇO (o `<=` da referência)', () => {
@@ -119,9 +119,17 @@ describe('clickBead — marca o começo ouvindo, fecha no fim, e reouve ao ajust
    * É o que faz as vezes do botão `▶ tocar este pedaço` (`playSel`, L262) que a
    * ENG-291 tirou destas estações.
    */
-  it('clicar a conta de começo reouve o trecho sem mexer nele', () => {
-    const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 0);
-    expect(r.state.selection).toEqual({ s: 0, e: 12 });
+  it('clicar a conta de começo NÃO move nada: reouve o trecho inteiro', () => {
+    const s = aberto({ selection: { s: 0, e: 12 } });
+    const r = clickBead(s, 0);
+    expect(r.state).toBe(s);
+    expect(r.play).toEqual({ type: 'range', s: 0, e: 12 });
+  });
+
+  it('clicar a conta de FIM também reouve, pela mesma razão', () => {
+    const s = aberto({ selection: { s: 0, e: 12 } });
+    const r = clickBead(s, 12);
+    expect(r.state).toBe(s);
     expect(r.play).toEqual({ type: 'range', s: 0, e: 12 });
   });
 
@@ -213,11 +221,11 @@ describe('clickBead — a frase se comporta como a cena', () => {
     expect(r.play).toEqual({ type: 'run', from: 7 });
   });
 
-  it('fechado o trecho, a frase também ajusta a borda e reouve o resultado', () => {
+  it('fechado o trecho, a frase também ajusta a borda', () => {
     const s = fraseando([frase({})], 0);
     const r = clickBead({ ...s, selection: { s: 10, e: 16 }, pendingStart: null }, 15);
     expect(r.state.selection).toEqual({ s: 10, e: 15 }); // 15−10=5 > 16−15=1
-    expect(r.play).toEqual({ type: 'range', s: 10, e: 15 });
+    expect(r.play).toEqual({ type: 'adjust', s: 10, e: 15, edge: 15 });
   });
 });
 
@@ -343,6 +351,6 @@ describe('clickBead — depois de arrastar o começo, o clique fecha COM ele', (
     const fechado = clickBead(arrastado, 15).state; // trecho {7,15}
     const r = clickBead(fechado, 2); // satura na fronteira 4
     expect(r.state.selection).toEqual({ s: 4, e: 15 });
-    expect(r.play).toEqual({ type: 'range', s: 4, e: 15 });
+    expect(r.play).toEqual({ type: 'adjust', s: 4, e: 15, edge: 4 });
   });
 });

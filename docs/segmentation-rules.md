@@ -46,11 +46,16 @@ position they did not know yet. Now the story RUNS while they decide.
   - **2nd click** → closes the segment. The audio **stops if the playhead already
     passed** the marked end, and **keeps going if it has not** — marking the end early
     must not punish someone who is still listening.
-  - **From the 3rd on** → moves the **nearest** boundary (the start included) and plays
-    the **resulting stretch whole**, not just the boundary. Ties go to the start (`<=`).
-  - Clicking the **start bead** falls out of that same branch: it moves the start onto
-    itself and replays the stretch — which is what stands in for the reference's
-    `▶ tocar este pedaço` button (`playSel`, L262) that ENG-291 removed from here.
+  - **From the 3rd on** → moves the **nearest** boundary (the start included). Ties go
+    to the start (`<=`). **Audio already running INSIDE the resulting stretch is not
+    interrupted** — restarting from the beginning was waste the owner reported on
+    2026-08-07: _"a reprodução não chegou no limite novo, então deveria continuar"_.
+    Only when the playhead sits outside the stretch (or nothing is playing) does the
+    UI sound anything, and then it is `playEdge` on the boundary that moved: the scene
+    has already been heard, what is in question is whether the CUT landed right.
+  - Tapping a boundary **without moving it** is not an adjustment — it replays the
+    whole stretch. That is what stands in for the reference's `▶ tocar este pedaço`
+    button (`playSel`, L262) that ENG-291 removed from these stations.
   - The click is clamped between the frontier and the necklace end (L566–567), so a
     click before the seam saturates at it.
 - **A confirmed (locked) segment:** click any of its beads → play **FROM that bead** to

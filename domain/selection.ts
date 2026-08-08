@@ -14,13 +14,13 @@
  *  2. **com `pendingStart`** → fecha o trecho; o áudio PARA se o playhead já passou do
  *     fim marcado e CONTINUA se ainda não chegou (`set-end` — a decisão depende do
  *     playhead, que é runtime, então mora na UI);
- *  3. **trecho fechado** → move a borda mais próxima e toca o TRECHO RESULTANTE
- *     inteiro (`range`), não só a borda.
+ *  3. **trecho fechado** → move a borda mais próxima (`adjust`); o áudio que já corre
+ *     DENTRO do trecho não é interrompido, e só fora dele a UI confere a borda que
+ *     andou. Tocar uma borda sem movê-la não é ajuste: reouve o trecho (`range`).
  *
  * Duas consequências que vale nomear:
- * - clicar a própria conta de COMEÇO cai no ramo 3, move o começo para onde ele já
- *   está e reouve o trecho — é o que faz as vezes do botão `▶ tocar este pedaço`
- *   (`playSel`, L262) que a ENG-291 tirou destas estações;
+ * - clicar a própria conta de COMEÇO (ou a de FIM) cai no ramo 3 sem mover nada, e
+ *   por isso reouve o trecho — o `playSel` que não temos como botão;
  * - sem pré-ancoragem, o começo vem do clique, então vão acidental entre cenas passa a
  *   ser possível. Era uma garantia que a emenda dava de graça (docs/segmentation-rules.md
  *   regra 2).
@@ -36,8 +36,12 @@ export type PlayAction =
   | { type: 'run'; from: number }
   /** Fechou o trecho: parar se o playhead já passou de `end`, senão deixar correr. */
   | { type: 'set-end'; end: number }
-  /** Ajustou uma borda: tocar o trecho resultante inteiro. */
-  | { type: 'range'; s: number; e: number };
+  /** Tocou uma borda sem movê-la (o trecho não mudou): reouvir o trecho inteiro. */
+  | { type: 'range'; s: number; e: number }
+  /** MOVEU uma borda: `edge` é a que andou, `{s,e}` é o trecho resultante. A UI só faz
+   *  som se o playhead estiver FORA do trecho — o áudio que já corre dentro dele não
+   *  é interrompido. */
+  | { type: 'adjust'; s: number; e: number; edge: number };
 
 export interface ClickResult {
   state: SessionState;
@@ -72,7 +76,14 @@ export function clickBead(state: SessionState, bead: number): ClickResult {
   const { s: selS, e: selE } = state.selection;
   const moveStart = b <= selS || (b < selE && b - selS <= selE - b);
   const selection = moveStart ? { s: b, e: selE } : { s: selS, e: b };
-  return { state: { ...state, selection }, play: { type: 'range', ...selection } };
+
+  // Tocar uma borda SEM movê-la é pedido de escuta, não ajuste: reouve o trecho. É o
+  // que faz as vezes do `▶ tocar este pedaço` (`playSel`, L262) que a ENG-291 tirou
+  // destas estações. Mover de verdade é que não pode reiniciar o áudio (ver `adjust`).
+  if (selection.s === selS && selection.e === selE) {
+    return { state, play: { type: 'range', ...selection } };
+  }
+  return { state: { ...state, selection }, play: { type: 'adjust', ...selection, edge: b } };
 }
 
 /**
