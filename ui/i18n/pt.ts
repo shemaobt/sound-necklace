@@ -424,6 +424,9 @@ export const pt = {
     record: 'gravar a resposta',
     stop: 'Parar',
     idleHint: 'Toque e fale a sua resposta',
+    /* Enquanto ainda não se sabe se esta pergunta tem resposta gravada. Toma o
+       lugar do convite a falar — a tela do ouvinte tem UMA linha (§9.2). */
+    checkingAnswer: 'procurando a resposta já gravada',
     emptyWave: 'a sua resposta vira um fio de som aqui',
     recordingLabel: 'gravando — os outros botões esperam a resposta',
     play: 'ouvir a resposta',

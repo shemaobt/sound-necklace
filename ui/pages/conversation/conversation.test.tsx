@@ -1052,3 +1052,76 @@ describe('Conversation — a transcrição começa ao avançar, não no fim', ()
     expect(questionText()).toBe(seq[1]!.question.q);
   });
 });
+
+/**
+ * "Já existe resposta gravada aqui?" é uma pergunta ao servidor (`recorder.has`),
+ * e no modo real ela custa uma ida à rede. Até responder, a estação montava a tela
+ * em `idle` — o convite a falar, a promessa do fio de som, nenhum "ouvir a
+ * resposta". Ou seja: numa pergunta que JÁ tinha resposta, a tela afirmava, por
+ * alguns segundos, que não havia. Quem conduz lê isso como perda.
+ */
+describe('Conversation — a procura pela resposta já gravada', () => {
+  const silent = (has: () => Promise<boolean>): VoiceRecorder => ({
+    start: () => Promise.reject(new Error('unused in this test')),
+    play: () => Promise.resolve(),
+    duration: () => Promise.resolve(9),
+    stopPlayback: () => {},
+    has,
+    delete: () => Promise.resolve(),
+    onPlayback: () => () => {},
+  });
+
+  it('enquanto a consulta não responde, a tela diz que procura — não que não há resposta', async () => {
+    load(mapping());
+    renderStation(<Conversation recorder={silent(() => new Promise(() => {}))} />);
+
+    expect(await screen.findByText('procurando a resposta já gravada')).toBeTruthy();
+    expect(screen.queryByText('Toque e fale a sua resposta')).toBeNull();
+  });
+
+  it('respondido que existe, a resposta gravada aparece para ouvir', async () => {
+    load(mapping());
+    renderStation(<Conversation recorder={silent(() => Promise.resolve(true))} />);
+
+    expect(await screen.findByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
+    expect(screen.queryByText('procurando a resposta já gravada')).toBeNull();
+  });
+
+  it('respondido que não existe, a tela volta a convidar a falar', async () => {
+    load(mapping());
+    renderStation(<Conversation recorder={silent(() => Promise.resolve(false))} />);
+
+    expect(await screen.findByText('Toque e fale a sua resposta')).toBeTruthy();
+  });
+
+  it('sem porta de voz não há o que procurar — nem um piscar de espera', () => {
+    load(mapping());
+    renderStation(<Conversation />);
+
+    expect(screen.getByText('Toque e fale a sua resposta')).toBeTruthy();
+    expect(screen.queryByText('procurando a resposta já gravada')).toBeNull();
+  });
+
+  /**
+   * A consulta é assíncrona e o microfone segue aberto durante ela: um veredito que
+   * chega DEPOIS do primeiro toque encontrava a tela gravando e a empurrava para
+   * "recorded" — a forma de onda ao vivo morria no meio da resposta, com o
+   * microfone ainda captando.
+   */
+  it('o veredito atrasado não atropela quem já começou a gravar', async () => {
+    let answer: ((exists: boolean) => void) | undefined;
+    const recorder = new FixtureVoiceRecorder();
+    const racing: VoiceRecorder = {
+      ...silent(() => new Promise<boolean>((res) => (answer = res))),
+      start: (p) => recorder.start(p),
+    };
+
+    load(mapping());
+    renderStation(<Conversation recorder={racing} />);
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+
+    await act(async () => answer?.(true));
+
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeTruthy();
+  });
+});

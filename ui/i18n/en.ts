@@ -398,6 +398,9 @@ export const en: Dict = {
     record: 'record the answer',
     stop: 'Stop',
     idleHint: 'Tap and speak your answer',
+    /* Enquanto ainda não se sabe se esta pergunta tem resposta gravada. Toma o
+       lugar do convite a falar — a tela do ouvinte tem UMA linha (§9.2). */
+    checkingAnswer: 'looking for the answer already recorded',
     emptyWave: 'your answer becomes a thread of sound here',
     recordingLabel: 'recording — the other buttons wait for the answer',
     play: 'listen to the answer',

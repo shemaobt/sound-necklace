@@ -40,14 +40,62 @@ describe('ConversationProgressBar', () => {
     expect(container.querySelector('.cds-conv-progress-caption')?.textContent).toBe('Chegada');
   });
 
-  it('os segmentos até o trecho atual são "past"; os seguintes não', () => {
+  /**
+   * O quanto já andou, DESENHADO — a porcentagem que o §9.2 proíbe imprimir em
+   * tela de ouvinte. Antes o trecho inteiro acendia de uma vez ao ser alcançado:
+   * dentro de uma cena de cinco perguntas a barra ficava idêntica da primeira à
+   * última, e a única coisa que se movia era o marcador.
+   */
+  const fills = (el: HTMLElement): string[] =>
+    [...el.querySelectorAll<HTMLElement>('.cds-conv-progress-fill')].map((f) => f.style.width);
+
+  it('o preenchimento cobre a pergunta em foco e para ali', () => {
     const { container } = render(
-      <ConversationProgressBar trechos={TRECHOS} current={12} total={21} ariaLabel="p" />,
+      <ConversationProgressBar trechos={TRECHOS} current={0} total={21} ariaLabel="p" />,
     );
-    const segs = container.querySelectorAll('.cds-conv-progress-seg');
-    expect(segs[0]!.getAttribute('data-past')).toBe('true'); // história
-    expect(segs[1]!.getAttribute('data-past')).toBe('true'); // cena atual
-    expect(segs[2]!.getAttribute('data-past')).toBeNull(); // frase futura
+    // 1ª das 11 perguntas da história: um onze avos do primeiro segmento, zero no resto
+    expect(fills(container)).toEqual([`${(1 / 11) * 100}%`, '0%', '0%']);
+  });
+
+  it('o preenchimento avança DENTRO do trecho, pergunta a pergunta', () => {
+    const { container, rerender } = render(
+      <ConversationProgressBar trechos={TRECHOS} current={11} total={21} ariaLabel="p" />,
+    );
+    // 1ª pergunta da cena (índice 11): história cheia, um quinto da cena
+    expect(fills(container)).toEqual(['100%', `${(1 / 5) * 100}%`, '0%']);
+
+    rerender(<ConversationProgressBar trechos={TRECHOS} current={13} total={21} ariaLabel="p" />);
+    expect(fills(container)).toEqual(['100%', `${(3 / 5) * 100}%`, '0%']);
+  });
+
+  it('na última pergunta a barra está cheia', () => {
+    const { container } = render(
+      <ConversationProgressBar trechos={TRECHOS} current={20} total={21} ariaLabel="p" />,
+    );
+    expect(fills(container)).toEqual(['100%', '100%', '100%']);
+    expect(container.querySelector<HTMLElement>('.cds-conv-progress-marker')!.style.left).toBe(
+      '100%',
+    );
+  });
+
+  it('o marcador é a cabeça do preenchimento — a mesma posição, não duas verdades', () => {
+    const { container } = render(
+      <ConversationProgressBar trechos={TRECHOS} current={13} total={21} ariaLabel="p" />,
+    );
+    expect(container.querySelector<HTMLElement>('.cds-conv-progress-marker')!.style.left).toBe(
+      `${(14 / 21) * 100}%`,
+    );
+  });
+
+  it('anuncia progresso a quem ouve a tela, e ainda assim sem número falado', () => {
+    const { getByRole } = render(
+      <ConversationProgressBar trechos={TRECHOS} current={13} total={21} ariaLabel="progresso" />,
+    );
+    const bar = getByRole('progressbar', { name: 'progresso' });
+    expect(bar.getAttribute('aria-valuenow')).toBe('14');
+    expect(bar.getAttribute('aria-valuemax')).toBe('21');
+    // aria-valuetext substitui a leitura do número: o leitor de tela diz o trecho
+    expect(bar.getAttribute('aria-valuetext')).toBe('Chegada');
   });
 
   it('tem um marcador e uma divisória entre cada par de trechos', () => {
