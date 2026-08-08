@@ -15,6 +15,7 @@ import {
   voiceAnswerPath,
 } from '../../../domain';
 import { questionTextFor } from '../../i18n/conversation-questions';
+import { interviewIsEnglish } from '../../i18n/interview-language';
 import { Button, WaveformBar } from '../../atoms';
 import { PreparingSession } from '../../organisms';
 import type { PaletteEntry } from '../../tokens';
@@ -594,6 +595,9 @@ export function Report({
   onWaitingChange,
 }: ReportProps) {
   const { t, i18n } = useTranslation();
+  // A entrevista correu em inglês? É a MESMA regra que o wiring usa para dizer a língua
+  // ao job (@/ui/app/App.tsx), e é o que decide se o rascunho tem tradução a preservar.
+  const spokenInEnglish = interviewIsEnglish(i18n.language);
   const session = useSessionStore((s) => s.session);
   // O preload (ENG-337) semeia os dois conjuntos: linha conhecida nasce resolvida,
   // sem passar pelo "procurando"; o efeito abaixo só completa o que faltou.
@@ -781,9 +785,19 @@ export function Report({
   };
   /** Confirmar: o TRANSCRIPT em revisão vira A resposta, pelo mesmo caminho de digitar. */
   const confirmDraft = (slot: QuestionSlot, text: string): void => {
-    // escreve a resposta SEM passar por writeTyped: o inglês desta gravação continua
-    // válido — é ele que o artefato emite
-    sessionStore.getState().apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), slot, text));
+    sessionStore.getState().apply((s) => {
+      const base = s.mapping ? s : ensureMapping(s);
+      // Entrevista em inglês: não houve tradução — o servidor devolve o próprio
+      // transcript, então `en__` guarda o VERBATIM do reconhecedor, hesitação e
+      // repetição inclusas. Mantê-lo faria o artefato emitir o áudio bruto por cima
+      // do texto que a pessoa acabou de corrigir e conferir, e a correção sumiria em
+      // silêncio (o `.md` prefere `en__` à célula). Descartá-lo é o que faz valer a
+      // regra: o inglês do artefato deriva do texto CONFIRMADO.
+      if (spokenInEnglish) return setAnswer(setAnswer(base, draftEnSlot(slot), ''), slot, text);
+      // Em PT o inglês desta gravação continua sendo o que o artefato emite: a célula
+      // guarda a língua falada, e apagar `en__` faria o `.md` sair em português.
+      return setAnswer(base, slot, text);
+    });
   };
 
   // Quantas respostas gravadas ainda esperam confirmação — o número que o leitor

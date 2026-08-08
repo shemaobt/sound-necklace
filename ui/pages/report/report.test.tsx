@@ -20,6 +20,7 @@ import {
   type Span,
   voiceAnswerPath,
 } from '../../../domain';
+import i18n from '../../i18n';
 import { sessionStore } from '../../state';
 import { markSkipped } from '../conversation/answered';
 import Report from './index';
@@ -567,6 +568,38 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     expect((within(card).getByLabelText('resposta') as HTMLTextAreaElement).value).toBe(
       'Ele falou do boto-cor-de-rosa.',
     );
+  });
+
+  /**
+   * Entrevista em INGLÊS: no servidor a tradução é um no-op (`translate_to_english`
+   * devolve o próprio transcript quando a língua já é inglês), então `en__` guarda o
+   * texto CRU do reconhecedor — hesitação, repetição e recomeço inclusos. Como o
+   * artefato prefere `en__` à célula, a correção que a facilitadora acabou de fazer
+   * era descartada em silêncio e o `.md` saía com o verbatim do STT.
+   *
+   * O que um humano confirma é o transcript, e o inglês do artefato deriva DESSE texto
+   * (CLAUDE.md, emenda ENG-370) — aqui os dois são o mesmo texto, então a célula manda.
+   */
+  it('em inglês, o .md sai com o transcript CORRIGIDO, não com o verbatim do STT', async () => {
+    const RAW = 'He, he told of the... of the dolphin, you know.';
+    const CLEAN = 'He told of the dolphin.';
+    // caminho inglês: o rascunho volta com o MESMO texto nos dois campos
+    const { stt, finish } = controllableStt({ [PATH]: { source: RAW, en: RAW } });
+    await act(() => i18n.changeLanguage('en'));
+    load(report());
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    finish();
+    const src = await screen.findByDisplayValue(RAW);
+    await userEvent.clear(src);
+    await userEvent.type(src, CLEAN);
+
+    const card = src.closest('.cds-report-card') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: /confirm the transcript/i }));
+
+    const md = buildMapReport(sessionStore.getState().session!);
+    expect(md).toContain(CLEAN);
+    expect(md).not.toContain(RAW);
   });
 
   it('apagar o transcript de propósito o mantém apagado ao remontar', async () => {
