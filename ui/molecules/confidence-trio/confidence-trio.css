@@ -8,12 +8,17 @@
   gap: 14px;
 }
 
+/* 168px é a medida do protótipo e continua sendo o alvo. O que mudou é que os três
+   cartões CEDEM largura quando a linha aperta, em vez de obrigar quem os hospeda a
+   empilhá-los — e empilhar, numa janela baixa, é o que empurrava o "Confirmar" para
+   fora da tela. 118px ainda é um alvo de toque folgado para o rótulo mais longo. */
 .cds-confidence-trio-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  width: 168px;
+  flex: 0 1 168px;
+  min-width: 118px;
   padding: 22px 16px;
   border: 1.5px solid transparent;
   border-radius: 20px;

@@ -76,9 +76,15 @@
   opacity: 1;
 }
 
+/* Colunas pelo espaço, não por um número fixo: três colunas eram a conta certa
+   para uma coluna de 640px e a conta errada para qualquer largura maior — a
+   estação passou a deitar em telas largas (triage.css) e a grade tem de gastar
+   o que ganhou. 184px é a menor largura em que os rótulos longos ("Convocação do
+   tribunal na porta") ainda quebram em duas linhas; `auto-fill` devolve as mesmas
+   três colunas nos 640px de antes. */
 .cds-triage-picker-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
   gap: 9px;
 }
 
@@ -124,10 +130,49 @@
   color: var(--cds-ui-ink);
 }
 
+/*
+ * O TRIO E O CONFIRMAR NA MESMA LINHA.
+ *
+ * Empilhados, o passo da confiança pede ~300px de altura, e numa janela de 620px a
+ * estação só tem ~255 para dar: o botão saía da área visível do próprio picker e
+ * virava um controle que existe, aparece no DOM e só se alcança rolando um vão de
+ * poucas dezenas de pixels. A largura ao lado do trio estava sobrando.
+ *
+ * A calha da ESQUERDA é um `::before` — um item de flex vazio que espelha a calha
+ * onde o botão mora. Sem ela, revelar o Confirmar empurraria o trio para o lado
+ * exatamente no instante em que a pessoa acabou de mirar num dos três cartões; com
+ * ela, as duas calhas crescem juntas (`flex: 1 1 0`) e o trio fica parado no
+ * centro. Um `<div>` vazio faria o mesmo, mas seria um nó a mais no DOM para dizer
+ * uma coisa que só o desenho sabe.
+ *
+ * Quando a linha aperta, quem cede é o trio (`min-width: 0` aqui + os cartões
+ * elásticos em confidence-trio.css) e depois a calha vazia, que chega a zero — o
+ * botão, que é a ação, nunca é o primeiro a ser espremido. Só se nem assim couber a
+ * linha quebra, e aí o `flex-wrap` empilha como antes.
+ */
+.cds-triage-picker-answer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.cds-triage-picker-answer::before {
+  content: '';
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* o trio (a molécula) — pela ordem, não pela classe dela */
+.cds-triage-picker-answer > :first-child {
+  min-width: 0;
+}
+
 .cds-triage-picker-confirm {
   display: flex;
-  justify-content: center;
-  margin-top: 8px;
+  flex: 1 1 0;
+  justify-content: flex-start;
 }
 
 @media (prefers-reduced-motion: no-preference) {

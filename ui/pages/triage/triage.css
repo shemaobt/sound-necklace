@@ -59,6 +59,17 @@
   --cds-triage-picker-scroll-max: none;
 }
 
+/* a cena em foco: a pergunta, o estado e o colar que a toca */
+.cds-triage-scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  flex: none;
+}
+
 /* A corrente de flex precisa do min-height:0 em cada elo até a caixa de rolagem:
    sem isso o conteúdo do filho define o tamanho e a rolagem escapa para a
    página, que é justamente o que a altura fechada acima evita. */
@@ -204,4 +215,75 @@
   font-weight: 300;
   font-size: clamp(24px, 3.4vh, 34px);
   color: var(--cds-ui-ink);
+}
+
+/*
+ * A ESTAÇÃO DEITA (a queixa do dono: "a listagem está apertada" e "o Confirmar
+ * ficou escondido" — um defeito só).
+ *
+ * A pilha vertical gastava a altura com a cena (pergunta + estado + colar ≈ 200px)
+ * e deixava para a grade dos 27 tipos o que sobrasse: medido a 1280px de largura,
+ * 9 cartões à vista a 900px de altura, 3 a 800, ZERO a 700 e a 620 — enquanto
+ * metade da largura da tela ficava vazia dos dois lados. No passo da confiança a
+ * mesma falta de altura recortava o "Confirmar" para dentro da caixa que rola: um
+ * botão que só se alcança rolando 53px de vão.
+ *
+ * Deitar não é um remendo de altura, é a correção da raiz: a cena vai para a
+ * coluna da esquerda e a grade fica com a ALTURA INTEIRA do foco em vez das
+ * sobras. Repare que ninguém ganhou `flex: none` aqui — o `flex: 1 1 auto` do
+ * foco continua sendo o que entrega essa altura (ENG-388), e é justamente por
+ * isso que o conserto tem de acontecer na direção do eixo, não no encolhimento.
+ *
+ * 900px é o piso onde as duas colunas ainda cabem. Entre 900 e ~1050 a grade
+ * chega a perder uma coluna de cartões (fica com duas, em vez das três que tinha
+ * empilhada) e ainda assim a troca compensa: medido a 900×700, deitada ela mostra
+ * 6 tipos e empilhada mostra ZERO. Contar colunas era a métrica errada — o que se
+ * conta é quantos tipos a pessoa consegue ver. Abaixo de 900 não há largura para
+ * repartir, e a pilha vertical continua sendo o desenho certo.
+ *
+ * Este bloco fica no FIM do arquivo de propósito: `@media` não soma
+ * especificidade, então quem sobrescreve as regras da coluna empilhada precisa
+ * vir depois delas.
+ */
+@media (min-width: 900px) {
+  /* A aba da gaveta de cobertura mora colada na direita da estação (`right: 0`) e
+     flutua sobre o conteúdo. Enquanto o foco tinha 680px ela nunca encontrava
+     ninguém; com a grade larga ela passou a deitar sobre a última coluna de
+     cartões. O corredor é simétrico de propósito: reservá-lo só à direita
+     descentraria a estação inteira para acomodar um controle de facilitadora. */
+  .cds-triage {
+    padding-inline: 3rem;
+  }
+
+  .cds-triage-focus {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    gap: 2rem;
+    max-width: 1240px;
+  }
+
+  /* Largura declarada, não emergente: com `flex-basis: auto` dos dois lados quem
+     decidiria a divisão seria o encolhimento proporcional — um número que ninguém
+     escolheu e que muda com a cópia. */
+  .cds-triage-scene {
+    flex: 0 0 clamp(220px, 22%, 300px);
+    /* a cena centra na altura da linha; quem cresce é a grade */
+    align-self: center;
+  }
+
+  /* a grade fica com a largura que sobra — o teto de 640px do organismo existe
+     para quando ele é a coluna INTEIRA, que aqui deixou de ser o caso */
+  .cds-triage-focus .cds-triage-picker {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  /* O passo da confiança é baixo e a coluna é alta: encostado no topo ele fica
+     longe da cena, que centra do outro lado. A grade dos tipos NÃO ganha isto —
+     ela preenche a coluna e centrar seria centrar o nada. */
+  .cds-triage-focus .cds-triage-picker[data-stage='confianca'] {
+    justify-content: center;
+  }
 }

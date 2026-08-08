@@ -200,23 +200,29 @@ export function TriagePicker({ onConfirm, onNoneFit }: TriagePickerProps) {
           </button>
         </div>
         <p className="cds-triage-picker-question">{t('triagePicker.confidenceQuestion')}</p>
-        <ConfidenceTrio
-          value={choice ?? undefined}
-          onSelect={setChoice}
-          label={t('triagePicker.confidenceQuestion')}
-          choiceLabels={{
-            certeza: t('confidence.certeza'),
-            quase: t('confidence.quase'),
-            duvida: t('confidence.duvida'),
-          }}
-        />
-        {choice ? (
+        {/* O trio e o Confirmar dividem uma linha quando há largura (ver o CSS): a
+            pilha vertical empurrava o botão para fora da área visível numa janela
+            baixa. O berço do botão fica SEMPRE montado, vazio antes da escolha —
+            assim o trio não desliza para o lado no instante em que se escolhe. */}
+        <div className="cds-triage-picker-answer">
+          <ConfidenceTrio
+            value={choice ?? undefined}
+            onSelect={setChoice}
+            label={t('triagePicker.confidenceQuestion')}
+            choiceLabels={{
+              certeza: t('confidence.certeza'),
+              quase: t('confidence.quase'),
+              duvida: t('confidence.duvida'),
+            }}
+          />
           <div className="cds-triage-picker-confirm">
-            <Button onClick={() => onConfirm?.(picked, CONFIDENCE_BY_CHOICE[choice])}>
-              {t('triagePicker.confirm')}
-            </Button>
+            {choice ? (
+              <Button onClick={() => onConfirm?.(picked, CONFIDENCE_BY_CHOICE[choice])}>
+                {t('triagePicker.confirm')}
+              </Button>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
     );
   }
