@@ -15,8 +15,9 @@
  *     fim marcado e CONTINUA se ainda não chegou (`set-end` — a decisão depende do
  *     playhead, que é runtime, então mora na UI);
  *  3. **trecho fechado** → move a borda mais próxima (`adjust`); o áudio que já corre
- *     DENTRO do trecho não é interrompido, e só fora dele a UI confere a borda que
- *     andou. Tocar uma borda sem movê-la não é ajuste: reouve o trecho (`range`).
+ *     DENTRO do trecho não é interrompido, e quando é preciso soar a UI toca o
+ *     **pedaço que mudou de dono** (da posição antiga da borda à nova). Tocar uma
+ *     borda sem movê-la não é ajuste: reouve o trecho (`range`).
  *
  * Duas consequências que vale nomear:
  * - clicar a própria conta de COMEÇO (ou a de FIM) cai no ramo 3 sem mover nada, e
@@ -38,10 +39,10 @@ export type PlayAction =
   | { type: 'set-end'; end: number }
   /** Tocou uma borda sem movê-la (o trecho não mudou): reouvir o trecho inteiro. */
   | { type: 'range'; s: number; e: number }
-  /** MOVEU uma borda: `edge` é a que andou, `{s,e}` é o trecho resultante. A UI só faz
-   *  som se o playhead estiver FORA do trecho — o áudio que já corre dentro dele não
-   *  é interrompido. */
-  | { type: 'adjust'; s: number; e: number; edge: number };
+  /** MOVEU uma borda. `{s,e}` é o trecho resultante; `delta` é o pedaço que MUDOU DE
+   *  DONO — da posição antiga da borda até a nova, em qualquer direção. A UI só faz som
+   *  se o playhead estiver FORA do trecho, e o que ela toca é o `delta`. */
+  | { type: 'adjust'; s: number; e: number; delta: { s: number; e: number } };
 
 export interface ClickResult {
   state: SessionState;
@@ -83,7 +84,12 @@ export function clickBead(state: SessionState, bead: number): ClickResult {
   if (selection.s === selS && selection.e === selE) {
     return { state, play: { type: 'range', ...selection } };
   }
-  return { state: { ...state, selection }, play: { type: 'adjust', ...selection, edge: b } };
+  // o pedaço que mudou de dono: da posição ANTIGA da borda até a nova. Esticar toca o
+  // que a cena ganhou; encolher toca o que ela perdeu. Ordenado, porque a borda anda
+  // nos dois sentidos.
+  const antes = moveStart ? selS : selE;
+  const delta = { s: Math.min(antes, b), e: Math.max(antes, b) };
+  return { state: { ...state, selection }, play: { type: 'adjust', ...selection, delta } };
 }
 
 /**

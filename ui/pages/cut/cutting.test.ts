@@ -71,14 +71,14 @@ describe('playClick — intenção do clique → player, com o playhead', () => 
   });
 
   /**
-   * Ajustar a borda com o áudio CORRENDO não pode reiniciar do começo (relato do
-   * dono, 2026-08-07): "a reprodução não chegou no limite novo, então ele deveria
-   * continuar". Só quando o que está soando já não pertence ao trecho é que vale
-   * gastar som — e aí a lupa da borda basta, porque a cena já foi ouvida.
+   * Ajustar a borda com o áudio CORRENDO não pode reiniciar (relato do dono,
+   * 2026-08-07): "a reprodução não chegou no limite novo, então deveria continuar".
+   * E quando é preciso soar, o que interessa é o TRECHO QUE MUDOU DE DONO — do limite
+   * antigo ao novo —, não a cena de novo nem ~1 s solto em volta da borda.
    */
   it('adjust com o playhead DENTRO do novo trecho não faz nada — deixa correr', () => {
     const player = spyPlayer();
-    playClick(player, { type: 'adjust', s: 0, e: 14, edge: 14 }, 23, 5);
+    playClick(player, { type: 'adjust', s: 0, e: 14, delta: { s: 10, e: 14 } }, 23, 5);
     expect(player.play).not.toHaveBeenCalled();
     expect(player.playEdge).not.toHaveBeenCalled();
     expect(player.stop).not.toHaveBeenCalled();
@@ -86,23 +86,29 @@ describe('playClick — intenção do clique → player, com o playhead', () => 
 
   it('adjust nas pontas do trecho ainda conta como dentro (bordas inclusivas)', () => {
     const player = spyPlayer();
-    playClick(player, { type: 'adjust', s: 4, e: 14, edge: 14 }, 23, 14);
-    expect(player.playEdge).not.toHaveBeenCalled();
-    playClick(player, { type: 'adjust', s: 4, e: 14, edge: 4 }, 23, 4);
-    expect(player.playEdge).not.toHaveBeenCalled();
-  });
-
-  it('adjust com o playhead JÁ ALÉM do novo fim confere a borda', () => {
-    const player = spyPlayer();
-    playClick(player, { type: 'adjust', s: 0, e: 14, edge: 14 }, 23, 20);
-    expect(player.playEdge).toHaveBeenCalledWith(14);
-  });
-
-  it('adjust com NADA tocando confere a borda, sem repetir a cena', () => {
-    const player = spyPlayer();
-    playClick(player, { type: 'adjust', s: 0, e: 14, edge: 14 }, 23, null);
-    expect(player.playEdge).toHaveBeenCalledWith(14);
+    playClick(player, { type: 'adjust', s: 4, e: 14, delta: { s: 10, e: 14 } }, 23, 14);
     expect(player.play).not.toHaveBeenCalled();
+    playClick(player, { type: 'adjust', s: 4, e: 14, delta: { s: 4, e: 6 } }, 23, 4);
+    expect(player.play).not.toHaveBeenCalled();
+  });
+
+  it('esticar o fim com NADA tocando toca só o pedaço GANHO', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 0, e: 14, delta: { s: 10, e: 14 } }, 23, null);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
+    expect(player.playEdge).not.toHaveBeenCalled();
+  });
+
+  it('encolher o fim toca o pedaço PERDIDO — o que saiu da cena', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 0, e: 10, delta: { s: 10, e: 14 } }, 23, null);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
+  });
+
+  it('com o playhead já ALÉM do trecho, o pedaço que mudou também soa', () => {
+    const player = spyPlayer();
+    playClick(player, { type: 'adjust', s: 0, e: 14, delta: { s: 10, e: 14 } }, 23, 20);
+    expect(player.play).toHaveBeenCalledWith(10, 14);
   });
 });
 

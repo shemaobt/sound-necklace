@@ -93,19 +93,19 @@ describe('clickBead — marca o começo ouvindo, fecha no fim, e reouve ao ajust
   it('fechado o trecho, clicar além do fim move o FIM e devolve o ajuste à UI', () => {
     const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 20);
     expect(r.state.selection).toEqual({ s: 0, e: 20 });
-    expect(r.play).toEqual({ type: 'adjust', s: 0, e: 20, edge: 20 });
+    expect(r.play).toEqual({ type: 'adjust', s: 0, e: 20, delta: { s: 12, e: 20 } });
   });
 
   it('clicar perto do começo move o COMEÇO, e a borda reportada é ele', () => {
     const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 4);
     expect(r.state.selection).toEqual({ s: 4, e: 12 }); // 4−0=4 ≤ 12−4=8
-    expect(r.play).toEqual({ type: 'adjust', s: 4, e: 12, edge: 4 });
+    expect(r.play).toEqual({ type: 'adjust', s: 4, e: 12, delta: { s: 0, e: 4 } });
   });
 
   it('clicar perto do fim move o FIM', () => {
     const r = clickBead(aberto({ selection: { s: 0, e: 12 } }), 9);
     expect(r.state.selection).toEqual({ s: 0, e: 9 }); // 9−0=9 > 12−9=3
-    expect(r.play).toEqual({ type: 'adjust', s: 0, e: 9, edge: 9 });
+    expect(r.play).toEqual({ type: 'adjust', s: 0, e: 9, delta: { s: 9, e: 12 } });
   });
 
   it('empate no meio vai para o COMEÇO (o `<=` da referência)', () => {
@@ -225,7 +225,7 @@ describe('clickBead — a frase se comporta como a cena', () => {
     const s = fraseando([frase({})], 0);
     const r = clickBead({ ...s, selection: { s: 10, e: 16 }, pendingStart: null }, 15);
     expect(r.state.selection).toEqual({ s: 10, e: 15 }); // 15−10=5 > 16−15=1
-    expect(r.play).toEqual({ type: 'adjust', s: 10, e: 15, edge: 15 });
+    expect(r.play).toEqual({ type: 'adjust', s: 10, e: 15, delta: { s: 15, e: 16 } });
   });
 });
 
@@ -351,6 +351,6 @@ describe('clickBead — depois de arrastar o começo, o clique fecha COM ele', (
     const fechado = clickBead(arrastado, 15).state; // trecho {7,15}
     const r = clickBead(fechado, 2); // satura na fronteira 4
     expect(r.state.selection).toEqual({ s: 4, e: 15 });
-    expect(r.play).toEqual({ type: 'adjust', s: 4, e: 15, edge: 4 });
+    expect(r.play).toEqual({ type: 'adjust', s: 4, e: 15, delta: { s: 4, e: 7 } });
   });
 });

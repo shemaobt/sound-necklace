@@ -48,8 +48,9 @@ const EDIT_AFTER = 3;
  * - `adjust` → mexeu numa borda: se o playhead está DENTRO do trecho resultante, não
  *   faz nada — interromper para recomeçar do início era o desperdício que o dono
  *   relatou ("a reprodução não chegou no limite novo, então deveria continuar"). Fora
- *   do trecho (ou com nada tocando), confere a borda movida com `playEdge`: a cena já
- *   foi ouvida, o que falta saber é se o CORTE caiu no lugar.
+ *   do trecho (ou com nada tocando), toca o `delta`: o pedaço que mudou de dono, da
+ *   posição antiga da borda à nova. Esticar dá a ouvir o que a cena ganhou; encolher,
+ *   o que ela perdeu. A cena já foi ouvida — repeti-la seria o outro desperdício.
  */
 export function playClick(
   player: Player,
@@ -72,7 +73,7 @@ export function playClick(
       return;
     case 'adjust':
       if (head !== null && head >= action.s && head <= action.e) return;
-      player.playEdge(action.edge);
+      player.play(action.delta.s, action.delta.e);
       return;
   }
 }

@@ -51,8 +51,10 @@ position they did not know yet. Now the story RUNS while they decide.
     interrupted** — restarting from the beginning was waste the owner reported on
     2026-08-07: _"a reprodução não chegou no limite novo, então deveria continuar"_.
     Only when the playhead sits outside the stretch (or nothing is playing) does the
-    UI sound anything, and then it is `playEdge` on the boundary that moved: the scene
-    has already been heard, what is in question is whether the CUT landed right.
+    UI sound anything, and what it plays is the **stretch that changed hands** — from
+    the boundary's old position to its new one. Growing plays what the scene GAINED,
+    shrinking plays what it LOST. The scene has already been heard; replaying it is
+    the other waste the owner named.
   - Tapping a boundary **without moving it** is not an adjustment — it replays the
     whole stretch. That is what stands in for the reference's `▶ tocar este pedaço`
     button (`playSel`, L262) that ENG-291 removed from these stations.

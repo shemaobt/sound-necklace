@@ -155,11 +155,11 @@ describe('Escuta 2 — modelo de clique com áudio na hora (decisão do dono, 20
     expect(sessionStore.getState().session!.pendingStart).toBeNull();
     expect(calls.length).toBe(n);
 
-    // 3º clique depois do fim: o fim cede. Com NADA tocando (o espião não avança), a
-    // borda é conferida — a cena não é repetida do início.
+    // 3º clique depois do fim: o fim cede de 6 para 8 e toca só o pedaço GANHO (6→8).
+    // Com nada tocando, a cena não é repetida do início nem some o áudio.
     firePointer(el, 8);
     expect(sessionStore.getState().session!.selection).toEqual({ s: 2, e: 8 });
-    expect(calls.at(-1)).toEqual({ m: 'playEdge', args: [8] });
+    expect(calls.at(-1)).toEqual({ m: 'play', args: [6, 8] });
 
     // tocar uma borda SEM movê-la é pedido de escuta: reouve o trecho
     firePointer(el, 2);
