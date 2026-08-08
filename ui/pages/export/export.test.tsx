@@ -25,7 +25,7 @@ import {
   voiceAnswerPath,
 } from '../../../domain';
 import { splitByGuard } from '../../atoms/testing/css';
-import { sessionStore } from '../../state';
+import { freezeClock, markActivity, readClock, sessionStore, startClock } from '../../state';
 import exportCss from './export.css?raw';
 import Export from './index';
 
@@ -140,6 +140,7 @@ function cardButton(filename: string): HTMLElement {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   sessionStore.setState({ session: null, review: false, lock: null, online: true });
 });
 afterEach(() => {
@@ -409,5 +410,63 @@ describe('Export — inglês confirmado é requisito para guardar (ENG-327)', ()
     const { report } = await store.getArtifacts(id);
     expect(report).toContain('He told of the dolphin.');
     expect(report).not.toContain('respostas/');
+  });
+});
+
+/**
+ * Quanto tempo esta sessão custou — a pergunta que a facilitadora faz ao fim, e
+ * só ao fim. O número é LÍQUIDO (@/ui/state/session-clock): tempo de sessão aberta
+ * com a aba à vista, descontadas as pausas longas. Ele mora neste browser e não
+ * entra em artefato nenhum.
+ */
+describe('Export — o tempo líquido da sessão (só ao concluir)', () => {
+  it('antes de concluir, a tela não fala de tempo: o relógio não é uma cobrança durante o trabalho', async () => {
+    const state = exportable();
+    const store = new FixtureSessionStore();
+    const id = await seedInProgress(store, state);
+    startClock(id, 0);
+    markActivity(id, 60_000);
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await screen.findByRole('button', { name: 'Concluir e guardar os documentos' });
+
+    expect(screen.queryByText(/tempo de trabalho/i)).toBeNull();
+  });
+
+  it('concluída, o chip mostra o tempo de trabalho — e o número para de andar', async () => {
+    const state = exportable();
+    const store = new FixtureSessionStore();
+    const id = await seedInProgress(store, state);
+    startClock(id, 0);
+    markActivity(id, 60_000);
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
+    );
+
+    expect(await screen.findByText(/tempo de trabalho/i)).toBeTruthy();
+    expect(screen.getByText('1 min')).toBeTruthy();
+    // ficar na tela de conclusão não é trabalho: o número exibido é o congelado
+    markActivity(id, 10 * 60_000);
+    expect(readClock(id).netMs).toBe(60_000);
+  });
+
+  it('destravar para editar tira o chip e volta a contar', async () => {
+    const state = exportable();
+    const store = new FixtureSessionStore();
+    const id = await seedCompleted(store, state);
+    startClock(id, 0);
+    markActivity(id, 60_000);
+    freezeClock(id);
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Destravar para editar' }));
+
+    expect(screen.queryByText(/tempo de trabalho/i)).toBeNull();
+    expect(readClock(id).frozen).toBe(false);
   });
 });

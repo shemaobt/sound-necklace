@@ -12,3 +12,15 @@ export {
   type SessionStoreDeps,
 } from './session-store';
 export { createAppStore, appStore, useAppStore, type AppStore } from './app-store';
+export {
+  type ClockRecord,
+  IDLE_GAP_MS,
+  TICK_MS,
+  freezeClock,
+  markActivity,
+  netTimeParts,
+  readClock,
+  resumeClock,
+  startClock,
+  useSessionClock,
+} from './session-clock';

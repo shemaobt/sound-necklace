@@ -1125,3 +1125,112 @@ describe('Conversation — a procura pela resposta já gravada', () => {
     expect(screen.getByRole('button', { name: 'Parar' })).toBeTruthy();
   });
 });
+
+/**
+ * "Guardar os documentos →" leva a uma tela que RECUSA guardar enquanto houver
+ * resposta gravada sem texto confirmado (`reportExportStatus`, ENG-327). Sair da
+ * revisão sem confirmar era, portanto, andar para um botão morto: a explicação
+ * chegava uma tela tarde. O diálogo diz isso ANTES, com o mesmo número do gate, e
+ * — §9.5, nunca punir — deixa passar mesmo assim quem quiser passar.
+ */
+describe('Conversation — sair da revisão com transcrição por confirmar', () => {
+  async function walkToReport(): Promise<void> {
+    const total = questionSequence(sessionStore.getState().session!).length;
+    for (let i = 0; i < total; i++) {
+      await userEvent.click(screen.getByRole('button', { name: 'Próxima pergunta' }));
+    }
+  }
+
+  /** Grava a resposta da 1ª pergunta e chega à revisão sem confirmar texto nenhum. */
+  async function recordedButUnconfirmed(onGoToExport: () => void): Promise<void> {
+    load(mapping());
+    renderStation(
+      <Conversation recorder={new FixtureVoiceRecorder()} onGoToExport={onGoToExport} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+    await walkToReport();
+  }
+
+  /**
+   * Estes casos gravam uma resposta e depois ANDAM pelas 21 perguntas com cliques
+   * reais, e cada pergunta agora espera a consulta "já existe resposta gravada aqui?"
+   * (o estado `checking` do #175). Só o caminhar já custa ~3 s numa máquina de CI, e o
+   * padrão de 5 s do Vitest passou a estourar quando os dois PRs se encontraram na
+   * main. O trabalho é legítimo: o teto sobe para caber nele, em vez de o teste ser
+   * afinado até caber no teto.
+   */
+  const ANDAR = 20_000;
+
+  it(
+    'o clique abre o diálogo em vez de guardar, e conta quantas faltam',
+    async () => {
+      const onGoToExport = vi.fn();
+      await recordedButUnconfirmed(onGoToExport);
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
+
+      expect(await screen.findByRole('dialog')).toBeTruthy();
+      expect(screen.getByText(/falta confirmar a transcrição de 1 resposta/i)).toBeTruthy();
+      expect(onGoToExport).not.toHaveBeenCalled();
+    },
+    ANDAR,
+  );
+
+  it(
+    '"Revisar as respostas" fecha e deixa quem revisa onde ele revisa',
+    async () => {
+      const onGoToExport = vi.fn();
+      await recordedButUnconfirmed(onGoToExport);
+      await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
+
+      await userEvent.click(screen.getByRole('button', { name: 'Revisar as respostas' }));
+
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(onGoToExport).not.toHaveBeenCalled();
+    },
+    ANDAR,
+  );
+
+  it(
+    '"Ir mesmo assim" passa: o aviso guia, não tranca',
+    async () => {
+      const onGoToExport = vi.fn();
+      await recordedButUnconfirmed(onGoToExport);
+      await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
+
+      await userEvent.click(screen.getByRole('button', { name: 'Ir mesmo assim' }));
+
+      expect(onGoToExport).toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).toBeNull();
+    },
+    ANDAR,
+  );
+
+  it(
+    'confirmada a transcrição, o diálogo não aparece — ele espelha o gate, não duplica regra',
+    async () => {
+      const onGoToExport = vi.fn();
+      load(mapping());
+      const recorder = new FixtureVoiceRecorder();
+      renderStation(<Conversation recorder={recorder} onGoToExport={onGoToExport} />);
+      await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
+      // o texto confirmado é exatamente o que `reportExportStatus` procura
+      act(() => {
+        sessionStore
+          .getState()
+          .apply((s) =>
+            setAnswer(ensureMapping(s), { level: 1, k: L1_Q[0]!.k }, 'He told of the dolphin.'),
+          );
+      });
+      await walkToReport();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Guardar os documentos →' }));
+
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(onGoToExport).toHaveBeenCalled();
+    },
+    ANDAR,
+  );
+});

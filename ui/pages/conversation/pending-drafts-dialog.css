@@ -1,0 +1,49 @@
+/* Sair da revisão com transcrição por confirmar — cartão creme sobre véu, no mesmo
+   registro do seam-modal: uma pergunta curta, duas saídas, nenhuma tranca. */
+
+.cds-pending-drafts-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 7, 3, 0.45);
+}
+
+.cds-pending-drafts {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: min(28rem, calc(100vw - 2rem));
+  padding: 1.6rem 1.7rem 1.4rem;
+  border-radius: var(--cds-radius-card);
+  background: var(--cds-ui-card);
+  box-shadow: var(--cds-shadow-modal);
+  color: var(--cds-ui-ink);
+}
+
+.cds-pending-drafts-title {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-weight: 300;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.cds-pending-drafts-body {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--cds-ui-ink-soft);
+}
+
+.cds-pending-drafts-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+}

@@ -139,6 +139,10 @@ export const en: Dict = {
     reportBlockedUnknown:
       'I could not check which answers were recorded. Reload the page before saving.',
     semFim: '{{n}} phrase(s) still without a locked end.',
+    netTimeLabel: 'Working time in this session',
+    netTimeHm: '{{h}} h {{m}} min',
+    netTimeM: '{{m}} min',
+    netTimeShort: 'less than 1 min',
     reopen: 'Unlock to edit',
     complete: 'Finish and save the documents',
     saving: 'Saving…',
@@ -344,6 +348,13 @@ export const en: Dict = {
     preparingReviewEyebrow: 'Opening',
     preparingReview: 'Bringing the audio back for the review…',
     toExport: 'Save the documents →',
+    pendingDrafts: {
+      title_one: '1 answer still has no confirmed transcription.',
+      title_other: '{{count}} answers still have no confirmed transcription.',
+      body: 'The recording stays in custody but never enters the document — only confirmed text does. Saving the documents will refuse while any is missing.',
+      review: 'Review the answers',
+      anyway: 'Go anyway',
+    },
     prev: '← previous',
   },
   seamModal: {
