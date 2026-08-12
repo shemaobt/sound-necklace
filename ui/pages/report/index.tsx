@@ -22,6 +22,7 @@ import type { PaletteEntry } from '../../tokens';
 import { isSkipped } from '../conversation/answered';
 import { type BlockLabels, blockEyebrow } from '../conversation/trechos';
 import { sessionStore, useSessionStore } from '../../state';
+import { BulkConfirm, type BulkResult } from './confirm-all-dialog';
 import { type SttPhase, useSttDrafts } from './use-stt-drafts';
 import './report.css';
 
@@ -612,6 +613,8 @@ export function Report({
   // reais da porta; `opening` é a janela entre o toque e o som começar (fetch do blob).
   const [playingPath, setPlayingPath] = useState<string | null>(null);
   const [openingPath, setOpeningPath] = useState<string | null>(null);
+  // O que o lote de fato fez — medido depois de escrever, nunca a partir do plano.
+  const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
 
   // Visão de LEITURA com o answer store garantido mesmo antes do efeito persistir.
   const mapped = useMemo(() => {
@@ -762,6 +765,19 @@ export function Report({
   const rows = toRows(mapped, sequence, i18n.language, blockLabels);
 
   /**
+   * Quantas respostas GRAVADAS ainda estão sem texto confirmado — a mesma conta que o
+   * gate de exportação faz (`reportExportStatus`, @/contracts/relatorio), feita aqui
+   * sobre a descoberta de voz desta tela. Recebe um estado qualquer porque o lote
+   * precisa medir DEPOIS de escrever, e não a partir do que pretendia escrever.
+   */
+  const pendingIn = (state: SessionState | null): number =>
+    state
+      ? questionSequence(state).filter(
+          (s) => voiceSet.has(voiceAnswerPath(s)) && !readAnswer(state.mapping, s).trim(),
+        ).length
+      : 0;
+
+  /**
    * Digitar à mão DESCARTA o inglês da máquina (ENG-370). Quem escreve a própria
    * resposta está dizendo que a transcrição não serve — e uma tradução que descreve
    * outro texto é pior no artefato do que a língua de origem, porque contradiz a
@@ -783,21 +799,71 @@ export function Report({
       .getState()
       .apply((s) => setAnswer(s.mapping ? s : ensureMapping(s), draftSrcSlot(slot), text));
   };
+  /**
+   * O ATO de confirmar uma resposta, sobre um estado qualquer. Vive fora do `apply`
+   * porque o lote precisa aplicá-lo N vezes dentro de UMA transação — e porque um
+   * segundo caminho de confirmação divergiria da assimetria PT/EN abaixo sem que
+   * nenhum teste percebesse até o artefato sair errado.
+   */
+  const confirmInto = (s: SessionState, slot: QuestionSlot, text: string): SessionState => {
+    const base = s.mapping ? s : ensureMapping(s);
+    // Entrevista em inglês: não houve tradução — o servidor devolve o próprio
+    // transcript, então `en__` guarda o VERBATIM do reconhecedor, hesitação e
+    // repetição inclusas. Mantê-lo faria o artefato emitir o áudio bruto por cima
+    // do texto que a pessoa acabou de corrigir e conferir, e a correção sumiria em
+    // silêncio (o `.md` prefere `en__` à célula). Descartá-lo é o que faz valer a
+    // regra: o inglês do artefato deriva do texto CONFIRMADO.
+    if (spokenInEnglish) return setAnswer(setAnswer(base, draftEnSlot(slot), ''), slot, text);
+    // Em PT o inglês desta gravação continua sendo o que o artefato emite: a célula
+    // guarda a língua falada, e apagar `en__` faria o `.md` sair em português.
+    return setAnswer(base, slot, text);
+  };
+
   /** Confirmar: o TRANSCRIPT em revisão vira A resposta, pelo mesmo caminho de digitar. */
   const confirmDraft = (slot: QuestionSlot, text: string): void => {
-    sessionStore.getState().apply((s) => {
-      const base = s.mapping ? s : ensureMapping(s);
-      // Entrevista em inglês: não houve tradução — o servidor devolve o próprio
-      // transcript, então `en__` guarda o VERBATIM do reconhecedor, hesitação e
-      // repetição inclusas. Mantê-lo faria o artefato emitir o áudio bruto por cima
-      // do texto que a pessoa acabou de corrigir e conferir, e a correção sumiria em
-      // silêncio (o `.md` prefere `en__` à célula). Descartá-lo é o que faz valer a
-      // regra: o inglês do artefato deriva do texto CONFIRMADO.
-      if (spokenInEnglish) return setAnswer(setAnswer(base, draftEnSlot(slot), ''), slot, text);
-      // Em PT o inglês desta gravação continua sendo o que o artefato emite: a célula
-      // guarda a língua falada, e apagar `en__` faria o `.md` sair em português.
-      return setAnswer(base, slot, text);
-    });
+    sessionStore.getState().apply((s) => confirmInto(s, slot, text));
+  };
+
+  /**
+   * Confirmar TODAS de uma vez (decisão do dono, 2026-08-12). Uma entrevista longa chega
+   * aqui com centenas de respostas gravadas sem texto, e o gate de exportação recusa
+   * guardar enquanto sobrar uma: confirmar uma a uma não é fluxo de trabalho. Isto
+   * SATISFAZ o gate, e é a única coisa que o satisfaz — `contracts/relatorio` não sabe
+   * que esta ação existe e não muda por causa dela.
+   *
+   * Elegível é o par exato: tem transcrição E a célula ainda está vazia. A célula cheia
+   * é o que protege a resposta que a facilitadora escreveu à mão — o rascunho continua
+   * guardado ao lado dela depois que ela digita, e sem essa condição o lote apagaria o
+   * texto dela com o da máquina.
+   *
+   * Uma transação só: `apply` por resposta dispararia um autosave e um render por
+   * item, e 467 deles atravessariam a rede em fila.
+   */
+  const bulkConfirmable = sequence.filter(
+    (slot) =>
+      voiceSet.has(voiceAnswerPath(slot)) &&
+      !readAnswer(mapped.mapping, slot).trim() &&
+      readAnswer(mapped.mapping, draftSrcSlot(slot)).trim() !== '',
+  );
+
+  const confirmAllDrafts = (): void => {
+    const before = pendingIn(mapped);
+    sessionStore.getState().apply((s) =>
+      bulkConfirmable.reduce((acc, slot) => {
+        // relido do estado que se está construindo, não do render: é a mesma condição
+        // de elegibilidade, aplicada sobre a verdade do momento da escrita
+        if (readAnswer(acc.mapping, slot).trim()) return acc;
+        const text = readAnswer(acc.mapping, draftSrcSlot(slot));
+        // o texto vai como está, não aparado: confirmar avulso escreve o valor do campo,
+        // e "o mesmo ato" precisa escrever o mesmo byte
+        return text.trim() ? confirmInto(acc, slot, text) : acc;
+      }, s),
+    );
+    // O resultado é LIDO do estado depois, nunca do plano: `apply` é silenciosamente
+    // ignorado fora da edição (offline, revisão, trava), e um "pronto" contado a partir
+    // do que se pretendia fazer mentiria justamente quando nada aconteceu.
+    const after = pendingIn(sessionStore.getState().session);
+    setBulkResult({ confirmed: Math.max(0, before - after), remaining: after });
   };
 
   // Quantas respostas gravadas ainda esperam confirmação — o número que o leitor
@@ -819,9 +885,7 @@ export function Report({
    * column with background and padding, emptied of content, turned into a band across
    * the screen under the animation.
    */
-  const toReview = sequence.filter(
-    (s) => voiceSet.has(voiceAnswerPath(s)) && !readAnswer(mapped.mapping, s).trim(),
-  ).length;
+  const toReview = pendingIn(mapped);
 
   return (
     <section className={waiting ? 'cds-report cds-report--waiting' : 'cds-report'}>
@@ -831,6 +895,13 @@ export function Report({
           <p className="cds-report-headline">{t('report.headline')}</p>
         </header>
       )}
+      {/* Confirmar tudo de uma vez: mora onde os rascunhos estão e onde a recusa da
+          exportação manda a facilitadora. */}
+      <BulkConfirm
+        pending={waiting ? 0 : bulkConfirmable.length}
+        result={bulkResult}
+        onConfirm={confirmAllDrafts}
+      />
       {/* Registrada VAZIA desde o início: uma região live criada junto com o
           conteúdo não é anunciada. Anuncia o resumo, nunca os rascunhos inteiros,
           e não move o foco (WCAG 2.2 SC 4.1.3) — quem revisa chega quando quiser. */}

@@ -1,0 +1,69 @@
+/* Aceitar todas as transcrições de uma vez — cartão creme sobre véu, no mesmo registro
+   dos diálogos do Dashboard e do seam-modal. Sem animação: o Radix monta e desmonta na
+   hora, que é o comportamento correto sob reduced-motion. */
+
+.cds-confirm-all-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 7, 3, 0.45);
+  z-index: 49;
+}
+
+.cds-confirm-all {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 1.6rem 1.7rem 1.4rem;
+  border-radius: var(--cds-radius-card);
+  background: var(--cds-ui-card);
+  box-shadow: var(--cds-shadow-modal);
+  color: var(--cds-ui-ink);
+  text-align: left;
+  z-index: 50;
+}
+
+.cds-confirm-all-title {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-weight: 300;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.cds-confirm-all-body {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--cds-ui-ink-soft);
+}
+
+.cds-confirm-all-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+}
+
+.cds-confirm-all-accept {
+  padding: 0.55rem 0.9rem;
+  border: 1px solid currentcolor;
+  border-radius: var(--cds-radius-pill);
+  background: transparent;
+  color: var(--cds-ui-accent);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.cds-confirm-all-accept:hover {
+  background: var(--cds-ui-wash);
+}

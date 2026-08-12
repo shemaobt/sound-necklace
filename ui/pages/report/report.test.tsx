@@ -405,45 +405,45 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
   });
 });
 
-describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () => {
-  /** Transcriber controlável: `resolve()` entrega os rascunhos quando o teste quiser. */
-  function controllableStt(drafts: Record<string, { source: string; en: string }>): {
-    stt: Transcriber;
-    finish: () => void;
-    started: string[][];
-    /** As opções de cada `start` — é onde o `force` e o seu alcance aparecem. */
-    asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[];
-  } {
-    const started: string[][] = [];
-    const asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[] = [];
-    let release: (() => void) | null = null;
-    // o job só termina quando o TESTE mandar: `progress` espera esta promessa, então
-    // nenhum caso depende da ordem dos microtasks nem do atraso real do polling
-    const gate = new Promise<void>((res) => {
-      release = res;
-    });
-    let settled = false;
-    void gate.then(() => {
-      settled = true;
-    });
-    return {
-      started,
-      asked,
-      finish: () => release?.(),
-      stt: {
-        start: (_id, paths, opts) => {
-          started.push([...paths]);
-          asked.push(opts);
-          return Promise.resolve();
-        },
-        progress: async () => {
-          await Promise.resolve();
-          return settled ? { done: true, drafts } : { done: false, drafts: {} };
-        },
+/** Transcriber controlável: `resolve()` entrega os rascunhos quando o teste quiser. */
+function controllableStt(drafts: Record<string, { source: string; en: string }>): {
+  stt: Transcriber;
+  finish: () => void;
+  started: string[][];
+  /** As opções de cada `start` — é onde o `force` e o seu alcance aparecem. */
+  asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[];
+} {
+  const started: string[][] = [];
+  const asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[] = [];
+  let release: (() => void) | null = null;
+  // o job só termina quando o TESTE mandar: `progress` espera esta promessa, então
+  // nenhum caso depende da ordem dos microtasks nem do atraso real do polling
+  const gate = new Promise<void>((res) => {
+    release = res;
+  });
+  let settled = false;
+  void gate.then(() => {
+    settled = true;
+  });
+  return {
+    started,
+    asked,
+    finish: () => release?.(),
+    stt: {
+      start: (_id, paths, opts) => {
+        started.push([...paths]);
+        asked.push(opts);
+        return Promise.resolve();
       },
-    };
-  }
+      progress: async () => {
+        await Promise.resolve();
+        return settled ? { done: true, drafts } : { done: false, drafts: {} };
+      },
+    },
+  };
+}
 
+describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () => {
   const Q = L1_Q[0]!;
   const PATH = voiceAnswerPath({ level: 1, k: Q.k });
   const DRAFTS = { [PATH]: { source: 'Ele contou do boto.', en: 'He told of the dolphin.' } };
@@ -801,6 +801,152 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     // e o que se anuncia é o RESUMO, não o rascunho inteiro
     expect(region.textContent).toMatch(/1 resposta para revisar/i);
     expect(region.textContent).not.toContain('He told of the dolphin.');
+  });
+});
+
+/**
+ * Confirmar todas as transcrições de uma vez. Uma entrevista longa chega ao relatório
+ * com centenas de respostas gravadas sem texto, e o gate de exportação
+ * (`reportExportStatus`, @/contracts/relatorio) recusa guardar enquanto sobrar uma.
+ * Confirmar uma a uma não é fluxo de trabalho — o lote é o caminho por dentro do gate,
+ * nunca por cima dele.
+ *
+ * Os casos que importam são os NEGATIVOS: a resposta escrita à mão que não pode ser
+ * atropelada pelo texto da máquina, o diálogo que não confirma nada antes do sim, e a
+ * resposta sem rascunho que precisa aparecer no resultado em vez de sumir num "pronto".
+ */
+describe('Relatório — confirmar todas as transcrições de uma vez', () => {
+  const BULK_Q = [L1_Q[0]!, L1_Q[1]!, L1_Q[2]!];
+  const BULK_PATHS = BULK_Q.map((q) => voiceAnswerPath({ level: 1, k: q.k }));
+  const BULK_DRAFTS: Record<string, { source: string; en: string }> = {
+    [BULK_PATHS[0]!]: { source: 'Ele contou do boto.', en: 'He told of the dolphin.' },
+    [BULK_PATHS[1]!]: { source: 'Começa na cheia.', en: 'It starts in the flood.' },
+    [BULK_PATHS[2]!]: { source: 'Ela mudou de ideia.', en: 'She changed her mind.' },
+  };
+
+  const ACTION = 'Confirmar todas as transcrições';
+  const ACCEPT = 'Aceitar as transcrições';
+  const REVIEW = 'Rever uma a uma';
+
+  /** O relatório aberto com os rascunhos já na mão — o estado em que o lote existe. */
+  async function openWithDrafts(
+    drafts: Record<string, { source: string; en: string }>,
+    recorded: string[] = Object.keys(drafts),
+  ): Promise<void> {
+    const { stt, finish } = controllableStt(drafts);
+    load(report());
+    render(
+      <Report
+        recorder={controllableRecorder(Object.fromEntries(recorded.map((p) => [p, true])))}
+        stt={stt}
+        sessionId="s-1"
+      />,
+    );
+    finish();
+    for (const d of Object.values(drafts)) await screen.findByDisplayValue(d.source);
+  }
+
+  /** O que a resposta desta pergunta mostra agora — a célula, como a facilitadora a vê. */
+  function answerOf(q: { q: string }): string {
+    return (within(cardFor(q.q)).getByLabelText('resposta') as HTMLTextAreaElement).value;
+  }
+
+  it('confirma de uma vez toda resposta pendente que tinha rascunho', async () => {
+    await openWithDrafts(BULK_DRAFTS);
+
+    await userEvent.click(screen.getByRole('button', { name: ACTION }));
+    await userEvent.click(screen.getByRole('button', { name: ACCEPT }));
+
+    expect(BULK_Q.map(answerOf)).toEqual(BULK_PATHS.map((p) => BULK_DRAFTS[p]!.source));
+    // sem nada mais por confirmar, a ação sai da tela
+    expect(screen.queryByRole('button', { name: ACTION })).toBeNull();
+  });
+
+  it('pergunta antes: abrir não confirma nada, e desistir deixa tudo como estava', async () => {
+    await openWithDrafts(BULK_DRAFTS);
+
+    await userEvent.click(screen.getByRole('button', { name: ACTION }));
+    expect(BULK_Q.map(answerOf)).toEqual(['', '', '']);
+
+    await userEvent.click(screen.getByRole('button', { name: REVIEW }));
+    expect(BULK_Q.map(answerOf)).toEqual(['', '', '']);
+  });
+
+  /**
+   * O pior que este recurso poderia fazer: apagar com texto de máquina a resposta que a
+   * facilitadora escreveu com as próprias mãos. O rascunho continua guardado ao lado da
+   * célula depois que ela digita — é só a célula cheia que o protege.
+   */
+  it('não sobrescreve a resposta que a facilitadora escreveu à mão', async () => {
+    await openWithDrafts(BULK_DRAFTS);
+
+    const mine = cardFor(BULK_Q[0]!.q);
+    await userEvent.type(within(mine).getByLabelText('resposta'), 'Foi o avô quem contou.');
+    await userEvent.click(within(mine).getByRole('button', { name: 'aceitar a edição' }));
+
+    await userEvent.click(screen.getByRole('button', { name: ACTION }));
+    await userEvent.click(screen.getByRole('button', { name: ACCEPT }));
+
+    expect(answerOf(BULK_Q[0]!)).toBe('Foi o avô quem contou.');
+    expect(answerOf(BULK_Q[1]!)).toBe(BULK_DRAFTS[BULK_PATHS[1]!]!.source);
+  });
+
+  it('a resposta gravada SEM rascunho fica intacta, e o resultado diz que ela ainda falta', async () => {
+    const comRascunho = BULK_PATHS[0]!;
+    const semRascunho = BULK_PATHS[1]!;
+    await openWithDrafts({ [comRascunho]: BULK_DRAFTS[comRascunho]! }, [comRascunho, semRascunho]);
+
+    await userEvent.click(screen.getByRole('button', { name: ACTION }));
+    await userEvent.click(screen.getByRole('button', { name: ACCEPT }));
+
+    const resultado = screen.getByRole('status', { name: 'resultado da confirmação em lote' });
+    expect(resultado.textContent).toMatch(/1 resposta confirmada/i);
+    expect(resultado.textContent).toMatch(/ainda falta 1 resposta/i);
+    expect(answerOf(BULK_Q[1]!)).toBe('');
+  });
+
+  /**
+   * A mesma assimetria do confirmar avulso (ENG-370). Em PT o `en__` é a tradução e
+   * segue sendo o que o artefato emite; em inglês ele é o VERBATIM do reconhecedor, e
+   * mantê-lo publicaria o áudio bruto por cima do texto conferido. Perder isto dentro
+   * de um laço faz o `.md` sair errado numa das duas línguas, em silêncio.
+   */
+  it('em português o lote preserva o inglês: o .md sai em inglês', async () => {
+    const path = BULK_PATHS[0]!;
+    await openWithDrafts({ [path]: BULK_DRAFTS[path]! });
+
+    await userEvent.click(screen.getByRole('button', { name: ACTION }));
+    await userEvent.click(screen.getByRole('button', { name: ACCEPT }));
+
+    const md = buildMapReport(sessionStore.getState().session!);
+    expect(md).toContain('He told of the dolphin.');
+    expect(md).not.toContain('Ele contou do boto.');
+  });
+
+  it('em inglês o lote descarta o verbatim: o .md sai com o transcript corrigido', async () => {
+    const RAW = 'He, he told of the... of the dolphin, you know.';
+    const CLEAN = 'He told of the dolphin.';
+    const path = BULK_PATHS[0]!;
+    await act(() => i18n.changeLanguage('en'));
+    await openWithDrafts({ [path]: { source: RAW, en: RAW } });
+
+    const src = screen.getByDisplayValue(RAW);
+    await userEvent.clear(src);
+    await userEvent.type(src, CLEAN);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm every transcript' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Accept the transcripts' }));
+
+    const md = buildMapReport(sessionStore.getState().session!);
+    expect(md).toContain(CLEAN);
+    expect(md).not.toContain(RAW);
+  });
+
+  it('sem nada por confirmar, a ação nem aparece', () => {
+    load(report());
+    render(<Report />);
+
+    expect(screen.queryByRole('button', { name: ACTION })).toBeNull();
   });
 });
 
