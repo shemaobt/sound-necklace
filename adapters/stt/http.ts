@@ -30,6 +30,9 @@ const AnswerSchema = z.object({
   transcript_source: z.string().nullable().optional(),
   translation_en: z.string().nullable().optional(),
   error: z.string().nullable().optional(),
+  // exigida, como o servidor a declara: um default local aqui viraria `0`, que é a
+  // geração que a confirmação recusa sem que nada no cliente possa consertar
+  generation: z.number(),
 });
 
 const ProgressSchema = z.object({
@@ -110,7 +113,11 @@ export class HttpTranscriber implements Transcriber {
       // só a resposta PRONTA vira rascunho; pendente ou com falha não tem inglês, e a
       // pessoa a resolve digitando — o gate de exportação já cobre isso
       if (a.translation_en != null) {
-        drafts[a.path] = { source: a.transcript_source ?? '', en: a.translation_en };
+        drafts[a.path] = {
+          source: a.transcript_source ?? '',
+          en: a.translation_en,
+          generation: a.generation,
+        };
       }
     }
     return { done: data.pending === 0, drafts };

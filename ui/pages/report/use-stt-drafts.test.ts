@@ -10,7 +10,7 @@ const P2 = 'respostas/level2/PT1/quem.webm';
 
 const draft = (en: string): TranscriptionProgress => ({
   done: true,
-  drafts: { [P1]: { source: 'origem', en } },
+  drafts: { [P1]: { source: 'origem', en, generation: 1 } },
 });
 
 /**

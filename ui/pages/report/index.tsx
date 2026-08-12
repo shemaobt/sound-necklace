@@ -161,6 +161,26 @@ const DRAFT_SRC_PREFIX = 'src__';
  */
 const DRAFT_VER_PREFIX = 'enver__';
 
+/**
+ * Geração do rascunho guardado em `src__<k>`/`en__<k>` — o contador que o SERVIDOR
+ * mantém para aquela resposta.
+ *
+ * Existe porque a versão da gravação não responde à pergunta que a semeadura faz. Uma
+ * re-transcrição não toca na gravação: uma sessão real foi transcrita antes de a limpeza
+ * de disfluência existir, refeita depois com sucesso, e o rascunho guardado seguiu
+ * "corrente" porque os dois lados da comparação continuavam iguais — numa sessão anterior
+ * ao `voiceVersion` os dois eram `0`, e a comparação dizia "igual" para sempre. O artefato
+ * saiu com as gagueiras que o servidor já tinha removido.
+ *
+ * A AUSÊNCIA desta chave lê-se como "superado", ao contrário da ausência de `enver__`.
+ * São perguntas diferentes: `enver__` ausente significa "nunca transcrito", e forçar ali
+ * pagaria de novo por todas as outras respostas; `gen__` ausente significa "semeado antes
+ * de sabermos de que geração era", e essa é exatamente a sessão que precisa dar lugar ao
+ * texto novo. O preço é uma re-semeadura única por sessão antiga cujo rascunho ainda não
+ * foi confirmado — a célula preenchida continua intocada.
+ */
+const DRAFT_GEN_PREFIX = 'gen__';
+
 /** O slot da nota: a mesma resposta sob a chave reservada `nota__<k>`. */
 function noteSlot(slot: QuestionSlot): AnswerSlot {
   return reservedSlot(slot, NOTE_PREFIX);
@@ -179,6 +199,11 @@ function draftSrcSlot(slot: QuestionSlot): AnswerSlot {
 /** O slot da versão de gravação a que o rascunho guardado corresponde. */
 function draftVerSlot(slot: QuestionSlot): AnswerSlot {
   return reservedSlot(slot, DRAFT_VER_PREFIX);
+}
+
+/** O slot da geração do servidor a que o rascunho guardado corresponde. */
+function draftGenSlot(slot: QuestionSlot): AnswerSlot {
+  return reservedSlot(slot, DRAFT_GEN_PREFIX);
 }
 
 function reservedSlot(slot: QuestionSlot, prefix: string): AnswerSlot {
@@ -732,7 +757,9 @@ export function Report({
       if (!slot) continue;
       const m = mapped?.mapping ?? null;
       const version = String(recordingVersion?.[path] ?? 0);
+      const generation = String(draft.generation);
       const seededVersion = readAnswer(m, draftVerSlot(slot));
+      const seededGeneration = readAnswer(m, draftGenSlot(slot));
       // a existência do TRANSCRIPT é o que marca "já semeado": é ele que um humano
       // edita, então é sobre ele que vale a promessa de não ressuscitar texto apagado
       const known = hasAnswerKey(m, draftSrcSlot(slot));
@@ -740,16 +767,20 @@ export function Report({
       // propor. Semear o inglês aqui o faria vencer o texto da pessoa no artefato
       // (ENG-370) — o mesmo motivo pelo qual digitar descarta o inglês.
       if (readAnswer(m, slot).trim()) continue;
-      // A chave já existe e é da MESMA gravação: houve edição humana (inclusive
-      // apagá-la de propósito) e não se mexe. Se a versão MUDOU, o que está ali é a
-      // tradução de um áudio descartado e precisa dar lugar ao rascunho novo.
-      if (known && seededVersion === version) continue;
+      // A chave já existe, é da MESMA gravação E da MESMA geração: houve edição humana
+      // (inclusive apagá-la de propósito) e não se mexe. Se QUALQUER um dos dois mudou,
+      // o que está ali foi superado — pela gravação (o áudio foi descartado) ou pelo
+      // servidor (o texto foi refeito) — e dá lugar ao rascunho novo. Comparar só a
+      // gravação era o bug: uma re-transcrição não a toca, então o rascunho velho
+      // seguia de pé e o artefato saía com o texto que o servidor já tinha corrigido.
+      if (known && seededVersion === version && seededGeneration === generation) continue;
       sessionStore.getState().apply((s) => {
         // o inglês vai para a chave que o ARTEFATO lê (contracts/relatorio, ENG-370);
         // o transcript, para a chave que a TELA edita
         const withEn = setAnswer(s.mapping ? s : ensureMapping(s), draftEnSlot(slot), draft.en);
         const withSrc = setAnswer(withEn, draftSrcSlot(slot), draft.source);
-        return setAnswer(withSrc, draftVerSlot(slot), version);
+        const withVer = setAnswer(withSrc, draftVerSlot(slot), version);
+        return setAnswer(withVer, draftGenSlot(slot), generation);
       });
     }
   }, [drafts, sequence, mapped, recordingVersion]);

@@ -17,6 +17,16 @@ export interface AnswerDraft {
   source: string;
   /** tradução para inglês — é ESTE texto que a facilitadora confirma */
   en: string;
+  /**
+   * Contador de revisão DESTE rascunho no servidor. É a única coisa que distingue um
+   * rascunho refeito de um rascunho velho: re-transcrever não toca na gravação, então
+   * a versão da gravação diz "igual" mesmo quando o texto mudou por completo.
+   *
+   * Obrigatório, nunca opcional: um campo que falta convida a preencher com `0`, e `0`
+   * é uma confirmação de aparência válida que o servidor recusa — e que nenhum recarregar
+   * conserta.
+   */
+  generation: number;
 }
 
 /** Progresso do job de uma sessão. Os rascunhos chegam de uma vez, no fim. */

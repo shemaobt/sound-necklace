@@ -93,23 +93,29 @@ describe('HttpTranscriber — o modo real fala com o job da ENG-325', () => {
         {
           path: P1,
           status: 'ready',
+          transcript_verbatim: 'Ele, ele contou do boto.',
           transcript_source: 'Ele contou do boto.',
           translation_en: 'He told of the dolphin.',
           error: null,
+          generation: 3,
         },
         {
           path: P2,
           status: 'failed',
+          transcript_verbatim: null,
           transcript_source: null,
           translation_en: null,
           error: 'boom',
+          generation: 1,
         },
         {
           path: 'respostas/level1/lugar.webm',
           status: 'pending',
+          transcript_verbatim: null,
           transcript_source: null,
           translation_en: null,
           error: null,
+          generation: 0,
         },
       ],
     };
@@ -119,7 +125,14 @@ describe('HttpTranscriber — o modo real fala com o job da ENG-325', () => {
 
     expect(done).toBe(false); // ainda há uma pendente
     expect(drafts).toEqual({
-      [P1]: { source: 'Ele contou do boto.', en: 'He told of the dolphin.' },
+      [P1]: {
+        source: 'Ele contou do boto.',
+        en: 'He told of the dolphin.',
+        // A geração vem junto, e é o que distingue um rascunho refeito de um velho: uma
+        // re-transcrição no servidor não toca na gravação, então a versão da gravação
+        // diz "igual" mesmo quando o texto mudou por inteiro.
+        generation: 3,
+      },
     });
   });
 
@@ -130,8 +143,24 @@ describe('HttpTranscriber — o modo real fala com o job da ENG-325', () => {
       failed: 1,
       pending: 0,
       answers: [
-        { path: P1, status: 'ready', transcript_source: 's', translation_en: 'en', error: null },
-        { path: P2, status: 'failed', transcript_source: null, translation_en: null, error: 'x' },
+        {
+          path: P1,
+          status: 'ready',
+          transcript_verbatim: 's',
+          transcript_source: 's',
+          translation_en: 'en',
+          error: null,
+          generation: 1,
+        },
+        {
+          path: P2,
+          status: 'failed',
+          transcript_verbatim: null,
+          transcript_source: null,
+          translation_en: null,
+          error: 'x',
+          generation: 1,
+        },
       ],
     };
     const stt = make(vi.fn(async () => json(body)) as unknown as typeof globalThis.fetch);
