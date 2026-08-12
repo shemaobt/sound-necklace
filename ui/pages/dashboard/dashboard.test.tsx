@@ -432,6 +432,45 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     await waitFor(() => expect(listed('Frágil')).toBe(false));
     expect(removed).toHaveBeenCalledTimes(1);
   });
+
+  /**
+   * Apagar e reler a lista são DUAS idas ao servidor. Se a segunda cair, a história
+   * já foi embora — dizer "não consegui apagar" manda a facilitadora tentar de novo
+   * uma coisa já feita, e a segunda tentativa bate num 404. O que falhou foi a
+   * releitura, e é isso que a tela tem de dizer.
+   */
+  it('uma releitura falha depois de apagar não vira "não consegui apagar"', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseDelete('Frágil');
+    // a listagem inicial já resolveu; só a releitura de depois do apagar é que cai
+    vi.spyOn(store, 'list').mockRejectedValue(new Error('rede fora'));
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByText(/Não consegui apagar/)).toBeNull();
+    // o que de fato falhou, dito com as palavras certas
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Não consegui carregar as histórias',
+    );
+  });
+
+  it('desistir no meio do apagar não some com a pergunta', async () => {
+    const store = new FixtureSessionStore({ latencyMs: 30 });
+    await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseDelete('Frágil');
+    fireEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
+    // com o apagar no ar não há o que desistir — e uma recusa que chegasse depois
+    // não teria onde aparecer se a pergunta já tivesse sumido
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    await waitFor(() => expect(listed('Frágil')).toBe(false));
+  });
 });
 
 describe('Dashboard — nova história (§7.2)', () => {

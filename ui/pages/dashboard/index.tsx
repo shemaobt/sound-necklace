@@ -215,7 +215,9 @@ function DeleteConfirm({
   const keepRef = useRef<HTMLDivElement>(null);
 
   return (
-    <Dialog.Root open onOpenChange={(open) => (open ? undefined : onCancel())}>
+    // com o apagar no ar não há o que desistir, e uma recusa que chegasse depois não
+    // teria onde aparecer se a pergunta já tivesse sumido (§9.4: nunca um silêncio)
+    <Dialog.Root open onOpenChange={(open) => (open || busy ? undefined : onCancel())}>
       <Dialog.Portal>
         <Dialog.Overlay className="cds-dashboard-confirm-overlay" />
         <Dialog.Content
@@ -344,15 +346,20 @@ export function Dashboard({
    * Apagar de verdade, depois da pergunta. Fronteira de IO: a recusa do servidor vira
    * frase na tela — trava alheia diz QUEM está com a história (§9.4) — e a história
    * continua listada. A casa se atualiza pela MESMA listagem que a encheu.
+   *
+   * Apagar e reler são duas idas ao servidor, e só a PRIMEIRA decide se a história
+   * ainda existe: uma releitura que caia depois do apagar é um problema de leitura,
+   * e chamá-la de "não consegui apagar" mandaria repetir uma coisa já feita — cuja
+   * repetição bate num 404. Por isso a releitura vive fora do try do apagar.
    */
   const onDeleteConfirmed = useCallback(async (): Promise<void> => {
     if (!pendingDelete) return;
     setDeleting(true);
     setDeleteError(null);
+    let removed = false;
     try {
       await store.remove(pendingDelete.id);
-      setSessions(await store.list());
-      setPendingDelete(null);
+      removed = true;
     } catch (err) {
       setDeleteError(
         err instanceof LockLostError && err.holder
@@ -362,6 +369,13 @@ export function Dashboard({
     } finally {
       setDeleting(false);
     }
+    if (!removed) return;
+
+    setPendingDelete(null);
+    await store
+      .list()
+      .then(setSessions)
+      .catch(() => setListError(true));
   }, [pendingDelete, store, t]);
 
   const cards = useMemo(

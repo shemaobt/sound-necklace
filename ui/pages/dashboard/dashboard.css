@@ -188,7 +188,9 @@
   border-radius: var(--cds-radius-pill);
 }
 
-/* ---------- menu de downloads do cartão concluído (ENG-305/333) ---------- */
+/* ---------- menu de ações do cartão (ENG-305/333, ENG-281) ----------
+   O prefixo `dl-` é herança do tempo em que só havia download aqui; renomear a
+   família inteira custaria mais do que informa. */
 /* gatilho-ícone: um quadrado-pílula do tamanho do botão principal, só o glifo ⋮ */
 .cds-dashboard-dl-trigger {
   display: inline-flex;
@@ -258,6 +260,15 @@
   border-top: 1px solid var(--cds-ui-hairline);
   border-radius: 0 0 10px 10px;
   color: var(--cds-ui-error-fg);
+}
+
+/* numa história em andamento o apagar é a única entrada: nada acima dele para
+   separar, e o filete solto viraria um risco no topo do menu */
+.cds-dashboard-dl-item[data-danger]:only-child {
+  margin-top: 0;
+  padding-top: 9px;
+  border-top: none;
+  border-radius: 10px;
 }
 
 .cds-dashboard-dl-item[data-danger]:hover {
