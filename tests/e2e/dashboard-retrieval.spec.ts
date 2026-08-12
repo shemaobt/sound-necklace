@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Download, type Page } from '@playwright/test';
 
 import { manifestoFilename, relatorioFilename, retornoFilename } from '../../contracts';
 import { ColarApp, STORAGE_KEY } from './support';
@@ -30,22 +30,11 @@ async function readStored(
   return { slug: rec.summary.story_slug, artifacts: rec.artifacts };
 }
 
-/** Clicks a menu item and returns the suggested filename + the raw bytes. */
-async function downloadFrom(
-  page: Page,
-  item: Locator,
-): Promise<{ filename: string; bytes: Buffer }> {
-  const [download] = await Promise.all([page.waitForEvent('download'), item.click()]);
-  const path = await download.path();
-  return { filename: download.suggestedFilename(), bytes: readFileSync(path) };
-}
-
-/** Os três documentos §8.8: nome exibido no card, chave guardada, helper do filename. */
+/** Os três documentos §8.8: chave guardada + helper do filename. */
 const ARTIFACTS = [
-  // os itens do menu do cartão mostram os TÍTULOS humanos (ENG-305)
-  { shown: 'As decisões de vocês', key: 'anchoring', filenameFor: retornoFilename },
-  { shown: 'O mapa das contas', key: 'manifest', filenameFor: manifestoFilename },
-  { shown: 'A conversa sobre o sentido', key: 'report', filenameFor: relatorioFilename },
+  { key: 'anchoring', filenameFor: retornoFilename },
+  { key: 'manifest', filenameFor: manifestoFilename },
+  { key: 'report', filenameFor: relatorioFilename },
 ] as const;
 
 test('baixa os três artefatos direto do dashboard, byte-idênticos, sem abrir a sessão', async ({
@@ -77,23 +66,28 @@ test('baixa os três artefatos direto do dashboard, byte-idênticos, sem abrir a
   await page.goto('/dashboard');
   await expect(page.getByRole('heading', { name: 'Suas histórias' })).toBeVisible();
 
-  // o menu "Baixar" vive no cartão da concluída (ENG-305) — um só na grade
-  const trigger = page.getByRole('button', { name: 'Baixar' });
-  await expect(trigger).toHaveCount(1); // exatamente a sessão concluída
+  // o menu de ações vive no cartão (ENG-281: em TODOS eles; aqui só há um na grade)
+  const trigger = page.getByRole('button', { name: /^Ações em / });
+  await expect(trigger).toHaveCount(1);
   await trigger.click();
 
-  // ——— baixa os três, um a um, do menu do cartão ———
-  for (const { shown, key, filenameFor } of ARTIFACTS) {
-    const item = page.getByRole('button', { name: shown });
-    const { filename, bytes } = await downloadFrom(page, item);
+  // ——— uma escolha só, e os três documentos saem (ENG-281) ———
+  const saved: Download[] = [];
+  page.on('download', (d) => saved.push(d));
+  await page.getByRole('button', { name: 'Baixar os documentos' }).click();
+  await expect.poll(() => saved.length).toBe(3);
 
+  for (const { key, filenameFor } of ARTIFACTS) {
     // filename exato (§8.8: <slug>-<nome-do-artefato>).
-    expect(filename).toBe(filenameFor(stored.slug));
+    const wanted = filenameFor(stored.slug);
+    const download = saved.find((d) => d.suggestedFilename() === wanted);
+    expect(download, `nenhum download chamado ${wanted}`).toBeTruthy();
 
     // bytes crus idênticos aos guardados — sem normalização, sem trim (§10.5).
+    const bytes = readFileSync(await download!.path());
     expect(bytes.equals(Buffer.from(stored.artifacts[key], 'utf8'))).toBe(true);
-
-    // nunca navegou para dentro da sessão: a rota continua no dashboard.
-    expect(new URL(page.url()).pathname).toBe('/dashboard');
   }
+
+  // nunca navegou para dentro da sessão: a rota continua no dashboard.
+  expect(new URL(page.url()).pathname).toBe('/dashboard');
 });
