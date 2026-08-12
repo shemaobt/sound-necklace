@@ -20,6 +20,7 @@ contracts still come from PRD v2 + `docs/reference/index.html`.
 | `Colar de Sons - Telas.dc.html` | Assembled-screens panorama (labels p1…p12; images live in the design project) |
 | `support.js` | The `.dc.html` runtime (generated; do not edit) |
 | `assets/` | Shemá brand SVGs: icon (branco/telha/verde) + pattern tile |
+| `website-icon.svg` | The **Colar de Sons site mark** — the drawn necklace, every colour a token of the app's own palette (cord + end beads `colors.olive`, small beads the 7th scene hue, middle beads `colors.confidenceFilled`, centre bead `colors.telha`). Ported inline as `ColarIcon` in `ui/tokens/icon.tsx`; it is NOT monochrome and takes no colorway |
 | `trava-granularidade.html` | The granularity-lock dialog (ENG-363) |
 | `pacote-melhorias-ui.html` | **August 2026 delivery** — copy-ready CSS/JS plus a marked-up template per item, from the first walkthrough of the built app (ENG-386…ENG-393) |
 | `pacote-melhorias-ui.md` | The integration guide for the above: exact PT-BR copy, accessibility notes, QA checklist |

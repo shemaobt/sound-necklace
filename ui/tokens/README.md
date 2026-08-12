@@ -27,7 +27,8 @@ Fonte única dos tokens (redesign PRD §4; protótipo normativo
 | `--cds-shadow-card/menu/modal/cta/play`               | ver `tokens.css`                                  | sombras baixas nos cards, mais fundas em menu/modal/CTA         |
 | `motion` / `--cds-motion-*`                           | 220ms ease-out                                    | sem bounces                                                     |
 | `typography` / `--cds-font-*`                         | Montserrat / Merriweather                         | load-bearing / voz quieta                                       |
-| `ShemaIcon`                                           | colorways branco·telha·verde                      | marca no header/watermark                                       |
+| `ShemaIcon`                                           | colorways branco·telha·verde                      | marca Shemá — hoje só as marcas d'água das estações             |
+| `ColarIcon`                                           | colorido por token, sem colorway                  | marca do site (Colar de Sons): cabeçalhos e login               |
 
 `scenePalette`/`phrasePalette` são **triplas literais** copiadas à mão do
 protótipo (`PAL`/`PALF` em Protótipo.dc.html) — `lit` é o brilho do gradiente
@@ -35,6 +36,24 @@ radial da pérola, `deep` a sombra, escolhidos por cor e não derivados por
 fórmula. Não existe mais uma função `darken30`/derivação automática de `deep`:
 qualquer nova cor de paleta precisa das três tintas escolhidas à mão no
 protótipo, não calculadas.
+
+## Duas marcas, e por que só uma tem colorway
+
+`ShemaIcon` é um glifo monocromático: recebe uma `colorway` e pinta o desenho
+inteiro de uma cor. `ColarIcon` é a marca do site
+(`docs/design/website-icon.svg`) — o colar desenhado, e **cada conta é um token
+diferente**: cordão e pontas `colors.olive`, contas pequenas a 7ª matiz de
+`scenePalette`, contas médias `colors.confidenceFilled`, conta central
+`colors.telha`. Uma colorway aqui achataria as cinco cores em uma só e
+destruiria o desenho, então ela não existe.
+
+O que troca com o fundo é só a parte escura — cordão e as duas contas das
+pontas, oliva no claro e creme no escuro. Duas formas de dizer isso, porque são
+dois mundos: quem sabe em **React** que o fundo é escuro passa `onDark` (o
+painel do login, oliva sempre); onde só o **CSS** sabe — o cabeçalho do shell
+escurece por `:has()` nas telas cerimoniais, o dashboard troca com o tema — as
+classes `cds-mark-cord` e `cds-mark-end` são o gancho para repintar essas
+partes, e só elas (`ui/app/header.css`, `ui/pages/dashboard/dashboard.css`).
 
 **Decisão de acessibilidade (ENG-278, `inkSubtle`):** o protótipo usa `#8A8970`
 para labels secundários, que dá 3.28:1 sobre o creme — reprova o AA 4.5:1 do

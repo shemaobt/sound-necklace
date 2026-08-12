@@ -1,9 +1,9 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import baseCss from './base.css?inline';
 import fontsSource from './fonts.ts?raw';
-import { ShemaIcon } from './icon';
+import { ColarIcon, ShemaIcon } from './icon';
 import { colors, iconColorways, motion, phrasePalette, scenePalette } from './tokens';
 import tokensCss from './tokens.css?inline';
 
@@ -225,5 +225,57 @@ describe('ícone Shemá (colorways §4.4)', () => {
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
     expect(svg?.querySelectorAll('path[fill="#BE4A01"]').length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * A marca do site (`docs/design/website-icon.svg`): o colar desenhado, não um
+ * glifo. Ao contrário do `ShemaIcon`, ela NÃO tem colorway — pintar tudo de uma
+ * cor só achataria as contas e destruiria o desenho. O que se adapta ao chrome
+ * escuro é só a parte escura: o cordão e as duas contas das pontas.
+ */
+describe('marca Colar de Sons', () => {
+  /** O que um leitor de tela e o olho encontram no desenho, sem olhar por dentro. */
+  function paint(onDark?: boolean) {
+    const { container } = render(<ColarIcon onDark={onDark} />);
+    const svg = container.querySelector('svg');
+    const cord = svg?.querySelector('path')?.getAttribute('stroke') ?? null;
+    const beads = Array.from(
+      svg?.querySelectorAll('circle') ?? [],
+      (c) => c.getAttribute('fill') ?? '',
+    );
+    return { cord, beads, ends: beads.filter((f) => f === cord) };
+  }
+
+  it('anuncia a marca a quem não vê a tela', () => {
+    render(<ColarIcon />);
+
+    expect(screen.getByRole('img', { name: 'Colar de Sons' })).toBeTruthy();
+  });
+
+  it('as contas guardam a paleta nos dois fundos — a marca nunca vira um glifo de uma cor', () => {
+    const light = paint(false);
+    const dark = paint(true);
+
+    // as contas que NÃO são as pontas: pequenas, médias e a do meio
+    const inner = (p: ReturnType<typeof paint>) => p.beads.filter((f) => f !== p.cord);
+    expect(inner(light)).toEqual([
+      scenePalette[6]!.base,
+      scenePalette[6]!.base,
+      colors.confidenceFilled,
+      colors.confidenceFilled,
+      colors.telha,
+    ]);
+    expect(inner(dark)).toEqual(inner(light));
+  });
+
+  it('o cordão e as duas pontas viram creme no chrome escuro', () => {
+    const light = paint(false);
+    const dark = paint(true);
+
+    expect(light.cord).toBe(colors.olive);
+    expect(dark.cord).toBe(colors.cream);
+    expect(light.ends).toHaveLength(2);
+    expect(dark.ends).toHaveLength(2);
   });
 });

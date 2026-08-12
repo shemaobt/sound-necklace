@@ -3,7 +3,7 @@
  * Consumo: atoms/molecules importam DAQUI; nunca hardcodam hex.
  * Side effects: importar './fonts' e os css uma vez no shell.
  */
-export { ShemaIcon } from './icon';
+export { ColarIcon, ShemaIcon } from './icon';
 export {
   colors,
   iconColorways,

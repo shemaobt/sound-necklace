@@ -1,4 +1,63 @@
-import { iconColorways, type IconColorway } from './tokens';
+import { colors, iconColorways, scenePalette, type IconColorway } from './tokens';
+
+/** as contas pequenas: o verde-água da paleta de cenas */
+const BEAD_SMALL = scenePalette[6]!.base;
+
+/**
+ * Marca do site — o colar desenhado (`docs/design/website-icon.svg`): cordão em
+ * arco, contas crescendo das pontas para o meio. Ao contrário do `ShemaIcon`,
+ * NÃO tem colorway: cada conta é um token da paleta da casa, e pintar tudo de
+ * uma cor só achataria o desenho inteiro.
+ *
+ * O que se adapta ao chrome escuro é só o que some nele — o cordão e as duas
+ * contas das pontas, que são oliva. As contas guardam a paleta nos dois fundos.
+ *
+ * `onDark` serve a quem SABE em React que o fundo é escuro (o painel do login,
+ * oliva sempre). Onde só o CSS sabe — o cabeçalho do shell escurece por
+ * `:has()`, o dashboard pelo tema —, as classes `cds-mark-cord`/`cds-mark-end`
+ * são o gancho para repintar essas mesmas partes, e só elas.
+ *
+ * O viewBox recorta o quadrado 120×120 do arquivo na altura do desenho (o colar
+ * ocupa só a faixa central): sem o recorte, `size` mediria o vazio em volta e a
+ * marca sairia com um terço do tamanho pedido.
+ */
+export function ColarIcon({
+  onDark = false,
+  size = 24,
+  title = 'Colar de Sons',
+}: {
+  /** chrome escuro: cordão e pontas viram creme para não sumirem no fundo */
+  onDark?: boolean;
+  size?: number;
+  title?: string;
+}) {
+  const cord = onDark ? colors.cream : colors.olive;
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="10 39 100 40"
+      height={size}
+      role="img"
+      aria-label={title}
+    >
+      <path
+        className="cds-mark-cord"
+        d="M15 45 Q60 87 105 45"
+        fill="none"
+        stroke={cord}
+        strokeWidth={3.5}
+        strokeLinecap="round"
+      />
+      <circle className="cds-mark-end" cx="15" cy="44.8" r="3.5" fill={cord} />
+      <circle className="cds-mark-end" cx="105" cy="44.8" r="3.5" fill={cord} />
+      <circle cx="27" cy="54.1" r="5.5" fill={BEAD_SMALL} />
+      <circle cx="93" cy="54.1" r="5.5" fill={BEAD_SMALL} />
+      <circle cx="42" cy="61.8" r="8" fill={colors.confidenceFilled} />
+      <circle cx="78" cy="61.8" r="8" fill={colors.confidenceFilled} />
+      <circle cx="60" cy="65" r="12" fill={colors.telha} />
+    </svg>
+  );
+}
 
 /**
  * Ícone Shemá — geometria oficial dos assets do design
