@@ -47,8 +47,8 @@
    imagem o esmaga e a marca d'água aparece como um bloco no meio do cartão. */
 .cds-gran-lock-watermark {
   position: absolute;
-  right: -46px;
-  bottom: -52px;
+  right: -70px;
+  bottom: -78px;
   width: auto;
   max-width: none;
   opacity: 0.045;

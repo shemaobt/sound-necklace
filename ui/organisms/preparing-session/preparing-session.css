@@ -19,12 +19,13 @@
   color: var(--cds-cream);
 }
 
-/* a marca Shemá esmaecida ao fundo (protótipo: imagem opacity .05) */
+/* a marca Shemá esmaecida ao fundo (protótipo: imagem opacity .05). Sai do meio
+   para o canto inferior-direito: no centro ela ficava exatamente atrás do cordão
+   e da linha de espera, que são o que esta tela tem para mostrar. */
 .cds-preparing-watermark {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  right: -150px;
+  bottom: -170px;
   opacity: 0.05;
   pointer-events: none;
 }

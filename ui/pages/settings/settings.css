@@ -144,8 +144,8 @@
 
 .cds-settings-gran-watermark {
   position: absolute;
-  right: -120px;
-  bottom: -150px;
+  right: -180px;
+  bottom: -170px;
   opacity: 0.05;
   pointer-events: none;
 }
