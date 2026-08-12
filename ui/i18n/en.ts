@@ -217,7 +217,17 @@ export const en: Dict = {
     loading: 'Loading the stories…',
     actions: 'Actions on {{story}}',
     downloads: 'Download the documents',
+    renameSession: 'Rename the story',
     deleteSession: 'Delete the story',
+    renameDialog: {
+      title: 'Rename “{{story}}”',
+      body: 'Only the name shown here changes. The documents keep the filenames they always had.',
+      field: 'Story name',
+      save: 'Save the name',
+      cancel: 'Cancel',
+      locked: '{{holder}} has this story open right now. The name cannot change meanwhile.',
+      failed: 'Could not rename the story. Check the connection and try again.',
+    },
     deleteConfirm: {
       title: 'Delete “{{story}}”?',
       body: 'Everything in this story goes: the cuts, the classifications and the voice recordings of the answers. This cannot be undone.',

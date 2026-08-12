@@ -262,15 +262,6 @@
   color: var(--cds-ui-error-fg);
 }
 
-/* numa história em andamento o apagar é a única entrada: nada acima dele para
-   separar, e o filete solto viraria um risco no topo do menu */
-.cds-dashboard-dl-item[data-danger]:only-child {
-  margin-top: 0;
-  padding-top: 9px;
-  border-top: none;
-  border-radius: 10px;
-}
-
 .cds-dashboard-dl-item[data-danger]:hover {
   background: var(--cds-ui-error-bg);
 }
@@ -356,6 +347,58 @@
 }
 
 .cds-dashboard-confirm-destroy:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* O diálogo de renomear: o campo e os botões num <form>, para o Enter salvar. */
+.cds-dashboard-rename-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.cds-dashboard-rename-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cds-ui-ink-faint);
+}
+
+/* mesmo campo do Setup: branco, radius de ladrilho, 52px de altura */
+.cds-dashboard-rename-field input {
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1px solid rgba(var(--cds-ui-line-rgb), 0.18);
+  border-radius: var(--cds-radius-tile);
+  background: var(--cds-ui-card);
+  color: var(--cds-ui-ink);
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* Salvar é o gesto que se espera aqui — pesa como o primário da casa, ao
+   contrário do destruidor do apagar, que é de propósito discreto. */
+.cds-dashboard-rename-save {
+  padding: 0.55rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: var(--cds-radius-pill);
+  background: var(--cds-ui-accent);
+  color: var(--cds-cream);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.cds-dashboard-rename-save:disabled {
   opacity: 0.55;
   cursor: default;
 }

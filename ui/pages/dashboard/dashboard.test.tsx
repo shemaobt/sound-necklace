@@ -64,10 +64,30 @@ function goto(path: string): void {
   window.history.replaceState({}, '', path);
 }
 
-/** Abre o menu de ações do cartão e escolhe apagar — o gesto da facilitadora. */
-async function chooseDelete(story: string): Promise<void> {
+/** Abre o menu de ações do cartão e escolhe uma entrada — o gesto da facilitadora. */
+async function chooseAction(story: string, action: string): Promise<void> {
   await userEvent.click(await screen.findByRole('button', { name: `Ações em ${story}` }));
-  await userEvent.click(await screen.findByRole('button', { name: 'Apagar a história' }));
+  await userEvent.click(await screen.findByRole('button', { name: action }));
+}
+
+async function chooseDelete(story: string): Promise<void> {
+  await chooseAction(story, 'Apagar a história');
+}
+
+async function chooseRename(story: string): Promise<void> {
+  await chooseAction(story, 'Renomear a história');
+}
+
+/** O campo do diálogo de renomear. */
+function nameField(): HTMLInputElement {
+  return screen.getByRole('textbox', { name: 'Nome da história' }) as HTMLInputElement;
+}
+
+/** Troca o nome no campo aberto e salva. */
+async function typeNameAndSave(name: string): Promise<void> {
+  await userEvent.clear(nameField());
+  if (name) await userEvent.type(nameField(), name);
+  await userEvent.click(screen.getByRole('button', { name: 'Salvar o nome' }));
 }
 
 /**
@@ -470,6 +490,180 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
 
     expect(screen.getByRole('dialog')).toBeTruthy();
     await waitFor(() => expect(listed('Frágil')).toBe(false));
+  });
+});
+
+describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
+  it('toda história pode ser renomeada, terminada ou não', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Em curso', storySlug: 'em-curso' });
+    await seedCompleted(store, TRIPLE, { storyName: 'Terminada', storySlug: 'terminada' });
+    const dashboard = (
+      <Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />
+    );
+
+    render(dashboard);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações em Em curso' }));
+    expect(screen.getByRole('button', { name: 'Renomear a história' })).toBeTruthy();
+
+    // uma casa nova para o segundo cartão: fechar o primeiro menu exigiria do teste
+    // um gesto (Esc, clique fora) que não é o que ele afirma
+    cleanup();
+
+    render(dashboard);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações em Terminada' }));
+    expect(screen.getByRole('button', { name: 'Renomear a história' })).toBeTruthy();
+  });
+
+  it('o diálogo abre já com o nome de agora — corrigir um erro de digitação não é redigitar tudo', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'A raposa e o tanbor', storySlug: 'a-raposa' });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseRename('A raposa e o tanbor');
+
+    expect(nameField().value).toBe('A raposa e o tanbor');
+  });
+
+  it('salvar um nome novo o mostra no cartão — inclusive fora do ASCII', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Nome errado', storySlug: 'nome-errado' });
+    const renamed = vi.spyOn(store, 'rename');
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseRename('Nome errado');
+    // as histórias são em terena e português: acento e apóstrofo têm de voltar iguais.
+    // E o que sai daqui vai aparado nas pontas — "  Ana  " é "Ana".
+    await typeNameAndSave('  Kohíxoti-kipaé, a dança do bugio  ');
+
+    await waitFor(() => expect(listed('Kohíxoti-kipaé, a dança do bugio')).toBe(true));
+    expect(renamed).toHaveBeenCalledWith(expect.any(String), 'Kohíxoti-kipaé, a dança do bugio');
+    expect(listed('Nome errado')).toBe(false);
+  });
+
+  /**
+   * A decisão que a issue inteira gira em torno: renomear muda o nome de EXIBIÇÃO, e
+   * só. O `story_slug` nomeia os três documentos (§10.5/§10.6) e o pipeline os lê pelo
+   * nome — um rename que arrastasse o slug renomearia, calado, arquivos já guardados.
+   */
+  it('depois de renomear, os documentos continuam com o nome de arquivo de antes', async () => {
+    const store = new FixtureSessionStore();
+    await seedCompleted(store, TRIPLE, { storyName: 'Nome errado', storySlug: 'nome-errado' });
+    const saved = vi.fn();
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={saved} />);
+    await chooseRename('Nome errado');
+    await typeNameAndSave('Nome certo');
+    await waitFor(() => expect(listed('Nome certo')).toBe(true));
+
+    // baixa pelo MESMO menu, agora que o cartão já mostra o nome novo
+    await chooseAction('Nome certo', 'Baixar os documentos');
+
+    await waitFor(() => expect(saved).toHaveBeenCalledTimes(3));
+    const names = (saved.mock.calls as [string, string][]).map(([name]) => name);
+    expect(names.sort()).toEqual([
+      'nome-errado-anchoring-return.json',
+      'nome-errado-bead-manifest.json',
+      'nome-errado-mapping-report.md',
+    ]);
+  });
+
+  it('desistir não muda o nome nem pede nada à store', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Como está', storySlug: 'como-esta' });
+    const renamed = vi.spyOn(store, 'rename');
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseRename('Como está');
+    await userEvent.clear(nameField());
+    await userEvent.type(nameField(), 'Nunca salvo');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(renamed).not.toHaveBeenCalled();
+    expect(listed('Como está')).toBe(true);
+    expect(listed('Nunca salvo')).toBe(false);
+  });
+
+  it('um nome vazio — ou só de espaços — nem chega a ser enviado', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Tem nome', storySlug: 'tem-nome' });
+    const renamed = vi.spyOn(store, 'rename');
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseRename('Tem nome');
+    const save = screen.getByRole('button', { name: 'Salvar o nome' });
+
+    await userEvent.clear(nameField());
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+
+    await userEvent.type(nameField(), '   ');
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+
+    await userEvent.click(save);
+    expect(renamed).not.toHaveBeenCalled();
+    expect(listed('Tem nome')).toBe(true);
+  });
+
+  it('recusada por trava alheia, o nome fica como estava e a tela diz quem está com a história (§9.4)', async () => {
+    const backend = new FixtureSessionBackend();
+    const alice = new FixtureSessionStore({
+      backend,
+      user: { user_id: 'a', display_name: 'Alice' },
+    });
+    const bob = new FixtureSessionStore({ backend, user: { user_id: 'b', display_name: 'Bob' } });
+    const s = await alice.create(createInput({ storyName: 'Disputada', storySlug: 'disputada' }));
+    await alice.acquireLock(s.id);
+
+    render(<Dashboard store={bob} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseRename('Disputada');
+    await typeNameAndSave('Renomeada à força');
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Alice');
+    expect(listed('Disputada')).toBe(true);
+    expect(listed('Renomeada à força')).toBe(false);
+  });
+
+  it('duas confirmações seguidas não renomeiam duas vezes', async () => {
+    // a store demora a responder: sem trava, o segundo clique chega com o primeiro
+    // rename ainda no ar — e os dois têm de cair ANTES disso resolver
+    const store = new FixtureSessionStore({ latencyMs: 30 });
+    await seedInProgress(store, { storyName: 'Nome errado', storySlug: 'nome-errado' });
+    const renamed = vi.spyOn(store, 'rename');
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseRename('Nome errado');
+    await userEvent.clear(nameField());
+    await userEvent.type(nameField(), 'Nome certo');
+    const save = screen.getByRole('button', { name: 'Salvar o nome' });
+    fireEvent.click(save);
+    fireEvent.click(save);
+
+    await waitFor(() => expect(listed('Nome certo')).toBe(true));
+    expect(renamed).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Renomear e reler a lista são DUAS idas ao servidor, e só a PRIMEIRA decide se o
+   * nome mudou. Se a releitura cair, dizer "não consegui renomear" manda a
+   * facilitadora refazer uma coisa já feita (a mesma lição do apagar, ENG-281).
+   */
+  it('uma releitura falha depois de renomear não vira "não consegui renomear"', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Nome errado', storySlug: 'nome-errado' });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseRename('Nome errado');
+    // a listagem inicial já resolveu; só a releitura de depois do rename é que cai
+    vi.spyOn(store, 'list').mockRejectedValue(new Error('rede fora'));
+    await typeNameAndSave('Nome certo');
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByText(/Não consegui renomear/)).toBeNull();
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Não consegui carregar as histórias',
+    );
   });
 });
 
