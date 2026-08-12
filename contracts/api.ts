@@ -144,6 +144,23 @@ export const CreateSessionRequestSchema = z.strictObject({
 export type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;
 
 /**
+ * Renomear a sessão (ENG-281): muda SÓ o nome de exibição. O `story_slug` NUNCA viaja
+ * aqui — ele nomeia os três arquivos de artefato (§10.6) e ancora a aceitação de
+ * byte-identidade da ENG-253; um rename que o levasse junto renomearia os artefatos.
+ * O `strictObject` é o que torna essa ausência uma regra, e não um costume.
+ *
+ * As três restrições espelham à letra o `StringConstraints` do servidor
+ * (`strip_whitespace=True, min_length=1, max_length=255`): corta as pontas ANTES de
+ * medir, então um nome só de espaços é recusado em vez de guardado. Os dois modos
+ * parseiam por aqui — é o que impede a fixture de guardar `"  Oi  "` onde o real
+ * guardaria `"Oi"`.
+ */
+export const RenameSessionRequestSchema = z.strictObject({
+  story_name: z.string().trim().min(1).max(255),
+});
+export type RenameSessionRequest = z.infer<typeof RenameSessionRequestSchema>;
+
+/**
  * Corpo do autosave (§7.3): o DTO completo de estado de sessão. O SCHEMA REAL é
  * do ENG-234 (contracts/session-state.ts). Aqui validamos SÓ o envelope
  * versionado e deixamos o resto do estado passar opaco (looseObject) — assim os

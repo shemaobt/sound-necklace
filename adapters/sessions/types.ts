@@ -2,8 +2,10 @@
  * Porta SessionStore — persistência de sessão do PRD v2 §7.3: autosave contínuo do
  * estado INTEIRO (nenhuma ação do usuário é exigida), retomada de qualquer máquina,
  * ciclo de vida (em progresso → concluída, com o trio de artefatos guardado
- * BYTE-IDÊNTICO/opaco §10.5), lock consultivo de editor único (§7.3/O4) e recursos
- * de sessão (as respostas de voz por caminho `respostas/...`, §10.4/O5).
+ * BYTE-IDÊNTICO/opaco §10.5), lock consultivo de editor único (§7.3/O4), recursos
+ * de sessão (as respostas de voz por caminho `respostas/...`, §10.4/O5), e —
+ * desde a ENG-281 — renomear/apagar a sessão em definitivo (decisão do dono; o §7.2
+ * descreve o dashboard e NÃO especifica esses dois verbos).
  *
  * Custódia é OPACA: o estado e os artefatos entram e saem por deep-clone; a store
  * nunca re-serializa nem reinterpreta a forma interna do payload (é o que preserva
@@ -88,6 +90,21 @@ export interface SessionStore {
   list(): Promise<SessionSummary[]>;
   /** Estado salvo mais recente — retoma no passo exato. Lança se nunca salvo. */
   load(id: string): Promise<SessionStateDto>;
+
+  /**
+   * Renomeia a sessão (ENG-281) — SÓ o nome de exibição, aparado nas pontas. O
+   * `story_slug` não muda: ele nomeia os três artefatos (§10.6) e ancora a
+   * byte-identidade da ENG-253.
+   * Recusado (`LockLostError`) se a trava consultiva for de outra pessoa.
+   */
+  rename(id: string, storyName: string): Promise<SessionSummary>;
+  /**
+   * Apaga a sessão em definitivo (ENG-281) — resumo, estado, artefatos e as respostas
+   * de voz junto. Disponível a qualquer momento, inclusive numa sessão concluída.
+   * Chama-se `remove`, e não `delete`, porque `deleteResource` já vive nesta porta:
+   * dois `delete` no mesmo ponto de chamada é como se apaga a coisa errada.
+   */
+  remove(id: string): Promise<void>;
 
   /**
    * Enfileira um autosave: debounced, coalescente (o último estado vence) e
