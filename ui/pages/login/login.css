@@ -27,15 +27,19 @@
   pointer-events: none;
 }
 
-/* Recuo MEDIDO, não estimado: o formulário é uma coluna centrada no painel creme, e
-   a folga entre o botão "Entrar" e a base da janela cai para ~100px numa janela de
-   560px de altura. A parte visível da marca fica em ~80px por isso — o entalhe do
-   meio aparece (é o que a faz ler como marca, e não como uma faixa clara), e ela
-   passa ABAIXO do botão em qualquer tamanho de janela que o login suporte. */
+/* A marca é para ser VISTA (decisão do dono): fica quase toda na tela, só o canto
+   sangrando para fora. Sangra pelos DOIS lados de propósito — o desenho da Shemá
+   ocupa só ~61% da largura do próprio viewBox, então um recuo menor que ~230px a
+   deixaria flutuando com folga à direita, o que lê como um cartão solto e não como
+   marca d'água. Recuada assim, ela encosta na borda como nas estações.
+
+   O preço, medido e aceito: numa janela baixa (≤ ~700px de altura) ela passa por
+   trás do botão "Entrar". Não rouba clique — o `pointer-events: none` acima está no
+   invólucro — e os controles são opacos, então cobrem a marca em vez de misturar. */
 .cds-login-watermark > svg {
   position: absolute;
-  right: -250px;
-  bottom: -160px;
+  right: -300px;
+  bottom: -70px;
 }
 
 /* os dois painéis sobem acima da marca: elemento posicionado pinta depois do

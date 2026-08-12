@@ -64,7 +64,7 @@ export function Login({ auth = defaultAuth() }: LoginProps) {
     // o shell não embrulha esta rota: a página é o próprio landmark `main`
     <main className="cds-login">
       <span className="cds-login-watermark" aria-hidden="true">
-        <ShemaIcon colorway="telha" size={240} />
+        <ShemaIcon colorway="telha" size={300} />
       </span>
       <aside className="cds-login-hero">
         <ColarIcon onDark size={60} />
