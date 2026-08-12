@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
@@ -29,17 +29,18 @@ import './dashboard.css';
  * Lista TODAS as sessões da facilitadora em cartões — nome, slug, projeto, status,
  * última modificação e o relance de progresso pela capa do fio (contas acesas na
  * proporção do passo salvo); retoma direto no passo salvo (§7.3); baixa os três
- * artefatos de uma sessão concluída SEM abri-la (§10.5); apaga uma história em
- * definitivo, depois de perguntar; e abre uma nova. A expiração de auth (§7.1) volta
- * ao login sem tocar o estado em memória do app.
+ * artefatos de uma sessão concluída SEM abri-la (§10.5); troca o NOME de exibição de
+ * uma história sem mover o slug que nomeia os documentos (§10.6); apaga uma história
+ * em definitivo, depois de perguntar; e abre uma nova. A expiração de auth (§7.1)
+ * volta ao login sem tocar o estado em memória do app.
  *
  * Tem cabeçalho PRÓPRIO (o shell suprime o dele em `/dashboard`, como no `/login`):
  * marca + a usuária autenticada + sair. Reconciliações protótipo↔contrato (dado vence):
  * o protótipo mostra nome completo e e-mail ("Marcia Alencar / marcia@shema.org"), mas
  * `AuthUser` só tem `{id, username, roles}` — mostramos o `username` e a inicial, sem
- * inventar dados. Do kebab do protótipo (renomear/duplicar/excluir) existe hoje o
- * excluir (`store.remove`, ENG-281) ao lado dos downloads (ENG-305); duplicar não
- * existe na porta nem no §7.2, e renomear é outra fatia, com o diálogo dela.
+ * inventar dados. Do kebab do protótipo (renomear/duplicar/excluir) existem hoje o
+ * renomear e o excluir (`store.rename`/`store.remove`, ENG-281) ao lado dos downloads
+ * (ENG-305); duplicar não existe na porta nem no §7.2 e segue de fora.
  *
  * Camada de wiring: as portas `auth`/`store` chegam por prop nos testes; em produção
  * resolvem os singletons fixture (ports.ts). O download real é a fronteira `saveBytes`.
@@ -135,6 +136,7 @@ function ActionsMenu({
   canDownload,
   downloaded,
   onDownload,
+  onRename,
   onDelete,
 }: {
   t: Translate;
@@ -142,6 +144,7 @@ function ActionsMenu({
   canDownload: boolean;
   downloaded: boolean;
   onDownload: () => void;
+  onRename: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -164,6 +167,11 @@ function ActionsMenu({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className="cds-dashboard-dl-pop" sideOffset={6} align="end">
+          {/* renomear vale sempre — um nome errado se corrige no primeiro minuto */}
+          <button type="button" className="cds-dashboard-dl-item" onClick={onRename}>
+            <span aria-hidden="true">✎</span>
+            {t('dashboard.renameSession')}
+          </button>
           {/* os documentos só existem depois de guardar (§8.8) */}
           {canDownload && (
             <button
@@ -192,10 +200,59 @@ function ActionsMenu({
 }
 
 /**
+ * A casca dos dois diálogos do cartão (ENG-281): véu, cartão creme, título que NOMEIA
+ * a história — sem o nome, a facilitadora não tem como perceber que abriu o menu do
+ * cartão errado —, uma linha de explicação e o lugar fixo da recusa. Desistir é
+ * recusado enquanto a chamada está no ar: uma recusa que chegasse depois não teria
+ * onde aparecer se o diálogo já tivesse sumido (§9.4: nunca um silêncio). Quem chama
+ * escolhe o foco inicial, porque a resposta segura é diferente em cada um.
+ */
+function CardDialog({
+  title,
+  body,
+  error,
+  busy,
+  onCancel,
+  focusOnOpen,
+  children,
+}: {
+  title: string;
+  body: string;
+  error: string | null;
+  busy: boolean;
+  onCancel: () => void;
+  focusOnOpen: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Dialog.Root open onOpenChange={(open) => (open || busy ? undefined : onCancel())}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="cds-dashboard-confirm-overlay" />
+        <Dialog.Content
+          className="cds-dashboard-confirm"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            focusOnOpen();
+          }}
+        >
+          <Dialog.Title className="cds-dashboard-confirm-title">{title}</Dialog.Title>
+          <Dialog.Description className="cds-dashboard-confirm-body">{body}</Dialog.Description>
+          {error && (
+            <p className="cds-dashboard-confirm-alert" role="alert">
+              {error}
+            </p>
+          )}
+          {children}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+/**
  * A pergunta antes de apagar (ENG-281). Apagar é definitivo e leva as gravações de
- * voz junto, então a pergunta NOMEIA a história: sem o nome, a facilitadora não tem
- * como perceber que abriu o menu do cartão errado. O foco inicial vai para o manter
- * — um Enter distraído nunca deve ser o que destrói (§9.4: orientar, nunca punir).
+ * voz junto. O foco inicial vai para o manter — um Enter distraído nunca deve ser o
+ * que destrói (§9.4: orientar, nunca punir).
  */
 function DeleteConfirm({
   t,
@@ -215,48 +272,105 @@ function DeleteConfirm({
   const keepRef = useRef<HTMLDivElement>(null);
 
   return (
-    // com o apagar no ar não há o que desistir, e uma recusa que chegasse depois não
-    // teria onde aparecer se a pergunta já tivesse sumido (§9.4: nunca um silêncio)
-    <Dialog.Root open onOpenChange={(open) => (open || busy ? undefined : onCancel())}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="cds-dashboard-confirm-overlay" />
-        <Dialog.Content
-          className="cds-dashboard-confirm"
-          onOpenAutoFocus={(event) => {
-            event.preventDefault();
-            keepRef.current?.querySelector('button')?.focus();
-          }}
+    <CardDialog
+      title={t('dashboard.deleteConfirm.title', { story })}
+      body={t('dashboard.deleteConfirm.body')}
+      error={error}
+      busy={busy}
+      onCancel={onCancel}
+      focusOnOpen={() => keepRef.current?.querySelector('button')?.focus()}
+    >
+      <div className="cds-dashboard-confirm-actions">
+        <div ref={keepRef} style={{ display: 'contents' }}>
+          <Button size="sm" onClick={onCancel}>
+            {t('dashboard.deleteConfirm.cancel')}
+          </Button>
+        </div>
+        {/* desabilitado em voo: dois cliques seguidos não podem virar dois apagares */}
+        <button
+          type="button"
+          className="cds-dashboard-confirm-destroy"
+          disabled={busy}
+          onClick={onConfirm}
         >
-          <Dialog.Title className="cds-dashboard-confirm-title">
-            {t('dashboard.deleteConfirm.title', { story })}
-          </Dialog.Title>
-          <Dialog.Description className="cds-dashboard-confirm-body">
-            {t('dashboard.deleteConfirm.body')}
-          </Dialog.Description>
-          {error && (
-            <p className="cds-dashboard-confirm-alert" role="alert">
-              {error}
-            </p>
-          )}
-          <div className="cds-dashboard-confirm-actions">
-            <div ref={keepRef} style={{ display: 'contents' }}>
-              <Button size="sm" onClick={onCancel}>
-                {t('dashboard.deleteConfirm.cancel')}
-              </Button>
-            </div>
-            {/* desabilitado em voo: dois cliques seguidos não podem virar dois apagares */}
-            <button
-              type="button"
-              className="cds-dashboard-confirm-destroy"
-              disabled={busy}
-              onClick={onConfirm}
-            >
-              {t('dashboard.deleteConfirm.confirm')}
-            </button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+          {t('dashboard.deleteConfirm.confirm')}
+        </button>
+      </div>
+    </CardDialog>
+  );
+}
+
+/**
+ * Trocar o nome da história (ENG-281). O campo nasce com o nome de agora, focado e
+ * selecionado: quem veio corrigir um erro de digitação sobrescreve na hora, e quem
+ * veio emendar uma letra ainda tem o texto inteiro à mão. O nome sai aparado nas
+ * pontas, e um campo vazio nem chega a virar chamada — o servidor também recusaria,
+ * mas a facilitadora não precisa de uma ida ao servidor para saber disso.
+ *
+ * Muda o nome de EXIBIÇÃO, e só: o `story_slug` fica onde está porque é ele que
+ * nomeia os três documentos (§10.5/§10.6), e é isso que a linha de explicação diz.
+ */
+function RenameDialog({
+  t,
+  story,
+  busy,
+  error,
+  onCancel,
+  onSave,
+}: {
+  t: Translate;
+  story: string;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onSave: (name: string) => void;
+}) {
+  const [name, setName] = useState(story);
+  const fieldRef = useRef<HTMLInputElement>(null);
+  const trimmed = name.trim();
+
+  return (
+    <CardDialog
+      title={t('dashboard.renameDialog.title', { story })}
+      body={t('dashboard.renameDialog.body')}
+      error={error}
+      busy={busy}
+      onCancel={onCancel}
+      focusOnOpen={() => fieldRef.current?.select()}
+    >
+      {/* <form>: o Enter no campo salva, que é o gesto de quem só emendou uma letra.
+          Com o salvar desabilitado o Enter também não submete — a mesma trava serve
+          ao clique repetido e ao Enter repetido. */}
+      <form
+        className="cds-dashboard-rename-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave(trimmed);
+        }}
+      >
+        <label className="cds-dashboard-rename-field">
+          <span>{t('dashboard.renameDialog.field')}</span>
+          <input
+            ref={fieldRef}
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </label>
+        <div className="cds-dashboard-confirm-actions">
+          <Button size="sm" onClick={onCancel}>
+            {t('dashboard.renameDialog.cancel')}
+          </Button>
+          <button
+            type="submit"
+            className="cds-dashboard-rename-save"
+            disabled={busy || trimmed === ''}
+          >
+            {t('dashboard.renameDialog.save')}
+          </button>
+        </div>
+      </form>
+    </CardDialog>
   );
 }
 
@@ -307,6 +421,10 @@ export function Dashboard({
   const [pendingDelete, setPendingDelete] = useState<SessionSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  /** A história com o diálogo de renomear aberto — mesmo desenho do apagar. */
+  const [pendingRename, setPendingRename] = useState<SessionSummary | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -331,6 +449,20 @@ export function Dashboard({
   // §7.1: a expiração volta ao login SEM limpar o estado do app (não tocamos o store).
   // `replace`: não se volta a uma rota cuja sessão de auth já caducou.
   useEffect(() => auth.onAuthExpired(() => navigate('/login', { replace: true })), [auth]);
+
+  /**
+   * A casa se repinta pela MESMA listagem que a encheu — é a única leitura que
+   * conhece a ordem e o corte da grade. Uma releitura que caia é um problema de
+   * LEITURA: vira o aviso da lista, nunca o erro da escrita que acabou de dar certo.
+   */
+  const refresh = useCallback(
+    (): Promise<void> =>
+      store
+        .list()
+        .then(setSessions)
+        .catch(() => setListError(true)),
+    [store],
+  );
 
   /** Uma escolha, os três documentos (ENG-281) — os bytes guardados, sem refazer nada. */
   const onDownload = useCallback(
@@ -372,18 +504,48 @@ export function Dashboard({
     if (!removed) return;
 
     setPendingDelete(null);
-    await store
-      .list()
-      .then(setSessions)
-      .catch(() => setListError(true));
-  }, [pendingDelete, store, t]);
+    await refresh();
+  }, [pendingDelete, store, t, refresh]);
+
+  /**
+   * Renomear, depois de escrever. Mesma partilha de responsabilidade do apagar: a
+   * escrita decide se o nome mudou, a releitura só repinta a casa — por isso ela
+   * também vive fora do try. Muda o nome de exibição e nada mais: o `story_slug`
+   * não viaja no pedido (§10.6), então os documentos guardados seguem com o nome
+   * de arquivo de sempre.
+   */
+  const onRenameConfirmed = useCallback(
+    async (name: string): Promise<void> => {
+      if (!pendingRename) return;
+      setRenaming(true);
+      setRenameError(null);
+      let renamed = false;
+      try {
+        await store.rename(pendingRename.id, name);
+        renamed = true;
+      } catch (err) {
+        setRenameError(
+          err instanceof LockLostError && err.holder
+            ? t('dashboard.renameDialog.locked', { holder: err.holder })
+            : t('dashboard.renameDialog.failed'),
+        );
+      } finally {
+        setRenaming(false);
+      }
+      if (!renamed) return;
+
+      setPendingRename(null);
+      await refresh();
+    },
+    [pendingRename, store, t, refresh],
+  );
 
   const cards = useMemo(
     () =>
       (sessions ?? []).map((s) => ({
         ...toCard(s, t, locale),
-        // o menu vale para TODA história (ENG-281): apagar não espera a conclusão.
-        // Baixar espera: os documentos só passam a existir ao guardar (ENG-305).
+        // o menu vale para TODA história (ENG-281): renomear e apagar não esperam a
+        // conclusão. Baixar espera: os documentos só passam a existir ao guardar (ENG-305).
         menu: (
           <ActionsMenu
             t={t}
@@ -391,6 +553,7 @@ export function Dashboard({
             canDownload={s.status === 'completed'}
             downloaded={downloaded.has(s.id)}
             onDownload={() => void onDownload(s)}
+            onRename={() => setPendingRename(s)}
             onDelete={() => setPendingDelete(s)}
           />
         ),
@@ -501,6 +664,20 @@ export function Dashboard({
           </>
         )}
       </main>
+
+      {pendingRename && (
+        <RenameDialog
+          t={t}
+          story={pendingRename.story_name}
+          busy={renaming}
+          error={renameError}
+          onCancel={() => {
+            setPendingRename(null);
+            setRenameError(null);
+          }}
+          onSave={(name) => void onRenameConfirmed(name)}
+        />
+      )}
 
       {pendingDelete && (
         <DeleteConfirm

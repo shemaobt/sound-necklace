@@ -245,7 +245,21 @@ export const pt = {
        e "Ações" sozinho não diz em qual deles se está (ENG-281). */
     actions: 'Ações em {{story}}',
     downloads: 'Baixar os documentos',
+    renameSession: 'Renomear a história',
     deleteSession: 'Apagar a história',
+    renameDialog: {
+      title: 'Renomear “{{story}}”',
+      /* O nome de exibição muda; o slug não (§10.6) — e o slug é o que nomeia os
+         três documentos. Dizer isso evita a facilitadora esperar que os arquivos
+         já guardados sigam o nome novo. */
+      body: 'Muda só o nome que aparece aqui. Os documentos continuam com o nome de arquivo de sempre.',
+      field: 'Nome da história',
+      save: 'Salvar o nome',
+      cancel: 'Cancelar',
+      locked:
+        '{{holder}} está com esta história aberta agora. O nome não pode mudar enquanto isso.',
+      failed: 'Não consegui renomear a história. Verifique a conexão e tente de novo.',
+    },
     deleteConfirm: {
       title: 'Apagar “{{story}}”?',
       /* A pergunta diz o que vai junto: é um apagamento definitivo no servidor, e
