@@ -33,6 +33,16 @@
   min-width: 0;
 }
 
+/* A marca do site guarda a paleta das contas; só o cordão e as pontas — a parte
+   escura — seguem a tinta do documento, senão sumiriam no fundo do tema escuro. */
+.cds-dashboard-brand .cds-mark-cord {
+  stroke: var(--cds-ui-body-ink);
+}
+
+.cds-dashboard-brand .cds-mark-end {
+  fill: var(--cds-ui-body-ink);
+}
+
 .cds-dashboard-brand-title {
   margin: 0;
   font-family: var(--cds-font-load-bearing);

@@ -6,7 +6,7 @@ Path: @/ui/pages/listen
 
 - The first flow station to land (ENG-229): the ceremonial "Escuta 1 — Ouça a história" opening (PRD v2 §8.3, redesign §6.2) where the listener plays the whole recorded story and makes the single decision "Já ouvi a história completa".
 - A wiring component: it reads the pure @/domain session through the @/ui/state session store, renders the @/ui/organisms `Necklace` as pure transport, and dispatches the whole-story confirm reducer.
-- Full-bleed olive ceremonial treatment (Merriweather-italic tagline, brand watermark) with exactly one instruction line and one dominant action, per the listener-facing UI rules.
+- Full-bleed olive ceremonial treatment (Merriweather-italic tagline, brand watermark bleeding out of the bottom-right corner) with exactly one instruction line and one dominant action, per the listener-facing UI rules. The watermark is still the `ShemaIcon` — only the headers and the login took the new site mark; the station backgrounds kept the Shemá.
 
 ### How it fits into the larger codebase
 

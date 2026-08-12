@@ -486,10 +486,12 @@
   pointer-events: none;
 }
 
+/* recuada para o canto inferior-direito: aqui embaixo à direita mora o "Criar a
+   sessão", e a marca estava passando por trás do botão */
 .cds-setup-watermark > svg {
   position: absolute;
-  right: -90px;
-  bottom: -100px;
+  right: -200px;
+  bottom: -240px;
 }
 
 /* ---------- ENG-311: portas desabilitadas + esqueleto da lista ---------- */

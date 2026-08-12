@@ -208,4 +208,17 @@ describe('Escuta 1 — tratamento cerimonial (redesign §6.2, §4.5)', () => {
     const { outside } = splitByGuard(listenCss, guard);
     expect(outside).not.toMatch(/animation|@keyframes/);
   });
+
+  /**
+   * A marca d'água da estação continua sendo a Shemá, e continua fora da árvore de
+   * acessibilidade: ela é fundo, não conteúdo. A POSIÇÃO é CSS e não se afirma aqui —
+   * o que se afirma é que mexer nela não a apagou nem a deu voz.
+   */
+  it('a marca d’água Shemá segue no fundo, muda para quem ouve a tela', () => {
+    sessionStore.getState().load(makeSession());
+    renderStation(<Listen />);
+
+    expect(screen.getByRole('img', { name: 'Shemá', hidden: true })).toBeTruthy();
+    expect(screen.queryByRole('img', { name: 'Shemá' })).toBeNull();
+  });
 });

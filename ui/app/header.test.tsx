@@ -13,6 +13,15 @@ describe('Header — fixo durante o scroll das estações (ENG-315)', () => {
   });
 });
 
+describe('Header — a marca é a do site', () => {
+  it('o ícone do cabeçalho é o Colar de Sons, não mais o Shemá', () => {
+    render(<Header muted={false} onToggleMuted={() => {}} onBack={() => {}} />);
+
+    expect(screen.getByRole('img', { name: 'Colar de Sons' })).toBeTruthy();
+    expect(screen.queryByRole('img', { name: 'Shemá' })).toBeNull();
+  });
+});
+
 describe('Header', () => {
   it('não tem título — a marca é só o ícone', () => {
     const { container } = render(

@@ -25,11 +25,12 @@
   --cds-ui-wash: rgba(10, 7, 3, 0.14);
 }
 
-/* marca d'água vazando no canto (protótipo: right -70, bottom -90, 380px, .05) */
+/* marca d'água vazando no canto (protótipo: right -70, bottom -90, 380px, .05;
+   recuada mais para o canto inferior-direito, para sair de trás do colar) */
 .cds-listen-watermark {
   position: absolute;
-  right: -70px;
-  bottom: -90px;
+  right: -160px;
+  bottom: -170px;
   opacity: 0.05;
   pointer-events: none;
 }

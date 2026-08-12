@@ -60,8 +60,17 @@
   opacity: 0.92;
 }
 
-.cds-header-icon path {
-  fill: var(--cds-chrome-mark);
+/* A marca do site é colorida: as contas guardam a paleta, e só o cordão e as
+   duas pontas seguem o chrome — são a parte escura, a única que sumiria no
+   oliva cerimonial e no tema escuro. (Antes daqui morava um `path { fill }`
+   que pintava o ícone Shemá inteiro de `--cds-chrome-mark`; com um desenho de
+   várias cores, esse fill fecharia o arco do cordão.) */
+.cds-header-icon .cds-mark-cord {
+  stroke: var(--cds-chrome-fg);
+}
+
+.cds-header-icon .cds-mark-end {
+  fill: var(--cds-chrome-fg);
 }
 
 .cds-header-actions {
