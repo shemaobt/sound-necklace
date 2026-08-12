@@ -142,6 +142,11 @@ export const pt = {
     waitEyebrow: 'Guardando',
     waitLine: 'Reunindo as decisões de vocês nos documentos…',
     anchoringBlocked: 'Confirme o colar antes de exportar.',
+    /* Os dois títulos da recusa. Um gate que recusa não é uma falha: dizer "falta um
+       passo" nomeia o que fazer, enquanto "não consegui" nomeia o que deu errado.
+       Trocá-los faz a facilitadora procurar conexão quando o que falta é um clique. */
+    noticeBlocked: 'Falta um passo.',
+    noticeFailed: 'Não consegui agora.',
     reportBlocked_one:
       'Ainda há 1 resposta gravada sem o texto em inglês confirmado. Confirme-a no relatório — ou escreva a resposta à mão.',
     reportBlocked_other:
@@ -454,6 +459,23 @@ export const pt = {
     draftConfirm: 'confirmar a transcrição',
     draftRetry: 'tentar de novo',
     draftFailed: 'não consegui transcrever agora — dá para escrever a resposta à mão',
+    /* Confirmar tudo de uma vez. A cópia é explícita sobre o que se está aceitando:
+       texto de máquina, sem leitura resposta a resposta. Quem aceita é a facilitadora,
+       e ela precisa saber o que está assinando. */
+    bulkAction: 'Confirmar todas as transcrições',
+    bulkTitle_one: 'Confirmar 1 transcrição de uma vez?',
+    bulkTitle_other: 'Confirmar {{count}} transcrições de uma vez?',
+    bulkBody:
+      'Estes textos foram escritos por uma máquina a partir das gravações. Confirmar de uma vez aceita todos como estão, sem ler um a um, e eles passam a ser a resposta que vai para o documento. As gravações continuam guardadas, e qualquer resposta pode ser corrigida aqui depois.',
+    bulkReview: 'Rever uma a uma',
+    bulkAccept: 'Aceitar as transcrições',
+    bulkResultRegion: 'resultado da confirmação em lote',
+    bulkConfirmed_one: '1 resposta confirmada.',
+    bulkConfirmed_other: '{{count}} respostas confirmadas.',
+    bulkNothing: 'Nenhuma resposta foi confirmada.',
+    bulkRemaining_one: 'Ainda falta 1 resposta gravada sem transcrição — escreva-a à mão.',
+    bulkRemaining_other:
+      'Ainda faltam {{count}} respostas gravadas sem transcrição — escreva-as à mão.',
   },
   conversationStage: {
     listen: 'Ouvir a pergunta',

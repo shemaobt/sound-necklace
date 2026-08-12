@@ -353,6 +353,34 @@
   margin: 0;
 }
 
+/* Confirmar todas as transcrições: uma saída discreta acima da lista, não uma
+   chamada. O protagonista da tela continua sendo o que foi dito; isto é o atalho de
+   quem já sabe que vai aceitar as transcrições como estão. */
+.cds-report-bulk {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+/* O que o lote fez — mesma linha quieta do anúncio dos rascunhos, com a pendência
+   destacada: é ela que explica por que a exportação ainda pode recusar. */
+.cds-report-bulk-result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  margin: 0 0 6px;
+  color: var(--cds-ui-ink-faint);
+  font-size: 13.5px;
+}
+
+.cds-report-bulk-result:empty {
+  margin: 0;
+}
+
+.cds-report-bulk-result span:last-child:not(:only-child) {
+  color: var(--cds-ui-error-fg);
+}
+
 /* Controles de edição da resposta (ENG-369): o lápis anuncia que a linha é editável;
    em edição ele dá lugar a descartar/aceitar. Ficam à direita, na mesma linha do
    campo, e só ganham peso quando há o que decidir. */

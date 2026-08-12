@@ -132,6 +132,8 @@ export const en: Dict = {
     waitEyebrow: 'Saving',
     waitLine: 'Gathering your decisions into the documents…',
     anchoringBlocked: 'Confirm the necklace before exporting.',
+    noticeBlocked: 'One step is missing.',
+    noticeFailed: 'That did not work just now.',
     reportBlocked_one:
       '1 recorded answer still has no confirmed English text. Confirm it in the report — or write the answer by hand.',
     reportBlocked_other:
@@ -419,6 +421,20 @@ export const en: Dict = {
     draftConfirm: 'confirm the transcript',
     draftRetry: 'try again',
     draftFailed: 'could not transcribe right now — you can write the answer by hand',
+    bulkAction: 'Confirm every transcript',
+    bulkTitle_one: 'Confirm 1 transcript in one act?',
+    bulkTitle_other: 'Confirm {{count}} transcripts in one act?',
+    bulkBody:
+      'These texts were written by a machine from the recordings. Confirming them at once accepts all of them as they are, without reading them one by one, and they become the answers that go into the document. The recordings stay in custody, and any answer can still be corrected here afterwards.',
+    bulkReview: 'Review them one by one',
+    bulkAccept: 'Accept the transcripts',
+    bulkResultRegion: 'result of the bulk confirmation',
+    bulkConfirmed_one: '1 answer confirmed.',
+    bulkConfirmed_other: '{{count}} answers confirmed.',
+    bulkNothing: 'No answer was confirmed.',
+    bulkRemaining_one: '1 recorded answer still has no transcript — write it by hand.',
+    bulkRemaining_other:
+      '{{count}} recorded answers still have no transcript — write them by hand.',
   },
   conversationStage: {
     listen: 'Listen to the question',
