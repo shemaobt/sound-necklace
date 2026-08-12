@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 
 import type { AuthProvider } from '../../../adapters/api';
-import type { SessionStore } from '../../../adapters/sessions';
+import { LockLostError, type SessionStore } from '../../../adapters/sessions';
 import {
   manifestoFilename,
   relatorioFilename,
@@ -13,10 +14,7 @@ import {
 } from '../../../contracts';
 import { Button, Skeleton } from '../../atoms';
 import { ShemaIcon } from '../../tokens';
-import {
-  type ArtifactDownloads,
-  type ArtifactKind,
-} from '../../organisms/artifact-cards/artifact-cards';
+import { type ArtifactKind } from '../../organisms/artifact-cards/artifact-cards';
 import {
   SessionList,
   type SessionCardData,
@@ -31,17 +29,17 @@ import './dashboard.css';
  * Lista TODAS as sessões da facilitadora em cartões — nome, slug, projeto, status,
  * última modificação e o relance de progresso pela capa do fio (contas acesas na
  * proporção do passo salvo); retoma direto no passo salvo (§7.3); baixa os três
- * artefatos de uma sessão concluída SEM abri-la (§10.5); e abre uma nova história. A
- * expiração de auth (§7.1) volta ao login sem tocar o estado em memória do app.
+ * artefatos de uma sessão concluída SEM abri-la (§10.5); apaga uma história em
+ * definitivo, depois de perguntar; e abre uma nova. A expiração de auth (§7.1) volta
+ * ao login sem tocar o estado em memória do app.
  *
  * Tem cabeçalho PRÓPRIO (o shell suprime o dele em `/dashboard`, como no `/login`):
  * marca + a usuária autenticada + sair. Reconciliações protótipo↔contrato (dado vence):
  * o protótipo mostra nome completo e e-mail ("Marcia Alencar / marcia@shema.org"), mas
  * `AuthUser` só tem `{id, username, roles}` — mostramos o `username` e a inicial, sem
- * inventar dados. O menu kebab do protótipo (renomear/duplicar/excluir) NÃO foi portado:
- * `SessionStore` não expõe essas operações e o §7.2 não as pede; os downloads, que o
- * protótipo punha nesse menu, seguem nos ArtifactCards (§7.2/§10.5); estender o
- * contrato para suportá-las é um follow-up contract-critical, fora do escopo `ui/`.
+ * inventar dados. Do kebab do protótipo (renomear/duplicar/excluir) existe hoje o
+ * excluir (`store.remove`, ENG-281) ao lado dos downloads (ENG-305); duplicar não
+ * existe na porta nem no §7.2, e renomear é outra fatia, com o diálogo dela.
  *
  * Camada de wiring: as portas `auth`/`store` chegam por prop nos testes; em produção
  * resolvem os singletons fixture (ports.ts). O download real é a fronteira `saveBytes`.
@@ -124,51 +122,139 @@ function GearGlyph() {
 const KINDS: readonly ArtifactKind[] = ['anchoring', 'manifest', 'report'];
 
 /**
- * O menu de downloads do cartão concluído (ENG-305): os três artefatos atrás de
- * um "Baixar" no próprio cartão — os cards soltos abaixo da grade eram uma
- * segunda superfície competindo com as histórias. Os bytes vêm do MESMO
- * onDownload de sempre (§10.5, byte-idênticos aos guardados).
+ * O menu de ações do cartão (ENG-305 → ENG-281). Nasceu só com os downloads da
+ * concluída — os cards soltos abaixo da grade eram uma segunda superfície
+ * competindo com as histórias — e agora carrega também o apagar, que vale a
+ * QUALQUER momento: por isso o menu está em todo cartão, e não só nos prontos.
+ * Os bytes do download vêm do MESMO onDownload de sempre (§10.5, byte-idênticos
+ * aos guardados); os três documentos saem de uma escolha só.
  */
-function DownloadMenu({
+function ActionsMenu({
   t,
-  downloads,
-  onKind,
+  story,
+  canDownload,
+  downloaded,
+  onDownload,
+  onDelete,
 }: {
   t: Translate;
-  downloads: ArtifactDownloads;
-  onKind: (kind: ArtifactKind) => void;
+  story: string;
+  canDownload: boolean;
+  downloaded: boolean;
+  onDownload: () => void;
+  onDelete: () => void;
 }) {
   return (
+    // sem `open` controlado: o apagar abre OUTRA camada, e o próprio Radix fecha o
+    // menu quando o diálogo leva o foco embora (um teste guarda que ele não fica
+    // preso atrás do véu)
     <Popover.Root>
       <Popover.Trigger asChild>
-        {/* ícone discreto (ENG-333): o nome vive no aria-label — os leitores e os
-            testes seguem achando "Baixar"; a palavra não disputa com o Retomar */}
+        {/* ícone discreto (ENG-333): o nome vive no aria-label, e nomeia a história
+            — dois cartões na grade dão dois gatilhos, e "Ações" sozinho não diz
+            em qual deles se está */}
         <button
           type="button"
           className="cds-dashboard-dl-trigger"
-          aria-label={t('dashboard.downloads')}
-          title={t('dashboard.downloads')}
+          aria-label={t('dashboard.actions', { story })}
+          title={t('dashboard.actions', { story })}
         >
           <span aria-hidden="true">⋮</span>
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className="cds-dashboard-dl-pop" sideOffset={6} align="end">
-          {KINDS.map((kind) => (
+          {/* os documentos só existem depois de guardar (§8.8) */}
+          {canDownload && (
             <button
-              key={kind}
               type="button"
               className="cds-dashboard-dl-item"
-              data-downloaded={downloads[kind] || undefined}
-              onClick={() => onKind(kind)}
+              data-downloaded={downloaded || undefined}
+              onClick={onDownload}
             >
-              <span aria-hidden="true">{downloads[kind] ? '✓' : '⤓'}</span>
-              {t(`artifactCards.${kind}.title`)}
+              <span aria-hidden="true">{downloaded ? '✓' : '⤓'}</span>
+              {t('dashboard.downloads')}
             </button>
-          ))}
+          )}
+          <button
+            type="button"
+            className="cds-dashboard-dl-item"
+            data-danger="true"
+            onClick={onDelete}
+          >
+            <span aria-hidden="true">✕</span>
+            {t('dashboard.deleteSession')}
+          </button>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+/**
+ * A pergunta antes de apagar (ENG-281). Apagar é definitivo e leva as gravações de
+ * voz junto, então a pergunta NOMEIA a história: sem o nome, a facilitadora não tem
+ * como perceber que abriu o menu do cartão errado. O foco inicial vai para o manter
+ * — um Enter distraído nunca deve ser o que destrói (§9.4: orientar, nunca punir).
+ */
+function DeleteConfirm({
+  t,
+  story,
+  busy,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  t: Translate;
+  story: string;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const keepRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <Dialog.Root open onOpenChange={(open) => (open ? undefined : onCancel())}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="cds-dashboard-confirm-overlay" />
+        <Dialog.Content
+          className="cds-dashboard-confirm"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            keepRef.current?.querySelector('button')?.focus();
+          }}
+        >
+          <Dialog.Title className="cds-dashboard-confirm-title">
+            {t('dashboard.deleteConfirm.title', { story })}
+          </Dialog.Title>
+          <Dialog.Description className="cds-dashboard-confirm-body">
+            {t('dashboard.deleteConfirm.body')}
+          </Dialog.Description>
+          {error && (
+            <p className="cds-dashboard-confirm-alert" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="cds-dashboard-confirm-actions">
+            <div ref={keepRef} style={{ display: 'contents' }}>
+              <Button size="sm" onClick={onCancel}>
+                {t('dashboard.deleteConfirm.cancel')}
+              </Button>
+            </div>
+            {/* desabilitado em voo: dois cliques seguidos não podem virar dois apagares */}
+            <button
+              type="button"
+              className="cds-dashboard-confirm-destroy"
+              disabled={busy}
+              onClick={onConfirm}
+            >
+              {t('dashboard.deleteConfirm.confirm')}
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
@@ -215,6 +301,10 @@ export function Dashboard({
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [listError, setListError] = useState(false);
   const [downloaded, setDownloaded] = useState<Set<string>>(new Set());
+  /** A história cujo apagamento está sendo perguntado — a pergunta é o próprio estado. */
+  const [pendingDelete, setPendingDelete] = useState<SessionSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -240,39 +330,58 @@ export function Dashboard({
   // `replace`: não se volta a uma rota cuja sessão de auth já caducou.
   useEffect(() => auth.onAuthExpired(() => navigate('/login', { replace: true })), [auth]);
 
+  /** Uma escolha, os três documentos (ENG-281) — os bytes guardados, sem refazer nada. */
   const onDownload = useCallback(
-    async (s: SessionSummary, kind: ArtifactKind): Promise<void> => {
-      const bytes = (await store.getArtifacts(s.id))[kind];
-      saveBytes(filenameFor(kind, s.story_slug), bytes);
-      setDownloaded((prev) => new Set(prev).add(`${s.id}:${kind}`));
+    async (s: SessionSummary): Promise<void> => {
+      const artifacts = await store.getArtifacts(s.id);
+      for (const kind of KINDS) saveBytes(filenameFor(kind, s.story_slug), artifacts[kind]);
+      setDownloaded((prev) => new Set(prev).add(s.id));
     },
     [store, saveBytes],
   );
 
-  const downloadsFor = useCallback(
-    (id: string): ArtifactDownloads => ({
-      anchoring: downloaded.has(`${id}:anchoring`),
-      manifest: downloaded.has(`${id}:manifest`),
-      report: downloaded.has(`${id}:report`),
-    }),
-    [downloaded],
-  );
+  /**
+   * Apagar de verdade, depois da pergunta. Fronteira de IO: a recusa do servidor vira
+   * frase na tela — trava alheia diz QUEM está com a história (§9.4) — e a história
+   * continua listada. A casa se atualiza pela MESMA listagem que a encheu.
+   */
+  const onDeleteConfirmed = useCallback(async (): Promise<void> => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await store.remove(pendingDelete.id);
+      setSessions(await store.list());
+      setPendingDelete(null);
+    } catch (err) {
+      setDeleteError(
+        err instanceof LockLostError && err.holder
+          ? t('dashboard.deleteConfirm.locked', { holder: err.holder })
+          : t('dashboard.deleteConfirm.failed'),
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }, [pendingDelete, store, t]);
 
   const cards = useMemo(
     () =>
       (sessions ?? []).map((s) => ({
         ...toCard(s, t, locale),
-        // concluída: os três documentos atrás do "Baixar" do próprio cartão (ENG-305)
-        menu:
-          s.status === 'completed' ? (
-            <DownloadMenu
-              t={t}
-              downloads={downloadsFor(s.id)}
-              onKind={(kind) => void onDownload(s, kind)}
-            />
-          ) : undefined,
+        // o menu vale para TODA história (ENG-281): apagar não espera a conclusão.
+        // Baixar espera: os documentos só passam a existir ao guardar (ENG-305).
+        menu: (
+          <ActionsMenu
+            t={t}
+            story={s.story_name}
+            canDownload={s.status === 'completed'}
+            downloaded={downloaded.has(s.id)}
+            onDownload={() => void onDownload(s)}
+            onDelete={() => setPendingDelete(s)}
+          />
+        ),
       })),
-    [sessions, t, locale, downloadsFor, onDownload],
+    [sessions, t, locale, downloaded, onDownload],
   );
   const user = auth.currentUser();
 
@@ -378,6 +487,20 @@ export function Dashboard({
           </>
         )}
       </main>
+
+      {pendingDelete && (
+        <DeleteConfirm
+          t={t}
+          story={pendingDelete.story_name}
+          busy={deleting}
+          error={deleteError}
+          onCancel={() => {
+            setPendingDelete(null);
+            setDeleteError(null);
+          }}
+          onConfirm={() => void onDeleteConfirmed()}
+        />
+      )}
     </div>
   );
 }

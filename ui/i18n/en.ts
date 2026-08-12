@@ -215,7 +215,17 @@ export const en: Dict = {
     countMany: '{{count}} stories',
     progressLabel: 'progress: {{station}} — step {{step}} of {{total}}',
     loading: 'Loading the stories…',
-    downloads: 'Download',
+    actions: 'Actions on {{story}}',
+    downloads: 'Download the documents',
+    deleteSession: 'Delete the story',
+    deleteConfirm: {
+      title: 'Delete “{{story}}”?',
+      body: 'Everything in this story goes: the cuts, the classifications and the voice recordings of the answers. This cannot be undone.',
+      confirm: 'Delete forever',
+      cancel: 'Keep the story',
+      locked: '{{holder}} has this story open right now. It cannot be deleted meanwhile.',
+      failed: 'Could not delete the story. Check the connection and try again.',
+    },
     listError: 'Could not load the stories. Check the connection and reload.',
   },
   sessionList: {

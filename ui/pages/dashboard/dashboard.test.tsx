@@ -1,9 +1,13 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FixtureAuthProvider } from '../../../adapters/api';
-import { type CreateSessionInput, FixtureSessionStore } from '../../../adapters/sessions';
+import {
+  type CreateSessionInput,
+  FixtureSessionBackend,
+  FixtureSessionStore,
+} from '../../../adapters/sessions';
 import type { ArtifactTriple, SessionStateDto } from '../../../contracts';
 import dashboardCss from './dashboard.css?raw';
 import sessionListCss from '../../organisms/session-list/session-list.css?raw';
@@ -54,8 +58,26 @@ async function seedCompleted(
   return id;
 }
 
+const TRIPLE: ArtifactTriple = { anchoring: '{}', manifest: '{}', report: '#' };
+
 function goto(path: string): void {
   window.history.replaceState({}, '', path);
+}
+
+/** Abre o menu de ações do cartão e escolhe apagar — o gesto da facilitadora. */
+async function chooseDelete(story: string): Promise<void> {
+  await userEvent.click(await screen.findByRole('button', { name: `Ações em ${story}` }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Apagar a história' }));
+}
+
+/**
+ * A história está na GRADE? (o nome também aparece na pergunta — a grade é o que conta).
+ * `hidden: true` porque, com o diálogo aberto, o Radix marca o resto da página como
+ * aria-hidden: a grade continua na tela, atrás do véu, e é isso que se quer afirmar.
+ */
+function listed(story: string): boolean {
+  const grid = screen.getByRole('list', { name: 'histórias', hidden: true });
+  return within(grid).queryAllByText(story).length > 0;
 }
 
 beforeEach(() => goto('/dashboard'));
@@ -208,8 +230,43 @@ describe('Dashboard — retomar (§7.3)', () => {
   });
 });
 
-describe('Dashboard — downloads no cartão da concluída (§7.2/§10.5, ENG-305)', () => {
-  it('o menu "Baixar" do cartão entrega os três artefatos byte-idênticos e marca os baixados', async () => {
+describe('Dashboard — o menu de ações do cartão (§7.2/§10.5, ENG-305/ENG-281)', () => {
+  it('toda história oferece o menu de ações, terminada ou não', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Em curso', storySlug: 'em-curso' });
+    await seedCompleted(store, TRIPLE, { storyName: 'Terminada', storySlug: 'terminada' });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+
+    expect(await screen.findByRole('button', { name: 'Ações em Em curso' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ações em Terminada' })).toBeTruthy();
+  });
+
+  it('baixar só se oferece quando a história terminou; apagar, a qualquer momento', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Em curso', storySlug: 'em-curso' });
+    await seedCompleted(store, TRIPLE, { storyName: 'Terminada', storySlug: 'terminada' });
+    const dashboard = (
+      <Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />
+    );
+
+    // em andamento: nada para baixar ainda, mas dá para apagar
+    render(dashboard);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações em Em curso' }));
+    expect(screen.queryByRole('button', { name: 'Baixar os documentos' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Apagar a história' })).toBeTruthy();
+
+    // uma casa nova para o segundo cartão: fechar o primeiro menu exigiria do teste
+    // um gesto (Esc, clique fora) que não é o que ele afirma
+    cleanup();
+
+    render(dashboard);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações em Terminada' }));
+    expect(screen.getByRole('button', { name: 'Baixar os documentos' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Apagar a história' })).toBeTruthy();
+  });
+
+  it('um único "Baixar os documentos" guarda os três artefatos byte-idênticos daquela história', async () => {
     const triple: ArtifactTriple = {
       anchoring: '{"anchoring":true}',
       manifest: '{"manifest":true}',
@@ -221,59 +278,159 @@ describe('Dashboard — downloads no cartão da concluída (§7.2/§10.5, ENG-30
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={save} />);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Baixar' }));
-    await userEvent.click(await screen.findByRole('button', { name: /As decisões de vocês/ }));
-    // o popover fecha ao interagir? Radix mantém aberto em cliques internos — segue
-    await userEvent.click(screen.getByRole('button', { name: /O mapa das contas/ }));
-    await userEvent.click(screen.getByRole('button', { name: /A conversa sobre o sentido/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações em Concluída' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Baixar os documentos' }));
 
+    // uma escolha só e os três documentos saem — é isso que "um único" quer dizer
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(3));
     const sent = Object.fromEntries(save.mock.calls.map(([name, bytes]) => [name, bytes]));
     expect(sent['concluida-x-anchoring-return.json']).toBe(triple.anchoring);
     expect(sent['concluida-x-bead-manifest.json']).toBe(triple.manifest);
     expect(sent['concluida-x-mapping-report.md']).toBe(triple.report);
 
-    // baixado marca o item (as chaves agora batem com o kind — bug antigo corrigido)
+    // e a entrada passa a exibir o visto de já baixado (ENG-305)
     await waitFor(() =>
-      expect(
-        screen
-          .getByRole('button', { name: /As decisões de vocês/ })
-          .getAttribute('data-downloaded'),
-      ).toBe('true'),
+      expect(screen.getByRole('button', { name: 'Baixar os documentos' }).textContent).toContain(
+        '✓',
+      ),
     );
-    // e os cards soltos sumiram da home
-    expect(document.querySelector('.cds-dashboard-download-group')).toBeNull();
   });
 
-  it('o gatilho é um ícone discreto — nome acessível "Baixar", sem palavra visível (ENG-333)', async () => {
+  it('o gatilho é um ícone discreto — o nome nomeia a história, sem palavra visível (ENG-333)', async () => {
     const store = new FixtureSessionStore();
-    await seedCompleted(
-      store,
-      { anchoring: '{}', manifest: '{}', report: '#' },
-      { storyName: 'Concluída', storySlug: 'concluida-x' },
-    );
+    await seedInProgress(store, { storyName: 'Qualquer', storySlug: 'qualquer' });
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
 
-    const trigger = await screen.findByRole('button', { name: 'Baixar' });
-    // ícone, não palavra: o glifo é decorativo e o nome vem do aria-label
-    expect(trigger.getAttribute('aria-label')).toBe('Baixar');
-    expect(trigger.querySelector('[aria-hidden="true"]')).toBeTruthy();
-    expect(trigger.textContent).not.toContain('Baixar');
+    // o nome acessível existe (o findByRole já o exige) mas nenhuma letra é desenhada
+    const trigger = await screen.findByRole('button', { name: 'Ações em Qualquer' });
+    expect(trigger.textContent?.trim()).not.toMatch(/\p{L}/u);
   });
 
   it('a área de ação do cartão separa o botão principal do menu (ENG-333)', () => {
     const action = /\.cds-session-card-action\s*{[^}]*}/.exec(sessionListCss)?.[0] ?? '';
     expect(action).toMatch(/gap:/);
   });
+});
 
-  it('uma sessão em progresso não tem o menu Baixar', async () => {
+describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
+  it('escolher apagar pergunta antes: nada some enquanto a pergunta está na tela', async () => {
     const store = new FixtureSessionStore();
-    await seedInProgress(store, { storyName: 'Só andamento', storySlug: 'so-andamento' });
+    await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
+    const removed = vi.spyOn(store, 'remove');
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseDelete('Frágil');
 
-    await screen.findAllByText('Só andamento');
-    expect(screen.queryByRole('button', { name: 'Baixar' })).toBeNull();
+    // a pergunta nomeia a história — quem pegou o cartão errado tem como perceber
+    const dialog = await screen.findByRole('dialog', { name: /Apagar “Frágil”/ });
+    // e avisa que as gravações vão junto
+    expect(dialog.textContent).toContain('gravações');
+    // o menu não fica preso atrás do véu
+    expect(screen.queryByText('Apagar a história')).toBeNull();
+    // nada foi destruído ainda
+    expect(removed).not.toHaveBeenCalled();
+    expect(await store.list()).toHaveLength(1);
+    expect(listed('Frágil')).toBe(true);
+  });
+
+  it('confirmar tira a história da casa — que fica vazia, não quebrada', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseDelete('Frágil');
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
+
+    await waitFor(() => expect(listed('Frágil')).toBe(false));
+    expect(await store.list()).toHaveLength(0);
+    // casa vazia, não quebrada: nenhum cartão de história sobrou, nenhuma contagem
+    // fria, e o convite a começar outra segue de pé
+    expect(screen.queryByRole('button', { name: /Retomar/ })).toBeNull();
+    expect(screen.queryByText('1 história')).toBeNull();
+    expect(screen.getByRole('button', { name: /Comece uma nova história/i })).toBeTruthy();
+  });
+
+  it('desistir mantém a história', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
+    const removed = vi.spyOn(store, 'remove');
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseDelete('Frágil');
+    await userEvent.click(screen.getByRole('button', { name: 'Manter a história' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(removed).not.toHaveBeenCalled();
+    expect(listed('Frágil')).toBe(true);
+  });
+
+  it('apaga a história escolhida, não a vizinha', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Primeira', storySlug: 'primeira' });
+    await seedInProgress(store, { storyName: 'Segunda', storySlug: 'segunda' });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseDelete('Segunda');
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
+
+    await waitFor(() => expect(listed('Segunda')).toBe(false));
+    expect(listed('Primeira')).toBe(true);
+    // e a contagem da casa acompanha
+    expect(screen.getByText('1 história')).toBeTruthy();
+  });
+
+  it('recusada por trava alheia, a história fica e a tela diz quem está com ela (§9.4)', async () => {
+    const backend = new FixtureSessionBackend();
+    const alice = new FixtureSessionStore({
+      backend,
+      user: { user_id: 'a', display_name: 'Alice' },
+    });
+    const bob = new FixtureSessionStore({ backend, user: { user_id: 'b', display_name: 'Bob' } });
+    const s = await alice.create(createInput({ storyName: 'Disputada', storySlug: 'disputada' }));
+    await alice.acquireLock(s.id);
+
+    render(<Dashboard store={bob} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseDelete('Disputada');
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Alice');
+    expect(listed('Disputada')).toBe(true);
+    expect(await bob.list()).toHaveLength(1);
+  });
+
+  it('uma falha desconhecida mantém a história e diz alguma coisa', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
+    vi.spyOn(store, 'remove').mockRejectedValue(new Error('rede fora'));
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseDelete('Frágil');
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Não consegui apagar');
+    expect(listed('Frágil')).toBe(true);
+  });
+
+  it('duas confirmações seguidas não apagam duas vezes', async () => {
+    // a store demora a responder: sem trava, o segundo clique chega com o primeiro
+    // apagar ainda no ar — e é preciso que os dois cliques caiam ANTES disso resolver
+    // (esperar o primeiro terminaria com o diálogo já desmontado, e o teste passaria
+    // mesmo sem trava nenhuma)
+    const store = new FixtureSessionStore({ latencyMs: 30 });
+    await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
+    const removed = vi.spyOn(store, 'remove');
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    await chooseDelete('Frágil');
+    const destroy = screen.getByRole('button', { name: 'Apagar para sempre' });
+    fireEvent.click(destroy);
+    fireEvent.click(destroy);
+
+    await waitFor(() => expect(listed('Frágil')).toBe(false));
+    expect(removed).toHaveBeenCalledTimes(1);
   });
 });
 

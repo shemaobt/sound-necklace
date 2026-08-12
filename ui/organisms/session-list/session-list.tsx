@@ -9,7 +9,7 @@ export type SessionStatus = 'in-progress' | 'completed';
 
 export interface SessionCardData {
   id: string;
-  /** Nó extra na área de ação (ex.: o menu de downloads da concluída, ENG-305). */
+  /** Nó extra na área de ação (o menu de ações do cartão, ENG-305/ENG-281). */
   menu?: React.ReactNode;
   storyName: string;
   slug: string;
@@ -147,10 +147,10 @@ function NewStoryCard({ onNew }: { onNew: () => void }) {
  * do §7.2), nome da história, slug, projeto, status, última modificação e a ação
  * retomar/abrir. Superfície da facilitadora — densidade normal, dígitos permitidos.
  *
- * Presentacional: sessões e handlers chegam por props. Os downloads diretos de uma
- * sessão concluída são os ArtifactCards, compostos pela página (§7.2/§10.5) — o
- * protótipo os punha num menu kebab junto de renomear/duplicar/excluir, mas essas
- * ações não existem no `SessionStore` nem no PRD, então o menu não foi portado.
+ * Presentacional: sessões e handlers chegam por props. O menu kebab do protótipo
+ * voltou como o nó opcional `menu`, que a página compõe (ENG-305 pôs os downloads
+ * ali; a ENG-281 juntou o apagar). Duplicar segue de fora — de propósito: nem o
+ * `SessionStore` a expõe, nem o §7.2 a pede.
  *
  * O nome acessível do botão compõe verbo + título via texto visually-hidden (padrão
  * APG de nome composto); o cartão inteiro nunca é clicável.

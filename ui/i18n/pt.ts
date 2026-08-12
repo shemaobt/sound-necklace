@@ -241,7 +241,22 @@ export const pt = {
     countMany: '{{count}} histórias',
     progressLabel: 'progresso: {{station}} — passo {{step}} de {{total}}',
     loading: 'Carregando as histórias…',
-    downloads: 'Baixar',
+    /* O menu do cartão nomeia a história: duas sessões na grade dão dois gatilhos,
+       e "Ações" sozinho não diz em qual deles se está (ENG-281). */
+    actions: 'Ações em {{story}}',
+    downloads: 'Baixar os documentos',
+    deleteSession: 'Apagar a história',
+    deleteConfirm: {
+      title: 'Apagar “{{story}}”?',
+      /* A pergunta diz o que vai junto: é um apagamento definitivo no servidor, e
+         quem confirma precisa poder perceber que pegou o cartão errado (§9.4). */
+      body: 'Some tudo desta história: os cortes, as classificações e as gravações de voz das respostas. Não dá para desfazer.',
+      confirm: 'Apagar para sempre',
+      cancel: 'Manter a história',
+      locked:
+        '{{holder}} está com esta história aberta agora. Ela não pode ser apagada enquanto isso.',
+      failed: 'Não consegui apagar a história. Verifique a conexão e tente de novo.',
+    },
     listError: 'Não consegui carregar as histórias. Verifique a conexão e recarregue.',
   },
   sessionList: {
