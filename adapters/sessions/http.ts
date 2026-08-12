@@ -17,6 +17,7 @@ import {
   type ArtifactTriple,
   type CreateSessionRequest,
   type LockStatus,
+  type RenameSessionRequest,
   type ResourcePath,
   type SessionStateDto,
   type SessionSummary,
@@ -26,6 +27,7 @@ import type { ConnectivityMonitor } from '../connectivity/types';
 import { createAutosaver, type Autosaver } from './autosave';
 import {
   LockLostError,
+  SessionNotFoundError,
   type AutosaveStatus,
   type CreateSessionInput,
   type LockHolder,
@@ -39,6 +41,23 @@ import {
  * transitório (o lease caducou no meio da escrita — retentar).
  */
 const LOCK_CONFLICT = 409;
+const NOT_FOUND = 404;
+
+/**
+ * Traduz as recusas do rename/remove (§7.2) nos erros tipados que o Dashboard trata
+ * por tipo: 404 → sessão inexistente; 409 SESSION_LOCKED → outra pessoa detém o lease,
+ * levando o `holder_name` junto (é o nome que vai à tela). Qualquer outra falha sobe
+ * crua como `ApiError` — traduzir demais esconde a causa.
+ */
+function sessionWriteError(id: string, err: unknown): unknown {
+  if (!(err instanceof ApiError)) return err;
+  if (err.status === NOT_FOUND) return new SessionNotFoundError(id);
+  if (err.status === LOCK_CONFLICT) {
+    const body = err.body as { code?: string; holder_name?: string } | undefined;
+    if (body?.code === 'SESSION_LOCKED') return new LockLostError(id, body.holder_name ?? null);
+  }
+  return err;
+}
 
 /**
  * Filenames do PRD §10 — inglês desde a ENG-359. O `kind` é o identificador do
@@ -141,6 +160,28 @@ export class HttpSessionStore implements SessionStore {
       ).sessions;
       all.push(...page);
       if (page.length < PAGE) return all;
+    }
+  }
+
+  async rename(id: string, storyName: string): Promise<SessionSummary> {
+    // SÓ o nome no corpo: o story_slug nomeia os três artefatos (§10.5) e ancora a
+    // byte-identidade da ENG-253 — mandá-lo junto renomearia os arquivos exportados.
+    const body: RenameSessionRequest = { story_name: storyName };
+    try {
+      return SessionSummarySchema.parse(await this.#req('PATCH', `/sessions/${id}`, body));
+    } catch (err) {
+      throw sessionWriteError(id, err);
+    }
+  }
+
+  async remove(id: string): Promise<void> {
+    // nenhum autosave pendente pode aterrissar numa sessão que já não existe
+    this.#autosaver.cancel(id);
+    try {
+      // 204 sem corpo — `#req` devolve undefined em vez de tentar ler JSON de vazio
+      await this.#req('DELETE', `/sessions/${id}`);
+    } catch (err) {
+      throw sessionWriteError(id, err);
     }
   }
 

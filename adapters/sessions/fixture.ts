@@ -26,7 +26,7 @@ import type {
   SessionStore,
   Unsubscribe,
 } from './types';
-import { SessionNotFoundError } from './types';
+import { LockLostError, SessionNotFoundError } from './types';
 
 /** Subconjunto da Web Storage API usado para persistir entre reloads. */
 export interface KeyValueStorage {
@@ -165,6 +165,26 @@ export class FixtureSessionStore implements SessionStore {
     return clone(rec.state);
   }
 
+  async rename(id: string, storyName: string): Promise<SessionSummary> {
+    await this.#settle();
+    const rec = this.#requireEditable(id);
+    // o story_slug fica de fora do spread de propósito: ele nomeia os artefatos (§10.5)
+    rec.summary = { ...rec.summary, story_name: storyName };
+    this.#backend.persist();
+    return clone(rec.summary);
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.#settle();
+    this.#requireEditable(id);
+    // nada da sessão sobrevive: resumo, estado e artefatos saem com o registro; as
+    // respostas de voz saem aqui (no servidor é cascata do banco)
+    this.#autosaver.cancel(id);
+    this.#backend.sessions.delete(id);
+    this.#backend.resources.delete(id);
+    this.#backend.persist();
+  }
+
   autosave(id: string, state: SessionStateDto): void {
     this.#autosaver.schedule(id, clone(state));
   }
@@ -283,6 +303,18 @@ export class FixtureSessionStore implements SessionStore {
   #requireRec(id: string): SessionRecord {
     const rec = this.#backend.sessions.get(id);
     if (!rec) throw new SessionNotFoundError(id);
+    return rec;
+  }
+
+  /**
+   * O registro, desde que este editor possa mexer nele. Renomear e apagar são as
+   * únicas escritas que a fixture cerca pela trava: no servidor as duas passam pelo
+   * mesmo lease consultivo e respondem 409 SESSION_LOCKED, e uma fixture permissiva
+   * deixaria a UI aprender um comportamento que o modo real recusa.
+   */
+  #requireEditable(id: string): SessionRecord {
+    const rec = this.#requireRec(id);
+    if (this.#heldByOther(rec)) throw new LockLostError(id, rec.lock?.holder.display_name ?? null);
     return rec;
   }
 

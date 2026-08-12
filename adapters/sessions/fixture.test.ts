@@ -4,7 +4,7 @@ import type { ArtifactTriple, ResourcePath, SessionStateDto } from '../../contra
 import { FixtureConnectivityMonitor } from '../connectivity/fixture';
 import { FixtureSessionBackend, FixtureSessionStore, type KeyValueStorage } from './fixture';
 import type { CreateSessionInput } from './types';
-import { SessionNotFoundError } from './types';
+import { LockLostError, SessionNotFoundError } from './types';
 
 const input = (over: Partial<CreateSessionInput> = {}): CreateSessionInput => ({
   projectId: 'proj-1',
@@ -135,6 +135,86 @@ describe('FixtureSessionStore — advisory lock', () => {
     await alice.releaseLock(s.id);
     const taken = await bob.acquireLock(s.id);
     expect(taken.holder?.user_id).toBe('b');
+  });
+});
+
+describe('FixtureSessionStore — rename & remove (§7.2)', () => {
+  /** Duas stores sobre um backend = dois editores no mesmo servidor. */
+  const twoEditors = () => {
+    const backend = new FixtureSessionBackend();
+    return {
+      alice: new FixtureSessionStore({ backend, user: { user_id: 'a', display_name: 'Alice' } }),
+      bob: new FixtureSessionStore({ backend, user: { user_id: 'b', display_name: 'Bob' } }),
+    };
+  };
+
+  it('rename troca o nome de exibição e mantém o story_slug byte-idêntico', async () => {
+    const store = new FixtureSessionStore();
+    const s = await store.create(input());
+
+    const renamed = await store.rename(s.id, 'O canto da noite');
+
+    expect(renamed.story_name).toBe('O canto da noite');
+    const got = await store.get(s.id);
+    expect(got.story_name).toBe('O canto da noite');
+    const listed = (await store.list()).find((x) => x.id === s.id);
+    expect(listed?.story_name).toBe('O canto da noite');
+    // o slug nomeia os três artefatos (§10.5): renomear nunca o toca
+    expect(renamed.story_slug).toBe(s.story_slug);
+    expect(got.story_slug).toBe(s.story_slug);
+    expect(listed?.story_slug).toBe(s.story_slug);
+  });
+
+  it('remove apaga a sessão: some da listagem e o get lança SessionNotFoundError', async () => {
+    const store = new FixtureSessionStore();
+    const s = await store.create(input());
+    const other = await store.create(input({ storyName: 'Outra', storySlug: 'outra' }));
+
+    await store.remove(s.id);
+
+    expect((await store.list()).map((x) => x.id)).toEqual([other.id]);
+    await expect(store.get(s.id)).rejects.toBeInstanceOf(SessionNotFoundError);
+  });
+
+  it('remove leva junto as respostas de voz da sessão', async () => {
+    const store = new FixtureSessionStore();
+    const s = await store.create(input());
+    const path = 'respostas/level1/recontar.webm' as ResourcePath;
+    await store.putResource(s.id, path, new Uint8Array([1, 2, 3]));
+
+    await store.remove(s.id);
+
+    // o servidor faz isso por cascata; a fixture não pode ser a única store onde
+    // uma sessão apagada deixa as gravações alcançáveis
+    await expect(store.getResource(s.id, path)).rejects.toThrow();
+    expect(await store.listResources(s.id, 'respostas/')).toEqual([]);
+  });
+
+  it('rename de sessão travada por outra pessoa é recusado e o nome fica de pé', async () => {
+    const { alice, bob } = twoEditors();
+    const s = await alice.create(input());
+    await alice.acquireLock(s.id);
+
+    await expect(bob.rename(s.id, 'Nome do Bob')).rejects.toBeInstanceOf(LockLostError);
+
+    expect((await alice.get(s.id)).story_name).toBe(s.story_name);
+  });
+
+  it('remove de sessão travada por outra pessoa é recusado e a sessão fica de pé', async () => {
+    const { alice, bob } = twoEditors();
+    const s = await alice.create(input());
+    await alice.acquireLock(s.id);
+
+    await expect(bob.remove(s.id)).rejects.toBeInstanceOf(LockLostError);
+
+    expect((await alice.get(s.id)).id).toBe(s.id);
+  });
+
+  it('rename e remove de sessão desconhecida lançam SessionNotFoundError', async () => {
+    const store = new FixtureSessionStore();
+
+    await expect(store.rename('nope', 'Qualquer')).rejects.toBeInstanceOf(SessionNotFoundError);
+    await expect(store.remove('nope')).rejects.toBeInstanceOf(SessionNotFoundError);
   });
 });
 

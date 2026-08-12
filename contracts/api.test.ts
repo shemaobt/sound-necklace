@@ -18,6 +18,7 @@ import {
   MyRoleResponseSchema,
   MyRolesResponseSchema,
   OpaqueArtifactSchema,
+  RenameSessionRequestSchema,
   ResourceListResponseSchema,
   ResourceSummarySchema,
   ResourceUrlResponseSchema,
@@ -177,6 +178,23 @@ describe('sessions — create/list/summary/status', () => {
   it('valida a listagem de sessões', () => {
     expect(SessionListResponseSchema.safeParse({ sessions: [summary] }).success).toBe(true);
     expect(SessionListResponseSchema.safeParse({ sessions: [{ id: 's1' }] }).success).toBe(false);
+  });
+
+  it('rename carrega o nome de exibição — e SÓ ele', () => {
+    expect(RenameSessionRequestSchema.safeParse({ story_name: 'O outro conto' }).success).toBe(
+      true,
+    );
+    // o story_slug nomeia os três artefatos (§10.5) e ancora a byte-identidade da
+    // ENG-253: renomear não pode carregá-lo nem por engano.
+    expect(
+      RenameSessionRequestSchema.safeParse({ story_name: 'O outro conto', story_slug: 'o-outro' })
+        .success,
+    ).toBe(false);
+  });
+
+  it('rename recusa nome vazio ou só de espaços (o servidor responde 422)', () => {
+    expect(RenameSessionRequestSchema.safeParse({ story_name: '' }).success).toBe(false);
+    expect(RenameSessionRequestSchema.safeParse({ story_name: '   ' }).success).toBe(false);
   });
 });
 

@@ -90,6 +90,20 @@ export interface SessionStore {
   load(id: string): Promise<SessionStateDto>;
 
   /**
+   * Renomeia a sessão (§7.2) — SÓ o nome de exibição. O `story_slug` não muda: ele
+   * nomeia os três artefatos (§10.5) e ancora a byte-identidade da ENG-253.
+   * Recusado (`LockLostError`) se a trava consultiva for de outra pessoa.
+   */
+  rename(id: string, storyName: string): Promise<SessionSummary>;
+  /**
+   * Apaga a sessão em definitivo (§7.2) — resumo, estado, artefatos e as respostas
+   * de voz junto. Disponível a qualquer momento, inclusive numa sessão concluída.
+   * Chama-se `remove`, e não `delete`, porque `deleteResource` já vive nesta porta:
+   * dois `delete` no mesmo ponto de chamada é como se apaga a coisa errada.
+   */
+  remove(id: string): Promise<void>;
+
+  /**
    * Enfileira um autosave: debounced, coalescente (o último estado vence) e
    * pausado enquanto offline (retoma e faz flush no reconnect, sem perda).
    */
