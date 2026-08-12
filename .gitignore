@@ -7,6 +7,8 @@ coverage/
 # worktrees locais (skill using-git-worktrees / worktrees do Claude Code)
 .worktrees/
 .claude/
+# scratch do harness Maestri (papel do worker), escrito dentro da worktree
+.maestri/
 
 # artefatos de teste
 playwright-report/
