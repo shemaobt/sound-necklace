@@ -27,7 +27,7 @@ Fonte única dos tokens (redesign PRD §4; protótipo normativo
 | `--cds-shadow-card/menu/modal/cta/play`               | ver `tokens.css`                                  | sombras baixas nos cards, mais fundas em menu/modal/CTA         |
 | `motion` / `--cds-motion-*`                           | 220ms ease-out                                    | sem bounces                                                     |
 | `typography` / `--cds-font-*`                         | Montserrat / Merriweather                         | load-bearing / voz quieta                                       |
-| `ShemaIcon`                                           | colorways branco·telha·verde                      | marca Shemá — hoje só as marcas d'água das estações             |
+| `ShemaIcon`                                           | colorways branco·telha·verde                      | marca Shemá — marcas d'água das estações e do login             |
 | `ColarIcon`                                           | colorido por token, sem colorway                  | marca do site (Colar de Sons): cabeçalhos e login               |
 
 `scenePalette`/`phrasePalette` são **triplas literais** copiadas à mão do

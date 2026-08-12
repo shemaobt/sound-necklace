@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AuthError, type AuthProvider } from '../../../adapters/api';
-import { ColarIcon } from '../../tokens';
+import { ColarIcon, ShemaIcon } from '../../tokens';
 import { defaultAuth } from '../dashboard/ports';
 import { navigate } from '../../app/router';
 import './login.css';
@@ -19,10 +19,12 @@ import './login.css';
  * protótipo rotula o campo como "E-mail", mas o contrato de auth chaveia em
  * `username` (fixture/e2e: `facilitadora`/`admin`) — mantemos "Usuário"/`username`. Os
  * links "Criar conta"/"Esqueceu a senha?" do protótipo são `noop` (sem fluxo no MVP) e
- * ficam de fora. A marca é o `ColarIcon` — o colar de `docs/design/website-icon.svg`,
- * que substituiu o `ShemaIcon` branco daqui; ela vem com `onDark` porque o painel é
- * oliva fixo, e é isso que tira o cordão do fundo. Continua sem pipeline para o
- * wordmark `logo-branco.svg` nem para o `pattern-tile.svg` decorativo.
+ * ficam de fora. A marca do herói é o `ColarIcon` — o colar de
+ * `docs/design/website-icon.svg`, que substituiu o `ShemaIcon` branco daqui; ela vem
+ * com `onDark` porque o painel é oliva fixo, e é isso que tira o cordão do fundo. A
+ * Shemá não sumiu da tela: voltou como marca d'água de canto, decorativa, no mesmo
+ * registro das estações. Continua sem pipeline para o wordmark `logo-branco.svg` nem
+ * para o `pattern-tile.svg` decorativo.
  *
  * Camada de wiring: a porta `auth` chega por prop nos testes; em produção resolve o
  * singleton fixture partilhado com o dashboard (ports.ts).
@@ -61,6 +63,9 @@ export function Login({ auth = defaultAuth() }: LoginProps) {
   return (
     // o shell não embrulha esta rota: a página é o próprio landmark `main`
     <main className="cds-login">
+      <span className="cds-login-watermark" aria-hidden="true">
+        <ShemaIcon colorway="telha" size={300} />
+      </span>
       <aside className="cds-login-hero">
         <ColarIcon onDark size={60} />
         <p className="cds-login-verse">{t('login.verse')}</p>

@@ -83,10 +83,23 @@ describe('Login — abertura Shemá v2 (ENG-278, protótipo)', () => {
     expect(screen.getByText('Nada do áudio sai deste computador.')).toBeTruthy();
   });
 
-  it('o painel cerimonial traz a marca do site no lugar da Shemá', () => {
+  it('o painel cerimonial traz a marca do site', () => {
     render(<Login auth={new FixtureAuthProvider()} />);
 
     expect(screen.getByRole('img', { name: 'Colar de Sons' })).toBeTruthy();
+  });
+
+  /**
+   * A Shemá volta ao login como marca d'água — o mesmo registro das estações
+   * (ui/pages/listen). Decorativa quer dizer FORA da árvore de acessibilidade: um
+   * leitor de tela anunciando uma segunda marca num formulário de login é ruído.
+   * A POSIÇÃO é CSS e não se afirma aqui; o que se afirma é que ela está na tela
+   * e que não ganhou voz.
+   */
+  it("a Shemá está na tela como marca d'água, e é decorativa", () => {
+    render(<Login auth={new FixtureAuthProvider()} />);
+
+    expect(screen.getByRole('img', { name: 'Shemá', hidden: true })).toBeTruthy();
     expect(screen.queryByRole('img', { name: 'Shemá' })).toBeNull();
   });
 

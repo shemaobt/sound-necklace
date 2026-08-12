@@ -3,10 +3,50 @@
    sobre o creme. Foco e prefers-reduced-motion vêm do piso global (tokens/base.css). */
 
 .cds-login {
+  position: relative;
   display: flex;
   min-height: 100vh;
   background: var(--cds-ui-bg);
   color: var(--cds-ui-body-ink);
+}
+
+/* ---------- marca d'água (canto inferior-direito) ---------- */
+/* A Shemá sai do herói (que hoje traz a marca do site) e volta como marca d'água de
+   canto, no mesmo registro das estações — grande, quieta, decorativa.
+   `telha` porque o canto inferior-direito da PÁGINA é o painel creme; sobre o oliva
+   do herói o colorway teria de ser `branco`.
+
+   Quem recorta é o INVÓLUCRO, não a tela: `overflow: hidden` no `.cds-login` cortaria
+   o formulário numa janela baixa, e a primeira coisa a sumir seria o botão de entrar.
+   Mesmo arranjo da Setup (setup.css). */
+.cds-login-watermark {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* A marca é para ser VISTA (decisão do dono): fica quase toda na tela, só o canto
+   sangrando para fora. Sangra pelos DOIS lados de propósito — o desenho da Shemá
+   ocupa só ~61% da largura do próprio viewBox, então um recuo menor que ~230px a
+   deixaria flutuando com folga à direita, o que lê como um cartão solto e não como
+   marca d'água. Recuada assim, ela encosta na borda como nas estações.
+
+   O preço, medido e aceito: numa janela baixa (≤ ~700px de altura) ela passa por
+   trás do botão "Entrar". Não rouba clique — o `pointer-events: none` acima está no
+   invólucro — e os controles são opacos, então cobrem a marca em vez de misturar. */
+.cds-login-watermark > svg {
+  position: absolute;
+  right: -300px;
+  bottom: -70px;
+}
+
+/* os dois painéis sobem acima da marca: elemento posicionado pinta depois do
+   conteúdo em fluxo, então sem isto a marca passaria POR CIMA do formulário */
+.cds-login-hero,
+.cds-login-card {
+  position: relative;
 }
 
 /* ---------- painel cerimonial (esquerda) ---------- */

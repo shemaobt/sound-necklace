@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    Ícone da aba. É o colar de `docs/design/website-icon.svg` REDESENHADO para 16px,
+    não um recorte dele: o desenho original é uma faixa quase três vezes mais larga
+    que alta, e num quadrado de 16px ele vira um borrão de 6px de altura com o
+    cordão abaixo de meio pixel. Aqui o arco é mais fundo, são cinco contas em vez
+    de sete e o cordão é proporcionalmente mais grosso.
+
+    Sem ilusão sobre o que sobra a 16px: o que carrega o desenho é a FILEIRA DE
+    CONTAS crescendo para a telha do meio, disposta em curva. O cordão aparece só
+    como trechos curtos entre elas — é por isso que ele é grosso, e é por isso que
+    ele precisa trocar de cor na aba escura em vez de sumir.
+
+    A paleta é a mesma da marca (ui/tokens/icon.tsx): cordão oliva, pontas no verde-
+    água da 7ª cena, contas médias em `confidenceFilled`, centro telha. Tudo literal
+    porque um arquivo de `public/` não passa pelo bundler e não enxerga token algum.
+
+    A faixa de abas escura é o problema que o `onDark` do ColarIcon resolve em React;
+    aqui não há React, então a regra mora dentro do próprio arquivo. As contas
+    guardam a cor nos dois fundos — só o cordão troca.
+  -->
+  <title>Colar de Sons</title>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .cord {
+        stroke: #f6f5eb;
+      }
+    }
+  </style>
+  <path
+    class="cord"
+    d="M4.8 9.2 Q16 32 27.2 9.2"
+    fill="none"
+    stroke="#3F3E20"
+    stroke-width="2.9"
+    stroke-linecap="round"
+  />
+  <circle cx="4.8" cy="9.2" r="2.8" fill="#89AAA3" />
+  <circle cx="27.2" cy="9.2" r="2.8" fill="#89AAA3" />
+  <circle cx="9.28" cy="16.5" r="3.7" fill="#777D45" />
+  <circle cx="22.72" cy="16.5" r="3.7" fill="#777D45" />
+  <circle cx="16" cy="20.6" r="5.2" fill="#BE4A01" />
+</svg>
