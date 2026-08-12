@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -39,6 +39,14 @@ describe('ícone da aba (favicon)', () => {
     // resolve() a partir do arquivo, e não `new URL(...)`: em jsdom o `URL` global é
     // o do jsdom, e `fileURLToPath` recusa a instância dele.
     const publicDir = resolve(fileURLToPath(import.meta.url), '../../../public');
-    expect(existsSync(join(publicDir, href)), `${href} não existe em public/`).toBe(true);
+    const onDisk = join(publicDir, href);
+    expect(existsSync(onDisk), `${href} não existe em public/`).toBe(true);
+    // e a regra que justifica exigir SVG está mesmo lá dentro: sem ela o arquivo
+    // continua um SVG válido, o teste acima continua verde e o cordão some na aba
+    // escura — falha que só aparece na máquina de quem usa tema escuro.
+    expect(
+      readFileSync(onDisk, 'utf8'),
+      'o ícone precisa levar a própria regra de aba escura',
+    ).toContain('prefers-color-scheme: dark');
   });
 });

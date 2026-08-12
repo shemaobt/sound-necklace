@@ -4,8 +4,12 @@
     não um recorte dele: o desenho original é uma faixa quase três vezes mais larga
     que alta, e num quadrado de 16px ele vira um borrão de 6px de altura com o
     cordão abaixo de meio pixel. Aqui o arco é mais fundo, são cinco contas em vez
-    de sete e o cordão é proporcionalmente mais grosso — o que sobrevive à
-    rasterização é a curva com a conta telha no fundo dela.
+    de sete e o cordão é proporcionalmente mais grosso.
+
+    Sem ilusão sobre o que sobra a 16px: o que carrega o desenho é a FILEIRA DE
+    CONTAS crescendo para a telha do meio, disposta em curva. O cordão aparece só
+    como trechos curtos entre elas — é por isso que ele é grosso, e é por isso que
+    ele precisa trocar de cor na aba escura em vez de sumir.
 
     A paleta é a mesma da marca (ui/tokens/icon.tsx): cordão oliva, pontas no verde-
     água da 7ª cena, contas médias em `confidenceFilled`, centro telha. Tudo literal
