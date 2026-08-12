@@ -188,7 +188,9 @@
   border-radius: var(--cds-radius-pill);
 }
 
-/* ---------- menu de downloads do cartão concluído (ENG-305/333) ---------- */
+/* ---------- menu de ações do cartão (ENG-305/333, ENG-281) ----------
+   O prefixo `dl-` é herança do tempo em que só havia download aqui; renomear a
+   família inteira custaria mais do que informa. */
 /* gatilho-ícone: um quadrado-pílula do tamanho do botão principal, só o glifo ⋮ */
 .cds-dashboard-dl-trigger {
   display: inline-flex;
@@ -248,4 +250,112 @@
 
 .cds-dashboard-dl-item[data-downloaded] {
   color: var(--cds-ui-ink-faint);
+}
+
+/* Apagar mora no mesmo menu, mas não se parece com as outras entradas: a tinta de
+   erro e o filete acima separam o que destrói do que só guarda uma cópia. */
+.cds-dashboard-dl-item[data-danger] {
+  margin-top: 2px;
+  padding-top: 11px;
+  border-top: 1px solid var(--cds-ui-hairline);
+  border-radius: 0 0 10px 10px;
+  color: var(--cds-ui-error-fg);
+}
+
+/* numa história em andamento o apagar é a única entrada: nada acima dele para
+   separar, e o filete solto viraria um risco no topo do menu */
+.cds-dashboard-dl-item[data-danger]:only-child {
+  margin-top: 0;
+  padding-top: 9px;
+  border-top: none;
+  border-radius: 10px;
+}
+
+.cds-dashboard-dl-item[data-danger]:hover {
+  background: var(--cds-ui-error-bg);
+}
+
+/* A pergunta antes de apagar — cartão creme sobre véu, no registro dos outros
+   diálogos da casa (seam-modal, rascunhos pendentes). Sem animação: o Radix
+   monta e desmonta na hora, que é o comportamento correto sob reduced-motion. */
+.cds-dashboard-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 7, 3, 0.45);
+}
+
+.cds-dashboard-confirm {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: min(28rem, calc(100vw - 2rem));
+  padding: 1.6rem 1.7rem 1.4rem;
+  border-radius: var(--cds-radius-card);
+  background: var(--cds-ui-card);
+  box-shadow: var(--cds-shadow-modal);
+  color: var(--cds-ui-ink);
+  z-index: 50;
+}
+
+.cds-dashboard-confirm-title {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-weight: 300;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.cds-dashboard-confirm-body {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--cds-ui-ink-soft);
+}
+
+.cds-dashboard-confirm-alert {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  background: var(--cds-ui-error-bg);
+  color: var(--cds-ui-error-fg);
+  font-family: var(--cds-font-load-bearing);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.cds-dashboard-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+}
+
+/* O destruidor não é o botão primário da tela: pesa como texto, não como bloco
+   telha — quem apaga precisa mirar, não tropeçar. */
+.cds-dashboard-confirm-destroy {
+  padding: 0.55rem 0.9rem;
+  border: 1px solid currentcolor;
+  border-radius: var(--cds-radius-pill);
+  background: transparent;
+  color: var(--cds-ui-error-fg);
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.cds-dashboard-confirm-destroy:hover:enabled {
+  background: var(--cds-ui-error-bg);
+}
+
+.cds-dashboard-confirm-destroy:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
