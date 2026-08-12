@@ -7,6 +7,7 @@
  * ficam só em memória. Custódia opaca: estado/artefatos entram e saem por clone.
  */
 
+import { RenameSessionRequestSchema } from '../../contracts';
 import type {
   ArtifactTriple,
   LockStatus,
@@ -167,15 +168,22 @@ export class FixtureSessionStore implements SessionStore {
 
   async rename(id: string, storyName: string): Promise<SessionSummary> {
     await this.#settle();
+    // mesmo parse do modo real: apara as pontas e recusa nome vazio, senão a fixture
+    // guardaria "  Oi  " onde o servidor guardaria "Oi"
+    const { story_name } = RenameSessionRequestSchema.parse({ story_name: storyName });
     const rec = this.#requireEditable(id);
-    // o story_slug fica de fora do spread de propósito: ele nomeia os artefatos (§10.5)
-    rec.summary = { ...rec.summary, story_name: storyName };
+    // o story_slug fica de fora do spread de propósito: ele nomeia os artefatos (§10.6).
+    // `last_modified` sobe porque o `updated_at` do servidor é `onupdate=func.now()` —
+    // e o dashboard ordena por ele, então não subir aqui reordenaria a lista só na fixture.
+    rec.summary = { ...rec.summary, story_name, last_modified: new Date().toISOString() };
     this.#backend.persist();
     return clone(rec.summary);
   }
 
   async remove(id: string): Promise<void> {
     await this.#settle();
+    // a trava é cercada ANTES de qualquer apagamento: uma recusa tem de deixar a sessão
+    // exatamente como estava (é a mesma ordem do serviço no servidor)
     this.#requireEditable(id);
     // nada da sessão sobrevive: resumo, estado e artefatos saem com o registro; as
     // respostas de voz saem aqui (no servidor é cascata do banco)

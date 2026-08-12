@@ -9,6 +9,7 @@
 import {
   ArtifactUploadResponseSchema,
   LockStatusSchema,
+  RenameSessionRequestSchema,
   ResourceListResponseSchema,
   ResourceUrlResponseSchema,
   SessionListResponseSchema,
@@ -41,13 +42,17 @@ import {
  * transitório (o lease caducou no meio da escrita — retentar).
  */
 const LOCK_CONFLICT = 409;
+
+/** 404 do rename/remove — a sessão sumiu entre a listagem e o clique no kebab. */
 const NOT_FOUND = 404;
 
 /**
- * Traduz as recusas do rename/remove (§7.2) nos erros tipados que o Dashboard trata
+ * Traduz as recusas do rename/remove (ENG-281) nos erros tipados que o Dashboard trata
  * por tipo: 404 → sessão inexistente; 409 SESSION_LOCKED → outra pessoa detém o lease,
  * levando o `holder_name` junto (é o nome que vai à tela). Qualquer outra falha sobe
- * crua como `ApiError` — traduzir demais esconde a causa.
+ * crua como `ApiError` — traduzir demais esconde a causa. Em particular o rename tem um
+ * SEGUNDO 409, `SESSION_LOCK_CHANGED` (o lease caducou no meio do UPDATE), que o
+ * servidor responde de verdade e que precisa chegar ao chamador como está.
  */
 function sessionWriteError(id: string, err: unknown): unknown {
   if (!(err instanceof ApiError)) return err;
@@ -164,9 +169,10 @@ export class HttpSessionStore implements SessionStore {
   }
 
   async rename(id: string, storyName: string): Promise<SessionSummary> {
-    // SÓ o nome no corpo: o story_slug nomeia os três artefatos (§10.5) e ancora a
+    // SÓ o nome no corpo: o story_slug nomeia os três artefatos (§10.6) e ancora a
     // byte-identidade da ENG-253 — mandá-lo junto renomearia os arquivos exportados.
-    const body: RenameSessionRequest = { story_name: storyName };
+    // O parse (e não um literal) é o que apara as pontas como o servidor apara.
+    const body: RenameSessionRequest = RenameSessionRequestSchema.parse({ story_name: storyName });
     try {
       return SessionSummarySchema.parse(await this.#req('PATCH', `/sessions/${id}`, body));
     } catch (err) {
@@ -175,14 +181,16 @@ export class HttpSessionStore implements SessionStore {
   }
 
   async remove(id: string): Promise<void> {
-    // nenhum autosave pendente pode aterrissar numa sessão que já não existe
-    this.#autosaver.cancel(id);
     try {
       // 204 sem corpo — `#req` devolve undefined em vez de tentar ler JSON de vazio
       await this.#req('DELETE', `/sessions/${id}`);
     } catch (err) {
       throw sessionWriteError(id, err);
     }
+    // Só DEPOIS do 204: cancelar antes descartaria o estado pendente numa recusa
+    // (409/404/offline), e aí a sessão sobrevive no servidor sem o que não foi salvo.
+    // Agora o pior caso é um autosave despachado durante o DELETE morrer em 404.
+    this.#autosaver.cancel(id);
   }
 
   async load(id: string): Promise<SessionStateDto> {

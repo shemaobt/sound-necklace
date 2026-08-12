@@ -8,8 +8,9 @@ import type {
   SessionSummary,
 } from '../../contracts';
 import { FixtureConnectivityMonitor } from '../connectivity/fixture';
+import { ApiError } from '../api';
 import { HttpSessionStore, type HttpSessionStoreOptions } from './http';
-import { SessionNotFoundError, type CreateSessionInput } from './types';
+import { LockLostError, SessionNotFoundError, type CreateSessionInput } from './types';
 
 const input: CreateSessionInput = {
   projectId: 'proj-1',
@@ -280,7 +281,7 @@ describe('HttpSessionStore', () => {
     });
   });
 
-  describe('rename & remove (§7.2)', () => {
+  describe('rename & remove (ENG-281)', () => {
     /** Os dois verbos, para exercitar a MESMA tradução de recusa em cada um. */
     const verbs: [string, (s: HttpSessionStore) => Promise<unknown>][] = [
       ['rename', (s) => s.rename('sess-9', 'Novo nome')],
@@ -298,7 +299,7 @@ describe('HttpSessionStore', () => {
       ]);
       const body = JSON.parse(String(calls[0]?.init?.body)) as Record<string, unknown>;
       expect(body).toEqual({ story_name: 'B' }); // uma chave, e só ela
-      // o slug nomeia os três artefatos (§10.5) e ancora a byte-identidade da ENG-253:
+      // o slug nomeia os três artefatos (§10.6) e ancora a byte-identidade da ENG-253:
       // esta ausência é a decisão inteira que a fatia codifica
       expect(body).not.toHaveProperty('story_slug');
     });
@@ -335,12 +336,10 @@ describe('HttpSessionStore', () => {
           json({ detail: 'edited by Alice', code: 'SESSION_LOCKED', holder_name: 'Alice' }, 409),
         );
 
+        const err = await call(store).catch((e: unknown) => e);
+        expect(err).toBeInstanceOf(LockLostError);
         // o nome vai à tela do Dashboard — perdê-lo aqui é perder a cópia inteira
-        await expect(call(store)).rejects.toMatchObject({
-          name: 'LockLostError',
-          sessionId: 'sess-9',
-          holder: 'Alice',
-        });
+        expect(err).toMatchObject({ sessionId: 'sess-9', holder: 'Alice' });
       },
     );
 
@@ -348,6 +347,55 @@ describe('HttpSessionStore', () => {
       const store = storeWith(async () => json({ detail: 'not found' }, 404));
 
       await expect(call(store)).rejects.toBeInstanceOf(SessionNotFoundError);
+    });
+
+    it.each(verbs)('%s: um 409 que NÃO é SESSION_LOCKED sobe cru', async (_label, call) => {
+      // o servidor responde isto de verdade no rename (o lease caducou no meio do
+      // UPDATE). Traduzir todo 409 em LockLostError diria "outra pessoa está editando"
+      // quando ninguém está — e é o erro que esta asserção existe para pegar.
+      const store = storeWith(async () =>
+        json({ detail: 'lock changed hands', code: 'SESSION_LOCK_CHANGED' }, 409),
+      );
+
+      const err = await call(store).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err).not.toBeInstanceOf(LockLostError);
+      expect(err).toMatchObject({ status: 409 });
+    });
+
+    it.each(verbs)('%s: um 500 sobe cru', async (_label, call) => {
+      const store = storeWith(async () => json({ detail: 'boom' }, 500));
+
+      const err = await call(store).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err).toMatchObject({ status: 500 });
+    });
+
+    it('um remove RECUSADO não descarta o autosave pendente', async () => {
+      vi.useFakeTimers();
+      try {
+        const puts: string[] = [];
+        const store = storeWith(
+          async (url, init) => {
+            const method = init?.method ?? 'GET';
+            if (method === 'DELETE') return json({ detail: 'nope', code: 'SESSION_LOCKED' }, 409);
+            puts.push(String(init?.body));
+            return json({ saved_at: 't', schema_version: 1 });
+          },
+          { debounceMs: 50 },
+        );
+
+        store.autosave('sess-9', dto('não salvo ainda'));
+        await expect(store.remove('sess-9')).rejects.toBeInstanceOf(LockLostError);
+
+        // a sessão sobreviveu no servidor; descartar o pendente aqui perderia a
+        // edição que ainda não tinha sido salva
+        await vi.advanceTimersByTimeAsync(200);
+        expect(puts).toHaveLength(1);
+        expect(puts[0]).toContain('não salvo ainda');
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
