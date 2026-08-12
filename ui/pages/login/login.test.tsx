@@ -83,6 +83,13 @@ describe('Login — abertura Shemá v2 (ENG-278, protótipo)', () => {
     expect(screen.getByText('Nada do áudio sai deste computador.')).toBeTruthy();
   });
 
+  it('o painel cerimonial traz a marca do site no lugar da Shemá', () => {
+    render(<Login auth={new FixtureAuthProvider()} />);
+
+    expect(screen.getByRole('img', { name: 'Colar de Sons' })).toBeTruthy();
+    expect(screen.queryByRole('img', { name: 'Shemá' })).toBeNull();
+  });
+
   it('enquanto autentica, o botão vira "Entrando…" e fica travado', async () => {
     render(<Login auth={new PendingAuth()} />);
 

@@ -132,6 +132,21 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
   });
 });
 
+describe('Dashboard — a marca é a do site', () => {
+  it('o cabeçalho da casa traz o Colar de Sons, não mais o Shemá', async () => {
+    render(
+      <Dashboard
+        store={new FixtureSessionStore()}
+        auth={new FixtureAuthProvider()}
+        saveBytes={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole('img', { name: 'Colar de Sons' })).toBeTruthy();
+    expect(screen.queryByRole('img', { name: 'Shemá' })).toBeNull();
+  });
+});
+
 describe('Dashboard — nenhum UUID no cartão (ENG-307)', () => {
   it('project_id cru (UUID) não aparece; um nome de projeto continua aparecendo', async () => {
     const uuid = '7ae3eca9-2747-4b3c-ba38-4f835f1b4bbc';

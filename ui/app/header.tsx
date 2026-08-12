@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import * as Popover from '@radix-ui/react-popover';
 
 import { SaveChip, type SaveStatus } from '../molecules';
-import { ShemaIcon } from '../tokens';
+import { ColarIcon } from '../tokens';
 import type { Theme } from './theme';
 import './header.css';
 
@@ -89,7 +89,7 @@ export function Header({
           {t('header.back')}
         </button>
         <span className="cds-header-icon">
-          <ShemaIcon colorway="telha" size={26} />
+          <ColarIcon size={26} />
         </span>
       </div>
       <div className="cds-header-actions">

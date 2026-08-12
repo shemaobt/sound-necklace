@@ -13,7 +13,7 @@ import {
   type SessionSummary,
 } from '../../../contracts';
 import { Button, Skeleton } from '../../atoms';
-import { ShemaIcon } from '../../tokens';
+import { ColarIcon } from '../../tokens';
 import { type ArtifactKind } from '../../organisms/artifact-cards/artifact-cards';
 import {
   SessionList,
@@ -577,7 +577,7 @@ export function Dashboard({
     <div className="cds-dashboard">
       <header className="cds-dashboard-bar">
         <div className="cds-dashboard-brand">
-          <ShemaIcon colorway="telha" size={30} />
+          <ColarIcon size={30} />
           <h1 className="cds-dashboard-brand-title">{t('header.title')}</h1>
         </div>
 
