@@ -397,6 +397,46 @@ describe('Export — inglês confirmado é requisito para guardar (ENG-327)', ()
     expect(screen.getByText(/não consegui conferir/i)).toBeTruthy();
   });
 
+  /**
+   * A recusa mudou de FORMA (virou o cartão da casa, não uma faixa de texto solta) e não
+   * de comportamento. Estes dois casos são o cinto: o download do relatório continua
+   * recusando e continua explicando, e a recusa que falha FECHADO continua fechando.
+   */
+  it('o download do relatório recusado explica o motivo e não baixa nada', async () => {
+    const store = new FixtureSessionStore();
+    const { id, state } = await seedWithRecording(store, null);
+    const save = vi.fn();
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={save} />);
+    await screen.findByRole('button', { name: 'Concluir e guardar os documentos' });
+
+    await userEvent.click(cardButton('mapping-report.md'));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toMatch(/sem o texto em inglês confirmado/i);
+    expect(save).not.toHaveBeenCalled();
+    expect(cardButton('mapping-report.md').textContent).toContain('Baixar');
+  });
+
+  it('sem saber o que foi gravado, o download do relatório também recusa', async () => {
+    const store = new FixtureSessionStore();
+    const { id, state } = await seedWithRecording(store, 'He told of the dolphin.');
+    // a rede cai justamente ao ler quais respostas foram gravadas
+    vi.spyOn(store, 'load').mockRejectedValue(new Error('rede fora'));
+    const save = vi.fn();
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={save} />);
+    await screen.findByRole('button', { name: 'Concluir e guardar os documentos' });
+
+    await userEvent.click(cardButton('mapping-report.md'));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toMatch(/não consegui conferir/i);
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it('o .md guardado leva o texto confirmado e nenhum caminho de gravação', async () => {
     const store = new FixtureSessionStore();
     const { id, state } = await seedWithRecording(store, 'He told of the dolphin.');
@@ -410,6 +450,54 @@ describe('Export — inglês confirmado é requisito para guardar (ENG-327)', ()
     const { report } = await store.getArtifacts(id);
     expect(report).toContain('He told of the dolphin.');
     expect(report).not.toContain('respostas/');
+  });
+});
+
+/**
+ * A recusa desta tela era uma faixa de texto quieto, sem parentesco com nada: a única
+ * mensagem consequente do app que não vinha num cartão. Aqui ela passa a usar o mesmo
+ * registro dos diálogos do Dashboard — cartão creme, título e explicação — sem virar
+ * modal: recusar um download é resposta a um clique, e um véu que rouba o foco a cada
+ * falha de rede puniria quem só quer clicar de novo (§9: orientar, nunca punir).
+ */
+describe('Export — a recusa no registro da casa', () => {
+  it('traz um título e a explicação, e não só a linha solta', async () => {
+    const state = exportable({ whole: { id: 'S1', span: { s: 0, e: 9 }, confirmed: false } });
+    const store = new FixtureSessionStore();
+    const id = await seedInProgress(store, state);
+    load(state);
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await screen.findByRole('button', { name: 'Concluir e guardar os documentos' });
+
+    await userEvent.click(cardButton('anchoring-return.json'));
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('Falta um passo.')).toBeTruthy();
+    expect(within(alert).getByText('Confirme o colar antes de exportar.')).toBeTruthy();
+  });
+
+  it('a falha de IO se anuncia como falha, não como gate', async () => {
+    const state = exportable();
+    const store = new FixtureSessionStore();
+    const id = await seedInProgress(store, state);
+    load(state);
+    vi.spyOn(store, 'complete').mockRejectedValue(new Error('rede caiu'));
+
+    render(<Export store={store} sessionId={id} saveBytes={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Concluir e guardar os documentos' }),
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('Não consegui agora.')).toBeTruthy();
+    expect(alert.textContent).toContain('Não consegui guardar agora.');
+  });
+
+  it('é pintada como cartão da casa, não como faixa de texto', () => {
+    const notice = /\.cds-export-notice\s*\{[^}]*\}/.exec(exportCss)?.[0] ?? '';
+    expect(notice).toContain('var(--cds-ui-card)');
+    expect(notice).toContain('var(--cds-shadow-card)');
   });
 });
 

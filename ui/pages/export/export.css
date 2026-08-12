@@ -40,25 +40,63 @@
   background: var(--cds-ui-wash);
 }
 
-.cds-export-warning,
-.cds-export-notice {
+.cds-export-warning {
   margin: 0;
   max-width: 44ch;
   padding: 0.65rem 1.1rem;
   border-radius: var(--cds-radius-card);
+  background: var(--cds-warning-bg);
+  color: var(--cds-warning-ink);
   font-family: var(--cds-font-quiet-voice);
   font-size: 0.9rem;
   line-height: 1.45;
 }
 
-.cds-export-warning {
-  background: var(--cds-warning-bg);
-  color: var(--cds-warning-ink);
+/* A recusa, no registro dos diálogos da casa: cartão creme com sombra, título e
+   explicação, alinhados à esquerda para se ler como texto e não como aviso de
+   sistema. A cor do erro fica no glifo e no filete — a faixa inteira tingida
+   gritava, e esta tela recusa mais por gate do que por falha. */
+.cds-export-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 0;
+  max-width: 44ch;
+  padding: 0.85rem 1.1rem;
+  border-left: 3px solid var(--cds-ui-error-fg);
+  border-radius: var(--cds-radius-card);
+  background: var(--cds-ui-card);
+  box-shadow: var(--cds-shadow-card);
+  color: var(--cds-ui-ink);
+  text-align: left;
 }
 
-.cds-export-notice {
-  background: var(--cds-ui-error-bg);
+.cds-export-notice-glyph {
+  flex: none;
+  margin-top: 0.1rem;
   color: var(--cds-ui-error-fg);
+}
+
+.cds-export-notice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cds-export-notice-title {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-weight: 300;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.cds-export-notice-body {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--cds-ui-ink-soft);
 }
 
 .cds-export-action {

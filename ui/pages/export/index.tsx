@@ -123,6 +123,64 @@ function ClockGlyph() {
 }
 
 /**
+ * A recusa desta tela, no registro dos outros diálogos da casa (Dashboard, seam-modal):
+ * cartão creme com título e explicação. Era a única mensagem consequente do app que
+ * chegava como faixa de texto solta, e por isso não se parecia com nada.
+ *
+ * NÃO é modal, de propósito. Aqui a superfície é compartilhada por recusas de gate e
+ * por falhas de rede, e as duas respondem a um clique: um véu que roubasse o foco a
+ * cada download falho puniria quem só quer clicar de novo (§9.4 — orientar, nunca
+ * punir). `role="alert"` já garante o anúncio assertivo sem mover o foco de ninguém.
+ *
+ * O título separa "falta um passo" de "não consegui": um gate que recusa não é uma
+ * falha, e confundir os dois manda a facilitadora procurar conexão quando o que falta
+ * é um clique dela.
+ */
+type NoticeKind = 'blocked' | 'failed';
+
+interface Notice {
+  kind: NoticeKind;
+  text: string;
+}
+
+function NoticeGlyph({ kind }: { kind: NoticeKind }) {
+  return (
+    <svg
+      className="cds-export-notice-glyph"
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="12" r="9" />
+      {kind === 'blocked' ? <path d="M12 8v5" /> : <path d="M15 9l-6 6M9 9l6 6" />}
+      {kind === 'blocked' ? <path d="M12 16.5h.01" /> : null}
+    </svg>
+  );
+}
+
+function ExportNotice({ notice }: { notice: Notice }) {
+  const { t } = useTranslation();
+  return (
+    <div className="cds-export-notice" role="alert">
+      <NoticeGlyph kind={notice.kind} />
+      <div className="cds-export-notice-text">
+        <p className="cds-export-notice-title">
+          {notice.kind === 'blocked' ? t('export.noticeBlocked') : t('export.noticeFailed')}
+        </p>
+        <p className="cds-export-notice-body">{notice.text}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
  * O tempo LÍQUIDO da sessão, só na conclusão (@/ui/state/session-clock): tempo de
  * sessão aberta e à vista, descontadas as pausas longas. Aparecer durante o
  * trabalho o transformaria em cobrança — e a facilitadora não é cronometrada; ao
@@ -161,7 +219,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
   const [phase, setPhase] = useState<Phase>(store && sessionId ? 'loading' : 'edit');
   const [custody, setCustody] = useState<Custody | null>(null);
   const [downloaded, setDownloaded] = useState<ArtifactDownloads>(NO_DOWNLOADS);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
   // Tempo líquido CONGELADO: o número é lido no instante em que a sessão fecha e
   // não anda mais. Lido do estado, não do relógio a cada render — senão ele
@@ -251,15 +309,18 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
     custody?.voice ?? new Set<string>(),
   );
   const reportReady = custody?.ok === true && reportTextReady;
-  const reportBlockedNotice = (): string =>
-    custody?.ok === true
-      ? t('export.reportBlocked', { count: pendingSlots })
-      : t('export.reportBlockedUnknown');
+  const reportBlockedNotice = (): Notice => ({
+    kind: 'blocked',
+    text:
+      custody?.ok === true
+        ? t('export.reportBlocked', { count: pendingSlots })
+        : t('export.reportBlockedUnknown'),
+  });
 
   const onDownload = async (kind: ArtifactKind): Promise<void> => {
     if (!triple) return;
     if (kind === 'anchoring' && !canExport) {
-      setNotice(t('export.anchoringBlocked'));
+      setNotice({ kind: 'blocked', text: t('export.anchoringBlocked') });
       sound?.refuse();
       return;
     }
@@ -278,7 +339,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
           ? (await store.getArtifacts(sessionId))[kind]
           : triple[kind];
     } catch {
-      setNotice(t('export.downloadError'));
+      setNotice({ kind: 'failed', text: t('export.downloadError') });
       sound?.refuse();
       return;
     }
@@ -315,7 +376,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
         .clearSession(sessionId)
         .catch(() => undefined);
     } catch {
-      setNotice(t('export.saveError'));
+      setNotice({ kind: 'failed', text: t('export.saveError') });
       sound?.refuse();
     } finally {
       setBusy(false);
@@ -335,7 +396,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
       resumeClock(sessionId, Date.now());
       setNetMs(null);
     } catch {
-      setNotice(t('export.reopenError'));
+      setNotice({ kind: 'failed', text: t('export.reopenError') });
       sound?.refuse();
     } finally {
       setBusy(false);
@@ -370,11 +431,7 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
 
       <ArtifactCards downloaded={downloaded} onDownload={onDownload} />
 
-      {notice ? (
-        <p className="cds-export-notice" role="alert">
-          {notice}
-        </p>
-      ) : null}
+      {notice ? <ExportNotice notice={notice} /> : null}
 
       <div className="cds-export-action" data-role="primary-action">
         {phase === 'saved' ? (
