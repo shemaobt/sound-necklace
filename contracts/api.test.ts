@@ -184,7 +184,7 @@ describe('sessions — create/list/summary/status', () => {
     expect(RenameSessionRequestSchema.safeParse({ story_name: 'O outro conto' }).success).toBe(
       true,
     );
-    // o story_slug nomeia os três artefatos (§10.5) e ancora a byte-identidade da
+    // o story_slug nomeia os três artefatos (§10.6) e ancora a byte-identidade da
     // ENG-253: renomear não pode carregá-lo nem por engano.
     expect(
       RenameSessionRequestSchema.safeParse({ story_name: 'O outro conto', story_slug: 'o-outro' })
@@ -192,9 +192,20 @@ describe('sessions — create/list/summary/status', () => {
     ).toBe(false);
   });
 
-  it('rename recusa nome vazio ou só de espaços (o servidor responde 422)', () => {
+  it('rename corta as pontas antes de medir, como o servidor', () => {
+    // strip_whitespace ANTES de min_length: só-espaços é recusado, não guardado
     expect(RenameSessionRequestSchema.safeParse({ story_name: '' }).success).toBe(false);
     expect(RenameSessionRequestSchema.safeParse({ story_name: '   ' }).success).toBe(false);
+    expect(RenameSessionRequestSchema.parse({ story_name: '  O outro conto  ' })).toEqual({
+      story_name: 'O outro conto',
+    });
+    // 255 espelha a coluna do servidor
+    expect(RenameSessionRequestSchema.safeParse({ story_name: 'x'.repeat(255) }).success).toBe(
+      true,
+    );
+    expect(RenameSessionRequestSchema.safeParse({ story_name: 'x'.repeat(256) }).success).toBe(
+      false,
+    );
   });
 });
 

@@ -144,13 +144,19 @@ export const CreateSessionRequestSchema = z.strictObject({
 export type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;
 
 /**
- * Renomear a sessão (§7.2): muda SÓ o nome de exibição. O `story_slug` NUNCA viaja
- * aqui — ele nomeia os três arquivos de artefato (§10.5) e ancora a aceitação de
+ * Renomear a sessão (ENG-281): muda SÓ o nome de exibição. O `story_slug` NUNCA viaja
+ * aqui — ele nomeia os três arquivos de artefato (§10.6) e ancora a aceitação de
  * byte-identidade da ENG-253; um rename que o levasse junto renomearia os artefatos.
  * O `strictObject` é o que torna essa ausência uma regra, e não um costume.
+ *
+ * As três restrições espelham à letra o `StringConstraints` do servidor
+ * (`strip_whitespace=True, min_length=1, max_length=255`): corta as pontas ANTES de
+ * medir, então um nome só de espaços é recusado em vez de guardado. Os dois modos
+ * parseiam por aqui — é o que impede a fixture de guardar `"  Oi  "` onde o real
+ * guardaria `"Oi"`.
  */
 export const RenameSessionRequestSchema = z.strictObject({
-  story_name: z.string().refine((s) => s.trim().length > 0, 'nome da história vazio'),
+  story_name: z.string().trim().min(1).max(255),
 });
 export type RenameSessionRequest = z.infer<typeof RenameSessionRequestSchema>;
 
