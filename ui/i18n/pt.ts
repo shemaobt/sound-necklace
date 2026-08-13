@@ -459,6 +459,10 @@ export const pt = {
     draftConfirm: 'confirmar a transcrição',
     draftRetry: 'tentar de novo',
     draftFailed: 'não consegui transcrever agora — dá para escrever a resposta à mão',
+    /* Confirmar recusado. O silêncio seria o pior desfecho: a pessoa segue achando que
+       confirmou, e o documento sai com a tradução da frase anterior. */
+    confirmFailed: 'não deu para guardar esta transcrição — ela segue por confirmar',
+    confirmSuperseded: 'esta transcrição foi refeita — confira o texto novo antes de confirmar',
     /* Confirmar tudo de uma vez. A cópia é explícita sobre o que se está aceitando:
        texto de máquina, sem leitura resposta a resposta. Quem aceita é a facilitadora,
        e ela precisa saber o que está assinando. */

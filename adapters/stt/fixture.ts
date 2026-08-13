@@ -8,7 +8,7 @@
  * teste esperar.
  */
 
-import type { AnswerDraft, Transcriber, TranscriptionProgress } from './types';
+import type { AnswerDraft, ConfirmedTranscript, Transcriber, TranscriptionProgress } from './types';
 
 /** Quantas consultas o job leva para ficar pronto (só para dar o estado "rodando"). */
 const POLLS_TO_FINISH = 2;
@@ -79,5 +79,16 @@ export class FixtureTranscriber implements Transcriber {
     const drafts: Record<string, AnswerDraft> = {};
     for (const p of job.paths) drafts[p] = draftFor(p, job.generation);
     return Promise.resolve({ done: true, drafts });
+  }
+
+  confirm(sessionId: string, path: string, transcript: string): Promise<ConfirmedTranscript> {
+    const generation = this.#jobs.get(sessionId)?.generation ?? 1;
+    const base = draftFor(path, generation);
+    // texto inalterado volta com o inglês que já havia, como a rota real faz; um texto
+    // corrigido não tem tradutor por aqui, então o inglês do fixture É o texto confirmado
+    return Promise.resolve({
+      en: transcript === base.source ? base.en : transcript,
+      generation,
+    });
   }
 }

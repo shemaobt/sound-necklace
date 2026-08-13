@@ -251,6 +251,7 @@ describe('Conversation — the footer does not survive the transcription wait', 
     const stt = {
       start: () => Promise.resolve(),
       progress: () => Promise.resolve({ done: false, drafts: {} }),
+      confirm: () => Promise.reject(new Error('não usado neste teste')),
     };
     // the report discovers recordings through the recorder, not through `meta.voice`:
     // without one that answers "it exists", nothing is transcribed and the wait never starts
@@ -955,6 +956,7 @@ describe('Conversation — a transcrição começa ao avançar, não no fim', ()
           return Promise.resolve();
         },
         progress: () => Promise.resolve({ done: true, drafts: {} }),
+        confirm: () => Promise.reject(new Error('não usado neste teste')),
       },
     };
   }
@@ -1032,6 +1034,7 @@ describe('Conversation — a transcrição começa ao avançar, não no fim', ()
     const stt: Transcriber = {
       start: () => Promise.reject(new Error('rede fora')),
       progress: () => Promise.resolve({ done: true, drafts: {} }),
+      confirm: () => Promise.reject(new Error('não usado neste teste')),
     };
     load(mapping());
     const seq = questionSequence(sessionStore.getState().session!);

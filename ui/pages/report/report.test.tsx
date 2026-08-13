@@ -4,7 +4,8 @@ import reportCss from './report.css?raw';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Transcriber } from '../../../adapters/stt/types';
+import type { AnswerDraft, Transcriber } from '../../../adapters/stt/types';
+import { TranscriptSuperseded } from '../../../adapters/stt/types';
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import { buildMapReport, type ResourcePath } from '../../../contracts';
@@ -417,19 +418,52 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
  */
 type DraftFixture = { source: string; en: string; generation?: number };
 
-/** Transcriber controlável: `resolve()` entrega os rascunhos quando o teste quiser. */
-function controllableStt(drafts: Record<string, DraftFixture>): {
+/** Uma confirmação como o servidor a recebeu. */
+interface ConfirmCall {
+  path: string;
+  transcript: string;
+  generation: number;
+}
+
+/**
+ * Transcriber controlável: `resolve()` entrega os rascunhos quando o teste quiser.
+ *
+ * O `confirm` não é um espião: ele repete a rota real (`retranslate_answer`, tripod-api)
+ * porque o relatório depende das três respostas dela. Texto idêntico volta na hora, sem
+ * traduzir e sem mexer no contador — e essa comparação vem ANTES da guarda de geração,
+ * senão reconfirmar viraria conflito. Geração vencida é recusa. O resto traduz, guarda e
+ * incrementa. Um duplo que só registrasse a chamada passaria em qualquer implementação.
+ */
+function controllableStt(
+  drafts: Record<string, DraftFixture>,
+  opts: {
+    /**
+     * O inglês que o servidor deriva do texto confirmado. Identidade é o caminho da
+     * entrevista EM INGLÊS, onde o servidor devolve o próprio transcript.
+     */
+    translate?: (text: string) => string;
+    /** A confirmação fracassa (rede, 500) — nada volta e nada foi gravado lá. */
+    confirmFails?: boolean;
+  } = {},
+): {
   stt: Transcriber;
   finish: () => void;
   started: string[][];
   /** As opções de cada `start` — é onde o `force` e o seu alcance aparecem. */
   asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[];
+  /** O que chegou ao servidor em cada confirmação, na ordem. */
+  confirmed: ConfirmCall[];
+  /** Reescreve o que o servidor guarda — é como se encena uma re-transcrição. */
+  serve: (next: Record<string, DraftFixture>) => void;
 } {
-  const ready = Object.fromEntries(
-    Object.entries(drafts).map(([p, d]) => [p, { ...d, generation: d.generation ?? 1 }]),
-  );
+  const normalize = (d: Record<string, DraftFixture>): Record<string, AnswerDraft> =>
+    Object.fromEntries(
+      Object.entries(d).map(([p, v]) => [p, { ...v, generation: v.generation ?? 1 }]),
+    );
+  let ready = normalize(drafts);
   const started: string[][] = [];
   const asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[] = [];
+  const confirmed: ConfirmCall[] = [];
   let release: (() => void) | null = null;
   // o job só termina quando o TESTE mandar: `progress` espera esta promessa, então
   // nenhum caso depende da ordem dos microtasks nem do atraso real do polling
@@ -443,6 +477,10 @@ function controllableStt(drafts: Record<string, DraftFixture>): {
   return {
     started,
     asked,
+    confirmed,
+    serve: (next) => {
+      ready = normalize(next);
+    },
     finish: () => release?.(),
     stt: {
       start: (_id, paths, opts) => {
@@ -453,6 +491,18 @@ function controllableStt(drafts: Record<string, DraftFixture>): {
       progress: async () => {
         await Promise.resolve();
         return settled ? { done: true, drafts: ready } : { done: false, drafts: {} };
+      },
+      confirm: async (_id, path, transcript, generation) => {
+        await Promise.resolve();
+        confirmed.push({ path, transcript, generation });
+        if (opts.confirmFails) throw new Error('rede fora');
+        const row = ready[path];
+        if (!row) throw new Error(`sem rascunho guardado para ${path}`);
+        if (transcript === row.source) return { en: row.en, generation: row.generation };
+        if (generation !== row.generation) throw new TranscriptSuperseded('refeito por baixo');
+        const en = (opts.translate ?? ((t: string) => t))(transcript);
+        ready = { ...ready, [path]: { source: transcript, en, generation: row.generation + 1 } };
+        return { en, generation: row.generation + 1 };
       },
     },
   };
@@ -922,6 +972,131 @@ describe('Relatório — a transcrição refeita no servidor chega ao relatório
     const md = buildMapReport(sessionStore.getState().session!);
     expect(md).toContain('Foi o avô quem contou.');
     expect(md).not.toContain(LIMPO.en);
+  });
+});
+
+/**
+ * Confirmar é o que manda o texto corrigido ao servidor.
+ *
+ * O relatório lê `en__` para o artefato, e `en__` é a tradução do texto que o servidor
+ * guardava — não do texto que a facilitadora acabou de corrigir. Uma edição confirmada só
+ * localmente NUNCA chegava ao `.md`: o documento saía com a tradução da frase substituída.
+ * A rota que resolve isto existe (`PUT …/transcriptions/{path}`): ela traduz o que foi
+ * confirmado e devolve o inglês.
+ */
+describe('Relatório — confirmar manda o transcript ao servidor e traz o inglês de volta', () => {
+  const Q = L1_Q[0]!;
+  const PATH = voiceAnswerPath({ level: 1, k: Q.k });
+  const ORIGINAL = { source: 'Ele contou do boto.', en: 'He told of the dolphin.', generation: 7 };
+
+  function open(stt: Transcriber) {
+    return render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+  }
+
+  /** O botão de confirmar DESTE cartão — o de lote também casa com /confirmar/i. */
+  function confirmButton(): HTMLElement {
+    return within(cardFor(Q.q)).getByRole('button', { name: /confirmar a transcrição/i });
+  }
+
+  it('o transcript corrigido vai ao servidor com a geração do rascunho, e o inglês que volta é o que sai no documento', async () => {
+    const CORRIGIDO = 'Ele falou do boto-cor-de-rosa.';
+    const { stt, finish, confirmed } = controllableStt(
+      { [PATH]: ORIGINAL },
+      { translate: () => 'He spoke of the pink dolphin.' },
+    );
+    load(report());
+    open(stt);
+    finish();
+
+    const src = await screen.findByDisplayValue(ORIGINAL.source);
+    await userEvent.clear(src);
+    await userEvent.type(src, CORRIGIDO);
+    await userEvent.click(confirmButton());
+
+    await waitFor(() =>
+      expect(confirmed).toEqual([
+        { path: PATH, transcript: CORRIGIDO, generation: ORIGINAL.generation },
+      ]),
+    );
+    await waitFor(() => {
+      const md = buildMapReport(sessionStore.getState().session!);
+      expect(md).toContain('He spoke of the pink dolphin.');
+      expect(md).not.toContain(ORIGINAL.en);
+    });
+  });
+
+  it('confirmar o texto que já estava deixa a resposta confirmada', async () => {
+    const { stt, finish } = controllableStt({ [PATH]: ORIGINAL });
+    load(report());
+    open(stt);
+    finish();
+
+    await screen.findByDisplayValue(ORIGINAL.source);
+    await userEvent.click(confirmButton());
+
+    await waitFor(() => expect(answerOf(Q)).toBe(ORIGINAL.source));
+    expect(buildMapReport(sessionStore.getState().session!)).toContain(ORIGINAL.en);
+  });
+
+  /**
+   * O pior desfecho seria o silêncio: célula confirmada com um `en__` que descreve outra
+   * frase, e o documento saindo com ela. Se o servidor não guardou, a resposta continua
+   * por confirmar — o gate de exportação segue vermelho, que é a verdade, e o texto
+   * corrigido continua no campo para uma segunda tentativa.
+   */
+  it('um confirmar que fracassa não confirma a resposta, e diz que não confirmou', async () => {
+    const { stt, finish } = controllableStt({ [PATH]: ORIGINAL }, { confirmFails: true });
+    load(report());
+    open(stt);
+    finish();
+
+    const src = await screen.findByDisplayValue(ORIGINAL.source);
+    await userEvent.clear(src);
+    await userEvent.type(src, 'Ele falou do boto.');
+    await userEvent.click(confirmButton());
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(answerOf(Q)).toBe('');
+    expect(buildMapReport(sessionStore.getState().session!)).not.toContain(ORIGINAL.en);
+    // e o texto corrigido não se perde: uma segunda tentativa custa um clique
+    expect((screen.getByLabelText(/o que se ouviu/i) as HTMLTextAreaElement).value).toBe(
+      'Ele falou do boto.',
+    );
+  });
+
+  /**
+   * Conflito é a outra resposta da rota, e pede o oposto de uma retentativa: repetir manda
+   * a mesma geração vencida e perde de novo. Só reler o rascunho resolve — e o texto novo
+   * é o do servidor, porque a edição era de uma frase que já não existe.
+   */
+  it('um confirmar em conflito recarrega o rascunho em vez de sobrescrever', async () => {
+    const { stt, finish, serve } = controllableStt({ [PATH]: ORIGINAL });
+    load(report());
+    open(stt);
+    finish();
+
+    const src = await screen.findByDisplayValue(ORIGINAL.source);
+    // o servidor refez a transcrição por baixo da facilitadora
+    serve({
+      [PATH]: {
+        source: 'Ele contou do boto-cor-de-rosa.',
+        en: 'He told of the pink dolphin.',
+        generation: 9,
+      },
+    });
+    await userEvent.clear(src);
+    await userEvent.type(src, 'Ele falou do boto.');
+    await userEvent.click(confirmButton());
+
+    expect(await screen.findByDisplayValue('Ele contou do boto-cor-de-rosa.')).toBeTruthy();
+    expect(answerOf(Q)).toBe('');
   });
 });
 

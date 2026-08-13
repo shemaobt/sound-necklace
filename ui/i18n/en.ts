@@ -421,6 +421,8 @@ export const en: Dict = {
     draftConfirm: 'confirm the transcript',
     draftRetry: 'try again',
     draftFailed: 'could not transcribe right now — you can write the answer by hand',
+    confirmFailed: 'could not store this transcript — it is still unconfirmed',
+    confirmSuperseded: 'this transcript was redone — check the new text before confirming',
     bulkAction: 'Confirm every transcript',
     bulkTitle_one: 'Confirm 1 transcript in one act?',
     bulkTitle_other: 'Confirm {{count}} transcripts in one act?',

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AnswerDraft, Transcriber } from '../../../adapters/stt/types';
+import { TranscriptSuperseded } from '../../../adapters/stt/types';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import {
   EN_ANSWER_PREFIX,
@@ -88,6 +89,13 @@ export interface ReportProps {
 
 /** Prefixo da chave reservada da nota — fora do vocabulário de perguntas. */
 const NOTE_PREFIX = 'nota__';
+
+/**
+ * Por que a última confirmação desta resposta não pegou. `superseded` é o conflito, que
+ * pede reler em vez de repetir; `failed` é qualquer outra recusa, onde repetir é
+ * exatamente o que resolve.
+ */
+type ConfirmProblem = 'failed' | 'superseded';
 
 /** Alturas fixas das barras decorativas da linha de voz (px). */
 const WAVE_HEIGHTS = [6, 12, 20, 14, 22, 10, 16, 8];
@@ -336,6 +344,7 @@ function DraftReview({
   phase,
   draft,
   draftText,
+  problem,
   onDraftText,
   onConfirm,
   onRetry,
@@ -346,6 +355,8 @@ function DraftReview({
   draft?: AnswerDraft;
   /** O TRANSCRIPT em revisão — a língua falada. O inglês não passa por aqui. */
   draftText: string;
+  /** A última confirmação desta resposta não pegou, e por quê. */
+  problem?: ConfirmProblem;
   onDraftText?: (text: string) => void;
   onConfirm?: () => void;
   onRetry?: () => void;
@@ -385,6 +396,13 @@ function DraftReview({
       <Button variant="ghost" size="sm" onClick={onConfirm}>
         {t('report.draftConfirm')}
       </Button>
+      {/* `alert` e não `status`: é a resposta imediata a um clique, e o silêncio aqui
+          seria o desfecho ruim — a pessoa seguiria achando que confirmou. */}
+      {problem ? (
+        <p className="cds-report-draft-problem" role="alert">
+          {t(problem === 'superseded' ? 'report.confirmSuperseded' : 'report.confirmFailed')}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -418,6 +436,8 @@ interface ReportCardProps {
   draft?: AnswerDraft;
   /** Inglês do rascunho, editável antes de confirmar. */
   draftText?: string;
+  /** A última confirmação desta resposta não pegou, e por quê. */
+  confirmProblem?: ConfirmProblem;
   onDraftText?: (text: string) => void;
   onConfirmDraft?: () => void;
   onRetryDraft?: () => void;
@@ -441,6 +461,7 @@ function ReportCard({
   sttPhase = 'idle',
   draft,
   draftText = '',
+  confirmProblem,
   onDraftText,
   onConfirmDraft,
   onRetryDraft,
@@ -524,6 +545,7 @@ function ReportCard({
         phase={sttPhase}
         draft={draft}
         draftText={draftText}
+        problem={confirmProblem}
         onDraftText={onDraftText}
         onConfirm={onConfirmDraft}
         onRetry={onRetryDraft}
@@ -640,6 +662,9 @@ export function Report({
   const [openingPath, setOpeningPath] = useState<string | null>(null);
   // O que o lote de fato fez — medido depois de escrever, nunca a partir do plano.
   const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
+  // Por resposta: a última confirmação que não pegou. Não é estado do rascunho — é o
+  // desfecho de UM clique, e some assim que a pessoa tenta de novo.
+  const [confirmProblem, setConfirmProblem] = useState<Record<string, ConfirmProblem>>({});
 
   // Visão de LEITURA com o answer store garantido mesmo antes do efeito persistir.
   const mapped = useMemo(() => {
@@ -735,6 +760,7 @@ export function Report({
     phase: sttPhase,
     drafts,
     retry,
+    refresh,
   } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion, stalePaths);
 
   const waiting = sttPhase === 'running';
@@ -850,9 +876,46 @@ export function Report({
     return setAnswer(base, slot, text);
   };
 
-  /** Confirmar: o TRANSCRIPT em revisão vira A resposta, pelo mesmo caminho de digitar. */
-  const confirmDraft = (slot: QuestionSlot, text: string): void => {
-    sessionStore.getState().apply((s) => confirmInto(s, slot, text));
+  /**
+   * Confirmar: o TRANSCRIPT em revisão vira A resposta, pelo mesmo caminho de digitar —
+   * e o servidor traduz o texto confirmado e devolve o inglês que o artefato emite.
+   *
+   * Sem esse ida-e-volta, uma correção nunca chegava ao documento: `answerCell` prefere
+   * `en__`, e `en__` era a tradução da frase que a correção substituiu. É por isso que a
+   * confirmação passa pela rota mesmo quando o texto não mudou — reconfirmar não custa
+   * nada lá (texto idêntico volta na hora, sem traduzir).
+   *
+   * Recusada, NÃO confirma. Confirmar assim mesmo deixaria a célula preenchida ao lado de
+   * um inglês que descreve outra frase, e o documento sairia com ela — exatamente o bug
+   * que isto conserta, agora sem nada na tela para denunciá-lo. Não confirmar mantém o
+   * gate de exportação vermelho, que é a verdade, e o texto corrigido segue no campo:
+   * tentar de novo custa um clique. Sem porta, sem sessão ou sem geração conhecida não há
+   * a quem perguntar, e a confirmação local continua sendo a saída (§8.7 — sem beco).
+   */
+  const confirmDraft = async (slot: QuestionSlot, text: string): Promise<void> => {
+    const path = voiceAnswerPath(slot);
+    const seededGeneration = readAnswer(mapped.mapping, draftGenSlot(slot));
+    if (!stt || !sessionId || seededGeneration === '') {
+      sessionStore.getState().apply((s) => confirmInto(s, slot, text));
+      return;
+    }
+    setConfirmProblem((p) =>
+      path in p ? Object.fromEntries(Object.entries(p).filter(([k]) => k !== path)) : p,
+    );
+    try {
+      const answer = await stt.confirm(sessionId, path, text, Number(seededGeneration));
+      sessionStore.getState().apply((s) => {
+        const withAnswer = confirmInto(s, slot, text);
+        const withEn = setAnswer(withAnswer, draftEnSlot(slot), answer.en);
+        return setAnswer(withEn, draftGenSlot(slot), String(answer.generation));
+      });
+    } catch (err) {
+      const superseded = err instanceof TranscriptSuperseded;
+      setConfirmProblem((p) => ({ ...p, [path]: superseded ? 'superseded' : 'failed' }));
+      // repetir um conflito manda a mesma geração vencida e perde de novo: só reler o
+      // rascunho resolve, e a releitura não força reprocessamento nenhum
+      if (superseded) refresh();
+    }
   };
 
   /**
@@ -994,9 +1057,10 @@ export function Report({
               // o transcript em revisão começa no que a máquina ouviu e passa a viver
               // na chave reservada assim que alguém encosta nele
               draftText={readAnswer(mapped.mapping, draftSrcSlot(slot))}
+              confirmProblem={confirmProblem[path]}
               onDraftText={(text) => writeDraftSrc(slot, text)}
               onConfirmDraft={() =>
-                confirmDraft(slot, readAnswer(mapped.mapping, draftSrcSlot(slot)))
+                void confirmDraft(slot, readAnswer(mapped.mapping, draftSrcSlot(slot)))
               }
               onRetryDraft={retry}
             />

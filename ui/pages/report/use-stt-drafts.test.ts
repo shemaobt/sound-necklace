@@ -40,6 +40,7 @@ function deferredTranscriber(): {
         return Promise.resolve();
       },
       progress: () => new Promise<TranscriptionProgress>((res) => pending.push(res)),
+      confirm: () => Promise.reject(new Error('não usado neste teste')),
     },
   };
 }
@@ -137,6 +138,7 @@ describe('useSttDrafts — o job de rascunhos do relatório', () => {
     const stt: Transcriber = {
       start: () => Promise.reject(new Error('API fora')),
       progress: () => Promise.resolve({ done: false, drafts: {} }),
+      confirm: () => Promise.reject(new Error('não usado neste teste')),
     };
     const { result } = renderHook(() => useSttDrafts(stt, 's-1', [P1]));
 

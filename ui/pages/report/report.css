@@ -340,6 +340,15 @@
   font-style: italic;
 }
 
+/* Uma confirmação que não pegou. Fala mais alto que o "transcrevendo" — quem clicou
+   precisa saber que a resposta continua por confirmar — mas sem virar bloco de erro:
+   o texto corrigido segue ali, e tentar de novo é um clique. */
+.cds-report-draft-problem {
+  margin: 6px 0 0;
+  color: var(--cds-ui-accent);
+  font-size: 13px;
+}
+
 /* O anúncio dos rascunhos é para o leitor de tela E para quem enxerga: uma linha
    quieta, no tom das eyebrows. Vazia, não ocupa espaço (:empty) — a região precisa
    existir no DOM desde o início para ser anunciada, mas não deve abrir um buraco. */

@@ -35,6 +35,28 @@ export interface TranscriptionProgress {
   drafts: Record<string, AnswerDraft>;
 }
 
+/** O que o servidor devolve quando alguém confirma uma transcrição. */
+export interface ConfirmedTranscript {
+  /** Inglês DERIVADO do texto confirmado — é este que o artefato emite (ENG-370). */
+  en: string;
+  /** Contador depois da confirmação; a próxima confirmação precisa levá-lo. */
+  generation: number;
+}
+
+/**
+ * A confirmação foi recusada porque o rascunho mudou por baixo de quem confirmava.
+ *
+ * Tem tipo próprio porque pede o OPOSTO de uma falha comum: repetir manda a mesma geração
+ * vencida e perde de novo, para sempre. Só reler o rascunho resolve — o texto que se
+ * editava já não existe.
+ */
+export class TranscriptSuperseded extends Error {
+  constructor(message = 'a transcrição foi refeita no servidor') {
+    super(message);
+    this.name = 'TranscriptSuperseded';
+  }
+}
+
 export interface Transcriber {
   /**
    * Dispara o job para as gravações da sessão. Idempotente: repetir com o mesmo
@@ -52,4 +74,21 @@ export interface Transcriber {
   ): Promise<void>;
   /** Pergunta o progresso. Sessão que nunca começou responde concluída e vazia. */
   progress(sessionId: string): Promise<TranscriptionProgress>;
+  /**
+   * Guarda a transcrição como um humano a confirmou, e devolve o inglês que o servidor
+   * derivou DELA. Existe porque o inglês nunca é do cliente: o relatório lê `en__` para
+   * montar o artefato, então uma correção aplicada só aqui deixaria o documento com a
+   * tradução da frase que ela substituiu.
+   *
+   * `generation` é o contador que o rascunho carregava — a confirmação é um
+   * compare-and-swap. Texto idêntico ao guardado volta na hora, sem traduzir e sem mexer
+   * no contador, então reconfirmar não custa nada. Geração vencida rejeita com
+   * `TranscriptSuperseded`, e a única saída é reler o rascunho.
+   */
+  confirm(
+    sessionId: string,
+    path: string,
+    transcript: string,
+    generation: number,
+  ): Promise<ConfirmedTranscript>;
 }
