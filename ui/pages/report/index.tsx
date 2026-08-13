@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { AnswerDraft, Transcriber } from '../../../adapters/stt/types';
+import type { AnswerDraft, ConfirmedTranscript, Transcriber } from '../../../adapters/stt/types';
+import { TranscriptSuperseded } from '../../../adapters/stt/types';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import {
   EN_ANSWER_PREFIX,
@@ -22,7 +23,7 @@ import type { PaletteEntry } from '../../tokens';
 import { isSkipped } from '../conversation/answered';
 import { type BlockLabels, blockEyebrow } from '../conversation/trechos';
 import { sessionStore, useSessionStore } from '../../state';
-import { BulkConfirm, type BulkResult } from './confirm-all-dialog';
+import { BulkConfirm, type BulkResult, RedoStale, type RedoProgress } from './confirm-all-dialog';
 import { type SttPhase, useSttDrafts } from './use-stt-drafts';
 import './report.css';
 
@@ -88,6 +89,44 @@ export interface ReportProps {
 
 /** Prefixo da chave reservada da nota — fora do vocabulário de perguntas. */
 const NOTE_PREFIX = 'nota__';
+
+/**
+ * Por que a última confirmação desta resposta não pegou. `superseded` é o conflito, que
+ * pede reler em vez de repetir; `failed` é qualquer outra recusa, onde repetir é
+ * exatamente o que resolve.
+ */
+type ConfirmProblem = 'failed' | 'superseded';
+
+/**
+ * Quantas confirmações do lote de refazer voam ao mesmo tempo.
+ *
+ * O `PUT` é síncrono e são centenas: em fila, atrás de uma tela congelada, é uma espera
+ * que ninguém aguenta; todas de uma vez é uma rajada que o servidor não merece. A maioria
+ * cai na volta rápida do texto idêntico e não custa nada — só as que o servidor de fato
+ * refez pagam uma tradução.
+ */
+const REDO_CONCURRENCY = 6;
+
+/**
+ * Roda `fn` sobre os itens com no máximo `limit` em voo, na ordem em que ficarem livres.
+ * Cada item escreve o seu resultado por conta própria: uma falha no meio deixa um estado
+ * coerente, e correr de novo termina o que faltou.
+ */
+async function runBounded<T>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<void>,
+): Promise<void> {
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < items.length) {
+      const item = items[next];
+      next += 1;
+      if (item !== undefined) await fn(item);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
 
 /** Alturas fixas das barras decorativas da linha de voz (px). */
 const WAVE_HEIGHTS = [6, 12, 20, 14, 22, 10, 16, 8];
@@ -161,6 +200,26 @@ const DRAFT_SRC_PREFIX = 'src__';
  */
 const DRAFT_VER_PREFIX = 'enver__';
 
+/**
+ * Geração do rascunho guardado em `src__<k>`/`en__<k>` — o contador que o SERVIDOR
+ * mantém para aquela resposta.
+ *
+ * Existe porque a versão da gravação não responde à pergunta que a semeadura faz. Uma
+ * re-transcrição não toca na gravação: uma sessão real foi transcrita antes de a limpeza
+ * de disfluência existir, refeita depois com sucesso, e o rascunho guardado seguiu
+ * "corrente" porque os dois lados da comparação continuavam iguais — numa sessão anterior
+ * ao `voiceVersion` os dois eram `0`, e a comparação dizia "igual" para sempre. O artefato
+ * saiu com as gagueiras que o servidor já tinha removido.
+ *
+ * A AUSÊNCIA desta chave lê-se como "superado", ao contrário da ausência de `enver__`.
+ * São perguntas diferentes: `enver__` ausente significa "nunca transcrito", e forçar ali
+ * pagaria de novo por todas as outras respostas; `gen__` ausente significa "semeado antes
+ * de sabermos de que geração era", e essa é exatamente a sessão que precisa dar lugar ao
+ * texto novo. O preço é uma re-semeadura única por sessão antiga cujo rascunho ainda não
+ * foi confirmado — a célula preenchida continua intocada.
+ */
+const DRAFT_GEN_PREFIX = 'gen__';
+
 /** O slot da nota: a mesma resposta sob a chave reservada `nota__<k>`. */
 function noteSlot(slot: QuestionSlot): AnswerSlot {
   return reservedSlot(slot, NOTE_PREFIX);
@@ -179,6 +238,11 @@ function draftSrcSlot(slot: QuestionSlot): AnswerSlot {
 /** O slot da versão de gravação a que o rascunho guardado corresponde. */
 function draftVerSlot(slot: QuestionSlot): AnswerSlot {
   return reservedSlot(slot, DRAFT_VER_PREFIX);
+}
+
+/** O slot da geração do servidor a que o rascunho guardado corresponde. */
+function draftGenSlot(slot: QuestionSlot): AnswerSlot {
+  return reservedSlot(slot, DRAFT_GEN_PREFIX);
 }
 
 function reservedSlot(slot: QuestionSlot, prefix: string): AnswerSlot {
@@ -311,6 +375,7 @@ function DraftReview({
   phase,
   draft,
   draftText,
+  problem,
   onDraftText,
   onConfirm,
   onRetry,
@@ -321,6 +386,8 @@ function DraftReview({
   draft?: AnswerDraft;
   /** O TRANSCRIPT em revisão — a língua falada. O inglês não passa por aqui. */
   draftText: string;
+  /** A última confirmação desta resposta não pegou, e por quê. */
+  problem?: ConfirmProblem;
   onDraftText?: (text: string) => void;
   onConfirm?: () => void;
   onRetry?: () => void;
@@ -360,6 +427,13 @@ function DraftReview({
       <Button variant="ghost" size="sm" onClick={onConfirm}>
         {t('report.draftConfirm')}
       </Button>
+      {/* `alert` e não `status`: é a resposta imediata a um clique, e o silêncio aqui
+          seria o desfecho ruim — a pessoa seguiria achando que confirmou. */}
+      {problem ? (
+        <p className="cds-report-draft-problem" role="alert">
+          {t(problem === 'superseded' ? 'report.confirmSuperseded' : 'report.confirmFailed')}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -393,6 +467,8 @@ interface ReportCardProps {
   draft?: AnswerDraft;
   /** Inglês do rascunho, editável antes de confirmar. */
   draftText?: string;
+  /** A última confirmação desta resposta não pegou, e por quê. */
+  confirmProblem?: ConfirmProblem;
   onDraftText?: (text: string) => void;
   onConfirmDraft?: () => void;
   onRetryDraft?: () => void;
@@ -416,6 +492,7 @@ function ReportCard({
   sttPhase = 'idle',
   draft,
   draftText = '',
+  confirmProblem,
   onDraftText,
   onConfirmDraft,
   onRetryDraft,
@@ -499,6 +576,7 @@ function ReportCard({
         phase={sttPhase}
         draft={draft}
         draftText={draftText}
+        problem={confirmProblem}
         onDraftText={onDraftText}
         onConfirm={onConfirmDraft}
         onRetry={onRetryDraft}
@@ -615,6 +693,12 @@ export function Report({
   const [openingPath, setOpeningPath] = useState<string | null>(null);
   // O que o lote de fato fez — medido depois de escrever, nunca a partir do plano.
   const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
+  // Por resposta: a última confirmação que não pegou. Não é estado do rascunho — é o
+  // desfecho de UM clique, e some assim que a pessoa tenta de novo.
+  const [confirmProblem, setConfirmProblem] = useState<Record<string, ConfirmProblem>>({});
+  // O andamento do lote de refazer. Ele fala com o servidor uma resposta por vez, então
+  // não pode acontecer atrás de uma tela parada.
+  const [redoProgress, setRedoProgress] = useState<RedoProgress | null>(null);
 
   // Visão de LEITURA com o answer store garantido mesmo antes do efeito persistir.
   const mapped = useMemo(() => {
@@ -710,6 +794,7 @@ export function Report({
     phase: sttPhase,
     drafts,
     retry,
+    refresh,
   } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion, stalePaths);
 
   const waiting = sttPhase === 'running';
@@ -732,7 +817,9 @@ export function Report({
       if (!slot) continue;
       const m = mapped?.mapping ?? null;
       const version = String(recordingVersion?.[path] ?? 0);
+      const generation = String(draft.generation);
       const seededVersion = readAnswer(m, draftVerSlot(slot));
+      const seededGeneration = readAnswer(m, draftGenSlot(slot));
       // a existência do TRANSCRIPT é o que marca "já semeado": é ele que um humano
       // edita, então é sobre ele que vale a promessa de não ressuscitar texto apagado
       const known = hasAnswerKey(m, draftSrcSlot(slot));
@@ -740,16 +827,20 @@ export function Report({
       // propor. Semear o inglês aqui o faria vencer o texto da pessoa no artefato
       // (ENG-370) — o mesmo motivo pelo qual digitar descarta o inglês.
       if (readAnswer(m, slot).trim()) continue;
-      // A chave já existe e é da MESMA gravação: houve edição humana (inclusive
-      // apagá-la de propósito) e não se mexe. Se a versão MUDOU, o que está ali é a
-      // tradução de um áudio descartado e precisa dar lugar ao rascunho novo.
-      if (known && seededVersion === version) continue;
+      // A chave já existe, é da MESMA gravação E da MESMA geração: houve edição humana
+      // (inclusive apagá-la de propósito) e não se mexe. Se QUALQUER um dos dois mudou,
+      // o que está ali foi superado — pela gravação (o áudio foi descartado) ou pelo
+      // servidor (o texto foi refeito) — e dá lugar ao rascunho novo. Comparar só a
+      // gravação era o bug: uma re-transcrição não a toca, então o rascunho velho
+      // seguia de pé e o artefato saía com o texto que o servidor já tinha corrigido.
+      if (known && seededVersion === version && seededGeneration === generation) continue;
       sessionStore.getState().apply((s) => {
         // o inglês vai para a chave que o ARTEFATO lê (contracts/relatorio, ENG-370);
         // o transcript, para a chave que a TELA edita
         const withEn = setAnswer(s.mapping ? s : ensureMapping(s), draftEnSlot(slot), draft.en);
         const withSrc = setAnswer(withEn, draftSrcSlot(slot), draft.source);
-        return setAnswer(withSrc, draftVerSlot(slot), version);
+        const withVer = setAnswer(withSrc, draftVerSlot(slot), version);
+        return setAnswer(withVer, draftGenSlot(slot), generation);
       });
     }
   }, [drafts, sequence, mapped, recordingVersion]);
@@ -819,9 +910,57 @@ export function Report({
     return setAnswer(base, slot, text);
   };
 
-  /** Confirmar: o TRANSCRIPT em revisão vira A resposta, pelo mesmo caminho de digitar. */
-  const confirmDraft = (slot: QuestionSlot, text: string): void => {
-    sessionStore.getState().apply((s) => confirmInto(s, slot, text));
+  /**
+   * A escrita de UMA confirmação que o servidor aceitou: a célula, o rascunho e a geração
+   * numa transação só. Os dois caminhos que confirmam contra o servidor — o botão de um
+   * cartão e o lote de refazer — passam por aqui, para que a assimetria PT/EN de
+   * `confirmInto` e o carimbo da geração não possam divergir entre eles.
+   */
+  const applyConfirmed = (slot: QuestionSlot, text: string, answer: ConfirmedTranscript): void => {
+    sessionStore.getState().apply((s) => {
+      const confirmed = confirmInto(s, slot, text);
+      const withSrc = setAnswer(confirmed, draftSrcSlot(slot), text);
+      const withEn = setAnswer(withSrc, draftEnSlot(slot), answer.en);
+      return setAnswer(withEn, draftGenSlot(slot), String(answer.generation));
+    });
+  };
+
+  /**
+   * Confirmar: o TRANSCRIPT em revisão vira A resposta, pelo mesmo caminho de digitar —
+   * e o servidor traduz o texto confirmado e devolve o inglês que o artefato emite.
+   *
+   * Sem esse ida-e-volta, uma correção nunca chegava ao documento: `answerCell` prefere
+   * `en__`, e `en__` era a tradução da frase que a correção substituiu. É por isso que a
+   * confirmação passa pela rota mesmo quando o texto não mudou — reconfirmar não custa
+   * nada lá (texto idêntico volta na hora, sem traduzir).
+   *
+   * Recusada, NÃO confirma. Confirmar assim mesmo deixaria a célula preenchida ao lado de
+   * um inglês que descreve outra frase, e o documento sairia com ela — exatamente o bug
+   * que isto conserta, agora sem nada na tela para denunciá-lo. Não confirmar mantém o
+   * gate de exportação vermelho, que é a verdade, e o texto corrigido segue no campo:
+   * tentar de novo custa um clique. Sem porta, sem sessão ou sem geração conhecida não há
+   * a quem perguntar, e a confirmação local continua sendo a saída (§8.7 — sem beco).
+   */
+  const confirmDraft = async (slot: QuestionSlot, text: string): Promise<void> => {
+    const path = voiceAnswerPath(slot);
+    const seededGeneration = readAnswer(mapped.mapping, draftGenSlot(slot));
+    if (!stt || !sessionId || seededGeneration === '') {
+      sessionStore.getState().apply((s) => confirmInto(s, slot, text));
+      return;
+    }
+    setConfirmProblem((p) =>
+      path in p ? Object.fromEntries(Object.entries(p).filter(([k]) => k !== path)) : p,
+    );
+    try {
+      const answer = await stt.confirm(sessionId, path, text, Number(seededGeneration));
+      applyConfirmed(slot, text, answer);
+    } catch (err) {
+      const superseded = err instanceof TranscriptSuperseded;
+      setConfirmProblem((p) => ({ ...p, [path]: superseded ? 'superseded' : 'failed' }));
+      // repetir um conflito manda a mesma geração vencida e perde de novo: só reler o
+      // rascunho resolve, e a releitura não força reprocessamento nenhum
+      if (superseded) refresh();
+    }
   };
 
   /**
@@ -866,6 +1005,61 @@ export function Report({
     setBulkResult({ confirmed: Math.max(0, before - after), remaining: after });
   };
 
+  /**
+   * As respostas que foram CONFIRMADAS a partir de um rascunho que o servidor já refez.
+   *
+   * A guarda de semeadura impede que isto volte a acontecer, mas não resgata a sessão
+   * onde já aconteceu: lá a célula está preenchida com o texto vencido, e a proteção que
+   * salva a digitação humana recusa mexer nela — com razão. Este lote é a saída explícita,
+   * e o que ele NÃO pode tocar define quem entra:
+   *
+   * - a célula tem de ser EXATAMENTE o rascunho guardado. Isso cobre os dois lados de uma
+   *   vez: sem `src__` nenhum a resposta é texto de alguém e não bate; e se ela escreveu
+   *   por cima do rascunho depois — o `src__` fica lá ao lado da célula —, também não
+   *   bate. A condição "veio de um rascunho", sozinha, deixaria essa segunda porta aberta;
+   * - e a geração guardada tem de estar atrás da que o servidor oferece agora. Sem `gen__`
+   *   nenhum, está atrás: é a sessão que nunca soube de que geração era.
+   */
+  const staleConfirmed = sequence.filter((slot) => {
+    const draft = drafts[voiceAnswerPath(slot)];
+    if (!draft) return false;
+    const cell = readAnswer(mapped.mapping, slot);
+    if (!cell.trim() || cell !== readAnswer(mapped.mapping, draftSrcSlot(slot))) return false;
+    return readAnswer(mapped.mapping, draftGenSlot(slot)) !== String(draft.generation);
+  });
+
+  /**
+   * Refazer: para cada uma delas, o texto que o SERVIDOR tem agora, confirmado pela mesma
+   * rota do botão de um cartão — que devolve o inglês derivado dele.
+   *
+   * Concorrência limitada e andamento à vista porque o `PUT` é síncrono e são centenas.
+   * Cada resposta escreve o próprio resultado assim que volta, em vez de tudo no fim: uma
+   * falha no meio deixa um estado coerente e correr de novo termina o que faltou. O texto
+   * enviado é o que o servidor já guarda, então quase todas caem na volta rápida do texto
+   * idêntico e não custam tradução nenhuma.
+   */
+  const redoStaleConfirmed = async (): Promise<void> => {
+    if (!stt || !sessionId) return;
+    const targets = staleConfirmed.map((slot) => ({
+      slot,
+      path: voiceAnswerPath(slot),
+      draft: drafts[voiceAnswerPath(slot)]!,
+    }));
+    let settled = 0;
+    let failed = 0;
+    setRedoProgress({ done: 0, total: targets.length, failed: 0 });
+    await runBounded(targets, REDO_CONCURRENCY, async ({ slot, path, draft }) => {
+      try {
+        const answer = await stt.confirm(sessionId, path, draft.source, draft.generation);
+        applyConfirmed(slot, draft.source, answer);
+      } catch {
+        failed += 1;
+      }
+      settled += 1;
+      setRedoProgress({ done: settled, total: targets.length, failed });
+    });
+  };
+
   // Quantas respostas gravadas ainda esperam confirmação — o número que o leitor
   // de tela ouve quando os rascunhos chegam.
   /**
@@ -901,6 +1095,14 @@ export function Report({
         pending={waiting ? 0 : bulkConfirmable.length}
         result={bulkResult}
         onConfirm={confirmAllDrafts}
+      />
+      {/* Refazer o que o servidor já corrigiu. Mora ao lado do confirmar em lote porque é
+          a mesma pergunta vista do outro lado: aquele preenche célula vazia, este troca
+          a que foi preenchida cedo demais. */}
+      <RedoStale
+        stale={waiting ? 0 : staleConfirmed.length}
+        progress={redoProgress}
+        onRedo={() => void redoStaleConfirmed()}
       />
       {/* Registrada VAZIA desde o início: uma região live criada junto com o
           conteúdo não é anunciada. Anuncia o resumo, nunca os rascunhos inteiros,
@@ -963,9 +1165,10 @@ export function Report({
               // o transcript em revisão começa no que a máquina ouviu e passa a viver
               // na chave reservada assim que alguém encosta nele
               draftText={readAnswer(mapped.mapping, draftSrcSlot(slot))}
+              confirmProblem={confirmProblem[path]}
               onDraftText={(text) => writeDraftSrc(slot, text)}
               onConfirmDraft={() =>
-                confirmDraft(slot, readAnswer(mapped.mapping, draftSrcSlot(slot)))
+                void confirmDraft(slot, readAnswer(mapped.mapping, draftSrcSlot(slot)))
               }
               onRetryDraft={retry}
             />

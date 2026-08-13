@@ -12,6 +12,11 @@
  * - `GET` devolve o progresso: `{total, ready, failed, pending, answers[]}`. `done` é
  *   `pending === 0`; uma resposta com falha é uma linha `failed`, nunca o job inteiro.
  *
+ * E um terceiro, sob o caminho da resposta:
+ * - `PUT …/transcriptions/{resource_path}` guarda a transcrição confirmada e devolve a
+ *   linha, com o inglês DERIVADO dela. É SÍNCRONO — a tradução acontece dentro do pedido
+ *   — porque é o trabalho de uma resposta só e quem confirmou está esperando o resultado.
+ *
  * A resposta é JSON, então validamos com um schema Zod LOCAL do adapter — o snapshot
  * OpenAPI de `contracts/` (camada congelada) não precisa mudar por isto, no mesmo
  * espírito do TTS (que evitou DTO devolvendo bytes crus).
@@ -22,7 +27,8 @@
 
 import { z } from 'zod';
 
-import type { AnswerDraft, Transcriber, TranscriptionProgress } from './types';
+import type { AnswerDraft, ConfirmedTranscript, Transcriber, TranscriptionProgress } from './types';
+import { TranscriptSuperseded } from './types';
 
 const AnswerSchema = z.object({
   path: z.string(),
@@ -30,6 +36,9 @@ const AnswerSchema = z.object({
   transcript_source: z.string().nullable().optional(),
   translation_en: z.string().nullable().optional(),
   error: z.string().nullable().optional(),
+  // exigida, como o servidor a declara: um default local aqui viraria `0`, que é a
+  // geração que a confirmação recusa sem que nada no cliente possa consertar
+  generation: z.number(),
 });
 
 const ProgressSchema = z.object({
@@ -71,6 +80,14 @@ export class HttpTranscriber implements Transcriber {
     return `${this.#baseUrl}/sound-necklace/sessions/${encodeURIComponent(sessionId)}/transcriptions`;
   }
 
+  /**
+   * O caminho do recurso é um segmento `:path` no servidor — as barras SÃO o caminho.
+   * `encodeURIComponent` inteiro as viraria `%2F` e a rota não casaria.
+   */
+  #answerUrl(sessionId: string, path: string): string {
+    return `${this.#url(sessionId)}/${path.split('/').map(encodeURIComponent).join('/')}`;
+  }
+
   #headers(): Record<string, string> {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     const token = this.#token?.();
@@ -110,9 +127,48 @@ export class HttpTranscriber implements Transcriber {
       // só a resposta PRONTA vira rascunho; pendente ou com falha não tem inglês, e a
       // pessoa a resolve digitando — o gate de exportação já cobre isso
       if (a.translation_en != null) {
-        drafts[a.path] = { source: a.transcript_source ?? '', en: a.translation_en };
+        drafts[a.path] = {
+          source: a.transcript_source ?? '',
+          en: a.translation_en,
+          generation: a.generation,
+        };
       }
     }
     return { done: data.pending === 0, drafts };
+  }
+
+  async confirm(
+    sessionId: string,
+    path: string,
+    transcript: string,
+    generation: number,
+  ): Promise<ConfirmedTranscript> {
+    const url = this.#answerUrl(sessionId, path);
+    const res = await this.#fetch(url, {
+      method: 'PUT',
+      headers: this.#headers(),
+      // só a língua falada sobe: o inglês nunca é do cliente, é derivado lá
+      body: JSON.stringify({ transcript_source: transcript, generation }),
+    });
+    if (res.status === 401) this.#onUnauthorized?.();
+    if (res.status === 409) {
+      // três recusas com o mesmo status, e o cliente reage a cada uma de um jeito. Só
+      // CONFLICT é irreparável por retentativa — as travas de sessão são outra conversa,
+      // e tratá-las como conflito recarregaria o rascunho sem motivo nenhum.
+      const body: unknown = await res.json().catch(() => null);
+      const code =
+        body && typeof body === 'object' && 'code' in body
+          ? (body as { code: unknown }).code
+          : null;
+      if (code === 'CONFLICT') throw new TranscriptSuperseded();
+      throw new Error(`PUT ${url} → 409 ${String(code)}`);
+    }
+    if (!res.ok) throw new Error(`PUT ${url} → ${res.status}`);
+
+    const data = AnswerSchema.parse(await res.json());
+    // sem inglês não há o que o artefato possa emitir, e cair para a célula publicaria a
+    // língua falada em silêncio — melhor recusar e deixar a resposta por confirmar
+    if (data.translation_en == null) throw new Error(`PUT ${url} → sem tradução na resposta`);
+    return { en: data.translation_en, generation: data.generation };
   }
 }

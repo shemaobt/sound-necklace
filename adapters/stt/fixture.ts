@@ -8,7 +8,7 @@
  * teste esperar.
  */
 
-import type { AnswerDraft, Transcriber, TranscriptionProgress } from './types';
+import type { AnswerDraft, ConfirmedTranscript, Transcriber, TranscriptionProgress } from './types';
 
 /** Quantas consultas o job leva para ficar pronto (só para dar o estado "rodando"). */
 const POLLS_TO_FINISH = 2;
@@ -16,6 +16,8 @@ const POLLS_TO_FINISH = 2;
 interface Job {
   paths: string[];
   polls: number;
+  /** Sobe a cada reprocessamento, como o contador do servidor: é o que marca o rascunho novo. */
+  generation: number;
 }
 
 /** `respostas/level2/PT1/quem.webm` → `quem` (a pergunta), o que basta para variar. */
@@ -28,11 +30,12 @@ function slotOf(path: string): string {
   );
 }
 
-function draftFor(path: string): AnswerDraft {
+function draftFor(path: string, generation: number): AnswerDraft {
   const k = slotOf(path);
   return {
     source: `[transcrição fixture] resposta de ${k}`,
     en: `[fixture translation] answer for ${k}`,
+    generation,
   };
 }
 
@@ -60,7 +63,11 @@ export class FixtureTranscriber implements Transcriber {
     // preservar é a UNIÃO dos caminhos — sem ela um force nomeado encolheria o job
     // para a única resposta regravada e sumiria com as outras.
     const union = current ? [...new Set([...current.paths, ...paths])] : [...paths];
-    this.#jobs.set(sessionId, { paths: union, polls: 0 });
+    this.#jobs.set(sessionId, {
+      paths: union,
+      polls: 0,
+      generation: (current?.generation ?? 0) + 1,
+    });
     return Promise.resolve();
   }
 
@@ -70,7 +77,18 @@ export class FixtureTranscriber implements Transcriber {
     job.polls += 1;
     if (job.polls < POLLS_TO_FINISH) return Promise.resolve({ done: false, drafts: {} });
     const drafts: Record<string, AnswerDraft> = {};
-    for (const p of job.paths) drafts[p] = draftFor(p);
+    for (const p of job.paths) drafts[p] = draftFor(p, job.generation);
     return Promise.resolve({ done: true, drafts });
+  }
+
+  confirm(sessionId: string, path: string, transcript: string): Promise<ConfirmedTranscript> {
+    const generation = this.#jobs.get(sessionId)?.generation ?? 1;
+    const base = draftFor(path, generation);
+    // texto inalterado volta com o inglês que já havia, como a rota real faz; um texto
+    // corrigido não tem tradutor por aqui, então o inglês do fixture É o texto confirmado
+    return Promise.resolve({
+      en: transcript === base.source ? base.en : transcript,
+      generation,
+    });
   }
 }

@@ -29,6 +29,16 @@ export interface SttDrafts {
   drafts: Record<string, AnswerDraft>;
   /** Re-dispara o job descartando os rascunhos atuais (regravação, ou falha). */
   retry: () => void;
+  /**
+   * Relê os rascunhos SEM reprocessar nada — a reação a uma confirmação recusada por
+   * conflito, onde repetir manda a mesma geração vencida e perde de novo.
+   *
+   * Não é `retry`: aquele força, e forçar aqui pagaria de novo pela transcrição inteira
+   * para descobrir um texto que o servidor já tem. E não mexe na `jobKey`, de propósito:
+   * o resultado corrente continua válido enquanto a releitura voa, então a tela não
+   * volta para a espera por causa de uma resposta.
+   */
+  refresh: () => void;
 }
 
 /**
@@ -74,6 +84,9 @@ export function useSttDrafts(
   const pathsKey = keyOf(paths, versions);
   const [result, setResult] = useState<JobResult | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // releitura: entra nas dependências do efeito, mas NÃO na `jobKey` — o resultado que
+  // já está na tela segue casando com a chave corrente enquanto a consulta nova voa
+  const [reread, setReread] = useState(0);
   // identifica o pedido corrente: resposta de pedido velho é descartada
   const requestId = useRef(0);
   // lido no start via ref (não é dep do laço): quando o force muda SEM mudar o
@@ -171,7 +184,7 @@ export function useSttDrafts(
 
     void run();
     return stop;
-  }, [stt, sessionId, pathsKey, attempt, jobKey]);
+  }, [stt, sessionId, pathsKey, attempt, jobKey, reread]);
 
   // Derivado, nunca escrito num efeito (regra react-hooks da casa): um resultado
   // de outro pedido — chave diferente — lê-se como "ainda rodando".
@@ -180,5 +193,6 @@ export function useSttDrafts(
     phase: !active ? 'idle' : (current?.status ?? 'running'),
     drafts: current?.status === 'done' ? current.drafts : {},
     retry: () => setAttempt((n) => n + 1),
+    refresh: () => setReread((n) => n + 1),
   };
 }

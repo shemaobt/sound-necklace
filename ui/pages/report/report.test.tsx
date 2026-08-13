@@ -4,7 +4,8 @@ import reportCss from './report.css?raw';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Transcriber } from '../../../adapters/stt/types';
+import type { AnswerDraft, Transcriber } from '../../../adapters/stt/types';
+import { TranscriptSuperseded } from '../../../adapters/stt/types';
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import { buildMapReport, type ResourcePath } from '../../../contracts';
@@ -111,6 +112,11 @@ function cardFor(q: string): HTMLElement {
   const card = screen.getByText(q).closest('.cds-report-card');
   if (!card) throw new Error(`sem cartão para: ${q}`);
   return card as HTMLElement;
+}
+
+/** O que a resposta desta pergunta mostra agora — a célula, como a facilitadora a vê. */
+function answerOf(q: { q: string }): string {
+  return (within(cardFor(q.q)).getByLabelText('resposta') as HTMLTextAreaElement).value;
 }
 
 /**
@@ -405,16 +411,59 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
   });
 });
 
-/** Transcriber controlável: `resolve()` entrega os rascunhos quando o teste quiser. */
-function controllableStt(drafts: Record<string, { source: string; en: string }>): {
+/**
+ * Um rascunho como o teste o escreve. A geração é opcional aqui e só aqui: os casos
+ * que não falam de frescor não deveriam ter de inventar um número, e os que falam
+ * dizem exatamente qual.
+ */
+type DraftFixture = { source: string; en: string; generation?: number };
+
+/** Uma confirmação como o servidor a recebeu. */
+interface ConfirmCall {
+  path: string;
+  transcript: string;
+  generation: number;
+}
+
+/**
+ * Transcriber controlável: `resolve()` entrega os rascunhos quando o teste quiser.
+ *
+ * O `confirm` não é um espião: ele repete a rota real (`retranslate_answer`, tripod-api)
+ * porque o relatório depende das três respostas dela. Texto idêntico volta na hora, sem
+ * traduzir e sem mexer no contador — e essa comparação vem ANTES da guarda de geração,
+ * senão reconfirmar viraria conflito. Geração vencida é recusa. O resto traduz, guarda e
+ * incrementa. Um duplo que só registrasse a chamada passaria em qualquer implementação.
+ */
+function controllableStt(
+  drafts: Record<string, DraftFixture>,
+  opts: {
+    /**
+     * O inglês que o servidor deriva do texto confirmado. Identidade é o caminho da
+     * entrevista EM INGLÊS, onde o servidor devolve o próprio transcript.
+     */
+    translate?: (text: string) => string;
+    /** A confirmação fracassa (rede, 500) — nada volta e nada foi gravado lá. */
+    confirmFails?: boolean;
+  } = {},
+): {
   stt: Transcriber;
   finish: () => void;
   started: string[][];
   /** As opções de cada `start` — é onde o `force` e o seu alcance aparecem. */
   asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[];
+  /** O que chegou ao servidor em cada confirmação, na ordem. */
+  confirmed: ConfirmCall[];
+  /** Reescreve o que o servidor guarda — é como se encena uma re-transcrição. */
+  serve: (next: Record<string, DraftFixture>) => void;
 } {
+  const normalize = (d: Record<string, DraftFixture>): Record<string, AnswerDraft> =>
+    Object.fromEntries(
+      Object.entries(d).map(([p, v]) => [p, { ...v, generation: v.generation ?? 1 }]),
+    );
+  let ready = normalize(drafts);
   const started: string[][] = [];
   const asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[] = [];
+  const confirmed: ConfirmCall[] = [];
   let release: (() => void) | null = null;
   // o job só termina quando o TESTE mandar: `progress` espera esta promessa, então
   // nenhum caso depende da ordem dos microtasks nem do atraso real do polling
@@ -428,6 +477,10 @@ function controllableStt(drafts: Record<string, { source: string; en: string }>)
   return {
     started,
     asked,
+    confirmed,
+    serve: (next) => {
+      ready = normalize(next);
+    },
     finish: () => release?.(),
     stt: {
       start: (_id, paths, opts) => {
@@ -437,7 +490,19 @@ function controllableStt(drafts: Record<string, { source: string; en: string }>)
       },
       progress: async () => {
         await Promise.resolve();
-        return settled ? { done: true, drafts } : { done: false, drafts: {} };
+        return settled ? { done: true, drafts: ready } : { done: false, drafts: {} };
+      },
+      confirm: async (_id, path, transcript, generation) => {
+        await Promise.resolve();
+        confirmed.push({ path, transcript, generation });
+        if (opts.confirmFails) throw new Error('rede fora');
+        const row = ready[path];
+        if (!row) throw new Error(`sem rascunho guardado para ${path}`);
+        if (transcript === row.source) return { en: row.en, generation: row.generation };
+        if (generation !== row.generation) throw new TranscriptSuperseded('refeito por baixo');
+        const en = (opts.translate ?? ((t: string) => t))(transcript);
+        ready = { ...ready, [path]: { source: transcript, en, generation: row.generation + 1 } };
+        return { en, generation: row.generation + 1 };
       },
     },
   };
@@ -805,6 +870,237 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
 });
 
 /**
+ * O frescor do rascunho é a GERAÇÃO, não a versão da gravação.
+ *
+ * Uma sessão real foi transcrita antes de a limpeza de disfluência existir, foi
+ * re-transcrita no servidor com sucesso, e o artefato saiu com as gagueiras assim
+ * mesmo. A semeadura comparava a versão da GRAVAÇÃO — que uma re-transcrição não
+ * toca — e por isso lia o rascunho guardado como corrente para sempre. Numa sessão
+ * anterior ao contador de gravações os dois lados eram `0`, então a comparação dizia
+ * "igual" eternamente.
+ */
+describe('Relatório — a transcrição refeita no servidor chega ao relatório', () => {
+  const Q = L1_Q[0]!;
+  const PATH = voiceAnswerPath({ level: 1, k: Q.k });
+  const GAGA = { source: 'mas a, a história', en: 'but the, the story', generation: 1 };
+  const LIMPO = { source: 'mas a história', en: 'but the story', generation: 2 };
+
+  /** Abre o relatório com os rascunhos entregues e devolve a montagem. */
+  function open(drafts: Record<string, DraftFixture>, version = 1) {
+    const gravadas = Object.keys(drafts);
+    const { stt, finish } = controllableStt(drafts);
+    const view = render(
+      <Report
+        recorder={controllableRecorder(Object.fromEntries(gravadas.map((p) => [p, true])))}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={Object.fromEntries(gravadas.map((p) => [p, version]))}
+      />,
+    );
+    finish();
+    return view;
+  }
+
+  it('uma geração nova substitui o rascunho guardado, e o inglês vai junto', async () => {
+    load(report());
+    const primeira = open({ [PATH]: GAGA });
+    await screen.findByDisplayValue(GAGA.source);
+    primeira.unmount();
+
+    // MESMA gravação, transcrição refeita no servidor
+    open({ [PATH]: LIMPO });
+
+    await screen.findByDisplayValue(LIMPO.source);
+    expect(screen.queryByDisplayValue(GAGA.source)).toBeNull();
+
+    const card = screen.getByDisplayValue(LIMPO.source).closest('.cds-report-card') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: /confirmar/i }));
+
+    await waitFor(() => {
+      const md = buildMapReport(sessionStore.getState().session!);
+      expect(md).toContain(LIMPO.en);
+      expect(md).not.toContain(GAGA.en);
+    });
+  });
+
+  it('na MESMA geração nada é semeado de novo — a correção humana fica de pé', async () => {
+    load(report());
+    const primeira = open({ [PATH]: GAGA });
+    const campo = await screen.findByDisplayValue(GAGA.source);
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'mas a história dela');
+    primeira.unmount();
+
+    // o servidor devolve OUTRO texto, mas na mesma geração: nada mudou lá
+    open({ [PATH]: { ...LIMPO, generation: GAGA.generation } });
+
+    expect(await screen.findByDisplayValue('mas a história dela')).toBeTruthy();
+    expect(screen.queryByDisplayValue(LIMPO.source)).toBeNull();
+  });
+
+  /**
+   * A segunda resposta gravada não é enfeite: é o SINCRONIZADOR. Sem uma semeadura que
+   * de fato aconteça na segunda montagem, a asserção corre antes do efeito e o teste
+   * passa mesmo com a proteção arrancada — foi o que aconteceu ao escrevê-lo.
+   */
+  it('a célula já respondida nunca é sobrescrita, nem por uma geração nova', async () => {
+    const OUTRA = L1_Q[1]!;
+    const OUTRO_PATH = voiceAnswerPath({ level: 1, k: OUTRA.k });
+    load(report());
+    const primeira = open({
+      [PATH]: GAGA,
+      [OUTRO_PATH]: { source: 'e, e começa na cheia', en: 'and, and it starts in the flood' },
+    });
+    await screen.findByDisplayValue(GAGA.source);
+    const card = cardFor(Q.q);
+    await userEvent.type(within(card).getByLabelText('resposta'), 'Foi o avô quem contou.');
+    await userEvent.click(within(card).getByRole('button', { name: 'aceitar a edição' }));
+    primeira.unmount();
+
+    open({
+      [PATH]: LIMPO,
+      [OUTRO_PATH]: {
+        source: 'e começa na cheia',
+        en: 'and it starts in the flood',
+        generation: 2,
+      },
+    });
+
+    // a OUTRA resposta, de célula vazia, recebe o texto novo: a semeadura correu
+    await screen.findByDisplayValue('e começa na cheia');
+    expect(answerOf(Q)).toBe('Foi o avô quem contou.');
+    const md = buildMapReport(sessionStore.getState().session!);
+    expect(md).toContain('Foi o avô quem contou.');
+    expect(md).not.toContain(LIMPO.en);
+  });
+});
+
+/**
+ * Confirmar é o que manda o texto corrigido ao servidor.
+ *
+ * O relatório lê `en__` para o artefato, e `en__` é a tradução do texto que o servidor
+ * guardava — não do texto que a facilitadora acabou de corrigir. Uma edição confirmada só
+ * localmente NUNCA chegava ao `.md`: o documento saía com a tradução da frase substituída.
+ * A rota que resolve isto existe (`PUT …/transcriptions/{path}`): ela traduz o que foi
+ * confirmado e devolve o inglês.
+ */
+describe('Relatório — confirmar manda o transcript ao servidor e traz o inglês de volta', () => {
+  const Q = L1_Q[0]!;
+  const PATH = voiceAnswerPath({ level: 1, k: Q.k });
+  const ORIGINAL = { source: 'Ele contou do boto.', en: 'He told of the dolphin.', generation: 7 };
+
+  function open(stt: Transcriber) {
+    return render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+  }
+
+  /** O botão de confirmar DESTE cartão — o de lote também casa com /confirmar/i. */
+  function confirmButton(): HTMLElement {
+    return within(cardFor(Q.q)).getByRole('button', { name: /confirmar a transcrição/i });
+  }
+
+  it('o transcript corrigido vai ao servidor com a geração do rascunho, e o inglês que volta é o que sai no documento', async () => {
+    const CORRIGIDO = 'Ele falou do boto-cor-de-rosa.';
+    const { stt, finish, confirmed } = controllableStt(
+      { [PATH]: ORIGINAL },
+      { translate: () => 'He spoke of the pink dolphin.' },
+    );
+    load(report());
+    open(stt);
+    finish();
+
+    const src = await screen.findByDisplayValue(ORIGINAL.source);
+    await userEvent.clear(src);
+    await userEvent.type(src, CORRIGIDO);
+    await userEvent.click(confirmButton());
+
+    await waitFor(() =>
+      expect(confirmed).toEqual([
+        { path: PATH, transcript: CORRIGIDO, generation: ORIGINAL.generation },
+      ]),
+    );
+    await waitFor(() => {
+      const md = buildMapReport(sessionStore.getState().session!);
+      expect(md).toContain('He spoke of the pink dolphin.');
+      expect(md).not.toContain(ORIGINAL.en);
+    });
+  });
+
+  it('confirmar o texto que já estava deixa a resposta confirmada', async () => {
+    const { stt, finish } = controllableStt({ [PATH]: ORIGINAL });
+    load(report());
+    open(stt);
+    finish();
+
+    await screen.findByDisplayValue(ORIGINAL.source);
+    await userEvent.click(confirmButton());
+
+    await waitFor(() => expect(answerOf(Q)).toBe(ORIGINAL.source));
+    expect(buildMapReport(sessionStore.getState().session!)).toContain(ORIGINAL.en);
+  });
+
+  /**
+   * O pior desfecho seria o silêncio: célula confirmada com um `en__` que descreve outra
+   * frase, e o documento saindo com ela. Se o servidor não guardou, a resposta continua
+   * por confirmar — o gate de exportação segue vermelho, que é a verdade, e o texto
+   * corrigido continua no campo para uma segunda tentativa.
+   */
+  it('um confirmar que fracassa não confirma a resposta, e diz que não confirmou', async () => {
+    const { stt, finish } = controllableStt({ [PATH]: ORIGINAL }, { confirmFails: true });
+    load(report());
+    open(stt);
+    finish();
+
+    const src = await screen.findByDisplayValue(ORIGINAL.source);
+    await userEvent.clear(src);
+    await userEvent.type(src, 'Ele falou do boto.');
+    await userEvent.click(confirmButton());
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(answerOf(Q)).toBe('');
+    expect(buildMapReport(sessionStore.getState().session!)).not.toContain(ORIGINAL.en);
+    // e o texto corrigido não se perde: uma segunda tentativa custa um clique
+    expect((screen.getByLabelText(/o que se ouviu/i) as HTMLTextAreaElement).value).toBe(
+      'Ele falou do boto.',
+    );
+  });
+
+  /**
+   * Conflito é a outra resposta da rota, e pede o oposto de uma retentativa: repetir manda
+   * a mesma geração vencida e perde de novo. Só reler o rascunho resolve — e o texto novo
+   * é o do servidor, porque a edição era de uma frase que já não existe.
+   */
+  it('um confirmar em conflito recarrega o rascunho em vez de sobrescrever', async () => {
+    const { stt, finish, serve } = controllableStt({ [PATH]: ORIGINAL });
+    load(report());
+    open(stt);
+    finish();
+
+    const src = await screen.findByDisplayValue(ORIGINAL.source);
+    // o servidor refez a transcrição por baixo da facilitadora
+    serve({
+      [PATH]: {
+        source: 'Ele contou do boto-cor-de-rosa.',
+        en: 'He told of the pink dolphin.',
+        generation: 9,
+      },
+    });
+    await userEvent.clear(src);
+    await userEvent.type(src, 'Ele falou do boto.');
+    await userEvent.click(confirmButton());
+
+    expect(await screen.findByDisplayValue('Ele contou do boto-cor-de-rosa.')).toBeTruthy();
+    expect(answerOf(Q)).toBe('');
+  });
+});
+
+/**
  * Confirmar todas as transcrições de uma vez. Uma entrevista longa chega ao relatório
  * com centenas de respostas gravadas sem texto, e o gate de exportação
  * (`reportExportStatus`, @/contracts/relatorio) recusa guardar enquanto sobrar uma.
@@ -844,11 +1140,6 @@ describe('Relatório — confirmar todas as transcrições de uma vez', () => {
     );
     finish();
     for (const d of Object.values(drafts)) await screen.findByDisplayValue(d.source);
-  }
-
-  /** O que a resposta desta pergunta mostra agora — a célula, como a facilitadora a vê. */
-  function answerOf(q: { q: string }): string {
-    return (within(cardFor(q.q)).getByLabelText('resposta') as HTMLTextAreaElement).value;
   }
 
   it('confirma de uma vez toda resposta pendente que tinha rascunho', async () => {
@@ -947,6 +1238,141 @@ describe('Relatório — confirmar todas as transcrições de uma vez', () => {
     render(<Report />);
 
     expect(screen.queryByRole('button', { name: ACTION })).toBeNull();
+  });
+});
+
+/**
+ * Refazer as respostas que foram confirmadas a partir de um rascunho vencido.
+ *
+ * A guarda nova impede que isto volte a acontecer; não resgata a sessão onde já
+ * aconteceu. Lá as células estão preenchidas com o texto gaguejado, e a proteção que
+ * salva a digitação humana — célula cheia não se sobrescreve — recusa mexer nelas, com
+ * razão. Este lote é o caminho explícito, com o seu preço dito em voz alta.
+ */
+describe('Relatório — refazer as respostas confirmadas de um rascunho vencido', () => {
+  const Q = L1_Q[0]!;
+  const PATH = voiceAnswerPath({ level: 1, k: Q.k });
+  /** A resposta que a máquina nunca transcreveu e a facilitadora escreveu à mão. */
+  const MINHA_Q = L1_Q[1]!;
+  const MINHA_PATH = voiceAnswerPath({ level: 1, k: MINHA_Q.k });
+  const MINHA_RESPOSTA = 'Foi o avô quem contou.';
+  const GAGA = { source: 'mas a, a história', en: 'but the, the story', generation: 1 };
+  const LIMPO = { source: 'mas a história', en: 'but the story', generation: 2 };
+
+  const REDO = 'Refazer as transcrições vencidas';
+  const REDO_ACCEPT = 'Refazer as respostas';
+  const REDO_KEEP = 'Deixar como estão';
+
+  function mount(stt: Transcriber) {
+    return render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true, [MINHA_PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1, [MINHA_PATH]: 1 }}
+      />,
+    );
+  }
+
+  /**
+   * A sessão exata que isto existe para resgatar: uma resposta confirmada a partir da
+   * transcrição gaguejada, e ao lado dela uma resposta sem rascunho nenhum, escrita à mão.
+   */
+  async function sessaoJaConfirmadaDoRascunhoVelho(): Promise<void> {
+    load(report());
+    const antes = controllableStt({ [PATH]: GAGA });
+    const view = mount(antes.stt);
+    antes.finish();
+
+    const src = await screen.findByDisplayValue(GAGA.source);
+    const card = src.closest('.cds-report-card') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: /confirmar a transcrição/i }));
+    await waitFor(() => expect(answerOf(Q)).toBe(GAGA.source));
+
+    const minha = cardFor(MINHA_Q.q);
+    await userEvent.type(within(minha).getByLabelText('resposta'), MINHA_RESPOSTA);
+    await userEvent.click(within(minha).getByRole('button', { name: 'aceitar a edição' }));
+    view.unmount();
+  }
+
+  /** A volta, com o servidor já tendo refeito a transcrição. */
+  function reabreComTranscricaoRefeita() {
+    const depois = controllableStt({ [PATH]: LIMPO });
+    mount(depois.stt);
+    depois.finish();
+    return depois;
+  }
+
+  it('refaz a resposta confirmada de um rascunho vencido, e o inglês vai junto', async () => {
+    await sessaoJaConfirmadaDoRascunhoVelho();
+    reabreComTranscricaoRefeita();
+
+    await userEvent.click(await screen.findByRole('button', { name: REDO }));
+    await userEvent.click(screen.getByRole('button', { name: REDO_ACCEPT }));
+
+    await waitFor(() => expect(answerOf(Q)).toBe(LIMPO.source));
+    const md = buildMapReport(sessionStore.getState().session!);
+    expect(md).toContain(LIMPO.en);
+    expect(md).not.toContain(GAGA.en);
+  });
+
+  /**
+   * O que este lote não pode fazer de jeito nenhum. Sem rascunho não há de que refazer:
+   * o texto é dela.
+   */
+  it('a resposta escrita à mão, sem rascunho, fica de fora', async () => {
+    await sessaoJaConfirmadaDoRascunhoVelho();
+    const depois = reabreComTranscricaoRefeita();
+
+    await userEvent.click(await screen.findByRole('button', { name: REDO }));
+    await userEvent.click(screen.getByRole('button', { name: REDO_ACCEPT }));
+
+    await waitFor(() => expect(answerOf(Q)).toBe(LIMPO.source));
+    expect(answerOf(MINHA_Q)).toBe(MINHA_RESPOSTA);
+    // e nem chegou a ser oferecida ao servidor
+    expect(depois.confirmed.map((c) => c.path)).toEqual([PATH]);
+  });
+
+  /**
+   * O caso que "veio de um rascunho" sozinho não cobre: o rascunho FOI semeado, e depois
+   * a facilitadora escreveu a própria resposta por cima. O `src__` continua guardado ao
+   * lado da célula, então só a igualdade entre os dois separa "isto é o texto confirmado
+   * da máquina" de "isto é o que ela escreveu".
+   */
+  it('a resposta que a facilitadora escreveu por cima do rascunho também fica de fora', async () => {
+    load(report());
+    const antes = controllableStt({ [PATH]: GAGA });
+    const view = mount(antes.stt);
+    antes.finish();
+    const card = (await screen.findByDisplayValue(GAGA.source)).closest(
+      '.cds-report-card',
+    ) as HTMLElement;
+    await userEvent.type(within(card).getByLabelText('resposta'), MINHA_RESPOSTA);
+    await userEvent.click(within(card).getByRole('button', { name: 'aceitar a edição' }));
+    view.unmount();
+
+    reabreComTranscricaoRefeita();
+    // o anúncio dos rascunhos só aparece com o job concluído: é o instante em que a
+    // elegibilidade do lote já foi decidida
+    await screen.findByText(/para revisar/i);
+
+    expect(screen.queryByRole('button', { name: REDO })).toBeNull();
+    expect(answerOf(Q)).toBe(MINHA_RESPOSTA);
+  });
+
+  it('pergunta antes: abrir não refaz nada, e desistir deixa tudo como estava', async () => {
+    await sessaoJaConfirmadaDoRascunhoVelho();
+    const depois = reabreComTranscricaoRefeita();
+
+    await userEvent.click(await screen.findByRole('button', { name: REDO }));
+    expect(answerOf(Q)).toBe(GAGA.source);
+    // o foco inicial é a saída que não escreve nada: um Enter distraído não troca texto
+    // confirmado por texto de máquina
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: REDO_KEEP }));
+
+    await userEvent.click(screen.getByRole('button', { name: REDO_KEEP }));
+    expect(answerOf(Q)).toBe(GAGA.source);
+    expect(depois.confirmed).toEqual([]);
   });
 });
 

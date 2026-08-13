@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { HttpTranscriber } from './http';
+import { TranscriptSuperseded } from './types';
 
 const SESSION = 'sess-1';
 const P1 = 'respostas/level1/recontar.webm';
@@ -93,23 +94,29 @@ describe('HttpTranscriber — o modo real fala com o job da ENG-325', () => {
         {
           path: P1,
           status: 'ready',
+          transcript_verbatim: 'Ele, ele contou do boto.',
           transcript_source: 'Ele contou do boto.',
           translation_en: 'He told of the dolphin.',
           error: null,
+          generation: 3,
         },
         {
           path: P2,
           status: 'failed',
+          transcript_verbatim: null,
           transcript_source: null,
           translation_en: null,
           error: 'boom',
+          generation: 1,
         },
         {
           path: 'respostas/level1/lugar.webm',
           status: 'pending',
+          transcript_verbatim: null,
           transcript_source: null,
           translation_en: null,
           error: null,
+          generation: 0,
         },
       ],
     };
@@ -119,7 +126,14 @@ describe('HttpTranscriber — o modo real fala com o job da ENG-325', () => {
 
     expect(done).toBe(false); // ainda há uma pendente
     expect(drafts).toEqual({
-      [P1]: { source: 'Ele contou do boto.', en: 'He told of the dolphin.' },
+      [P1]: {
+        source: 'Ele contou do boto.',
+        en: 'He told of the dolphin.',
+        // A geração vem junto, e é o que distingue um rascunho refeito de um velho: uma
+        // re-transcrição no servidor não toca na gravação, então a versão da gravação
+        // diz "igual" mesmo quando o texto mudou por inteiro.
+        generation: 3,
+      },
     });
   });
 
@@ -130,8 +144,24 @@ describe('HttpTranscriber — o modo real fala com o job da ENG-325', () => {
       failed: 1,
       pending: 0,
       answers: [
-        { path: P1, status: 'ready', transcript_source: 's', translation_en: 'en', error: null },
-        { path: P2, status: 'failed', transcript_source: null, translation_en: null, error: 'x' },
+        {
+          path: P1,
+          status: 'ready',
+          transcript_verbatim: 's',
+          transcript_source: 's',
+          translation_en: 'en',
+          error: null,
+          generation: 1,
+        },
+        {
+          path: P2,
+          status: 'failed',
+          transcript_verbatim: null,
+          transcript_source: null,
+          translation_en: null,
+          error: 'x',
+          generation: 1,
+        },
       ],
     };
     const stt = make(vi.fn(async () => json(body)) as unknown as typeof globalThis.fetch);
@@ -166,6 +196,83 @@ describe('HttpTranscriber — o modo real fala com o job da ENG-325', () => {
     await stt.progress(SESSION).catch(() => {});
 
     expect(onUnauthorized).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirm faz PUT no caminho da resposta, mandando só a língua falada e a geração', async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url, init });
+      return json({
+        path: P2,
+        status: 'ready',
+        transcript_verbatim: 'Ela, ela mudou de ideia.',
+        transcript_source: 'Ela mudou de ideia.',
+        translation_en: 'She changed her mind.',
+        error: null,
+        generation: 8,
+      });
+    }) as unknown as typeof globalThis.fetch;
+
+    const confirmed = await make(fetchImpl).confirm(SESSION, P2, 'Ela mudou de ideia.', 7);
+
+    // as barras do caminho SÃO o caminho (segmento `:path` no servidor): escapá-las
+    // inteiras faria a rota não casar
+    expect(calls[0]?.url).toBe(`${URL}/${P2}`);
+    expect(calls[0]?.init?.method).toBe('PUT');
+    // o inglês nunca sobe: é derivado lá a partir do que foi confirmado
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      transcript_source: 'Ela mudou de ideia.',
+      generation: 7,
+    });
+    expect(confirmed).toEqual({ en: 'She changed her mind.', generation: 8 });
+  });
+
+  /**
+   * Os três 409 da rota pedem reações OPOSTAS, e só o `code` os separa. Tratar uma trava
+   * de sessão como conflito recarregaria o rascunho à toa; tratar o conflito como trava
+   * mandaria a mesma geração vencida de novo, para sempre.
+   */
+  it('o 409 de conflito vira TranscriptSuperseded; o de trava, não', async () => {
+    const conflito = make(
+      vi.fn(async () =>
+        json({ detail: 'redone', code: 'CONFLICT' }, 409),
+      ) as unknown as typeof globalThis.fetch,
+    );
+    const travada = make(
+      vi.fn(async () =>
+        json({ detail: 'busy', code: 'SESSION_LOCKED' }, 409),
+      ) as unknown as typeof globalThis.fetch,
+    );
+
+    await expect(conflito.confirm(SESSION, P1, 'texto', 1)).rejects.toBeInstanceOf(
+      TranscriptSuperseded,
+    );
+    const outro = await travada.confirm(SESSION, P1, 'texto', 1).catch((e: unknown) => e);
+    expect(outro).toBeInstanceOf(Error);
+    expect(outro).not.toBeInstanceOf(TranscriptSuperseded);
+  });
+
+  /**
+   * Sem inglês não há o que o artefato emita, e cair para a célula publicaria português
+   * em silêncio num documento que é inglês por contrato. Recusar deixa a resposta por
+   * confirmar, que é a verdade.
+   */
+  it('confirm sem tradução na resposta REJEITA em vez de deixar o inglês vazio', async () => {
+    const stt = make(
+      vi.fn(async () =>
+        json({
+          path: P1,
+          status: 'ready',
+          transcript_verbatim: null,
+          transcript_source: 'texto',
+          translation_en: null,
+          error: null,
+          generation: 2,
+        }),
+      ) as unknown as typeof globalThis.fetch,
+    );
+
+    await expect(stt.confirm(SESSION, P1, 'texto', 1)).rejects.toThrow();
   });
 
   it('progress num erro transitório REJEITA (o hook re-tenta em vez de tratar lixo como pronto)', async () => {
