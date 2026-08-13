@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { AnswerDraft, Transcriber } from '../../../adapters/stt/types';
+import type { AnswerDraft, ConfirmedTranscript, Transcriber } from '../../../adapters/stt/types';
 import { TranscriptSuperseded } from '../../../adapters/stt/types';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import {
@@ -23,7 +23,7 @@ import type { PaletteEntry } from '../../tokens';
 import { isSkipped } from '../conversation/answered';
 import { type BlockLabels, blockEyebrow } from '../conversation/trechos';
 import { sessionStore, useSessionStore } from '../../state';
-import { BulkConfirm, type BulkResult } from './confirm-all-dialog';
+import { BulkConfirm, type BulkResult, RedoStale, type RedoProgress } from './confirm-all-dialog';
 import { type SttPhase, useSttDrafts } from './use-stt-drafts';
 import './report.css';
 
@@ -96,6 +96,37 @@ const NOTE_PREFIX = 'nota__';
  * exatamente o que resolve.
  */
 type ConfirmProblem = 'failed' | 'superseded';
+
+/**
+ * Quantas confirmações do lote de refazer voam ao mesmo tempo.
+ *
+ * O `PUT` é síncrono e são centenas: em fila, atrás de uma tela congelada, é uma espera
+ * que ninguém aguenta; todas de uma vez é uma rajada que o servidor não merece. A maioria
+ * cai na volta rápida do texto idêntico e não custa nada — só as que o servidor de fato
+ * refez pagam uma tradução.
+ */
+const REDO_CONCURRENCY = 6;
+
+/**
+ * Roda `fn` sobre os itens com no máximo `limit` em voo, na ordem em que ficarem livres.
+ * Cada item escreve o seu resultado por conta própria: uma falha no meio deixa um estado
+ * coerente, e correr de novo termina o que faltou.
+ */
+async function runBounded<T>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<void>,
+): Promise<void> {
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < items.length) {
+      const item = items[next];
+      next += 1;
+      if (item !== undefined) await fn(item);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
 
 /** Alturas fixas das barras decorativas da linha de voz (px). */
 const WAVE_HEIGHTS = [6, 12, 20, 14, 22, 10, 16, 8];
@@ -665,6 +696,9 @@ export function Report({
   // Por resposta: a última confirmação que não pegou. Não é estado do rascunho — é o
   // desfecho de UM clique, e some assim que a pessoa tenta de novo.
   const [confirmProblem, setConfirmProblem] = useState<Record<string, ConfirmProblem>>({});
+  // O andamento do lote de refazer. Ele fala com o servidor uma resposta por vez, então
+  // não pode acontecer atrás de uma tela parada.
+  const [redoProgress, setRedoProgress] = useState<RedoProgress | null>(null);
 
   // Visão de LEITURA com o answer store garantido mesmo antes do efeito persistir.
   const mapped = useMemo(() => {
@@ -877,6 +911,21 @@ export function Report({
   };
 
   /**
+   * A escrita de UMA confirmação que o servidor aceitou: a célula, o rascunho e a geração
+   * numa transação só. Os dois caminhos que confirmam contra o servidor — o botão de um
+   * cartão e o lote de refazer — passam por aqui, para que a assimetria PT/EN de
+   * `confirmInto` e o carimbo da geração não possam divergir entre eles.
+   */
+  const applyConfirmed = (slot: QuestionSlot, text: string, answer: ConfirmedTranscript): void => {
+    sessionStore.getState().apply((s) => {
+      const confirmed = confirmInto(s, slot, text);
+      const withSrc = setAnswer(confirmed, draftSrcSlot(slot), text);
+      const withEn = setAnswer(withSrc, draftEnSlot(slot), answer.en);
+      return setAnswer(withEn, draftGenSlot(slot), String(answer.generation));
+    });
+  };
+
+  /**
    * Confirmar: o TRANSCRIPT em revisão vira A resposta, pelo mesmo caminho de digitar —
    * e o servidor traduz o texto confirmado e devolve o inglês que o artefato emite.
    *
@@ -904,11 +953,7 @@ export function Report({
     );
     try {
       const answer = await stt.confirm(sessionId, path, text, Number(seededGeneration));
-      sessionStore.getState().apply((s) => {
-        const withAnswer = confirmInto(s, slot, text);
-        const withEn = setAnswer(withAnswer, draftEnSlot(slot), answer.en);
-        return setAnswer(withEn, draftGenSlot(slot), String(answer.generation));
-      });
+      applyConfirmed(slot, text, answer);
     } catch (err) {
       const superseded = err instanceof TranscriptSuperseded;
       setConfirmProblem((p) => ({ ...p, [path]: superseded ? 'superseded' : 'failed' }));
@@ -960,6 +1005,61 @@ export function Report({
     setBulkResult({ confirmed: Math.max(0, before - after), remaining: after });
   };
 
+  /**
+   * As respostas que foram CONFIRMADAS a partir de um rascunho que o servidor já refez.
+   *
+   * A guarda de semeadura impede que isto volte a acontecer, mas não resgata a sessão
+   * onde já aconteceu: lá a célula está preenchida com o texto vencido, e a proteção que
+   * salva a digitação humana recusa mexer nela — com razão. Este lote é a saída explícita,
+   * e o que ele NÃO pode tocar define quem entra:
+   *
+   * - a célula tem de ser EXATAMENTE o rascunho guardado. Isso cobre os dois lados de uma
+   *   vez: sem `src__` nenhum a resposta é texto de alguém e não bate; e se ela escreveu
+   *   por cima do rascunho depois — o `src__` fica lá ao lado da célula —, também não
+   *   bate. A condição "veio de um rascunho", sozinha, deixaria essa segunda porta aberta;
+   * - e a geração guardada tem de estar atrás da que o servidor oferece agora. Sem `gen__`
+   *   nenhum, está atrás: é a sessão que nunca soube de que geração era.
+   */
+  const staleConfirmed = sequence.filter((slot) => {
+    const draft = drafts[voiceAnswerPath(slot)];
+    if (!draft) return false;
+    const cell = readAnswer(mapped.mapping, slot);
+    if (!cell.trim() || cell !== readAnswer(mapped.mapping, draftSrcSlot(slot))) return false;
+    return readAnswer(mapped.mapping, draftGenSlot(slot)) !== String(draft.generation);
+  });
+
+  /**
+   * Refazer: para cada uma delas, o texto que o SERVIDOR tem agora, confirmado pela mesma
+   * rota do botão de um cartão — que devolve o inglês derivado dele.
+   *
+   * Concorrência limitada e andamento à vista porque o `PUT` é síncrono e são centenas.
+   * Cada resposta escreve o próprio resultado assim que volta, em vez de tudo no fim: uma
+   * falha no meio deixa um estado coerente e correr de novo termina o que faltou. O texto
+   * enviado é o que o servidor já guarda, então quase todas caem na volta rápida do texto
+   * idêntico e não custam tradução nenhuma.
+   */
+  const redoStaleConfirmed = async (): Promise<void> => {
+    if (!stt || !sessionId) return;
+    const targets = staleConfirmed.map((slot) => ({
+      slot,
+      path: voiceAnswerPath(slot),
+      draft: drafts[voiceAnswerPath(slot)]!,
+    }));
+    let settled = 0;
+    let failed = 0;
+    setRedoProgress({ done: 0, total: targets.length, failed: 0 });
+    await runBounded(targets, REDO_CONCURRENCY, async ({ slot, path, draft }) => {
+      try {
+        const answer = await stt.confirm(sessionId, path, draft.source, draft.generation);
+        applyConfirmed(slot, draft.source, answer);
+      } catch {
+        failed += 1;
+      }
+      settled += 1;
+      setRedoProgress({ done: settled, total: targets.length, failed });
+    });
+  };
+
   // Quantas respostas gravadas ainda esperam confirmação — o número que o leitor
   // de tela ouve quando os rascunhos chegam.
   /**
@@ -995,6 +1095,14 @@ export function Report({
         pending={waiting ? 0 : bulkConfirmable.length}
         result={bulkResult}
         onConfirm={confirmAllDrafts}
+      />
+      {/* Refazer o que o servidor já corrigiu. Mora ao lado do confirmar em lote porque é
+          a mesma pergunta vista do outro lado: aquele preenche célula vazia, este troca
+          a que foi preenchida cedo demais. */}
+      <RedoStale
+        stale={waiting ? 0 : staleConfirmed.length}
+        progress={redoProgress}
+        onRedo={() => void redoStaleConfirmed()}
       />
       {/* Registrada VAZIA desde o início: uma região live criada junto com o
           conteúdo não é anunciada. Anuncia o resumo, nunca os rascunhos inteiros,

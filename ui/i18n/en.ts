@@ -437,6 +437,19 @@ export const en: Dict = {
     bulkRemaining_one: '1 recorded answer still has no transcript — write it by hand.',
     bulkRemaining_other:
       '{{count}} recorded answers still have no transcript — write them by hand.',
+    redoAction: 'Redo the superseded transcripts',
+    redoTitle_one: 'Redo 1 answer that is already confirmed?',
+    redoTitle_other: 'Redo {{count}} answers that are already confirmed?',
+    redoBody:
+      'These answers were confirmed from transcripts the server has since redone. Redoing REPLACES the text that is there with the machine’s new text — whatever those answers say now is lost. The recordings stay in custody, and any answer can still be corrected here afterwards.',
+    redoKeep: 'Leave them as they are',
+    redoAccept: 'Redo the answers',
+    redoProgressRegion: 'progress of the redo',
+    redoProgress: 'Redoing {{done}} of {{total}}…',
+    redoDone_one: '1 answer redone.',
+    redoDone_other: '{{count}} answers redone.',
+    redoFailed_one: '1 answer could not be redone — you can try again.',
+    redoFailed_other: '{{count}} answers could not be redone — you can try again.',
   },
   conversationStage: {
     listen: 'Listen to the question',

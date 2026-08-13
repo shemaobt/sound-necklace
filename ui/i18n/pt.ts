@@ -480,6 +480,21 @@ export const pt = {
     bulkRemaining_one: 'Ainda falta 1 resposta gravada sem transcrição — escreva-a à mão.',
     bulkRemaining_other:
       'Ainda faltam {{count}} respostas gravadas sem transcrição — escreva-as à mão.',
+    /* Refazer o que venceu. Destrutivo de um jeito que o lote acima não é: troca texto
+       já confirmado. A cópia diz o preço, e o foco nasce em "deixar como estão". */
+    redoAction: 'Refazer as transcrições vencidas',
+    redoTitle_one: 'Refazer 1 resposta já confirmada?',
+    redoTitle_other: 'Refazer {{count}} respostas já confirmadas?',
+    redoBody:
+      'Estas respostas foram confirmadas a partir de transcrições que o servidor refez depois. Refazer TROCA o texto que está ali pelo texto novo da máquina — o que estiver escrito agora nessas respostas se perde. As gravações continuam guardadas, e qualquer resposta pode ser corrigida aqui depois.',
+    redoKeep: 'Deixar como estão',
+    redoAccept: 'Refazer as respostas',
+    redoProgressRegion: 'andamento do refazer',
+    redoProgress: 'Refazendo {{done}} de {{total}}…',
+    redoDone_one: '1 resposta refeita.',
+    redoDone_other: '{{count}} respostas refeitas.',
+    redoFailed_one: '1 resposta não pôde ser refeita — dá para tentar de novo.',
+    redoFailed_other: '{{count}} respostas não puderam ser refeitas — dá para tentar de novo.',
   },
   conversationStage: {
     listen: 'Ouvir a pergunta',

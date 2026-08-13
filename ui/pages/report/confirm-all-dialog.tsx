@@ -30,9 +30,29 @@ export interface ConfirmAllDialogProps {
   onConfirm: () => void;
 }
 
-export function ConfirmAllDialog({ pending, onCancel, onConfirm }: ConfirmAllDialogProps) {
-  const { t } = useTranslation();
-  const reviewRef = useRef<HTMLDivElement>(null);
+/**
+ * A casca das decisões em lote do relatório. Duas as usam — confirmar tudo e refazer o
+ * que venceu — e o que elas têm em comum não é aparência: é o foco inicial na saída que
+ * não escreve nada. Duplicar a mecânica do Radix seria duplicar justamente a linha onde
+ * um descuido custaria centenas de respostas.
+ */
+function DecisionDialog({
+  title,
+  body,
+  keep,
+  accept,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  body: string;
+  /** A saída que não escreve nada — e onde o foco nasce. */
+  keep: string;
+  accept: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const keepRef = useRef<HTMLDivElement>(null);
 
   return (
     <Dialog.Root open onOpenChange={(open) => (open ? undefined : onCancel())}>
@@ -42,30 +62,40 @@ export function ConfirmAllDialog({ pending, onCancel, onConfirm }: ConfirmAllDia
           className="cds-confirm-all"
           onOpenAutoFocus={(event) => {
             event.preventDefault();
-            reviewRef.current?.querySelector('button')?.focus();
+            keepRef.current?.querySelector('button')?.focus();
           }}
         >
-          <Dialog.Title className="cds-confirm-all-title">
-            {t('report.bulkTitle', { count: pending })}
-          </Dialog.Title>
-          <Dialog.Description className="cds-confirm-all-body">
-            {t('report.bulkBody')}
-          </Dialog.Description>
+          <Dialog.Title className="cds-confirm-all-title">{title}</Dialog.Title>
+          <Dialog.Description className="cds-confirm-all-body">{body}</Dialog.Description>
           <div className="cds-confirm-all-actions">
-            <div ref={reviewRef} style={{ display: 'contents' }}>
+            <div ref={keepRef} style={{ display: 'contents' }}>
               <Button size="sm" onClick={onCancel}>
-                {t('report.bulkReview')}
+                {keep}
               </Button>
             </div>
             {/* Aceitar não é o botão primário da tela: pesa como texto, não como bloco
                 telha. Quem aceita centenas de textos de máquina precisa mirar. */}
             <button type="button" className="cds-confirm-all-accept" onClick={onConfirm}>
-              {t('report.bulkAccept')}
+              {accept}
             </button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+export function ConfirmAllDialog({ pending, onCancel, onConfirm }: ConfirmAllDialogProps) {
+  const { t } = useTranslation();
+  return (
+    <DecisionDialog
+      title={t('report.bulkTitle', { count: pending })}
+      body={t('report.bulkBody')}
+      keep={t('report.bulkReview')}
+      accept={t('report.bulkAccept')}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -129,6 +159,85 @@ export function BulkConfirm({
           onConfirm={() => {
             onConfirm();
             setAsking(false);
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+/** O andamento de um lote que fala com o servidor, e o que sobrou dele. */
+export interface RedoProgress {
+  done: number;
+  total: number;
+  failed: number;
+}
+
+/**
+ * Refazer as respostas que foram confirmadas a partir de uma transcrição que o servidor
+ * já refez depois.
+ *
+ * É DESTRUTIVO de um jeito que o confirmar em lote não é: aquele só preenche célula
+ * vazia, este TROCA texto já confirmado. Por isso a cópia diz o preço com todas as
+ * letras, e por isso o foco inicial vai para "deixar como estão".
+ *
+ * O trabalho é lento — cada resposta é um pedido ao servidor — então há andamento
+ * visível enquanto corre. Ele não some no fim: vira o resultado, contado do que de fato
+ * voltou, porque uma resposta que não pôde ser refeita precisa aparecer em vez de sumir
+ * dentro de um "pronto".
+ */
+export function RedoStale({
+  stale,
+  progress,
+  onRedo,
+}: {
+  /** Quantas respostas o lote vai refazer. Zero ⇒ a ação nem existe. */
+  stale: number;
+  progress: RedoProgress | null;
+  onRedo: () => void;
+}) {
+  const { t } = useTranslation();
+  const [asking, setAsking] = useState(false);
+  const running = progress !== null && progress.done < progress.total;
+
+  return (
+    <>
+      {stale > 0 && !running ? (
+        <div className="cds-report-bulk">
+          <Button variant="ghost" size="sm" onClick={() => setAsking(true)}>
+            {t('report.redoAction')}
+          </Button>
+        </div>
+      ) : null}
+      <div
+        className="cds-report-bulk-result"
+        role="status"
+        aria-live="polite"
+        aria-label={t('report.redoProgressRegion')}
+      >
+        {progress === null ? null : running ? (
+          <span>{t('report.redoProgress', { done: progress.done, total: progress.total })}</span>
+        ) : (
+          <>
+            <span>
+              {t('report.redoDone', { count: Math.max(0, progress.total - progress.failed) })}
+            </span>
+            {progress.failed > 0 ? (
+              <span>{t('report.redoFailed', { count: progress.failed })}</span>
+            ) : null}
+          </>
+        )}
+      </div>
+      {asking ? (
+        <DecisionDialog
+          title={t('report.redoTitle', { count: stale })}
+          body={t('report.redoBody')}
+          keep={t('report.redoKeep')}
+          accept={t('report.redoAccept')}
+          onCancel={() => setAsking(false)}
+          onConfirm={() => {
+            setAsking(false);
+            onRedo();
           }}
         />
       ) : null}

@@ -1242,6 +1242,141 @@ describe('Relatório — confirmar todas as transcrições de uma vez', () => {
 });
 
 /**
+ * Refazer as respostas que foram confirmadas a partir de um rascunho vencido.
+ *
+ * A guarda nova impede que isto volte a acontecer; não resgata a sessão onde já
+ * aconteceu. Lá as células estão preenchidas com o texto gaguejado, e a proteção que
+ * salva a digitação humana — célula cheia não se sobrescreve — recusa mexer nelas, com
+ * razão. Este lote é o caminho explícito, com o seu preço dito em voz alta.
+ */
+describe('Relatório — refazer as respostas confirmadas de um rascunho vencido', () => {
+  const Q = L1_Q[0]!;
+  const PATH = voiceAnswerPath({ level: 1, k: Q.k });
+  /** A resposta que a máquina nunca transcreveu e a facilitadora escreveu à mão. */
+  const MINHA_Q = L1_Q[1]!;
+  const MINHA_PATH = voiceAnswerPath({ level: 1, k: MINHA_Q.k });
+  const MINHA_RESPOSTA = 'Foi o avô quem contou.';
+  const GAGA = { source: 'mas a, a história', en: 'but the, the story', generation: 1 };
+  const LIMPO = { source: 'mas a história', en: 'but the story', generation: 2 };
+
+  const REDO = 'Refazer as transcrições vencidas';
+  const REDO_ACCEPT = 'Refazer as respostas';
+  const REDO_KEEP = 'Deixar como estão';
+
+  function mount(stt: Transcriber) {
+    return render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true, [MINHA_PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1, [MINHA_PATH]: 1 }}
+      />,
+    );
+  }
+
+  /**
+   * A sessão exata que isto existe para resgatar: uma resposta confirmada a partir da
+   * transcrição gaguejada, e ao lado dela uma resposta sem rascunho nenhum, escrita à mão.
+   */
+  async function sessaoJaConfirmadaDoRascunhoVelho(): Promise<void> {
+    load(report());
+    const antes = controllableStt({ [PATH]: GAGA });
+    const view = mount(antes.stt);
+    antes.finish();
+
+    const src = await screen.findByDisplayValue(GAGA.source);
+    const card = src.closest('.cds-report-card') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: /confirmar a transcrição/i }));
+    await waitFor(() => expect(answerOf(Q)).toBe(GAGA.source));
+
+    const minha = cardFor(MINHA_Q.q);
+    await userEvent.type(within(minha).getByLabelText('resposta'), MINHA_RESPOSTA);
+    await userEvent.click(within(minha).getByRole('button', { name: 'aceitar a edição' }));
+    view.unmount();
+  }
+
+  /** A volta, com o servidor já tendo refeito a transcrição. */
+  function reabreComTranscricaoRefeita() {
+    const depois = controllableStt({ [PATH]: LIMPO });
+    mount(depois.stt);
+    depois.finish();
+    return depois;
+  }
+
+  it('refaz a resposta confirmada de um rascunho vencido, e o inglês vai junto', async () => {
+    await sessaoJaConfirmadaDoRascunhoVelho();
+    reabreComTranscricaoRefeita();
+
+    await userEvent.click(await screen.findByRole('button', { name: REDO }));
+    await userEvent.click(screen.getByRole('button', { name: REDO_ACCEPT }));
+
+    await waitFor(() => expect(answerOf(Q)).toBe(LIMPO.source));
+    const md = buildMapReport(sessionStore.getState().session!);
+    expect(md).toContain(LIMPO.en);
+    expect(md).not.toContain(GAGA.en);
+  });
+
+  /**
+   * O que este lote não pode fazer de jeito nenhum. Sem rascunho não há de que refazer:
+   * o texto é dela.
+   */
+  it('a resposta escrita à mão, sem rascunho, fica de fora', async () => {
+    await sessaoJaConfirmadaDoRascunhoVelho();
+    const depois = reabreComTranscricaoRefeita();
+
+    await userEvent.click(await screen.findByRole('button', { name: REDO }));
+    await userEvent.click(screen.getByRole('button', { name: REDO_ACCEPT }));
+
+    await waitFor(() => expect(answerOf(Q)).toBe(LIMPO.source));
+    expect(answerOf(MINHA_Q)).toBe(MINHA_RESPOSTA);
+    // e nem chegou a ser oferecida ao servidor
+    expect(depois.confirmed.map((c) => c.path)).toEqual([PATH]);
+  });
+
+  /**
+   * O caso que "veio de um rascunho" sozinho não cobre: o rascunho FOI semeado, e depois
+   * a facilitadora escreveu a própria resposta por cima. O `src__` continua guardado ao
+   * lado da célula, então só a igualdade entre os dois separa "isto é o texto confirmado
+   * da máquina" de "isto é o que ela escreveu".
+   */
+  it('a resposta que a facilitadora escreveu por cima do rascunho também fica de fora', async () => {
+    load(report());
+    const antes = controllableStt({ [PATH]: GAGA });
+    const view = mount(antes.stt);
+    antes.finish();
+    const card = (await screen.findByDisplayValue(GAGA.source)).closest(
+      '.cds-report-card',
+    ) as HTMLElement;
+    await userEvent.type(within(card).getByLabelText('resposta'), MINHA_RESPOSTA);
+    await userEvent.click(within(card).getByRole('button', { name: 'aceitar a edição' }));
+    view.unmount();
+
+    reabreComTranscricaoRefeita();
+    // o anúncio dos rascunhos só aparece com o job concluído: é o instante em que a
+    // elegibilidade do lote já foi decidida
+    await screen.findByText(/para revisar/i);
+
+    expect(screen.queryByRole('button', { name: REDO })).toBeNull();
+    expect(answerOf(Q)).toBe(MINHA_RESPOSTA);
+  });
+
+  it('pergunta antes: abrir não refaz nada, e desistir deixa tudo como estava', async () => {
+    await sessaoJaConfirmadaDoRascunhoVelho();
+    const depois = reabreComTranscricaoRefeita();
+
+    await userEvent.click(await screen.findByRole('button', { name: REDO }));
+    expect(answerOf(Q)).toBe(GAGA.source);
+    // o foco inicial é a saída que não escreve nada: um Enter distraído não troca texto
+    // confirmado por texto de máquina
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: REDO_KEEP }));
+
+    await userEvent.click(screen.getByRole('button', { name: REDO_KEEP }));
+    expect(answerOf(Q)).toBe(GAGA.source);
+    expect(depois.confirmed).toEqual([]);
+  });
+});
+
+/**
  * ENG-372: o foco global (base.css) desenha um retângulo telha de 3px afastado 3px.
  * Num campo transparente de largura total isso vira uma caixa que briga com a linha
  * quieta que o campo é. Aqui o indicador troca de FORMA, não de força — e o teste
