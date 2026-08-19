@@ -376,6 +376,24 @@ export const en: Dict = {
       body: 'The recording stays in custody but never enters the document — only confirmed text does. Saving the documents will refuse while any is missing.',
       review: 'Review the answers',
       anyway: 'Go anyway',
+      confirmAll_one: 'Accept the transcript',
+      confirmAll_other: 'Accept the {{count}} transcripts',
+      bulkNote:
+        'These texts were written by a machine from the recordings. Accepting them at once takes all of them as they are, without reading them one by one, and they become the answers that go into the document. Answers already written by hand are left alone.',
+      bulkPartial_one:
+        'Even so, 1 recorded answer with no transcript will be left, and saving will still refuse because of it.',
+      bulkPartial_other:
+        'Even so, {{count}} recorded answers with no transcript will be left, and saving will still refuse because of them.',
+      confirmed_one: '1 transcript was confirmed and became the answer in the document.',
+      confirmed_other:
+        '{{count}} transcripts were confirmed and became the answers in the document.',
+      confirmedNone: 'No transcript was confirmed.',
+      leftTitle_one: '1 answer is still missing.',
+      leftTitle_other: '{{count}} answers are still missing.',
+      leftBody_one:
+        'It is a recording with no transcript: only writing it by hand resolves it, and saving the documents will keep refusing while it is missing.',
+      leftBody_other:
+        'They are recordings with no transcript: only writing them by hand resolves them, and saving the documents will keep refusing while they are missing.',
     },
     prev: '← Previous',
   },

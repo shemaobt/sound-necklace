@@ -29,7 +29,7 @@ import type { PaletteEntry } from '../../tokens';
 import { cardinal, sceneOrdinal } from '../cut/cutting';
 import { clearSkipped, isSkipped, markSkipped } from './answered';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
-import { PendingDraftsDialog } from './pending-drafts-dialog';
+import { type BulkOutcome, PendingDraftsDialog } from './pending-drafts-dialog';
 import { StationNav } from '../../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../../state';
@@ -99,6 +99,21 @@ interface ReportSlotProps {
   recordingVersion?: Record<string, number>;
   /** The transcription wait took the screen: this station's footer leaves with it. */
   onWaitingChange?: (waiting: boolean) => void;
+  /** A confirmação em lote da revisão, publicada para o aviso de saída (ENG-512). */
+  onBulkConfirmChange?: (bulk: BulkConfirmHandle | null) => void;
+}
+
+/**
+ * A ação de confirmar todas as transcrições, tal como a folha do relatório a publica
+ * (ENG-512). Declarada aqui pelo mesmo motivo que `ReportSlotProps`: aquela estação
+ * entra por add-a-file e pode não existir — ausente, `bulk` fica nulo e a ação some.
+ * Quem confirma continua sendo ela; o que atravessa é o ponteiro.
+ */
+interface BulkConfirmHandle {
+  /** Quantas respostas o lote confirmaria agora — as que têm rascunho e célula vazia. */
+  confirmable: number;
+  /** Confirma-as e devolve o que de fato aconteceu, medido depois de escrever. */
+  confirmAll: () => BulkOutcome;
 }
 
 /**
@@ -602,6 +617,10 @@ export function Conversation({
   const [transcribing, setTranscribing] = useState(false);
   /** Saída para a Export pedida com transcrição por confirmar: pergunta antes de andar. */
   const [confirmLeaving, setConfirmLeaving] = useState(false);
+  /** A confirmação em lote publicada pela revisão (ENG-512). Nula = não há o que correr. */
+  const [bulk, setBulk] = useState<BulkConfirmHandle | null>(null);
+  /** O que o lote fez quando foi corrido daqui — nulo enquanto não foi. */
+  const [bulkOutcome, setBulkOutcome] = useState<BulkOutcome | null>(null);
   const [reportVoice, setReportVoice] = useState<{
     checked: ReadonlySet<string>;
     has: ReadonlySet<string>;
@@ -721,14 +740,41 @@ export function Conversation({
       sound?.advance();
       onGoToExport?.();
     };
+    const closeWarning = (): void => {
+      setConfirmLeaving(false);
+      setBulkOutcome(null);
+    };
+    /**
+     * Aceitar todas ali mesmo (ENG-512). A ação é a da revisão — a que reconfere a
+     * elegibilidade dentro da transação e nunca escreve por cima de célula preenchida;
+     * daqui só sai o clique.
+     *
+     * O que ela devolve é MEDIDO depois de escrever, não planejado: se o `apply` não
+     * pegou (offline, revisão, trava) ela devolve zero confirmadas, e o aviso continua
+     * de pé dizendo isso. Sobrou pendência — as gravações sem transcrição, que o lote
+     * não alcança — a saída também não acontece: guardar recusaria do outro lado, e
+     * andar depois de um "pronto" faria o diálogo prometer o que não cumpriu.
+     */
+    const confirmAllPending = (): void => {
+      const result = bulk?.confirmAll() ?? { confirmed: 0, remaining: leaveWithPending };
+      if (result.remaining === 0) {
+        closeWarning();
+        leaveToExport();
+        return;
+      }
+      setBulkOutcome(result);
+    };
     return (
       <section className="cds-conversation" aria-label={t('conversation.reportAria')}>
         {confirmLeaving ? (
           <PendingDraftsDialog
             pending={leaveWithPending}
-            onReview={() => setConfirmLeaving(false)}
+            confirmable={bulk?.confirmable ?? 0}
+            outcome={bulkOutcome}
+            onConfirmAll={confirmAllPending}
+            onReview={closeWarning}
             onProceed={() => {
-              setConfirmLeaving(false);
+              closeWarning();
               leaveToExport();
             }}
           />
@@ -743,6 +789,7 @@ export function Conversation({
             sessionId={sessionId}
             recordingVersion={recordingVersion}
             onWaitingChange={setTranscribing}
+            onBulkConfirmChange={setBulk}
           />
         ) : (
           <div className="cds-conversation-report-fallback">

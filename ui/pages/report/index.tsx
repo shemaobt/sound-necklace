@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AnswerDraft, ConfirmedTranscript, Transcriber } from '../../../adapters/stt/types';
@@ -85,6 +85,25 @@ export interface ReportProps {
    * in flight.
    */
   onWaitingChange?: (waiting: boolean) => void;
+  /**
+   * Publica a confirmação em lote para fora da folha (ENG-512). O aviso de saída com
+   * rascunhos por confirmar vive uma camada acima, e sem isto quem clicava em "Guardar
+   * os documentos →" era mandado de volta a procurar o botão no topo da lista.
+   *
+   * Um PONTEIRO, não uma cópia: a elegibilidade, a transação única e a assimetria PT/EN
+   * de `confirmInto` continuam aqui. Um segundo caminho de confirmação divergiria delas
+   * sem que nenhum teste percebesse até o artefato sair errado. `null` diz que não há
+   * folha montada para correr a ação.
+   */
+  onBulkConfirmChange?: (bulk: BulkConfirmHandle | null) => void;
+}
+
+/** A ação de confirmar em lote, alcançável de fora da folha do relatório (ENG-512). */
+export interface BulkConfirmHandle {
+  /** Quantas respostas o lote confirmaria AGORA — as que têm rascunho e célula vazia. */
+  confirmable: number;
+  /** Confirma-as e devolve o que de fato aconteceu, medido depois de escrever. */
+  confirmAll: () => BulkResult;
 }
 
 /** Prefixo da chave reservada da nota — fora do vocabulário de perguntas. */
@@ -678,6 +697,37 @@ function ReportCard({
   );
 }
 
+/**
+ * Publica a confirmação em lote para quem estiver do lado de fora (ENG-512).
+ *
+ * É um componente, e não um efeito dentro da estação, porque `confirmAllDrafts` só
+ * existe DEPOIS da saída antecipada que a folha faz enquanto não há sessão — e um hook
+ * não pode nascer ali. Não desenha nada: o que atravessa é o ponteiro, não interface.
+ */
+function BulkConfirmBridge({
+  confirmable,
+  confirmAll,
+  publish,
+}: {
+  confirmable: number;
+  confirmAll: () => BulkResult;
+  publish?: (bulk: BulkConfirmHandle | null) => void;
+}) {
+  // o ponteiro publicado é ESTÁVEL e chama sempre a versão do último render: publicar a
+  // função nova de cada render faria o pai renderizar a cada tecla digitada na revisão
+  const latest = useRef(confirmAll);
+  useEffect(() => {
+    latest.current = confirmAll;
+  });
+  const stable = useCallback(() => latest.current(), []);
+  useEffect(() => {
+    publish?.({ confirmable, confirmAll: stable });
+    // desmontada a folha não há mais o que correr: quem guarda o ponteiro precisa saber
+    return () => publish?.(null);
+  }, [publish, confirmable, stable]);
+  return null;
+}
+
 export function Report({
   recorder = null,
   preloaded,
@@ -685,6 +735,7 @@ export function Report({
   sessionId = null,
   recordingVersion,
   onWaitingChange,
+  onBulkConfirmChange,
 }: ReportProps) {
   const { t, i18n } = useTranslation();
   // A entrevista correu em inglês? É a MESMA regra que o wiring usa para dizer a língua
@@ -1034,7 +1085,7 @@ export function Report({
       readAnswer(mapped.mapping, draftSrcSlot(slot)).trim() !== '',
   );
 
-  const confirmAllDrafts = (): void => {
+  const confirmAllDrafts = (): BulkResult => {
     const before = pendingIn(mapped);
     sessionStore.getState().apply((s) =>
       bulkConfirmable.reduce((acc, slot) => {
@@ -1051,7 +1102,11 @@ export function Report({
     // ignorado fora da edição (offline, revisão, trava), e um "pronto" contado a partir
     // do que se pretendia fazer mentiria justamente quando nada aconteceu.
     const after = pendingIn(sessionStore.getState().session);
-    setBulkResult({ confirmed: Math.max(0, before - after), remaining: after });
+    const result: BulkResult = { confirmed: Math.max(0, before - after), remaining: after };
+    setBulkResult(result);
+    // devolvido, e não só guardado: quem chama de fora (ENG-512) precisa do MESMO
+    // número medido aqui para dizer honestamente o que sobrou
+    return result;
   };
 
   /**
@@ -1127,6 +1182,12 @@ export function Report({
         pending={waiting ? 0 : bulkConfirmable.length}
         result={bulkResult}
         onConfirm={confirmAllDrafts}
+      />
+      {/* A MESMA ação, alcançável pelo aviso de saída uma camada acima (ENG-512). */}
+      <BulkConfirmBridge
+        confirmable={waiting ? 0 : bulkConfirmable.length}
+        confirmAll={confirmAllDrafts}
+        publish={onBulkConfirmChange}
       />
       {/* Refazer o que o servidor já corrigiu. Mora ao lado do confirmar em lote porque é
           a mesma pergunta vista do outro lado: aquele preenche célula vazia, este troca
