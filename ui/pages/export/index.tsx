@@ -27,6 +27,7 @@ import {
   type ArtifactKind,
 } from '../../organisms/artifact-cards/artifact-cards';
 import { Necklace, type NecklaceSegment, PreparingSession, SIZE_EXPORT } from '../../organisms';
+import { reviewIsDone } from '../../app/resume-placement';
 import {
   freezeClock,
   netTimeParts,
@@ -362,7 +363,12 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
     }
     setBusy(true);
     try {
-      await store.complete(sessionId, toSessionDto(session, custody?.meta ?? DEFAULT_META), triple);
+      const meta = custody?.meta ?? DEFAULT_META;
+      await store.complete(
+        sessionId,
+        toSessionDto(session, meta, reviewIsDone(session, meta.voice)),
+        triple,
+      );
       setNotice(null);
       sound?.advance();
       setPhase('saved');

@@ -324,7 +324,8 @@ function useSessionHydration(
         // passo exato. O adapter debounce+coalesce; o flush no pagehide fecha a janela.
         sessionStore.getState().setAutosave((live) => {
           const m = metaRef.current;
-          if (m) appSessionStore().autosave(routeId, toSessionDto(live, m));
+          if (m)
+            appSessionStore().autosave(routeId, toSessionDto(live, m, reviewIsDone(live, m.voice)));
         });
       } catch {
         // sessão sem estado salvo ou persistência corrompida — mantém o ui/state atual e
@@ -483,7 +484,7 @@ export function App() {
       setRecordingVersion((v) => ({ ...v, [path]: next }));
       if (!meta.voice.includes(path)) meta.voice = [...meta.voice, path];
       const store = appSessionStore();
-      store.autosave(routeId, toSessionDto(live, meta));
+      store.autosave(routeId, toSessionDto(live, meta, reviewIsDone(live, meta.voice)));
       void store.flush(routeId);
     },
     [routeId],

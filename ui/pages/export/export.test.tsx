@@ -124,7 +124,7 @@ async function seedInProgress(store: FixtureSessionStore, state: SessionState): 
 
 async function seedCompleted(store: FixtureSessionStore, state: SessionState): Promise<string> {
   const id = await seedInProgress(store, state);
-  await store.complete(id, toSessionDto(state, META), tripleOf(state));
+  await store.complete(id, toSessionDto(state, META, false), tripleOf(state));
   return id;
 }
 
@@ -347,7 +347,7 @@ describe('Export — inglês confirmado é requisito para guardar (ENG-327)', ()
     let state = ensureMapping(exportable());
     if (confirmedText !== null) state = setAnswer(state, { level: 1, k: Q.k }, confirmedText);
     const id = await seedInProgress(store, state);
-    store.autosave(id, toSessionDto(state, { ...META, voice: [PATH] }));
+    store.autosave(id, toSessionDto(state, { ...META, voice: [PATH] }, false));
     await store.flush(id);
     return { id, state };
   }

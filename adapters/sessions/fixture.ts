@@ -95,17 +95,26 @@ export interface FixtureSessionStoreOptions {
   latencyMs?: number;
 }
 
-/** Deriva o passo do dashboard (§7.2) do status + modo do estado salvo. */
+/**
+ * Deriva o passo do dashboard (§7.2) do status + modo do estado salvo.
+ *
+ * ESPELHA o servidor, inclusive na leitura da bandeira da revisão (ENG-514): lá o passo
+ * é `save` quando o modo é `mapeamento` e o documento traz `reviewComplete` verdadeiro —
+ * a ausência do campo, e qualquer outro valor, continuam significando entrevista em
+ * curso. Uma fixture mais generosa ensinaria à UI um comportamento que o modo real não
+ * tem.
+ */
 function stepFor(status: SessionStatus, state: SessionStateDto | undefined): SessionStep {
   if (status === 'completed') return 'save';
-  const s = state as { mode?: string; whole?: { confirmed?: boolean } } | undefined;
+  const s = state as
+    { mode?: string; whole?: { confirmed?: boolean }; reviewComplete?: boolean } | undefined;
   switch (s?.mode) {
     case 'triagem':
       return 'triage';
     case 'segmentacao':
       return 'phrases';
     case 'mapeamento':
-      return 'conversation';
+      return s.reviewComplete === true ? 'save' : 'conversation';
     default:
       return s?.whole?.confirmed ? 'cut' : 'listen';
   }
