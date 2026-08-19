@@ -45,3 +45,20 @@
   gap: 16px;
   padding-bottom: clamp(1.5rem, 5vh, 3rem);
 }
+
+/*
+ * A revisão é a única fase da conversa que passa da janela: são dezenas de cartões.
+ * O `min-height` lá em cima é PISO, não teto — a estação crescia junto, o documento
+ * inteiro rolava, e o rodapé de navegação (que mora no shell, DEPOIS da estação)
+ * descia com ele: alcançar "guardar os documentos" exigia rolar toda a entrevista.
+ *
+ * Aqui a estação ganha TETO — a altura útil exata do shell, a mesma conta que a
+ * Triagem já faz — e são os cartões que rolam por dentro. O escopo é só a revisão,
+ * pelo mesmo `:has()` que já troca a tinta acima: a tela de PERGUNTA é curta, e um
+ * teto ali só criaria uma região de rolagem sem nada para rolar.
+ */
+.cds-conversation:has(.cds-report) {
+  height: calc(100vh - var(--cds-shell-inset, 110px));
+  min-height: 0;
+  overflow-y: auto;
+}
