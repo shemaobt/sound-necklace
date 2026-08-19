@@ -1,4 +1,11 @@
-import { type AnswerSlot, type Mapping, type SessionState, setAnswer } from '../../../domain';
+import {
+  questionSequence,
+  setAnswer,
+  voiceAnswerPath,
+  type AnswerSlot,
+  type Mapping,
+  type SessionState,
+} from '../../../domain';
 
 /**
  * A pergunta que ficou SEM RESPOSTA de propósito.
@@ -54,4 +61,27 @@ export function markSkipped(state: SessionState, slot: AnswerSlot): SessionState
  */
 export function clearSkipped(state: SessionState, slot: AnswerSlot): SessionState {
   return setAnswer(state, skippedSlot(slot), '');
+}
+
+/**
+ * Índice da ÚLTIMA pergunta respondida — texto, voz gravada ou recusa registrada —, ou
+ * -1 quando a entrevista não começou. É o que decide onde a conversa reabre (ENG-321) e
+ * se a entrevista já chegou ao fim (ENG-367): a última pergunta respondida significa que
+ * não há mais o que perguntar, e os buracos atrás dela são recusas deliberadas.
+ *
+ * Mora aqui, e não na estação, porque desde a ENG-511 o shell faz a mesma pergunta uma
+ * tela antes, para decidir onde a sessão retomada abre. Uma regra, um lugar.
+ */
+export function lastAnsweredIndex(state: SessionState, voiced: readonly string[]): number {
+  const sequence = questionSequence(state);
+  for (let i = sequence.length - 1; i >= 0; i--) {
+    const slot = sequence[i]!;
+    if (
+      read(state.mapping, slot).trim() ||
+      voiced.includes(voiceAnswerPath(slot)) ||
+      isSkipped(state.mapping, slot)
+    )
+      return i;
+  }
+  return -1;
 }

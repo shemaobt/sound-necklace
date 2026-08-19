@@ -9,7 +9,6 @@ import type { UiSound } from '../../../adapters/ui-sound';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
 import {
   ensureMapping,
-  type Mapping,
   type QuestionSlot,
   questionSequence,
   setMode,
@@ -27,7 +26,7 @@ import {
 } from '../../organisms/conversation-stage/conversation-stage';
 import type { PaletteEntry } from '../../tokens';
 import { cardinal, sceneOrdinal } from '../cut/cutting';
-import { clearSkipped, isSkipped, markSkipped } from './answered';
+import { clearSkipped, isSkipped, lastAnsweredIndex, markSkipped } from './answered';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
 import { type BulkOutcome, PendingDraftsDialog } from './pending-drafts-dialog';
 import { StationNav } from '../../organisms/nav-footer/nav-footer';
@@ -164,14 +163,6 @@ function requestTranscription(
 /** Resolvido uma vez, no carregamento do módulo (o glob é eager e estático). */
 const ReportStation: ComponentType<ReportSlotProps> | null =
   Object.values(reportModules)[0]?.default ?? null;
-
-/** Lê a resposta de texto da pergunta em foco (string vazia quando ainda não há). */
-function readAnswer(m: Mapping | null, slot: QuestionSlot): string {
-  if (!m) return '';
-  if (slot.level === 1) return m.level1[slot.k] ?? '';
-  if (slot.level === 2) return m.level2[slot.partId]?.[slot.k] ?? '';
-  return m.level3[slot.propId]?.[slot.k] ?? '';
-}
 
 interface ListenTarget {
   key: string;
@@ -579,16 +570,7 @@ export function Conversation({
    *
    * Mount only: from then on the cursor belongs to the user.
    */
-  const lastAnswered = (): number => {
-    if (!mapped || sequence.length === 0) return -1;
-    const voiced = voicePaths();
-    const answered = (s2: QuestionSlot): boolean =>
-      Boolean(readAnswer(mapped.mapping, s2).trim()) ||
-      voiced.includes(voiceAnswerPath(s2)) ||
-      isSkipped(mapped.mapping, s2);
-    for (let i = sequence.length - 1; i >= 0; i--) if (answered(sequence[i]!)) return i;
-    return -1;
-  };
+  const lastAnswered = (): number => (mapped ? lastAnsweredIndex(mapped, voicePaths()) : -1);
   const [index, setIndex] = useState(() =>
     Math.min(lastAnswered() + 1, Math.max(sequence.length - 1, 0)),
   );
