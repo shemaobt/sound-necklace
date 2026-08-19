@@ -14,11 +14,26 @@
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-y: contain;
-  /* a barra clássica (Windows/Linux, ou macOS com "sempre mostrar") aparece
-     assim que o conteúdo passa do teto e ESTREITA o container — o que muda
+  /* As duas regras abaixo cobrem as duas barras de rolagem que existem, e uma não
+     substitui a outra.
+
+     A barra CLÁSSICA (Windows/Linux, ou macOS com "sempre mostrar") aparece assim
+     que o conteúdo passa do teto e ESTREITA o container — o que muda
      contas-por-fileira, o que muda a altura, o que faz a barra ir e vir. Reservar
-     a calha corta o laço antes que ele exista. */
+     a calha corta esse laço antes que ele exista.
+
+     A barra de SOBREPOSIÇÃO (macOS) não estreita nada: é pintada por cima do
+     conteúdo, e `scrollbar-gutter` não reserva calha nenhuma para ela. Sem folga
+     própria a última coluna de contas fica embaixo dela e o toque naquela conta
+     acerta o scroller (ENG-506). 16px cobrem a barra do macOS expandida (15px).
+
+     A folga vive AQUI, no elemento que rola, e nunca no `.cds-necklace` de dentro:
+     é o de dentro que a página mede (`clientWidth`, que INCLUI padding) para
+     decidir contas-por-fileira, e as contas se ancoram na caixa de padding dele —
+     padding lá faria a matemática andar sem as contas andarem, separando as
+     posições do hit-test. */
   scrollbar-gutter: stable;
+  padding-right: 16px;
 }
 
 /* pan-y, e não `none`: reservar o eixo vertical ao navegador é o que deixa o
