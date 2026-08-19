@@ -155,13 +155,13 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
 describe('session-state DTO — round-trip domínio → DTO → domínio', () => {
   for (const { name, state, meta: m } of variety) {
     it(`preserva o estado e o meta: ${name}`, () => {
-      const back = fromSessionDto(toSessionDto(state, m));
+      const back = fromSessionDto(toSessionDto(state, m, false));
       expect(back.state).toEqual(state);
       expect(back.meta).toEqual(m);
     });
 
     it(`sobrevive à serialização + schema: ${name}`, () => {
-      const dto = toSessionDto(state, m);
+      const dto = toSessionDto(state, m, false);
       const roundBytes = JSON.parse(serializeArtifact(dto)) as unknown;
       const parsed = SessionStateDtoSchema.parse(roundBytes);
       const back = fromSessionDto(parsed);
@@ -170,8 +170,8 @@ describe('session-state DTO — round-trip domínio → DTO → domínio', () =>
     });
   }
 
-  it('carimba schema_version = 2 (a ENG-356 mudou a forma; a ENG-357 versionou)', () => {
-    expect(toSessionDto(baseSession(), meta()).schema_version).toBe(2);
+  it('carimba schema_version = 3 (a ENG-514 acrescentou a bandeira da revisão)', () => {
+    expect(toSessionDto(baseSession(), meta(), false).schema_version).toBe(3);
   });
 
   /**
@@ -180,7 +180,7 @@ describe('session-state DTO — round-trip domínio → DTO → domínio', () =>
    * sessão em andamento num erro de hidratação.
    */
   it('um documento salvo antes do voiceVersion ainda abre, com o mapa vazio', () => {
-    const antigo = toSessionDto(baseSession(), meta()) as Record<string, unknown>;
+    const antigo = toSessionDto(baseSession(), meta(), false) as Record<string, unknown>;
     delete antigo['voiceVersion'];
 
     expect(fromSessionDto(antigo).meta.voiceVersion).toEqual({});
@@ -208,10 +208,10 @@ describe('session-state DTO — migração v1 → v2 na leitura (ENG-357)', () =
     expect(m.voice).toEqual(['respostas/level1/recontar.webm']);
   });
 
-  it('reidratar e regravar promove a sessão a v2 (a migração é de mão única)', () => {
+  it('reidratar e regravar promove a sessão à versão corrente (a migração é de mão única)', () => {
     const { state, meta: m } = fromSessionDto(fixture('legacy-v1.json'));
-    const promoted = toSessionDto(state, m);
-    expect(promoted.schema_version).toBe(2);
+    const promoted = toSessionDto(state, m, false);
+    expect(promoted.schema_version).toBe(3);
     expect(promoted.frases[0]!.statement).toBe('A chegada.');
     expect(promoted.parts[0]!.scene_kind_confidence).toBe('high');
   });
@@ -234,6 +234,28 @@ describe('session-state DTO — migração v1 → v2 na leitura (ENG-357)', () =
     // validação aqui um DTO da forma antiga viraria `statement: undefined`
     expect(() => fromSessionDto({ schema_version: 2 })).toThrow();
     expect(() => fromSessionDto(null)).toThrow();
+  });
+});
+
+describe('session-state DTO — migração v2 → v3 na leitura (ENG-514)', () => {
+  /**
+   * Toda sessão em andamento foi salva antes de a bandeira da revisão existir. Se a
+   * leitura recusasse o documento sem o campo, o campo novo transformaria cada uma
+   * delas num erro de hidratação.
+   */
+  it('uma sessão v2, anterior ao campo, continua abrindo inteira', () => {
+    const { state, meta: m } = fromSessionDto(fixture('legacy-v2.json'));
+
+    expect(state.frases[0]!.statement).toBe('A chegada.');
+    expect(state.parts[0]!.scene_kind_confidence).toBe('high');
+    expect(state.mapping?.level3['P1']?.['oque']).toBe('A chegada.');
+    expect(m.voice).toEqual(['respostas/level1/recontar.webm']);
+  });
+
+  it('reidratar e regravar promove a sessão v2 à versão corrente', () => {
+    const { state, meta: m } = fromSessionDto(fixture('legacy-v2.json'));
+
+    expect(toSessionDto(state, m, false).schema_version).toBe(3);
   });
 });
 
