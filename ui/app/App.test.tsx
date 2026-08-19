@@ -4,14 +4,57 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FixtureAuthProvider } from '../../adapters/api';
 import { FixtureSessionStore } from '../../adapters/sessions';
 import { fromSessionDto, toSessionDto } from '../../contracts';
-import { buildBeads, createSession, type SessionState } from '../../domain';
+import {
+  buildBeads,
+  createSession,
+  ensureMapping,
+  questionSequence,
+  setAnswer,
+  voiceAnswerPath,
+  type SessionState,
+} from '../../domain';
 import { sessionStore } from '../state';
 import { App } from './App';
 import { appAuth } from './auth-adapter';
 import { navigate } from './router';
 import { appSessionBackend, appSessionStore } from './session-adapter';
 
+/**
+ * Latência do RESUMO da sessão (`get`), e só dele: o estado continua chegando na
+ * hora. É o cenário do caso B — o shell sabe o estado antes de saber o status.
+ */
+const slowSummary = vi.hoisted(() => ({ ms: 0 }));
+vi.mock('./session-adapter', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./session-adapter')>();
+  const { FixtureSessionStore: Slow } = await import('../../adapters/sessions');
+  return {
+    ...actual,
+    appSessionStore: () => {
+      const store = actual.appSessionStore();
+      if (slowSummary.ms === 0) return store;
+      const slow = new Slow({ backend: actual.appSessionBackend(), latencyMs: slowSummary.ms });
+      // delegação com `this` amarrado ao store real: os campos privados dele não
+      // sobrevivem a um `this` que seja o proxy
+      return new Proxy(store, {
+        get: (target, prop) => {
+          if (prop === 'get') return slow.get.bind(slow);
+          const value = Reflect.get(target, prop, target) as unknown;
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+    },
+  };
+});
+
 const FILL = 'senha-fixture';
+
+/** A tela de espera da revisão (ui/i18n `conversation.preparingReview`). */
+const PREPARING_REVIEW = 'Trazendo os áudios de volta para a revisão…';
+/** A primeira pergunta da entrevista (domain `L1_Q`) — âncora de "abriu na Conversa". */
+const FIRST_QUESTION =
+  'Conte essa história com as suas palavras, como se fosse para alguém que nunca ouviu.';
+/** O palco da Export. */
+const EXPORT_HEADLINE = 'A história está inteira no colar.';
 
 /** Persiste uma sessão de corte com estado salvo no store app-global; devolve o id. */
 async function persistCuttingSession(): Promise<string> {
@@ -114,10 +157,92 @@ function completableSession(): SessionState {
   };
 }
 
+/**
+ * Sessão de mapeamento com TODAS as perguntas respondidas por escrito — a entrevista
+ * chegou ao fim e não sobrou rascunho por confirmar (nenhuma gravação existe). O texto
+ * é do chamador para que as respostas de uma sessão sejam reconhecíveis noutra.
+ */
+function fullyAnsweredSession(answer = 'resposta'): SessionState {
+  let s = ensureMapping(completableSession());
+  for (const slot of questionSequence(s)) s = setAnswer(s, slot, answer);
+  return s;
+}
+
+/**
+ * A entrevista terminou, mas UMA resposta foi gravada e nunca virou texto confirmado:
+ * a revisão ainda tem trabalho dentro (`reportExportStatus` recusa a exportação). A
+ * pendência fica na PRIMEIRA pergunta — a última respondida é o que leva à revisão.
+ */
+function answeredWithPendingDraft(answer = 'resposta'): {
+  state: SessionState;
+  voice: string[];
+} {
+  const full = fullyAnsweredSession(answer);
+  const first = questionSequence(full)[0]!;
+  return { state: setAnswer(full, first, ''), voice: [voiceAnswerPath(first)] };
+}
+
+/**
+ * Vigia o DOM enquanto a rota troca: a revisão que MONTA e depois é trocada não
+ * aparece numa asserção final. Amostra o documento a cada lote de mutações — inclusive
+ * de atributo, porque o React reusa a `<section>` da conversa e só troca o `aria-label`
+ * (observar apenas nós adicionados dá falso negativo).
+ */
+function watchWhileRouting(needle: string): () => { review: boolean; needle: boolean } {
+  const seen = { review: false, needle: false };
+  const sample = (): void => {
+    if (document.querySelector(`[aria-label="relatório"], [aria-label="${PREPARING_REVIEW}"]`))
+      seen.review = true;
+    if (document.body.textContent?.includes(needle)) seen.needle = true;
+  };
+  const obs = new MutationObserver(sample);
+  obs.observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ['aria-label'],
+  });
+  return () => {
+    obs.takeRecords();
+    sample();
+    obs.disconnect();
+    return seen;
+  };
+}
+
+/** Persiste um estado de mapeamento no store app-global; devolve o id da sessão. */
+async function persistMapeamento(state: SessionState, voice: string[] = []): Promise<string> {
+  const store = appSessionStore();
+  const summary = await store.create({
+    projectId: 'p1',
+    storyName: 'H',
+    storySlug: 'h',
+    audioId: 'a1',
+    granularityLevel: 'medium',
+    beadSec: 0.25,
+    manifestId: 'fnv1a32:deadbeef',
+    pipelineConsent: true,
+  });
+  store.autosave(
+    summary.id,
+    toSessionDto(state, {
+      granularityLevel: 'medium',
+      bucketAudioId: 'a1',
+      voice,
+      voiceVersion: {},
+      pipelineConsent: true,
+    }),
+  );
+  await store.flush(summary.id);
+  return summary.id;
+}
+
 beforeEach(() => {
   window.history.replaceState({}, '', '/');
   sessionStore.setState(sessionStore.getInitialState(), true);
   localStorage.clear(); // a store app-global persiste no localStorage — sem bleed entre casos
+  slowSummary.ms = 0;
 });
 
 describe('App shell', () => {
@@ -201,13 +326,14 @@ describe('App shell', () => {
     expect(screen.getByText('Guardar')).toBeDefined();
   });
 
-  it('numa sessão carregada, mostra o fio de contas', () => {
+  it('numa sessão carregada, mostra o fio de contas', async () => {
     act(() => {
       navigate('/session/s1');
       sessionStore.getState().load(sampleSession());
     });
     render(<App />);
-    expect(screen.getAllByText('Ouvir').length).toBeGreaterThan(0);
+    // a estação chega quando a hidratação da rota resolve — aqui, falhando (ENG-511)
+    expect((await screen.findAllByText('Ouvir')).length).toBeGreaterThan(0);
     expect(screen.getByText('Guardar')).toBeDefined();
   });
 
@@ -229,8 +355,9 @@ describe('App shell', () => {
     });
     render(<App />);
 
+    const guardar = await screen.findByText('Guardar');
     await act(async () => {
-      screen.getByText('Guardar').click();
+      guardar.click();
     });
     expect(screen.getByText('A história está inteira no colar.')).toBeDefined();
 
@@ -491,8 +618,9 @@ describe('App shell', () => {
       sessionStore.getState().load(completableSession());
     });
     render(<App />);
+    const guardar = await screen.findByText('Guardar');
     await act(async () => {
-      screen.getByText('Guardar').click();
+      guardar.click();
     });
     expect(screen.getByText('A história está inteira no colar.')).toBeDefined();
 
@@ -501,17 +629,21 @@ describe('App shell', () => {
       navigate('/session/outra');
       sessionStore.getState().load(sampleSession());
     });
+    // espera a estação da OUTRA sessão montar: sem isso o null abaixo seria o
+    // placeholder da hidratação, não a prova de que a Export não grudou
+    await screen.findAllByText('Ouvir');
     expect(screen.queryByText('A história está inteira no colar.')).toBeNull();
   });
 });
 
 describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
   it('cai offline pelos eventos da window: mostra o aviso e pausa as mutações; volta online sem perda', async () => {
-    await act(async () => {
-      navigate('/session/s1');
-      sessionStore.getState().load(sampleSession());
-    });
+    // uma sessão QUE EXISTE: a trava consultiva só é adquirida para uma sessão real, e
+    // sem lease a edição já estaria pausada por outro motivo — o teste não veria o seu
+    const id = await persistCuttingSession();
+    act(() => navigate(`/session/${id}`));
     render(<App />);
+    await screen.findAllByText('Ouvir'); // a estação, e com ela o gate de conexão
     expect(screen.queryByText(/Sem conexão/)).toBeNull();
 
     // context.setOffline do Playwright dispara o evento 'offline' na window.
@@ -538,7 +670,7 @@ describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
       sessionStore.getState().load(sampleSession());
     });
     render(<App />);
-    expect(screen.getAllByText('Ouvir').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Ouvir')).length).toBeGreaterThan(0);
 
     await act(async () => {
       // o teste dirige o fluxo fixture; o narrowing é o mesmo do seam de dev (ENG-247)
@@ -587,5 +719,84 @@ describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
     await waitFor(() => {
       expect(screen.queryByText(/em uso por Ana/)).toBeNull();
     });
+  });
+});
+
+/**
+ * Onde uma sessão retomada ABRE (ENG-511). O critério é a estação que a pessoa vê ao
+ * cair na rota — o interior (hidratação, ordem dos efeitos) é caixa-preta.
+ */
+describe('App shell — onde a sessão retomada abre (ENG-511)', () => {
+  it('em andamento com a revisão inteira confirmada: abre em Guardar, não na revisão', async () => {
+    const id = await persistMapeamento(fullyAnsweredSession());
+
+    act(() => navigate(`/session/${id}`));
+    render(<App />);
+
+    expect(await screen.findByText(EXPORT_HEADLINE)).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'relatório' })).toBeNull();
+  });
+
+  it('abrir a concluída vindo de outra sessão: nem a revisão nem as respostas da anterior', async () => {
+    // A abre na revisão por direito (uma resposta gravada ainda sem texto), e é dela o
+    // texto que serve de marca. B é a concluída, que deve abrir em Guardar.
+    const anterior = answeredWithPendingDraft('memória da sessão anterior');
+    const a = await persistMapeamento(anterior.state, anterior.voice);
+    const b = await persistMapeamento(fullyAnsweredSession('resposta da concluída'));
+    const store = appSessionStore();
+    await store.complete(b, await store.load(b), {
+      manifest: '{"m":1}',
+      anchoring: '{"a":1}',
+      report: '# r',
+    });
+    act(() => navigate(`/session/${a}`));
+    render(<App />);
+    await screen.findByRole('region', { name: 'relatório' });
+
+    // o resumo lento não é a causa — é o agravante que torna a janela visível
+    slowSummary.ms = 40;
+    const watch = watchWhileRouting('memória da sessão anterior');
+    act(() => navigate(`/session/${b}`));
+
+    expect(await screen.findByText(EXPORT_HEADLINE)).toBeDefined();
+    const seen = watch();
+    expect(seen.review).toBe(false);
+    // o que importa mais: conteúdo de UMA sessão não renderiza sob a rota de OUTRA
+    expect(seen.needle).toBe(false);
+  });
+
+  it('com uma resposta gravada por confirmar, continua abrindo na revisão', async () => {
+    const pendente = answeredWithPendingDraft();
+    const id = await persistMapeamento(pendente.state, pendente.voice);
+
+    act(() => navigate(`/session/${id}`));
+    render(<App />);
+
+    expect(await screen.findByRole('region', { name: 'relatório' })).toBeDefined();
+    expect(screen.queryByText(EXPORT_HEADLINE)).toBeNull();
+  });
+
+  it('em mapeamento sem nenhuma resposta, abre na entrevista', async () => {
+    const id = await persistMapeamento(ensureMapping(completableSession()));
+
+    act(() => navigate(`/session/${id}`));
+    render(<App />);
+
+    expect(await screen.findByText(FIRST_QUESTION)).toBeDefined();
+    expect(screen.queryByText(EXPORT_HEADLINE)).toBeNull();
+  });
+
+  it('de Guardar dá para voltar à entrevista: o clique manda, a hidratação não desfaz', async () => {
+    const id = await persistMapeamento(fullyAnsweredSession());
+
+    act(() => navigate(`/session/${id}`));
+    render(<App />);
+    await screen.findByText(EXPORT_HEADLINE);
+
+    await act(async () => {
+      screen.getByText('Conversa').click();
+    });
+    expect(screen.queryByText(EXPORT_HEADLINE)).toBeNull();
+    expect(await screen.findByRole('region', { name: 'relatório' })).toBeDefined();
   });
 });

@@ -27,6 +27,7 @@ import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
 import { NavFooterOutlet, NavFooterProvider } from '../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../organisms/preparing-session/preparing-session';
+import { reviewIsDone } from './resume-placement';
 import { buildAdapterRegistry, buildStationRegistry, type StationComponent } from './registries';
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
@@ -268,19 +269,26 @@ function useAuthGate(routeName: string): void {
  * limitação: um id que falha ao carregar não LIMPA a sessão viva anterior (o `ui/state`
  * não expõe reset) — no fluxo real toda sessão tem um DTO inicial persistido pelo Setup,
  * então só afeta ids inexistentes digitados à mão.
+ *
+ * Devolve ONDE a sessão abre, e só depois de saber (ENG-511). O `ready` é o que impede
+ * o shell de se comprometer com uma estação antes disso: o `ui/state` sobrevive à troca
+ * de rota, então montar de imediato mostrava a estação da sessão ANTERIOR — com os
+ * cartões de resposta dela — sob a rota da nova, até a hidratação chegar. Uma carga que
+ * FALHA também resolve, sem Export: erro de leitura não pode virar "vai para Guardar".
  */
 function useSessionHydration(
   routeId: string | null,
   metaRef: MutableRefObject<SessionMeta | null>,
   /** Seeds the render-readable mirror of `meta.voiceVersion` from the loaded session. */
   onVoiceVersion: (versions: Record<string, number>) => void,
-): boolean {
+): { ready: boolean; initialExport: boolean } {
   const loadedId = useRef<string | null>(null);
-  // Sessão concluída reabre na Export (§7.3), não no último modo salvo do domínio
-  // (conversation) — o status vive no resumo, não no DTO de estado (ENG-320). O id
-  // acompanha o status para o "concluída" de uma sessão não vazar para a próxima
-  // enquanto a hidratação dela ainda voa.
-  const [completedId, setCompletedId] = useState<string | null>(null);
+  // Onde ESTA sessão abre: concluída reabre na Export (§7.3), não no último modo salvo
+  // do domínio (conversation) — o status vive no resumo, não no DTO de estado (ENG-320)
+  // —, e o mesmo vale para a revisão que já está inteira confirmada (ENG-511). O id
+  // acompanha o veredito para que o de uma sessão não vaze para a próxima enquanto a
+  // hidratação dela ainda voa.
+  const [placed, setPlaced] = useState<{ id: string; toExport: boolean } | null>(null);
   useEffect(() => {
     if (routeId === null || routeId === loadedId.current) return;
     let alive = true;
@@ -290,8 +298,11 @@ function useSessionHydration(
         const [dto, summary] = await Promise.all([store.load(routeId), store.get(routeId)]);
         if (!alive) return;
         loadedId.current = routeId;
-        setCompletedId(summary.status === 'completed' ? routeId : null);
         const { state, meta } = fromSessionDto(dto);
+        setPlaced({
+          id: routeId,
+          toExport: summary.status === 'completed' || reviewIsDone(state, meta.voice),
+        });
         // O meta desta sessão vive num ref para que tanto o autosave quanto o
         // registro de respostas de voz (`onVoiceSaved`) escrevam no MESMO objeto:
         // gravar voz muta `meta.voice`, e a próxima persistência (do domínio ou da
@@ -316,14 +327,18 @@ function useSessionHydration(
           if (m) appSessionStore().autosave(routeId, toSessionDto(live, m));
         });
       } catch {
-        // sessão sem estado salvo ou persistência corrompida — mantém o ui/state atual
+        // sessão sem estado salvo ou persistência corrompida — mantém o ui/state atual e
+        // segue para a estação do passo salvo; o que não se faz é ir para Guardar sem
+        // ter lido nada
+        if (alive) setPlaced({ id: routeId, toExport: false });
       }
     })();
     return () => {
       alive = false;
     };
   }, [routeId, metaRef]);
-  return routeId !== null && completedId === routeId;
+  const settled = routeId !== null && placed?.id === routeId;
+  return { ready: settled, initialExport: settled && placed.toExport };
 }
 
 /**
@@ -429,7 +444,7 @@ export function App() {
   // `{}` on every load made every reopened session look re-recorded, and the entire
   // interview was transcribed — and paid for — again.
   const [recordingVersion, setRecordingVersion] = useState<Record<string, number>>({});
-  const completed = useSessionHydration(routeId, metaRef, setRecordingVersion);
+  const { ready, initialExport } = useSessionHydration(routeId, metaRef, setRecordingVersion);
   // A trava consultiva (§7.3) tem dono único: adquire ao abrir, renova a cada 15 s,
   // solta ao sair — e abre em revisão se outra pessoa a detém. Vale nos dois modos
   // (a fixture também serve trava), então há UM caminho de código, não dois.
@@ -593,9 +608,11 @@ export function App() {
 
   let body: React.ReactNode;
   if (route.name === 'session') {
-    if (!session) {
+    if (!session || !ready) {
       // a espera vira palco (ENG-312): contas em onda + uma linha, nunca um
-      // parágrafo parado — cobre criar E retomar (hidratação + decode do áudio)
+      // parágrafo parado — cobre criar E retomar (hidratação + decode do áudio). A
+      // espera dura até a hidratação DESTA rota resolver: antes disso não se sabe onde
+      // a sessão abre, e o que havia em memória é da sessão anterior (ENG-511).
       body = <PreparingSession />;
     } else {
       body = (
@@ -615,7 +632,7 @@ export function App() {
           onVoiceSaved={onVoiceSaved}
           stt={stt}
           recordingVersion={recordingVersion}
-          initialExport={completed}
+          initialExport={initialExport}
           voicePaths={getVoicePaths}
         />
       );
