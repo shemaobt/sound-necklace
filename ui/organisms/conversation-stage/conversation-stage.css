@@ -447,11 +447,30 @@
   color: color-mix(in srgb, var(--cds-cream, #f6f5eb) 78%, transparent);
 }
 
+/*
+ * As duas saídas dividem uma linha (ENG-507). Somados, os rótulos pedem mais do
+ * que os 444px da linha — 494px em PT, 488px em EN — e quebrar jogava a segunda
+ * decisão para baixo, longe da primeira. Aqui quem cede é o botão: sem quebra de
+ * linha no contêiner, os dois encolhem até o texto e o rótulo longo passa a
+ * ocupar duas linhas dentro da pílula. Alargar o painel resolveria também, mas
+ * 520px é largura de desenho e mudá-la não é decisão desta linha.
+ */
 .cds-rerecord-confirm-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
   align-items: center;
+}
+
+/*
+ * Piso: abaixo de 420px de janela sobram menos de 272px de linha — o mínimo que
+ * os dois rótulos ocupam já totalmente quebrados. Aí lado a lado seria mentira,
+ * e empilhar é a saída honesta.
+ */
+@media (max-width: 420px) {
+  .cds-rerecord-confirm-actions {
+    flex-wrap: wrap;
+  }
 }
 
 /* o portal sai do palco: o ghost oliva sobre painel oliva sumiria */
