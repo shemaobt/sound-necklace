@@ -11,6 +11,15 @@ concurrency:
 
 # Required checks (CLAUDE.md "Quality gates"): golden-harness, typecheck, lint,
 # depcruise, test. Nomes de job = nomes dos required status checks — não renomear.
+#
+# ENG-515: três jobs precisam do Chromium (golden-harness → `golden:verify`, que
+# regenera da referência; test → `test:browser`; e2e → as specs). O download travava
+# até o job estourar o teto e ser CANCELADO, e cancelamento se lê como `fail` no
+# `gh pr checks` — um golden vermelho que não significava nada. Por isso, nos três e
+# na mesma forma: cache do navegador (chave = versão instalada do Playwright), para
+# que em acerto não haja download nenhum; e `timeout-minutes` PRÓPRIO no passo, bem
+# abaixo do teto do job, para que um download que caia falhe rápido e dizendo o quê.
+# Sem nada de `continue-on-error`: sem navegador, o job TEM de ficar vermelho.
 jobs:
   golden-harness:
     runs-on: ubuntu-latest
@@ -27,7 +36,26 @@ jobs:
       # runner: replay via domain/contracts vs goldens comitados (byte a byte)
       - run: pnpm golden
       # verify: regenera da referência intocada e prova goldens ≡ referência
-      - run: pnpm exec playwright install --with-deps chromium
+      - name: Resolve Playwright version
+        id: playwright-version
+        # a versão vem do que está INSTALADO: chave chumbada envelhece calada e
+        # passaria a servir um navegador de outra versão
+        run: echo "version=$(pnpm exec playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
+      - name: Download Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 5
+        run: pnpm exec playwright install chromium
+      # as libs de sistema NÃO entram no cache ("operating system dependencies need to
+      # be installed, which are not cacheable" — docs do Playwright), então sempre rodam
+      - name: Install Chromium system dependencies
+        timeout-minutes: 5
+        run: pnpm exec playwright install-deps chromium
       - run: pnpm golden:verify
 
   typecheck:
@@ -86,7 +114,26 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm exec playwright install --with-deps chromium
+      - name: Resolve Playwright version
+        id: playwright-version
+        # a versão vem do que está INSTALADO: chave chumbada envelhece calada e
+        # passaria a servir um navegador de outra versão
+        run: echo "version=$(pnpm exec playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
+      - name: Download Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 5
+        run: pnpm exec playwright install chromium
+      # as libs de sistema NÃO entram no cache ("operating system dependencies need to
+      # be installed, which are not cacheable" — docs do Playwright), então sempre rodam
+      - name: Install Chromium system dependencies
+        timeout-minutes: 5
+        run: pnpm exec playwright install-deps chromium
       - run: pnpm test:browser
 
   # Job ADICIONAL (não-required): a imagem de produção realmente constrói. Só build,
@@ -126,7 +173,26 @@ jobs:
         with:
           node-version: 22
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - name: Resolve Playwright version
+        id: playwright-version
+        # a versão vem do que está INSTALADO: chave chumbada envelhece calada e
+        # passaria a servir um navegador de outra versão
+        run: echo "version=$(pnpm exec playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
+      - name: Download Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 5
+        run: pnpm exec playwright install chromium
+      # as libs de sistema NÃO entram no cache ("operating system dependencies need to
+      # be installed, which are not cacheable" — docs do Playwright), então sempre rodam
+      - name: Install Chromium system dependencies
+        timeout-minutes: 5
+        run: pnpm exec playwright install-deps chromium
       # o webServer da config sobe o Vite; a spec dirige o Chromium headless
       # o webServer da config sobe o Vite; a spec dirige o Chromium headless
       - run: pnpm e2e
