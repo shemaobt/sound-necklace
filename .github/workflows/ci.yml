@@ -13,13 +13,24 @@ concurrency:
 # depcruise, test. Nomes de job = nomes dos required status checks — não renomear.
 #
 # ENG-515: três jobs precisam do Chromium (golden-harness → `golden:verify`, que
-# regenera da referência; test → `test:browser`; e2e → as specs). O download travava
-# até o job estourar o teto e ser CANCELADO, e cancelamento se lê como `fail` no
-# `gh pr checks` — um golden vermelho que não significava nada. Por isso, nos três e
-# na mesma forma: cache do navegador (chave = versão instalada do Playwright), para
-# que em acerto não haja download nenhum; e `timeout-minutes` PRÓPRIO no passo, bem
-# abaixo do teto do job, para que um download que caia falhe rápido e dizendo o quê.
-# Sem nada de `continue-on-error`: sem navegador, o job TEM de ficar vermelho.
+# regenera da referência; test → `test:browser`; e2e → as specs). O antigo
+# `playwright install --with-deps chromium` travava até o job estourar o teto e ser
+# CANCELADO — e cancelamento se lê como `fail` no `gh pr checks`, o que já deixou o
+# golden vermelho num PR de camada congelada sem significar nada.
+#
+# Medido, e NÃO era o download: o download do Chromium leva 9-11 s e não falhou uma
+# vez; quem travava era o `apt-get update` do `--with-deps` contra o espelho
+# `azure.archive.ubuntu.com` (83 s quando dava certo, >5 min quando não). E o
+# `install-deps` instalava 9 pacotes — TODOS de fonte (CJK, cirílico, tailandês) e
+# ZERO bibliotecas: a imagem `ubuntu-latest` já traz tudo que o Chromium precisa
+# para subir. Pagávamos um ponto de falha flaky, em três jobs, por fontes que estas
+# suítes não renderizam (o `golden:verify` extrai strings via `page.evaluate`, sem
+# screenshot nem métrica de fonte; a UI é PT/EN). Por isso o `apt` saiu de vez.
+#
+# Sobrou, igual nos três: cache do navegador (chave = versão INSTALADA do Playwright)
+# e `timeout-minutes` PRÓPRIO no download, bem abaixo do teto do job. Sem nada de
+# `continue-on-error`: sem navegador, o job TEM de ficar vermelho. Se um dia faltar
+# uma lib do sistema, o Chromium falha ao subir — alto e visível, não em silêncio.
 jobs:
   golden-harness:
     runs-on: ubuntu-latest
@@ -51,11 +62,6 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         timeout-minutes: 5
         run: pnpm exec playwright install chromium
-      # as libs de sistema NÃO entram no cache ("operating system dependencies need to
-      # be installed, which are not cacheable" — docs do Playwright), então sempre rodam
-      - name: Install Chromium system dependencies
-        timeout-minutes: 5
-        run: pnpm exec playwright install-deps chromium
       - run: pnpm golden:verify
 
   typecheck:
@@ -129,11 +135,6 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         timeout-minutes: 5
         run: pnpm exec playwright install chromium
-      # as libs de sistema NÃO entram no cache ("operating system dependencies need to
-      # be installed, which are not cacheable" — docs do Playwright), então sempre rodam
-      - name: Install Chromium system dependencies
-        timeout-minutes: 5
-        run: pnpm exec playwright install-deps chromium
       - run: pnpm test:browser
 
   # Job ADICIONAL (não-required): a imagem de produção realmente constrói. Só build,
@@ -188,11 +189,6 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         timeout-minutes: 5
         run: pnpm exec playwright install chromium
-      # as libs de sistema NÃO entram no cache ("operating system dependencies need to
-      # be installed, which are not cacheable" — docs do Playwright), então sempre rodam
-      - name: Install Chromium system dependencies
-        timeout-minutes: 5
-        run: pnpm exec playwright install-deps chromium
       # o webServer da config sobe o Vite; a spec dirige o Chromium headless
       # o webServer da config sobe o Vite; a spec dirige o Chromium headless
       - run: pnpm e2e
