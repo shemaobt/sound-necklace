@@ -415,6 +415,26 @@ export const pt = {
       body: 'A gravação fica guardada, mas não entra no documento — só o texto confirmado entra. Guardar os documentos vai recusar enquanto faltar alguma.',
       review: 'Revisar as respostas',
       anyway: 'Ir mesmo assim',
+      /* Aceitar todas ali mesmo (ENG-512). A mesma ação do topo da revisão, dita com o
+         número que ELA alcança — as que têm transcrição —, que não é o número do aviso. */
+      confirmAll_one: 'Aceitar a transcrição',
+      confirmAll_other: 'Aceitar as {{count}} transcrições',
+      bulkNote:
+        'Estes textos foram escritos por uma máquina a partir das gravações. Aceitar de uma vez toma todos como estão, sem ler um a um, e eles passam a ser a resposta que vai para o documento. As respostas já escritas à mão ficam como estão.',
+      bulkPartial_one:
+        'Mesmo assim vai sobrar 1 resposta gravada que não tem transcrição, e guardar vai continuar recusando por causa dela.',
+      bulkPartial_other:
+        'Mesmo assim vão sobrar {{count}} respostas gravadas que não têm transcrição, e guardar vai continuar recusando por causa delas.',
+      confirmed_one: '1 transcrição foi confirmada e virou a resposta do documento.',
+      confirmed_other:
+        '{{count}} transcrições foram confirmadas e viraram as respostas do documento.',
+      confirmedNone: 'Nenhuma transcrição foi confirmada.',
+      leftTitle_one: 'Ainda falta 1 resposta.',
+      leftTitle_other: 'Ainda faltam {{count}} respostas.',
+      leftBody_one:
+        'É uma gravação sem transcrição: só escrevê-la à mão resolve, e guardar os documentos vai continuar recusando enquanto ela faltar.',
+      leftBody_other:
+        'São gravações sem transcrição: só escrevê-las à mão resolve, e guardar os documentos vai continuar recusando enquanto elas faltarem.',
     },
   },
   seamModal: {

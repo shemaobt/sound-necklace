@@ -7,6 +7,7 @@ import type { Player } from '../../../adapters/audio';
 import type { Transcriber } from '../../../adapters/stt/types';
 import { FixtureSpeechSynthesizer } from '../../../adapters/tts/fixture';
 import { FixtureVoiceRecorder } from '../../../adapters/voice/fixture';
+import { MemoryVoiceStore } from '../../../adapters/voice/memory-store';
 import type { VoiceRecorder } from '../../../adapters/voice/types';
 import {
   buildBeads,
@@ -25,6 +26,7 @@ import {
 } from '../../../domain';
 import i18n from '../../i18n';
 import { appStore, sessionStore } from '../../state';
+import { markSkipped } from './answered';
 import conversationCss from './conversation.css?raw';
 import Conversation from './index';
 
@@ -1236,4 +1238,144 @@ describe('Conversation — sair da revisão com transcrição por confirmar', ()
     },
     ANDAR,
   );
+});
+
+/**
+ * ENG-512 — aceitar todas as transcrições SEM sair do aviso.
+ *
+ * A ação em lote já existia, correta e testada, no topo da revisão; o aviso de saída
+ * já existia aqui. Quem clicava em "Guardar os documentos →" com rascunhos por
+ * confirmar era mandado de volta a procurá-la. O aviso passa a oferecer a MESMA ação —
+ * a do relatório, não uma segunda —, e os testes afirmam o que ficou gravado na
+ * resposta e em que tela a pessoa parou.
+ *
+ * Os dois números que se encontram aqui não são o mesmo: o aviso conta as respostas
+ * GRAVADAS sem texto confirmado (o número do gate), o lote conta as que têm
+ * transcrição guardada. Uma gravação sem transcrição está no primeiro e não no
+ * segundo — daí o terceiro caso.
+ */
+describe('Conversation — aceitar todas as transcrições a partir do aviso de saída (ENG-512)', () => {
+  const DRAFT_A = 'Ele contou do golfinho que trouxe o menino de volta.';
+  const DRAFT_B = 'A avó guardou a canção até o fim da viagem.';
+  const TYPED = 'A facilitadora escreveu esta resposta à mão.';
+
+  /** Os bytes que o fixture do gravador guarda — o conteúdo não importa, a existência sim. */
+  const RECORDED = Uint8Array.of(0x1a, 0x45, 0xdf, 0xa3);
+
+  interface Seed {
+    /** Índice na sequência de perguntas. Só de nível 1: a chave reservada mora no mesmo balde. */
+    at: number;
+    /** Transcrição guardada à espera de confirmação (`src__<k>`). */
+    draft?: string;
+    /** Resposta escrita à mão. */
+    typed?: string;
+  }
+
+  /** O texto que ficou GRAVADO na resposta — o que o documento vai emitir. */
+  function answerAt(at: number): string {
+    const state = sessionStore.getState().session!;
+    return state.mapping!.level1[questionSequence(state)[at]!.k] ?? '';
+  }
+
+  /**
+   * Abre a revisão já com as gravações persistidas e o estado semeado. A última
+   * pergunta é marcada como sem resposta para a sessão RETOMAR no fim (ENG-367): o
+   * caso é sobre o aviso de saída, não sobre trinta cliques de caminhada.
+   */
+  async function reviewWithVoice(seeds: readonly Seed[], onGoToExport: () => void): Promise<void> {
+    let state = ensureMapping(mapping());
+    const sequence = questionSequence(state);
+    const paths = seeds.map((s) => voiceAnswerPath(sequence[s.at]!));
+    for (const s of seeds) {
+      const slot = sequence[s.at]!;
+      if (slot.level !== 1) throw new Error(`a pergunta ${s.at} não é de nível 1`);
+      if (s.draft !== undefined) {
+        state = setAnswer(state, { level: 1, k: `src__${slot.k}` }, s.draft);
+      }
+      if (s.typed !== undefined) state = setAnswer(state, slot, s.typed);
+    }
+    state = markSkipped(state, sequence[sequence.length - 1]!);
+    const store = new MemoryVoiceStore();
+    for (const p of paths) await store.put(p, RECORDED);
+    load(state);
+    renderStation(
+      <Conversation
+        recorder={new FixtureVoiceRecorder(store)}
+        voicePaths={() => paths}
+        onGoToExport={onGoToExport}
+      />,
+    );
+    await screen.findByRole('button', { name: 'Guardar os documentos →' });
+  }
+
+  it('aceitando todas ali mesmo, os elegíveis viram resposta e o fluxo segue para Guardar', async () => {
+    const onGoToExport = vi.fn();
+    await reviewWithVoice(
+      [
+        { at: 0, draft: DRAFT_A },
+        { at: 1, draft: DRAFT_B },
+      ],
+      onGoToExport,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar os documentos →' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aceitar as 2 transcrições' }));
+
+    expect(answerAt(0)).toBe(DRAFT_A);
+    expect(answerAt(1)).toBe(DRAFT_B);
+    expect(onGoToExport).toHaveBeenCalled();
+  });
+
+  it('o texto escrito à mão sai intacto: o lote só preenche célula vazia', async () => {
+    const onGoToExport = vi.fn();
+    await reviewWithVoice(
+      [
+        { at: 0, draft: DRAFT_A, typed: TYPED },
+        { at: 1, draft: DRAFT_B },
+      ],
+      onGoToExport,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar os documentos →' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aceitar a transcrição' }));
+
+    expect(answerAt(0)).toBe(TYPED);
+    expect(answerAt(1)).toBe(DRAFT_B);
+  });
+
+  it('a gravação SEM transcrição continua pendente, e a tela não afirma o contrário', async () => {
+    const onGoToExport = vi.fn();
+    await reviewWithVoice([{ at: 0, draft: DRAFT_A }, { at: 1 }], onGoToExport);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar os documentos →' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aceitar a transcrição' }));
+
+    expect(answerAt(0)).toBe(DRAFT_A);
+    expect(answerAt(1)).toBe('');
+    // não passou para a Export, e o aviso continua de pé dizendo o que sobrou
+    expect(onGoToExport).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog').textContent).toMatch(/ainda falta 1 resposta/i);
+  });
+
+  /**
+   * A ação nova aceita centenas de textos de máquina de uma vez. O foco continua
+   * nascendo na saída que não escreve nada — um Enter distraído no aviso não pode ser
+   * o que confirma —, e ela entra na tabulação logo depois, ao alcance de quem só usa
+   * o teclado.
+   */
+  it('a ação nova entra na tabulação sem roubar o foco inicial', async () => {
+    await reviewWithVoice(
+      [
+        { at: 0, draft: DRAFT_A },
+        { at: 1, draft: DRAFT_B },
+      ],
+      vi.fn(),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar os documentos →' }));
+
+    expect(document.activeElement?.textContent).toBe('Revisar as respostas');
+    await userEvent.tab();
+    expect(document.activeElement?.textContent).toBe('Aceitar as 2 transcrições');
+  });
 });
