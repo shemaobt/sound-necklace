@@ -305,13 +305,18 @@ export function Setup({
       sessionStore.getState().load(state);
       store.autosave(
         summary.id,
-        toSessionDto(state, {
-          granularityLevel: projectLevel,
-          bucketAudioId: chosen.id,
-          voice: [],
-          voiceVersion: {},
-          pipelineConsent: consent,
-        }),
+        toSessionDto(
+          state,
+          {
+            granularityLevel: projectLevel,
+            bucketAudioId: chosen.id,
+            voice: [],
+            voiceVersion: {},
+            pipelineConsent: consent,
+          },
+          // a sessão está nascendo: não há entrevista, muito menos revisão pronta
+          false,
+        ),
       );
       await store.flush(summary.id);
 

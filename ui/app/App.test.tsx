@@ -13,6 +13,7 @@ import {
   voiceAnswerPath,
   type SessionState,
 } from '../../domain';
+import { markSkipped } from '../pages/conversation/answered';
 import { sessionStore } from '../state';
 import { App } from './App';
 import { appAuth } from './auth-adapter';
@@ -71,13 +72,17 @@ async function persistCuttingSession(): Promise<string> {
   });
   store.autosave(
     summary.id,
-    toSessionDto(cuttingWithLockedScene(), {
-      granularityLevel: 'medium',
-      bucketAudioId: 'a1',
-      voice: [],
-      voiceVersion: {},
-      pipelineConsent: true,
-    }),
+    toSessionDto(
+      cuttingWithLockedScene(),
+      {
+        granularityLevel: 'medium',
+        bucketAudioId: 'a1',
+        voice: [],
+        voiceVersion: {},
+        pipelineConsent: true,
+      },
+      false,
+    ),
   );
   await store.flush(summary.id);
   return summary.id;
@@ -183,6 +188,18 @@ function answeredWithPendingDraft(answer = 'resposta'): {
 }
 
 /**
+ * A entrevista chegou ao fim com a ÚLTIMA pergunta RECUSADA: recusar é responder, então
+ * a sessão está pronta — e nenhuma gravação ficou sem texto. É a última porque é nela
+ * que "← Anterior" pousa ao sair da revisão, que é por onde se volta ao microfone.
+ */
+function answeredWithLastSkipped(): SessionState {
+  const full = fullyAnsweredSession();
+  const sequence = questionSequence(full);
+  const slot = sequence[sequence.length - 1]!;
+  return markSkipped(setAnswer(full, slot, ''), slot);
+}
+
+/**
  * Vigia o DOM enquanto a rota troca: a revisão que MONTA e depois é trocada não
  * aparece numa asserção final. Amostra o documento a cada lote de mutações — inclusive
  * de atributo, porque o React reusa a `<section>` da conversa e só troca o `aria-label`
@@ -226,13 +243,17 @@ async function persistMapeamento(state: SessionState, voice: string[] = []): Pro
   });
   store.autosave(
     summary.id,
-    toSessionDto(state, {
-      granularityLevel: 'medium',
-      bucketAudioId: 'a1',
-      voice,
-      voiceVersion: {},
-      pipelineConsent: true,
-    }),
+    toSessionDto(
+      state,
+      {
+        granularityLevel: 'medium',
+        bucketAudioId: 'a1',
+        voice,
+        voiceVersion: {},
+        pipelineConsent: true,
+      },
+      false,
+    ),
   );
   await store.flush(summary.id);
   return summary.id;
@@ -307,13 +328,17 @@ describe('App shell', () => {
     });
     store.autosave(
       summary.id,
-      toSessionDto(sampleSession(), {
-        granularityLevel: 'medium',
-        bucketAudioId: 'a1',
-        voice: [],
-        voiceVersion: {},
-        pipelineConsent: true,
-      }),
+      toSessionDto(
+        sampleSession(),
+        {
+          granularityLevel: 'medium',
+          bucketAudioId: 'a1',
+          voice: [],
+          voiceVersion: {},
+          pipelineConsent: true,
+        },
+        false,
+      ),
     );
     await store.flush(summary.id);
 
@@ -386,13 +411,17 @@ describe('App shell', () => {
     });
     // o estado salvo ficou no Conversation (o último modo do domínio) — é o que hoje
     // faz a reentrada cair na entrevista
-    const dto = toSessionDto(completableSession(), {
-      granularityLevel: 'medium',
-      bucketAudioId: 'a1',
-      voice: [],
-      voiceVersion: {},
-      pipelineConsent: true,
-    });
+    const dto = toSessionDto(
+      completableSession(),
+      {
+        granularityLevel: 'medium',
+        bucketAudioId: 'a1',
+        voice: [],
+        voiceVersion: {},
+        pipelineConsent: true,
+      },
+      false,
+    );
     store.autosave(summary.id, dto);
     await store.flush(summary.id);
     await store.complete(summary.id, dto, {
@@ -426,13 +455,17 @@ describe('App shell', () => {
     });
     store.autosave(
       summary.id,
-      toSessionDto(sampleSession(), {
-        granularityLevel: 'medium',
-        bucketAudioId: 'a1',
-        voice: [],
-        voiceVersion: {},
-        pipelineConsent: true,
-      }),
+      toSessionDto(
+        sampleSession(),
+        {
+          granularityLevel: 'medium',
+          bucketAudioId: 'a1',
+          voice: [],
+          voiceVersion: {},
+          pipelineConsent: true,
+        },
+        false,
+      ),
     );
     await store.flush(summary.id);
 
@@ -492,13 +525,17 @@ describe('App shell', () => {
     });
     store.autosave(
       summary.id,
-      toSessionDto(completableSession(), {
-        granularityLevel: 'medium',
-        bucketAudioId: 'a1',
-        voice: [],
-        voiceVersion: {},
-        pipelineConsent: true,
-      }),
+      toSessionDto(
+        completableSession(),
+        {
+          granularityLevel: 'medium',
+          bucketAudioId: 'a1',
+          voice: [],
+          voiceVersion: {},
+          pipelineConsent: true,
+        },
+        false,
+      ),
     );
     await store.flush(summary.id);
 
@@ -559,13 +596,17 @@ describe('App shell', () => {
       });
       store.autosave(
         summary.id,
-        toSessionDto(cuttingWithLockedScene(), {
-          granularityLevel: 'medium',
-          bucketAudioId: 'aud_conto_do_boto',
-          voice: [],
-          voiceVersion: {},
-          pipelineConsent: true,
-        }),
+        toSessionDto(
+          cuttingWithLockedScene(),
+          {
+            granularityLevel: 'medium',
+            bucketAudioId: 'aud_conto_do_boto',
+            voice: [],
+            voiceVersion: {},
+            pipelineConsent: true,
+          },
+          false,
+        ),
       );
       await store.flush(summary.id);
 
@@ -798,5 +839,80 @@ describe('App shell — onde a sessão retomada abre (ENG-511)', () => {
     });
     expect(screen.queryByText(EXPORT_HEADLINE)).toBeNull();
     expect(await screen.findByRole('region', { name: 'relatório' })).toBeDefined();
+  });
+});
+
+/**
+ * O passo que a sessão SALVA reporta ao dashboard (ENG-514). O critério é o que o
+ * resumo devolve depois de o shell persistir — o interior (que campo carrega o quê) é
+ * caixa-preta. O passo importa porque é ele que o cartão desenha: uma sessão a que só
+ * falta guardar mostrava quatro contas apagadas.
+ */
+describe('App shell — o passo que a sessão salva reporta (ENG-514)', () => {
+  /** Uma decisão qualquer depois da hidratação — é o autosave dela que se observa. */
+  async function saveOnce(id: string, slug: string): Promise<void> {
+    act(() => sessionStore.getState().apply((s) => ({ ...s, slug })));
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    await waitFor(async () => {
+      expect(fromSessionDto(await appSessionStore().load(id)).state.slug).toBe(slug);
+    });
+  }
+
+  it('com a revisão inteira pronta, reporta Guardar', async () => {
+    const id = await persistMapeamento(fullyAnsweredSession());
+    act(() => navigate(`/session/${id}`));
+    render(<App />);
+    await screen.findByText(EXPORT_HEADLINE);
+
+    await saveOnce(id, 'pronta-para-guardar');
+
+    expect((await appSessionStore().get(id)).progress.current_step).toBe('save');
+  });
+
+  it('com uma resposta gravada ainda sem texto, continua reportando a Conversa', async () => {
+    const pendente = answeredWithPendingDraft();
+    const id = await persistMapeamento(pendente.state, pendente.voice);
+    act(() => navigate(`/session/${id}`));
+    render(<App />);
+    await screen.findByRole('region', { name: 'relatório' });
+
+    await saveOnce(id, 'ainda-por-confirmar');
+
+    expect((await appSessionStore().get(id)).progress.current_step).toBe('conversation');
+  });
+
+  it('gravar uma resposta que ainda não tem texto devolve o passo à Conversa', async () => {
+    // a bandeira é dado DERIVADO: se ela ficasse valendo a do último salvamento, o
+    // cartão continuaria dizendo "só falta guardar" com uma resposta por transcrever
+    const id = await persistMapeamento(answeredWithLastSkipped());
+    act(() => navigate(`/session/${id}`));
+    render(<App />);
+    await screen.findByText(EXPORT_HEADLINE);
+    await saveOnce(id, 'pronta-antes-de-gravar');
+    expect((await appSessionStore().get(id)).progress.current_step).toBe('save');
+
+    // a facilitadora volta da revisão e grava a resposta que tinha ficado sem
+    await act(async () => {
+      screen.getByText('Conversa').click();
+    });
+    const anterior = await screen.findByRole('button', { name: '← Anterior' });
+    await act(async () => {
+      anterior.click();
+    });
+    const mic = await screen.findByRole('button', { name: 'Gravar a resposta' });
+    await act(async () => {
+      mic.click();
+    });
+    const parar = await screen.findByRole('button', { name: 'Parar' });
+    await act(async () => {
+      parar.click();
+    });
+
+    // gravar persiste na hora (§8.7) — e o passo salvo acompanha
+    await waitFor(async () => {
+      expect((await appSessionStore().get(id)).progress.current_step).toBe('conversation');
+    });
   });
 });

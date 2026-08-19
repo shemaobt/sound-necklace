@@ -21,9 +21,10 @@
  * VERSÕES (ENG-357). v1 = a forma PT-BR (`statement_pt`, confiança
  * `alta`/`média`/`baixa`); v2 = a forma inglesa que a ENG-356 introduziu. A
  * ENG-356 trocou a forma sem carimbar versão nova, então v1 e v2 conviveram
- * indistinguíveis por um commit — daí o bump aqui. A leitura aceita as duas e
- * normaliza para v2; a escrita só emite v2, então reabrir e salvar promove a
- * sessão. `SessionStateDtoSchema` (v2) permanece o schema canônico e RECUSA v1:
+ * indistinguíveis por um commit — daí o bump aqui. v3 = a v2 mais a bandeira
+ * `reviewComplete` (ENG-514). A leitura aceita as três e normaliza para v3; a
+ * escrita só emite v3, então reabrir e salvar promove a sessão.
+ * `SessionStateDtoSchema` (v3) permanece o schema canônico e RECUSA v1 e v2:
  * migrar é um passo explícito, nunca uma tolerância do schema.
  *
  * Importa apenas domain/ + zod (raiz) + o enum de granularidade do bucket.
@@ -82,7 +83,7 @@ const MappingSchema = z.strictObject({
 });
 
 export const SessionStateDtoSchema = z.strictObject({
-  schema_version: z.literal(2),
+  schema_version: z.literal(3),
   // grade + identidade
   durationSec: z.number().nonnegative(),
   beadSec: z.number().positive(),
@@ -116,9 +117,34 @@ export const SessionStateDtoSchema = z.strictObject({
   // Sem isso, acrescentá-lo transformaria cada sessão em andamento num erro de
   // hidratação.
   voiceVersion: z.record(z.string(), z.int().nonnegative()).default({}),
+  /**
+   * A revisão desta sessão está inteira pronta (ENG-514) — só falta guardar.
+   *
+   * DERIVADO, e por isso ausente do `SessionMeta`: quem salva o recalcula a cada
+   * escrita (`toSessionDto` o exige como argumento) e a leitura o ignora. Um valor
+   * relido do documento anterior seria justamente o defeito que este campo existe
+   * para não ter: uma sessão dizendo "só falta guardar" com resposta por transcrever.
+   *
+   * Opcional porque o documento de toda sessão em andamento foi escrito antes dele —
+   * a API lê a ausência como "não sabemos", que é o comportamento de sempre.
+   */
+  reviewComplete: z.boolean().optional(),
 });
 
 export type SessionStateDto = z.infer<typeof SessionStateDtoSchema>;
+
+/* ---------------- v2 legado (ENG-514) ---------------- */
+
+/** v2 é a v3 sem a bandeira da revisão — e nada mais. */
+const SessionStateDtoV2Schema = SessionStateDtoSchema.omit({ reviewComplete: true }).extend({
+  schema_version: z.literal(2),
+});
+
+/** Traz um documento v2 para a forma v3. A bandeira nasce AUSENTE: ninguém a
+ *  inventa na leitura; ela só existe a partir do primeiro salvamento. */
+function upgradeV2(dto: z.infer<typeof SessionStateDtoV2Schema>): SessionStateDto {
+  return { ...dto, schema_version: 3 };
+}
 
 /* ---------------- v1 legado (ENG-357) ---------------- */
 
@@ -135,14 +161,17 @@ const LegacyFraseSchema = FraseSchema.omit({ statement: true }).extend({
   statement_pt: z.string(),
 });
 
-const SessionStateDtoV1Schema = SessionStateDtoSchema.extend({
+const SessionStateDtoV1Schema = SessionStateDtoV2Schema.extend({
   schema_version: z.literal(1),
   parts: z.array(LegacyScenePartSchema),
   frases: z.array(LegacyFraseSchema),
 });
 
-/** Traz um documento v1 para a forma v2. Só toca o que mudou de nome/vocabulário. */
-function upgradeV1(dto: z.infer<typeof SessionStateDtoV1Schema>): SessionStateDto {
+/** Traz um documento v1 para a forma v2. Só toca o que mudou de nome/vocabulário;
+ *  o resto do caminho até a versão corrente é do `upgradeV2`. */
+function upgradeV1(
+  dto: z.infer<typeof SessionStateDtoV1Schema>,
+): z.infer<typeof SessionStateDtoV2Schema> {
   return {
     ...dto,
     schema_version: 2,
@@ -165,12 +194,14 @@ function upgradeV1(dto: z.infer<typeof SessionStateDtoV1Schema>): SessionStateDt
  * reprova alto — corromper em silêncio é pior que falhar ao retomar.
  */
 function parseSessionDto(raw: unknown): SessionStateDto {
-  const v2 = SessionStateDtoSchema.safeParse(raw);
-  if (v2.success) return v2.data;
+  const v3 = SessionStateDtoSchema.safeParse(raw);
+  if (v3.success) return v3.data;
+  const v2 = SessionStateDtoV2Schema.safeParse(raw);
+  if (v2.success) return upgradeV2(v2.data);
   const v1 = SessionStateDtoV1Schema.safeParse(raw);
-  if (v1.success) return upgradeV1(v1.data);
-  // o erro do v2 é o útil: v1 é o caminho de exceção, não o esperado
-  throw new Error(`estado de sessão inválido: ${v2.error.message}`);
+  if (v1.success) return upgradeV2(upgradeV1(v1.data));
+  // o erro do v3 é o útil: as versões antigas são o caminho de exceção, não o esperado
+  throw new Error(`estado de sessão inválido: ${v3.error.message}`);
 }
 
 /** Campos de sessão que não vivem no `SessionState` do domínio (§7.3). */
@@ -191,9 +222,19 @@ export interface SessionMeta {
   pipelineConsent: boolean;
 }
 
-export function toSessionDto(state: SessionState, meta: SessionMeta): SessionStateDto {
+/**
+ * @param reviewComplete a revisão desta sessão está inteira pronta. OBRIGATÓRIO de
+ * propósito (ENG-514): é o compilador que impede um caminho de escrita de esquecê-lo e
+ * deixar o documento reportando um passo vencido. A regra mora em quem chama porque ela
+ * depende da convenção de recusa, que vive na `ui/` — e `contracts/` não importa `ui/`.
+ */
+export function toSessionDto(
+  state: SessionState,
+  meta: SessionMeta,
+  reviewComplete: boolean,
+): SessionStateDto {
   return {
-    schema_version: 2,
+    schema_version: 3,
     durationSec: state.durationSec,
     beadSec: state.beadSec,
     totalBeads: state.totalBeads,
@@ -231,6 +272,7 @@ export function toSessionDto(state: SessionState, meta: SessionMeta): SessionSta
     pipelineConsent: meta.pipelineConsent,
     voice: [...meta.voice],
     voiceVersion: { ...meta.voiceVersion },
+    reviewComplete,
   };
 }
 
