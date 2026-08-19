@@ -449,6 +449,40 @@ describe('Necklace — janela rolável que segue a conta acesa (ENG-387)', () =>
     expect(win.scrollHeight).toBeGreaterThan(MAX_H);
   });
 
+  /**
+   * ENG-506 — onde a barra é de SOBREPOSIÇÃO (macOS), ela é pintada por cima do
+   * conteúdo sem tirar largura nenhuma: a última coluna de contas fica embaixo
+   * dela e o toque naquela conta acerta o scroller. A folga tem de existir mesmo
+   * onde a barra é clássica e o Chromium de teste não simula a de sobreposição —
+   * por isso a asserção é sobre a folga RESERVADA à direita das contas, medida em
+   * pixels de tela, e o limiar é a largura de uma barra de sobreposição do macOS.
+   */
+  const BARRA_SOBREPOSICAO = 15;
+
+  it('a barra de rolagem tem por onde passar sem cobrir conta nenhuma (ENG-506)', () => {
+    const { win, el } = open();
+
+    // o cenário é o do relato: há mais contas do que cabem, então há barra
+    expect(win.scrollHeight).toBeGreaterThan(win.clientHeight);
+
+    // onde a área da barra começa: a clássica sai do clientWidth (a diferença é a
+    // calha), a de sobreposição não tira nada e pinta os últimos pixels da caixa
+    const calha = win.offsetWidth - win.clientWidth;
+    const inicioDaBarra = win.getBoundingClientRect().right - calha;
+
+    // a conta que chega mais à direita em qualquer fileira
+    const contaMaisADireita = Math.max(
+      ...Array.from(el.querySelectorAll('.cds-necklace-bead')).map(
+        (b) => b.getBoundingClientRect().right,
+      ),
+    );
+
+    expect(
+      inicioDaBarra - contaMaisADireita,
+      'a barra de rolagem passa por cima da última coluna de contas',
+    ).toBeGreaterThanOrEqual(BARRA_SOBREPOSICAO);
+  });
+
   it('tocar uma conta DEPOIS de rolar reporta essa conta, não a vizinha', () => {
     const onBeadPointerDown = vi.fn();
     const { win, el } = open({ onBeadPointerDown });
