@@ -1306,9 +1306,27 @@ describe('Relatório — refazer as respostas confirmadas de um rascunho vencido
     return depois;
   }
 
+  /**
+   * A descoberta de voz terminou — a precondição do lote, esperada pela sua consequência
+   * VISÍVEL: a linha de voz de cada cartão, que só existe com o caminho em `voiceSet`.
+   *
+   * A descoberta resolve um caminho por vez, sem barreira (ENG-319), e é ELA que decide
+   * quais respostas vão ao job: quais rascunhos voltam, e portanto se há o que refazer.
+   * Sem esta espera o `findBy` do botão cobria a cadeia inteira — os dois `has`, o
+   * disparo do job e a volta dos rascunhos — sob um único orçamento, e num runner lento
+   * o orçamento acabava antes dela (ENG-516). Enquanto os dois cartões não mostram a
+   * própria linha, o conjunto ainda pode crescer e o lote ainda não pode existir.
+   */
+  async function descobertaDeVozConcluida(): Promise<void> {
+    for (const q of [Q, MINHA_Q]) {
+      await within(cardFor(q.q)).findByRole('button', { name: /Ouvir a resposta/ });
+    }
+  }
+
   it('refaz a resposta confirmada de um rascunho vencido, e o inglês vai junto', async () => {
     await sessaoJaConfirmadaDoRascunhoVelho();
     reabreComTranscricaoRefeita();
+    await descobertaDeVozConcluida();
 
     await userEvent.click(await screen.findByRole('button', { name: REDO }));
     await userEvent.click(screen.getByRole('button', { name: REDO_ACCEPT }));
@@ -1326,6 +1344,7 @@ describe('Relatório — refazer as respostas confirmadas de um rascunho vencido
   it('a resposta escrita à mão, sem rascunho, fica de fora', async () => {
     await sessaoJaConfirmadaDoRascunhoVelho();
     const depois = reabreComTranscricaoRefeita();
+    await descobertaDeVozConcluida();
 
     await userEvent.click(await screen.findByRole('button', { name: REDO }));
     await userEvent.click(screen.getByRole('button', { name: REDO_ACCEPT }));
@@ -1366,6 +1385,7 @@ describe('Relatório — refazer as respostas confirmadas de um rascunho vencido
   it('pergunta antes: abrir não refaz nada, e desistir deixa tudo como estava', async () => {
     await sessaoJaConfirmadaDoRascunhoVelho();
     const depois = reabreComTranscricaoRefeita();
+    await descobertaDeVozConcluida();
 
     await userEvent.click(await screen.findByRole('button', { name: REDO }));
     expect(answerOf(Q)).toBe(GAGA.source);
