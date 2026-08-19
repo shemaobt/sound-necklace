@@ -1377,6 +1377,95 @@ describe('Relatório — refazer as respostas confirmadas de um rascunho vencido
 });
 
 /**
+ * ENG-505: a espera é para quem tem o que esperar. O job está SEMPRE 'running' ao montar
+ * — nenhum resultado chegou ainda —, então decidir a tela só pela fase manda à espera
+ * toda revisão reaberta, inclusive as que não têm nada a transcrever. No pior caso o
+ * poll gira até o teto de cinco minutos com o trabalho já pronto atrás do cometa.
+ *
+ * A regra é: espera-se enquanto o job roda E alguma resposta gravada ainda PRECISA de
+ * rascunho — sem texto confirmado e sem rascunho utilizável. Sozinhos, os dois casos
+ * abaixo seriam satisfeitos por nunca mais esperar; quem segura esse outro lado é a
+ * espera da ENG-367, no bloco acima.
+ */
+describe('Relatório — reabrir uma revisão que não tem o que transcrever (ENG-505)', () => {
+  const Q = L1_Q[0]!;
+  const PATH = voiceAnswerPath({ level: 1, k: Q.k });
+  const DRAFTS = { [PATH]: { source: 'Ele contou do boto.', en: 'He told of the dolphin.' } };
+
+  it('com a resposta gravada já confirmada, reabrir cai na revisão, não na espera', async () => {
+    const { stt } = controllableStt(DRAFTS); // o job NUNCA termina
+    load(setAnswer(report(), { level: 1, k: Q.k }, 'Ele contou do boto.'));
+    const view = render(
+      <Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />,
+    );
+
+    // a linha de voz só acende depois de a gravação ser descoberta — é a partir daí
+    // que a tela de espera apareceria
+    expect(await screen.findByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+
+    // a tela de espera pela marca que só ela tem: dizer "transcrevendo" seria ambíguo,
+    // porque um cartão em revisão também o diz
+    expect(view.container.querySelector('.cds-report')?.className).not.toContain(
+      'cds-report--waiting',
+    );
+    expect(view.container.querySelectorAll('.cds-report-card').length).toBeGreaterThan(0);
+  });
+
+  it('com o rascunho já semeado e ainda por confirmar, reabrir mostra o rascunho', async () => {
+    const primeira = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={primeira.stt}
+        sessionId="s-1"
+      />,
+    );
+    primeira.finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    view.unmount();
+
+    // a pessoa saiu sem confirmar e voltou: o rascunho está guardado, e não há nada a
+    // transcrever de novo — a revisão abre com ele à mão
+    const { stt } = controllableStt(DRAFTS); // o job NUNCA termina
+    render(<Report recorder={controllableRecorder({ [PATH]: true })} stt={stt} sessionId="s-1" />);
+
+    expect(await screen.findByDisplayValue('Ele contou do boto.')).toBeTruthy();
+    expect(screen.queryByText(/transcrevendo/i)).toBeNull();
+  });
+
+  it('regravar depois do rascunho traz a espera de volta, sem mostrar o texto do áudio descartado', async () => {
+    const primeira = controllableStt(DRAFTS);
+    load(report());
+    const view = render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={primeira.stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 1 }}
+      />,
+    );
+    primeira.finish();
+    await screen.findByDisplayValue('Ele contou do boto.');
+    view.unmount();
+
+    // a pessoa regravou: o rascunho guardado descreve um áudio que não existe mais
+    const { stt } = controllableStt(DRAFTS); // o job NUNCA termina
+    render(
+      <Report
+        recorder={controllableRecorder({ [PATH]: true })}
+        stt={stt}
+        sessionId="s-1"
+        recordingVersion={{ [PATH]: 2 }}
+      />,
+    );
+
+    await screen.findByText(/transcrevendo/i);
+    expect(screen.queryByDisplayValue('Ele contou do boto.')).toBeNull();
+  });
+});
+
+/**
  * ENG-372: o foco global (base.css) desenha um retângulo telha de 3px afastado 3px.
  * Num campo transparente de largura total isso vira uma caixa que briga com a linha
  * quieta que o campo é. Aqui o indicador troca de FORMA, não de força — e o teste

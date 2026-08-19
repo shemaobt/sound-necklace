@@ -374,6 +374,7 @@ function DraftReview({
   show,
   phase,
   draft,
+  stored,
   draftText,
   problem,
   onDraftText,
@@ -384,6 +385,12 @@ function DraftReview({
   show: boolean;
   phase: SttPhase;
   draft?: AnswerDraft;
+  /**
+   * A resposta já tem rascunho GUARDADO — semeado numa visita anterior e persistido no
+   * mapping. É o que separa "ainda não há o que revisar" de "o job corrente ainda não
+   * respondeu", que o objeto efêmero do hook não distingue.
+   */
+  stored: boolean;
   /** O TRANSCRIPT em revisão — a língua falada. O inglês não passa por aqui. */
   draftText: string;
   /** A última confirmação desta resposta não pegou, e por quê. */
@@ -394,7 +401,9 @@ function DraftReview({
 }) {
   const { t } = useTranslation();
   if (!show) return null;
-  if (phase === 'running')
+  // Um rascunho já guardado se revisa sem esperar: o job em curso é idempotente e vai
+  // devolver o mesmo texto. Só quem ainda não tem o que mostrar diz que está transcrevendo.
+  if (phase === 'running' && !stored)
     return <p className="cds-report-draft-status">{t('report.transcribing')}</p>;
   if (phase === 'failed') {
     return (
@@ -406,7 +415,7 @@ function DraftReview({
       </p>
     );
   }
-  if (!draft) return null;
+  if (!draft && !stored) return null;
   const fieldId = `en-${draftFieldId(slot)}`;
   return (
     <div className="cds-report-draft">
@@ -465,6 +474,8 @@ interface ReportCardProps {
   sttPhase?: SttPhase;
   /** Rascunho desta resposta, quando o job já entregou. */
   draft?: AnswerDraft;
+  /** Já há rascunho guardado no mapping para esta resposta. */
+  draftStored?: boolean;
   /** Inglês do rascunho, editável antes de confirmar. */
   draftText?: string;
   /** A última confirmação desta resposta não pegou, e por quê. */
@@ -491,6 +502,7 @@ function ReportCard({
   onPlay,
   sttPhase = 'idle',
   draft,
+  draftStored = false,
   draftText = '',
   confirmProblem,
   onDraftText,
@@ -575,6 +587,7 @@ function ReportCard({
         show={awaitingConfirm}
         phase={sttPhase}
         draft={draft}
+        stored={draftStored}
         draftText={draftText}
         problem={confirmProblem}
         onDraftText={onDraftText}
@@ -790,6 +803,21 @@ export function Report({
     if (recorded === undefined) return false;
     return seeded !== String(recorded);
   });
+  /**
+   * The recorded answers that still NEED a draft: no confirmed text, and no draft worth
+   * showing — either never transcribed, or holding a draft the re-recording superseded.
+   *
+   * The stale clause belongs inside this definition, not beside it. Without it a stored
+   * draft would count as "have one" even when it describes a take that no longer exists,
+   * and the review would open offering the transcript of discarded audio as if it were
+   * current.
+   */
+  const awaitingDraft = recordedPaths.some((p) => {
+    const slot = sequence.find((s) => voiceAnswerPath(s) === p);
+    if (!slot) return false;
+    if (readAnswer(mapped?.mapping ?? null, slot).trim()) return false;
+    return !readAnswer(mapped?.mapping ?? null, draftVerSlot(slot)) || stalePaths.includes(p);
+  });
   const {
     phase: sttPhase,
     drafts,
@@ -797,7 +825,28 @@ export function Report({
     refresh,
   } = useSttDrafts(stt, sessionId, recordedPaths, recordingVersion, stalePaths);
 
-  const waiting = sttPhase === 'running';
+  /**
+   * A espera é a TELA — não uma palavra dentro de cada um dos 41 cartões (ENG-367).
+   * Chegar à revisão com tudo dizendo "transcrevendo" convida a mexer no que ainda vai
+   * mudar. Reusa o cometa de contas da espera de sessão (ENG-337), a mesma animação das
+   * outras esperas do fluxo, e a folha larga a própria superfície de documento enquanto
+   * espera (`--waiting`): a coluna de 760px vira uma faixa sob a animação.
+   *
+   * Espera-se enquanto o job roda E alguma resposta gravada ainda precisa de rascunho.
+   * As duas metades sustentam peso: a fase sozinha é sempre 'running' ao montar — nenhum
+   * resultado chegou ainda —, então mandaria à espera toda revisão reaberta, inclusive
+   * uma cujas gravações um humano já confirmou, e o poll giraria até o teto de cinco
+   * minutos com o trabalho pronto. `awaitingDraft` é durável porque lê o mapping: sobrevive
+   * a sair e voltar, e volta a ser verdade quando uma resposta é regravada.
+   *
+   * A troca é do MIOLO, não da tela: a região live fica montada nos dois estados, porque
+   * uma região criada junto com o conteúdo não é anunciada — trocar a árvore inteira
+   * perderia o aviso dos rascunhos em silêncio.
+   *
+   * 'failed' e o esgotamento do prazo não seguram ninguém: a revisão abre e cada cartão
+   * traz seu "tentar de novo", porque digitar à mão sempre resolve (§8.7 — sem beco).
+   */
+  const waiting = sttPhase === 'running' && awaitingDraft;
   // Layout, not a plain effect: the signal goes up BEFORE paint. With `useEffect` the
   // parent only reacted once the wait was already on screen, and the footer flashed
   // for a frame.
@@ -1062,23 +1111,6 @@ export function Report({
 
   // Quantas respostas gravadas ainda esperam confirmação — o número que o leitor
   // de tela ouve quando os rascunhos chegam.
-  /**
-   * ENG-367: enquanto a transcrição roda, a espera é a TELA — não uma palavra dentro de
-   * cada um dos 41 cartões. Chegar à revisão com tudo dizendo "transcrevendo" convida a
-   * mexer no que ainda vai mudar. Reusa o cometa de contas da espera de sessão (ENG-337),
-   * a mesma animação das outras esperas do fluxo.
-   *
-   * A troca é do MIOLO, não da tela: a região live fica montada nos dois estados, porque
-   * uma região criada junto com o conteúdo não é anunciada — trocar a árvore inteira
-   * perderia o aviso dos rascunhos em silêncio.
-   *
-   * 'failed' e o esgotamento do prazo não seguram ninguém: a revisão abre e cada cartão
-   * traz seu "tentar de novo", porque digitar à mão sempre resolve (§8.7 — sem beco).
-   *
-   * The sheet drops its own document surface while it waits (`--waiting`): the 760px
-   * column with background and padding, emptied of content, turned into a band across
-   * the screen under the animation.
-   */
   const toReview = pendingIn(mapped);
 
   return (
@@ -1162,6 +1194,7 @@ export function Report({
               }}
               sttPhase={stt ? sttPhase : 'idle'}
               draft={drafts[path]}
+              draftStored={hasAnswerKey(mapped.mapping, draftSrcSlot(slot))}
               // o transcript em revisão começa no que a máquina ouviu e passa a viver
               // na chave reservada assim que alguém encosta nele
               draftText={readAnswer(mapped.mapping, draftSrcSlot(slot))}
