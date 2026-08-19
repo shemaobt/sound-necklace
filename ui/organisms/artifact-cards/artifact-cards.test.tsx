@@ -34,7 +34,7 @@ describe('ArtifactCards (PRD §8.8 / redesign §6.7 — os três documentos)', (
 
     rerender(<ArtifactCards downloaded={{ ...nenhum, anchoring: true }} />);
     const retorno = cardByTitle('As decisões de vocês');
-    expect(within(retorno).getByRole('button', { name: 'baixado' })).toBeDefined();
+    expect(within(retorno).getByRole('button', { name: 'Baixado' })).toBeDefined();
     expect(screen.getAllByRole('button', { name: 'Baixar' })).toHaveLength(2);
   });
 

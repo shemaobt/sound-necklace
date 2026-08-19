@@ -186,7 +186,7 @@ describe('Conversation — resume where the interview stopped (ENG-321)', () => 
  * audio recorded up to the 40th, reopening landed on the 2nd, every time, with dozens
  * of clicks between the facilitator and where they had stopped. The cursor now follows
  * the LAST answer, which is where the conversation actually stopped; skipped questions
- * stay reachable through "← anterior" and the bead thread.
+ * stay reachable through "← Anterior" and the bead thread.
  */
 describe('Conversation — resume follows the last answer, not the first hole', () => {
   it('with questions skipped in the middle, reopens AFTER the last answered one', () => {
@@ -239,7 +239,7 @@ describe('Conversation — resume follows the last answer, not the first hole', 
 
 /**
  * ENG-367 turned the transcription wait into the screen, but the footer lives in the
- * PARENT and never found out: "← anterior" and "Guardar os documentos →" stayed under
+ * PARENT and never found out: "← Anterior" and "Guardar os documentos →" stayed under
  * the wait, offering the way out to the Export with the drafts still in flight.
  */
 describe('Conversation — the footer does not survive the transcription wait', () => {
@@ -278,7 +278,7 @@ describe('Conversation — the footer does not survive the transcription wait', 
 
     await screen.findByText(/transcrevendo/i);
     expect(screen.queryByRole('button', { name: 'Guardar os documentos →' })).toBeNull();
-    expect(screen.queryByRole('button', { name: '← anterior' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '← Anterior' })).toBeNull();
   });
 });
 
@@ -375,17 +375,17 @@ describe('Conversation — o ▶ do span de cada nível (PRD v2 §8.7)', () => {
     load(mapping());
     renderStation(<Conversation player={player} />);
 
-    await userEvent.click(screen.getByRole('button', { name: '▶ ouvir a história' }));
+    await userEvent.click(screen.getByRole('button', { name: '▶ Ouvir a história' }));
     expect(player.toggle).toHaveBeenLastCalledWith('historia', 0, 29);
 
     // avança até a primeira pergunta de nível 2 (índice 11)
     for (let i = 0; i < 11; i += 1) await next();
-    await userEvent.click(screen.getByRole('button', { name: '▶ ouvir a cena' }));
+    await userEvent.click(screen.getByRole('button', { name: '▶ Ouvir a cena' }));
     expect(player.toggle).toHaveBeenLastCalledWith('PT1', 2, 8);
 
     // avança até a primeira pergunta de nível 3 (índice 21)
     for (let i = 0; i < 10; i += 1) await next();
-    await userEvent.click(screen.getByRole('button', { name: '▶ ouvir a frase' }));
+    await userEvent.click(screen.getByRole('button', { name: '▶ Ouvir a frase' }));
     expect(player.toggle).toHaveBeenLastCalledWith('P1', 2, 4);
   });
 });
@@ -396,20 +396,20 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     load(mapping());
     renderStation(<Conversation recorder={recorder} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
 
-    await userEvent.click(await screen.findByRole('button', { name: /^ouvir a resposta$/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /^Ouvir a resposta$/ }));
     expect(recorder.playing).not.toBeNull();
     // tocando: o botão oferece pausar
-    await userEvent.click(screen.getByRole('button', { name: 'pausar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Pausar' }));
     expect(recorder.playing).toBeNull();
-    expect(screen.getByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Ouvir a resposta$/ })).toBeTruthy();
   });
 
   it('ouvir mostra "abrindo…" até a porta confirmar o início da reprodução (ENG-336)', async () => {
     // play() pendurado: a janela real de fetch+decode do modo real. O botão precisa
-    // dizer que está abrindo — e só virar "pausar" quando o som de fato começa.
+    // dizer que está abrindo — e só virar "Pausar" quando o som de fato começa.
     const recorder = new FixtureVoiceRecorder();
     const playbackCbs: ((p: string | null) => void)[] = [];
     vi.spyOn(recorder, 'onPlayback').mockImplementation((cb) => {
@@ -426,12 +426,12 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     load(mapping());
     renderStation(<Conversation recorder={recorder} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
-    await userEvent.click(await screen.findByRole('button', { name: /^ouvir a resposta$/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /^Ouvir a resposta$/ }));
 
     // em voo: abrindo, e sem segundo clique acumulando outra reprodução
-    const opening = screen.getByRole('button', { name: 'abrindo a resposta…' });
+    const opening = screen.getByRole('button', { name: 'Abrindo a resposta…' });
     expect(opening.hasAttribute('disabled')).toBe(true);
 
     // a porta confirma o início (emite o path DEPOIS do play resolver)
@@ -439,13 +439,13 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
       releasePlay?.();
       playbackCbs.forEach((cb) => cb('respostas/level1/recontar.webm'));
     });
-    expect(screen.getByRole('button', { name: 'pausar' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Pausar' })).toBeTruthy();
 
     // o fim da reprodução volta a oferecer ouvir
     await act(async () => {
       playbackCbs.forEach((cb) => cb(null));
     });
-    expect(screen.getByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Ouvir a resposta$/ })).toBeTruthy();
   });
 
   it('parar entra em "guardando" até a persistência confirmar (ENG-318)', async () => {
@@ -471,18 +471,18 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     load(mapping());
     renderStation(<Conversation recorder={recorder} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
 
     // enquanto a resposta persiste: estado no botão — guardando, sem aceitar clique
-    const saving = screen.getByRole('button', { name: 'guardando a resposta' });
+    const saving = screen.getByRole('button', { name: 'Guardando a resposta' });
     expect((saving as HTMLButtonElement).disabled).toBe(true);
 
     await act(async () => release?.());
-    expect(await screen.findByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^Ouvir a resposta$/ })).toBeTruthy();
   });
 
-  it('gravar guarda no caminho exato da pergunta; "gravar de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
+  it('gravar guarda no caminho exato da pergunta; "Gravar de novo" regrava; "listen" toca; NÃO há canal digitado na entrevista', async () => {
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
     renderStation(<Conversation recorder={recorder} />);
@@ -490,19 +490,19 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     const path = 'respostas/level1/recontar.webm';
     expect(await recorder.has(path)).toBe(false);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     expect(await recorder.has(path)).toBe(true);
 
-    // "gravar de novo" pergunta antes (ENG-392) e, confirmado, já está gravando de
+    // "Gravar de novo" pergunta antes (ENG-392) e, confirmado, já está gravando de
     // volta no MESMO caminho — uma intenção, um toque
-    await userEvent.click(screen.getByRole('button', { name: 'gravar de novo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar de novo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Apagar e gravar de novo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     expect(await recorder.has(path)).toBe(true);
 
     // "listen" toca a gravação deste caminho
-    await userEvent.click(screen.getByRole('button', { name: 'ouvir a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ouvir a resposta' }));
     expect(recorder.playing).toBe(path);
 
     // a digitação saiu do palco da entrevista — vive só no relatório (ui/pages/report)
@@ -515,7 +515,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     load(mapping());
     renderStation(<Conversation recorder={recorder} onVoiceSaved={onVoiceSaved} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     expect(onVoiceSaved).toHaveBeenCalledWith('respostas/level1/recontar.webm');
   });
@@ -529,7 +529,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
       <Conversation recorder={recorder} onVoiceSaved={onVoiceSaved} />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     const rec = await startSpy.mock.results[0]!.value;
     // segura o stop() pendente: o await de onStop fica suspenso até resolvermos
     let resolveStop!: (v: { blob: Blob; durationSec: number }) => void;
@@ -559,7 +559,7 @@ describe('Conversation — resposta por voz, entrevista só-voz (PRD v2 §8.7, �
     const state = ensureMapping(mapping());
     const { unmount } = renderStation(<Conversation recorder={recorder} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     const rec = await startSpy.mock.results[0]!.value;
     const cancelSpy = vi.spyOn(rec, 'cancel');
 
@@ -589,7 +589,7 @@ describe('Conversation — navegação entre níveis (referência mapNav L1099�
     load(mapping());
     renderStation(<Conversation />);
 
-    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
+    await userEvent.click(screen.getByRole('button', { name: '← Anterior' }));
     expect(sessionStore.getState().session!.mode).toBe('segmentacao');
   });
 
@@ -602,7 +602,7 @@ describe('Conversation — navegação entre níveis (referência mapNav L1099�
     for (let i = 0; i < total; i += 1) await next();
     expect(screen.getByRole('region', { name: 'relatório' })).toBeTruthy();
 
-    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
+    await userEvent.click(screen.getByRole('button', { name: '← Anterior' }));
     expect(questionText()).toBe(L3_Q[L3_Q.length - 1]!.q);
   });
 });
@@ -733,7 +733,7 @@ describe('Conversation — a passagem para o relatório (ENG-250)', () => {
     load(mapping());
     renderStation(<Conversation recorder={recorder} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
 
     // anda até o relatório (a última "Próxima pergunta" abre a prévia)
@@ -744,7 +744,7 @@ describe('Conversation — a passagem para o relatório (ENG-250)', () => {
 
     // a gravação da 1ª pergunta é ouvível LÁ — sem o recorder o card cairia no
     // "ainda sem resposta gravada" e a voz ficaria inalcançável
-    const play = await screen.findByRole('button', { name: '▶ ouvir a resposta' });
+    const play = await screen.findByRole('button', { name: '▶ Ouvir a resposta' });
     await userEvent.click(play);
     expect(recorder.playing).toBe('respostas/level1/recontar.webm');
   });
@@ -785,13 +785,13 @@ describe('Conversation — fronteira de IO real da resposta (ENG-247)', () => {
     load(mapping());
     renderStation(<Conversation recorder={recorder} onVoiceSaved={onVoiceSaved} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('A resposta não foi guardada.');
     // volta ao microfone (nada preso em "gravando"), e o shell NÃO registrou o caminho
-    expect(screen.getByRole('button', { name: 'gravar a resposta' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Gravar a resposta' })).toBeTruthy();
     expect(onVoiceSaved).not.toHaveBeenCalled();
   });
 });
@@ -804,7 +804,7 @@ describe('Conversation — fronteira de IO real da resposta (ENG-247)', () => {
  */
 describe('Conversation — a pergunta que ficou sem resposta', () => {
   async function skip(): Promise<void> {
-    await userEvent.click(screen.getByRole('button', { name: 'sem resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sem resposta' }));
   }
 
   it('marcar sem resposta segue para a próxima pergunta', async () => {
@@ -849,8 +849,8 @@ describe('Conversation — a pergunta que ficou sem resposta', () => {
     load(mapping());
     const view = render(<Conversation />);
     await skip();
-    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
-    await userEvent.click(screen.getByRole('button', { name: 'voltar a perguntar' }));
+    await userEvent.click(screen.getByRole('button', { name: '← Anterior' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar a perguntar' }));
     view.unmount();
 
     render(<Conversation />);
@@ -863,13 +863,13 @@ describe('Conversation — a pergunta que ficou sem resposta', () => {
     load(mapping());
     render(<Conversation recorder={recorder} />);
     await skip();
-    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
-    expect(screen.getByRole('button', { name: 'voltar a perguntar' })).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: '← Anterior' }));
+    expect(screen.getByRole('button', { name: 'Voltar a perguntar' })).toBeTruthy();
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
 
-    expect(screen.getByRole('button', { name: 'sem resposta' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sem resposta' })).toBeTruthy();
   });
 });
 
@@ -888,7 +888,7 @@ describe('Conversation — o cabeçalho fica sabendo da gravação (ENG-393)', (
 
     expect(appStore.getState().recording).toBe(false);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     expect(appStore.getState().recording).toBe(true);
 
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
@@ -902,7 +902,7 @@ describe('Conversation — o cabeçalho fica sabendo da gravação (ENG-393)', (
     load(mapping());
     const { unmount } = render(<Conversation recorder={recorder} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     expect(appStore.getState().recording).toBe(true);
 
     unmount();
@@ -925,9 +925,9 @@ describe('Conversation — a duração no diálogo de regravar não traz dígito
     load(mapping());
     render(<Conversation recorder={recorder} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'gravar de novo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Gravar de novo' }));
 
     const dialogo = screen.getByRole('alertdialog');
     expect(dialogo.textContent ?? '').toMatch(/minuto/);
@@ -975,7 +975,7 @@ describe('Conversation — a transcrição começa ao avançar, não no fim', ()
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     await next();
 
@@ -1006,7 +1006,7 @@ describe('Conversation — a transcrição começa ao avançar, não no fim', ()
     );
 
     // volta para uma resposta já gravada e avança por cima dela de novo
-    await userEvent.click(screen.getByRole('button', { name: '← anterior' }));
+    await userEvent.click(screen.getByRole('button', { name: '← Anterior' }));
     await next();
 
     expect(started).toEqual([]);
@@ -1048,7 +1048,7 @@ describe('Conversation — a transcrição começa ao avançar, não no fim', ()
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     await next();
 
@@ -1078,7 +1078,7 @@ describe('Conversation — a procura pela resposta já gravada', () => {
     load(mapping());
     renderStation(<Conversation recorder={silent(() => new Promise(() => {}))} />);
 
-    expect(await screen.findByText('procurando a resposta já gravada')).toBeTruthy();
+    expect(await screen.findByText('Procurando a resposta já gravada')).toBeTruthy();
     expect(screen.queryByText('Toque e fale a sua resposta')).toBeNull();
   });
 
@@ -1086,8 +1086,8 @@ describe('Conversation — a procura pela resposta já gravada', () => {
     load(mapping());
     renderStation(<Conversation recorder={silent(() => Promise.resolve(true))} />);
 
-    expect(await screen.findByRole('button', { name: /^ouvir a resposta$/ })).toBeTruthy();
-    expect(screen.queryByText('procurando a resposta já gravada')).toBeNull();
+    expect(await screen.findByRole('button', { name: /^Ouvir a resposta$/ })).toBeTruthy();
+    expect(screen.queryByText('Procurando a resposta já gravada')).toBeNull();
   });
 
   it('respondido que não existe, a tela volta a convidar a falar', async () => {
@@ -1102,7 +1102,7 @@ describe('Conversation — a procura pela resposta já gravada', () => {
     renderStation(<Conversation />);
 
     expect(screen.getByText('Toque e fale a sua resposta')).toBeTruthy();
-    expect(screen.queryByText('procurando a resposta já gravada')).toBeNull();
+    expect(screen.queryByText('Procurando a resposta já gravada')).toBeNull();
   });
 
   /**
@@ -1121,7 +1121,7 @@ describe('Conversation — a procura pela resposta já gravada', () => {
 
     load(mapping());
     renderStation(<Conversation recorder={racing} />);
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
 
     await act(async () => answer?.(true));
 
@@ -1150,7 +1150,7 @@ describe('Conversation — sair da revisão com transcrição por confirmar', ()
     renderStation(
       <Conversation recorder={new FixtureVoiceRecorder()} onGoToExport={onGoToExport} />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
     await walkToReport();
   }
@@ -1217,7 +1217,7 @@ describe('Conversation — sair da revisão com transcrição por confirmar', ()
       load(mapping());
       const recorder = new FixtureVoiceRecorder();
       renderStation(<Conversation recorder={recorder} onGoToExport={onGoToExport} />);
-      await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
       await userEvent.click(screen.getByRole('button', { name: 'Parar' }));
       // o texto confirmado é exatamente o que `reportExportStatus` procura
       act(() => {

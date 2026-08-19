@@ -144,7 +144,7 @@ describe('CoverageDrawer — dispensa (Radix)', () => {
   it('o botão fechar (×) fecha', async () => {
     render(<CoverageDrawer coverage={coverageFixture()} />);
     const dialog = openDrawer();
-    fireEvent.click(dialog.querySelector('[aria-label="fechar"]')!);
+    fireEvent.click(dialog.querySelector('[aria-label="Fechar"]')!);
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

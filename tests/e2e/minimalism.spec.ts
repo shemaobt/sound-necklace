@@ -17,9 +17,9 @@ import { scanListenerSurface } from './support/minimalism';
  */
 
 const LISTEN = {
-  1: '▶ ouvir a história',
-  2: '▶ ouvir a cena',
-  3: '▶ ouvir a frase',
+  1: '▶ Ouvir a história',
+  2: '▶ Ouvir a cena',
+  3: '▶ Ouvir a frase',
 } as const;
 
 /** Nível da pergunta em foco no Conversation, pelo ▶ do trecho (exatamente um por tela). */
@@ -156,7 +156,7 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await scan('Conversation — nível frase');
 
   // ——— Conversation: gravando ———
-  await page.getByRole('button', { name: 'gravar a resposta' }).click();
+  await page.getByRole('button', { name: 'Gravar a resposta' }).click();
   await expect(page.getByRole('button', { name: 'Parar' })).toBeVisible();
   await scan('Conversation — gravando');
 });

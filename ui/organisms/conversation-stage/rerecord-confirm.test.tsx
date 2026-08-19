@@ -33,14 +33,14 @@ function recordedStage(props: Partial<ConversationStageProps> = {}) {
   return { ...view, onRerecord };
 }
 
-const abrirRegravar = () => userEvent.click(screen.getByRole('button', { name: 'gravar de novo' }));
+const abrirRegravar = () => userEvent.click(screen.getByRole('button', { name: 'Gravar de novo' }));
 
 describe('pedir para regravar', () => {
   it('os botões da resposta dizem o que fazem', () => {
     recordedStage();
 
-    expect(screen.getByRole('button', { name: 'ouvir a resposta' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'gravar de novo' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ouvir a resposta' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Gravar de novo' })).toBeTruthy();
   });
 
   it('abrir a confirmação ainda não apaga nada', async () => {
@@ -116,7 +116,7 @@ describe('a confirmação não vira imposto no caminho normal', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'gravar a resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gravar a resposta' }));
 
     expect(onRecord).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alertdialog')).toBeNull();

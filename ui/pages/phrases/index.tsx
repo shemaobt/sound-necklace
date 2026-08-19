@@ -54,7 +54,7 @@ import './phrases.css';
  * Segmentação — as frases dentro de uma cena (PRD v2 §8.6, redesign §6.5): palco
  * creme, o colar em JANELA na cena produtiva ativa (cena ± margem, fora escurecido,
  * banda tracejada) e a frase marcada em dois toques (começo, depois fim), com o
- * clique saturado na fronteira do domínio (incl. back-reach da 1ª frase). Cada clique dá áudio na hora (§8.2); "▶ ouvir a cena" toca só a
+ * clique saturado na fronteira do domínio (incl. back-reach da 1ª frase). Cada clique dá áudio na hora (§8.2); "▶ Ouvir a cena" toca só a
  * cena. A travessia de borda abre o seam-modal com a oferta que o domínio
  * classificou (mover desliza a costura e trava; reancorar limpa; escalada volta à
  * Triage). Fio de contas das frases travadas: Remover; ajuste pós-fato é arrastar
