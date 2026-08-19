@@ -465,14 +465,17 @@ function controllableStt(
   const asked: ({ force?: boolean; paths?: readonly string[] } | undefined)[] = [];
   const confirmed: ConfirmCall[] = [];
   let release: (() => void) | null = null;
-  // o job só termina quando o TESTE mandar: `progress` espera esta promessa, então
-  // nenhum caso depende da ordem dos microtasks nem do atraso real do polling
+  // o job só termina quando o TESTE mandar: `progress` ESPERA esta promessa, então
+  // nenhum caso depende da ordem dos microtasks nem do atraso real do polling.
+  //
+  // Esperar é o que faz a promessa valer. Enquanto a consulta respondia "ainda não"
+  // na hora, quem perguntasse antes do `finish` recebia essa resposta e o hook
+  // agendava a próxima tentativa para daqui a `FIRST_DELAY_MS` (2 s, use-stt-drafts) —
+  // mais que o orçamento de um `findBy`. O caso passava aqui e falhava no CI, onde a
+  // consulta cai antes do `finish`, e a mesma espera atendia dois papéis: "o job não
+  // acabou" e "o job não acabou AINDA".
   const gate = new Promise<void>((res) => {
     release = res;
-  });
-  let settled = false;
-  void gate.then(() => {
-    settled = true;
   });
   return {
     started,
@@ -489,8 +492,8 @@ function controllableStt(
         return Promise.resolve();
       },
       progress: async () => {
-        await Promise.resolve();
-        return settled ? { done: true, drafts: ready } : { done: false, drafts: {} };
+        await gate;
+        return { done: true, drafts: ready };
       },
       confirm: async (_id, path, transcript, generation) => {
         await Promise.resolve();
