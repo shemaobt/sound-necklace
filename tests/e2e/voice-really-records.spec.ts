@@ -43,7 +43,7 @@ test('gravar uma resposta produz áudio audível, não um arquivo vazio', async 
 
   // sem o helper: ele aperta gravar/parar de enfiada, e uma gravação de zero segundo
   // rende um WebM só de cabeçalho — real, mas inaudível. Aqui a pessoa "fala".
-  await page.getByRole('button', { name: 'gravar a resposta' }).click();
+  await page.getByRole('button', { name: 'Gravar a resposta' }).click();
 
   /* ENG-393 — com o microfone aberto, o "← Histórias" do CABEÇALHO também espera.
      Ele mora em ui/app, fora da estação, e é a única saída que o palco da conversa
@@ -60,7 +60,7 @@ test('gravar uma resposta produz áudio audível, não um arquivo vazio', async 
 
   // parou: a saída volta a existir
   await expect(voltar).not.toHaveAttribute('aria-disabled', 'true');
-  await page.getByRole('button', { name: 'ouvir a resposta', exact: true }).click();
+  await page.getByRole('button', { name: 'Ouvir a resposta', exact: true }).click();
 
   await expect
     .poll(async () =>

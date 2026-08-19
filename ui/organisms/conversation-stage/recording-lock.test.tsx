@@ -98,7 +98,7 @@ describe('gravando: os outros controles esperam', () => {
     const onToggleSkip = vi.fn();
     stage({ onToggleSkip });
 
-    await userEvent.click(screen.getByRole('button', { name: 'sem resposta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sem resposta' }));
 
     expect(onToggleSkip).not.toHaveBeenCalled();
   });

@@ -42,19 +42,19 @@ describe('ConversationStage — marcador de papel (§8.7)', () => {
 
 /** Reproduzindo a resposta gravada: ouvir ⇄ pausar + as barras acesas (ENG-322). */
 describe('ConversationStage — feedback de reprodução da resposta (ENG-322)', () => {
-  it("tocando, 'ouvir a resposta' vira 'pausar' e a forma de onda acende", () => {
+  it("tocando, 'Ouvir a resposta' vira 'Pausar' e a forma de onda acende", () => {
     const { container, rerender } = render(
       <ConversationStage
         {...baseProps({ recorderState: 'recorded', answerPlaying: true, onStopPlay: vi.fn() })}
       />,
     );
-    expect(screen.getByRole('button', { name: 'pausar' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Pausar' })).toBeTruthy();
     expect(
       container.querySelectorAll('.cds-waveform-bar[data-state="active"]').length,
     ).toBeGreaterThan(0);
 
     rerender(<ConversationStage {...baseProps({ recorderState: 'recorded' })} />);
-    expect(screen.getByRole('button', { name: 'ouvir a resposta' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ouvir a resposta' })).toBeTruthy();
     expect(container.querySelectorAll('.cds-waveform-bar[data-state="active"]').length).toBe(0);
   });
 });
@@ -78,29 +78,29 @@ describe('ConversationStage — a procura pela resposta já gravada', () => {
     const { container } = render(
       <ConversationStage {...baseProps({ recorderState: 'checking' })} />,
     );
-    expect(screen.getByText('procurando a resposta já gravada')).toBeTruthy();
+    expect(screen.getByText('Procurando a resposta já gravada')).toBeTruthy();
     expect(screen.queryByText('Toque e fale a sua resposta')).toBeNull();
     expect(container.textContent ?? '').not.toMatch(/\d/);
   });
 
   it('não oferece ouvir nem regravar antes de saber que existe resposta', () => {
     render(<ConversationStage {...baseProps({ recorderState: 'checking' })} />);
-    expect(screen.queryByRole('button', { name: 'ouvir a resposta' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'gravar de novo' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ouvir a resposta' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gravar de novo' })).toBeNull();
   });
 
   it('a procura não trava o microfone: quem quer responder já pode', () => {
     render(<ConversationStage {...baseProps({ recorderState: 'checking' })} />);
-    const mic = screen.getByRole('button', { name: 'gravar a resposta' });
+    const mic = screen.getByRole('button', { name: 'Gravar a resposta' });
     expect((mic as HTMLButtonElement).disabled).toBe(false);
   });
 });
 
 /** Parar → guardar: o estado vive no botão (ENG-318) — spinner, desabilitado, sem texto novo. */
 describe('ConversationStage — guardando a resposta (ENG-318)', () => {
-  it("em 'saving', o microfone vira 'guardando a resposta' e não aceita clique", () => {
+  it("em 'saving', o microfone vira 'Guardando a resposta' e não aceita clique", () => {
     render(<ConversationStage {...baseProps({ recorderState: 'saving' })} />);
-    const btn = screen.getByRole('button', { name: 'guardando a resposta' });
+    const btn = screen.getByRole('button', { name: 'Guardando a resposta' });
     expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 });
@@ -199,21 +199,21 @@ describe('ConversationStage — convite e gravação por voz (protótipo §9.2)'
     );
     const stopButton = screen.getByRole('button', { name: 'Parar' });
     expect(stopButton.classList.contains('cds-conversation-stage-mic')).toBe(true);
-    expect(screen.getByText('gravando — os outros botões esperam a resposta')).toBeTruthy();
+    expect(screen.getByText('Gravando — os outros botões esperam a resposta')).toBeTruthy();
     expect(container.textContent ?? '').not.toMatch(/\d/);
   });
 });
 
 /**
- * No rodapé, entre voltar e avançar, o "sem resposta" ficava escondido: quem conduz
+ * No rodapé, entre voltar e avançar, o "Sem resposta" ficava escondido: quem conduz
  * olha para o microfone, e é ali — no mesmo instante em que se decidiria gravar —
  * que se decide deixar a pergunta sem resposta.
  */
-describe('ConversationStage — o "sem resposta" mora junto do microfone', () => {
+describe('ConversationStage — o "Sem resposta" mora junto do microfone', () => {
   it('fica na área do gravador, não no rodapé da navegação', () => {
     const { container } = render(<ConversationStage {...baseProps({ onToggleSkip: vi.fn() })} />);
 
-    const skip = screen.getByRole('button', { name: 'sem resposta' });
+    const skip = screen.getByRole('button', { name: 'Sem resposta' });
     expect(container.querySelector('.cds-conversation-stage-recorder')?.contains(skip)).toBe(true);
     expect(container.querySelector('.cds-conversation-stage-footer')?.contains(skip)).toBe(false);
   });
@@ -221,8 +221,8 @@ describe('ConversationStage — o "sem resposta" mora junto do microfone', () =>
   it('o microfone segue sendo a ação dominante ao lado dele', () => {
     render(<ConversationStage {...baseProps({ onToggleSkip: vi.fn() })} />);
 
-    const mic = screen.getByRole('button', { name: 'gravar a resposta' });
-    const skip = screen.getByRole('button', { name: 'sem resposta' });
+    const mic = screen.getByRole('button', { name: 'Gravar a resposta' });
+    const skip = screen.getByRole('button', { name: 'Sem resposta' });
     expect(mic.classList.contains('cds-conversation-stage-mic')).toBe(true);
     expect(skip.classList.contains('cds-conversation-stage-mic')).toBe(false);
   });

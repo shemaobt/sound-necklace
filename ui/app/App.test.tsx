@@ -340,7 +340,7 @@ describe('App shell', () => {
     });
     render(<App />);
 
-    const mic = await screen.findByRole('button', { name: 'gravar a resposta' });
+    const mic = await screen.findByRole('button', { name: 'Gravar a resposta' });
     await act(async () => {
       mic.click();
     });
@@ -350,7 +350,7 @@ describe('App shell', () => {
   it('persiste o caminho da resposta de voz em meta.voice — e sem inglês confirmado, não exporta', async () => {
     // Gravar voz no Conversation (§8.7) deve entrar no `meta.voice` da sessão persistida,
     // de modo que o Export/relatório reflita a resposta como caminho `respostas/…` em vez
-    // de "sem resposta" (ENG-276). O gravador em si já funciona; o que faltava era o shell
+    // de "Sem resposta" (ENG-276). O gravador em si já funciona; o que faltava era o shell
     // fiar o caminho salvo de volta ao DTO.
     const store = appSessionStore();
     const summary = await store.create({
@@ -379,7 +379,7 @@ describe('App shell', () => {
     render(<App />);
 
     // grava a resposta de voz da primeira pergunta (L1 "recontar")
-    const mic = await screen.findByRole('button', { name: 'gravar a resposta' });
+    const mic = await screen.findByRole('button', { name: 'Gravar a resposta' });
     await act(async () => {
       mic.click();
     });

@@ -238,21 +238,21 @@ export class ColarApp {
 
   /** Grava uma resposta por voz (gravador fixture): gravar → parar. */
   async recordVoiceAnswer(): Promise<void> {
-    await this.page.getByRole('button', { name: 'gravar a resposta' }).click();
+    await this.page.getByRole('button', { name: 'Gravar a resposta' }).click();
     await this.page.getByRole('button', { name: 'Parar' }).click();
     await expect(
-      this.page.getByRole('button', { name: 'ouvir a resposta', exact: true }),
+      this.page.getByRole('button', { name: 'Ouvir a resposta', exact: true }),
     ).toBeVisible();
   }
 
   /** A digitação vive no RELATÓRIO (a facilitadora escreve depois — §8.7). */
   async typeAnswerInReport(index: number, text: string): Promise<void> {
-    await this.page.getByRole('textbox', { name: 'resposta' }).nth(index).fill(text);
+    await this.page.getByRole('textbox', { name: 'Resposta' }).nth(index).fill(text);
     // ENG-369: o texto fica em estado local até alguém aceitar
     await this.page
       .locator('.cds-report-card')
       .nth(index)
-      .getByRole('button', { name: 'aceitar a edição' })
+      .getByRole('button', { name: 'Aceitar a edição' })
       .click();
   }
 
@@ -263,7 +263,7 @@ export class ColarApp {
    */
   async confirmDraftInReport(index: number): Promise<string> {
     const card = this.page.locator('.cds-report-card').nth(index);
-    const confirm = card.getByRole('button', { name: /confirmar a transcrição/i });
+    const confirm = card.getByRole('button', { name: /Confirmar a transcrição/i });
     await confirm.waitFor({ state: 'visible', timeout: 15000 });
     const en = await card.locator('.cds-report-draft-en').inputValue();
     await confirm.click();
@@ -280,9 +280,9 @@ export class ColarApp {
   }
 
   private async currentQuestionLevel(): Promise<1 | 2 | 3 | null> {
-    if (await this.page.getByRole('button', { name: '▶ ouvir a história' }).count()) return 1;
-    if (await this.page.getByRole('button', { name: '▶ ouvir a cena' }).count()) return 2;
-    if (await this.page.getByRole('button', { name: '▶ ouvir a frase' }).count()) return 3;
+    if (await this.page.getByRole('button', { name: '▶ Ouvir a história' }).count()) return 1;
+    if (await this.page.getByRole('button', { name: '▶ Ouvir a cena' }).count()) return 2;
+    if (await this.page.getByRole('button', { name: '▶ Ouvir a frase' }).count()) return 3;
     return null;
   }
 
@@ -318,7 +318,7 @@ export class ColarApp {
    * botão, e a lista encolhe a cada clique.
    */
   async confirmAllDrafts(): Promise<number> {
-    const buttons = this.page.getByRole('button', { name: /confirmar a transcrição/i });
+    const buttons = this.page.getByRole('button', { name: /Confirmar a transcrição/i });
     // o job é assíncrono: sem esperar o PRIMEIRO rascunho, a contagem seria 0 e o
     // laço sairia sem confirmar nada
     try {

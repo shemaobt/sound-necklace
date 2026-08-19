@@ -73,8 +73,8 @@ describe('Header — som e volume da sessão (ENG-314)', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'som e volume' }));
-    const slider = await screen.findByRole('slider', { name: 'volume da história' });
+    await user.click(screen.getByRole('button', { name: 'Som e volume' }));
+    const slider = await screen.findByRole('slider', { name: 'Volume da história' });
     expect(slider.getAttribute('max')).toBe('2');
 
     fireEvent.change(slider, { target: { value: '1.5' } });

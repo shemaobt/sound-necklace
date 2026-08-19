@@ -215,7 +215,7 @@ describe('Export — downloads reusam os bytes guardados (PRD v2 §10.5)', () =>
     expect(sent['historia-bead-manifest.json']).toBe(stored.manifest);
     expect(sent['historia-mapping-report.md']).toBe(stored.report);
 
-    expect(cardButton('anchoring-return.json').textContent).toContain('baixado');
+    expect(cardButton('anchoring-return.json').textContent).toContain('Baixado');
   });
 });
 

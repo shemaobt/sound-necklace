@@ -116,7 +116,7 @@ function cardFor(q: string): HTMLElement {
 
 /** O que a resposta desta pergunta mostra agora — a célula, como a facilitadora a vê. */
 function answerOf(q: { q: string }): string {
-  return (within(cardFor(q.q)).getByLabelText('resposta') as HTMLTextAreaElement).value;
+  return (within(cardFor(q.q)).getByLabelText('Resposta') as HTMLTextAreaElement).value;
 }
 
 /**
@@ -174,16 +174,16 @@ describe('Relatório — reprodução com cara de reprodução (ENG-323)', () =>
     render(<Report recorder={recorder} />);
 
     const card = cardFor(q.q);
-    await userEvent.click(await within(card).findByRole('button', { name: /ouvir a resposta/ }));
+    await userEvent.click(await within(card).findByRole('button', { name: /Ouvir a resposta/ }));
     // entre o toque e o som: o botão diz que está abrindo, sem aceitar clique
-    const opening = within(card).getByRole('button', { name: /abrindo a resposta/ });
+    const opening = within(card).getByRole('button', { name: /Abrindo a resposta/ });
     expect((opening as HTMLButtonElement).disabled).toBe(true);
 
     await act(async () => releasePlay?.());
     // tocando: pausar + ondas acesas
-    await userEvent.click(within(card).getByRole('button', { name: /pausar a resposta/ }));
+    await userEvent.click(within(card).getByRole('button', { name: /Pausar a resposta/ }));
     // pausado: volta ao ouvir
-    expect(within(card).getByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: /Ouvir a resposta/ })).toBeTruthy();
   });
 });
 
@@ -197,10 +197,10 @@ describe('Relatório — a voz aparece conforme cada resposta resolve (ENG-319)'
     render(<Report recorder={recorder} />);
 
     const card = cardFor(fastQ.q);
-    expect(await within(card).findByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+    expect(await within(card).findByRole('button', { name: /Ouvir a resposta/ })).toBeTruthy();
   });
 
-  it('enquanto a verificação voa, o cartão mostra "procurando", não "sem resposta"', () => {
+  it('enquanto a verificação voa, o cartão mostra "procurando", não "Sem resposta"', () => {
     const pendingQ = L1_Q[1]!;
     const recorder = controllableRecorder({}); // nada resolve
     load(report());
@@ -228,7 +228,7 @@ describe('Relatório — a voz aparece conforme cada resposta resolve (ENG-319)'
 
     // com gravação conhecida: a linha de voz já está lá, sem espera
     const known = cardFor(knownQ.q);
-    expect(within(known).getByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+    expect(within(known).getByRole('button', { name: /Ouvir a resposta/ })).toBeTruthy();
     expect(within(known).queryByLabelText('procurando a resposta gravada')).toBeNull();
     // conhecida SEM gravação: o vazio normal, também sem espera
     const empty = cardFor(emptyQ.q);
@@ -293,7 +293,7 @@ describe('Relatório — renderização por tipo de resposta (redesign §6.6)', 
 
     // só-voz: ▶ ouvir a resposta + forma de onda + duração (resolvido assíncrono via has())
     const voiceCard = cardFor(voiceQ.q);
-    expect(await within(voiceCard).findByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+    expect(await within(voiceCard).findByRole('button', { name: /Ouvir a resposta/ })).toBeTruthy();
     expect(voiceCard.querySelectorAll('.cds-waveform-bar').length).toBeGreaterThan(0);
     const duration = await within(voiceCard).findByLabelText('duração da resposta');
     expect(duration.textContent).toMatch(/^\d+:\d{2}$/); // duração real formatada, não "—"
@@ -325,7 +325,7 @@ describe('Relatório — renderização por tipo de resposta (redesign §6.6)', 
     render(<Report recorder={recorder} />);
 
     const card = cardFor(q.q);
-    expect(await within(card).findByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+    expect(await within(card).findByRole('button', { name: /Ouvir a resposta/ })).toBeTruthy();
     expect(card.querySelectorAll('.cds-waveform-bar').length).toBeGreaterThan(0);
     expect((within(card).getByRole('textbox') as HTMLTextAreaElement).value).toBe('era uma vez');
   });
@@ -346,7 +346,7 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
     await userEvent.type(within(card).getByRole('textbox'), 'resposta nova');
     expect(sessionStore.getState().session!.mapping?.level1[q.k] ?? '').toBe('');
 
-    await userEvent.click(within(card).getByRole('button', { name: 'aceitar a edição' }));
+    await userEvent.click(within(card).getByRole('button', { name: 'Aceitar a edição' }));
     expect(sessionStore.getState().session!.mapping!.level1[q.k]).toBe('resposta nova');
   });
 
@@ -360,7 +360,7 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
     await userEvent.clear(field);
     await userEvent.type(field, 'texto que vou desistir');
 
-    await userEvent.click(within(card).getByRole('button', { name: 'descartar a edição' }));
+    await userEvent.click(within(card).getByRole('button', { name: 'Descartar a edição' }));
 
     expect((within(card).getByRole('textbox') as HTMLTextAreaElement).value).toBe('era uma vez');
     expect(sessionStore.getState().session!.mapping!.level1[q.k]).toBe('era uma vez');
@@ -372,14 +372,14 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
     render(<Report />);
 
     const card = cardFor(q.q);
-    expect(within(card).getByRole('button', { name: 'editar a resposta' })).toBeTruthy();
-    expect(within(card).queryByRole('button', { name: 'aceitar a edição' })).toBeNull();
+    expect(within(card).getByRole('button', { name: 'Editar a resposta' })).toBeTruthy();
+    expect(within(card).queryByRole('button', { name: 'Aceitar a edição' })).toBeNull();
 
     await userEvent.type(within(card).getByRole('textbox'), 'x');
 
-    expect(within(card).queryByRole('button', { name: 'editar a resposta' })).toBeNull();
-    expect(within(card).getByRole('button', { name: 'descartar a edição' })).toBeTruthy();
-    expect(within(card).getByRole('button', { name: 'aceitar a edição' })).toBeTruthy();
+    expect(within(card).queryByRole('button', { name: 'Editar a resposta' })).toBeNull();
+    expect(within(card).getByRole('button', { name: 'Descartar a edição' })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Aceitar a edição' })).toBeTruthy();
   });
 
   it('a nota persiste no estado da sessão (relida no re-mount) e NÃO sai no .md exportado', async () => {
@@ -390,9 +390,9 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
     const before = buildMapReport(sessionStore.getState().session!);
 
     const card = cardFor(q.q);
-    await userEvent.click(within(card).getByRole('button', { name: 'acrescentar uma observação' }));
+    await userEvent.click(within(card).getByRole('button', { name: 'Acrescentar uma observação' }));
     await userEvent.type(
-      within(card).getByLabelText('observação da facilitadora'),
+      within(card).getByLabelText('Observação da facilitadora'),
       'checar vocabulário',
     );
 
@@ -400,7 +400,7 @@ describe('Relatório — edição e nota da facilitadora (PRD v2 §8.7, §10.4)'
     view.unmount();
     render(<Report />);
     expect(
-      (within(cardFor(q.q)).getByLabelText('observação da facilitadora') as HTMLTextAreaElement)
+      (within(cardFor(q.q)).getByLabelText('Observação da facilitadora') as HTMLTextAreaElement)
         .value,
     ).toBe('checar vocabulário');
 
@@ -526,7 +526,7 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
 
     await screen.findByText(/transcrevendo/i);
     expect(view.container.querySelectorAll('.cds-report-card')).toHaveLength(0);
-    expect(screen.queryByLabelText('resposta')).toBeNull();
+    expect(screen.queryByLabelText('Resposta')).toBeNull();
     // a região live continua montada e vazia: criada junto com o conteúdo, não seria
     // anunciada quando os rascunhos chegassem
     expect(view.container.querySelector('.cds-report-drafts-live')).not.toBeNull();
@@ -608,7 +608,7 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     await userEvent.click(within(card).getByRole('button', { name: /confirmar/i }));
 
     // a TELA fica na língua falada…
-    expect((within(card).getByLabelText('resposta') as HTMLTextAreaElement).value).toBe(
+    expect((within(card).getByLabelText('Resposta') as HTMLTextAreaElement).value).toBe(
       'Ele contou do boto.',
     );
     // …e o ARTEFATO, em inglês
@@ -630,7 +630,7 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     const card = src.closest('.cds-report-card') as HTMLElement;
     await userEvent.click(within(card).getByRole('button', { name: /confirmar/i }));
 
-    expect((within(card).getByLabelText('resposta') as HTMLTextAreaElement).value).toBe(
+    expect((within(card).getByLabelText('Resposta') as HTMLTextAreaElement).value).toBe(
       'Ele falou do boto-cor-de-rosa.',
     );
   });
@@ -660,7 +660,7 @@ describe('Relatório — rascunhos de transcrição e tradução (ENG-327)', () 
     await userEvent.type(src, CLEAN);
 
     const card = src.closest('.cds-report-card') as HTMLElement;
-    await userEvent.click(within(card).getByRole('button', { name: /confirm the transcript/i }));
+    await userEvent.click(within(card).getByRole('button', { name: /Confirm the transcript/i }));
 
     const md = buildMapReport(sessionStore.getState().session!);
     expect(md).toContain(CLEAN);
@@ -953,8 +953,8 @@ describe('Relatório — a transcrição refeita no servidor chega ao relatório
     });
     await screen.findByDisplayValue(GAGA.source);
     const card = cardFor(Q.q);
-    await userEvent.type(within(card).getByLabelText('resposta'), 'Foi o avô quem contou.');
-    await userEvent.click(within(card).getByRole('button', { name: 'aceitar a edição' }));
+    await userEvent.type(within(card).getByLabelText('Resposta'), 'Foi o avô quem contou.');
+    await userEvent.click(within(card).getByRole('button', { name: 'Aceitar a edição' }));
     primeira.unmount();
 
     open({
@@ -1002,7 +1002,7 @@ describe('Relatório — confirmar manda o transcript ao servidor e traz o ingl�
 
   /** O botão de confirmar DESTE cartão — o de lote também casa com /confirmar/i. */
   function confirmButton(): HTMLElement {
-    return within(cardFor(Q.q)).getByRole('button', { name: /confirmar a transcrição/i });
+    return within(cardFor(Q.q)).getByRole('button', { name: /Confirmar a transcrição/i });
   }
 
   it('o transcript corrigido vai ao servidor com a geração do rascunho, e o inglês que volta é o que sai no documento', async () => {
@@ -1172,8 +1172,8 @@ describe('Relatório — confirmar todas as transcrições de uma vez', () => {
     await openWithDrafts(BULK_DRAFTS);
 
     const mine = cardFor(BULK_Q[0]!.q);
-    await userEvent.type(within(mine).getByLabelText('resposta'), 'Foi o avô quem contou.');
-    await userEvent.click(within(mine).getByRole('button', { name: 'aceitar a edição' }));
+    await userEvent.type(within(mine).getByLabelText('Resposta'), 'Foi o avô quem contou.');
+    await userEvent.click(within(mine).getByRole('button', { name: 'Aceitar a edição' }));
 
     await userEvent.click(screen.getByRole('button', { name: ACTION }));
     await userEvent.click(screen.getByRole('button', { name: ACCEPT }));
@@ -1286,12 +1286,12 @@ describe('Relatório — refazer as respostas confirmadas de um rascunho vencido
 
     const src = await screen.findByDisplayValue(GAGA.source);
     const card = src.closest('.cds-report-card') as HTMLElement;
-    await userEvent.click(within(card).getByRole('button', { name: /confirmar a transcrição/i }));
+    await userEvent.click(within(card).getByRole('button', { name: /Confirmar a transcrição/i }));
     await waitFor(() => expect(answerOf(Q)).toBe(GAGA.source));
 
     const minha = cardFor(MINHA_Q.q);
-    await userEvent.type(within(minha).getByLabelText('resposta'), MINHA_RESPOSTA);
-    await userEvent.click(within(minha).getByRole('button', { name: 'aceitar a edição' }));
+    await userEvent.type(within(minha).getByLabelText('Resposta'), MINHA_RESPOSTA);
+    await userEvent.click(within(minha).getByRole('button', { name: 'Aceitar a edição' }));
     view.unmount();
   }
 
@@ -1347,8 +1347,8 @@ describe('Relatório — refazer as respostas confirmadas de um rascunho vencido
     const card = (await screen.findByDisplayValue(GAGA.source)).closest(
       '.cds-report-card',
     ) as HTMLElement;
-    await userEvent.type(within(card).getByLabelText('resposta'), MINHA_RESPOSTA);
-    await userEvent.click(within(card).getByRole('button', { name: 'aceitar a edição' }));
+    await userEvent.type(within(card).getByLabelText('Resposta'), MINHA_RESPOSTA);
+    await userEvent.click(within(card).getByRole('button', { name: 'Aceitar a edição' }));
     view.unmount();
 
     reabreComTranscricaoRefeita();
@@ -1401,7 +1401,7 @@ describe('Relatório — reabrir uma revisão que não tem o que transcrever (EN
 
     // a linha de voz só acende depois de a gravação ser descoberta — é a partir daí
     // que a tela de espera apareceria
-    expect(await screen.findByRole('button', { name: /ouvir a resposta/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /Ouvir a resposta/ })).toBeTruthy();
 
     // a tela de espera pela marca que só ela tem: dizer "transcrevendo" seria ambíguo,
     // porque um cartão em revisão também o diz

@@ -91,8 +91,8 @@ describe('ConversationStage — fluxo do gravador (Chromium real; CLAUDE.md gate
 
     // gravado → ouvir a resposta / gravar de novo
     update(base({ recorderState: 'recorded', answerLength: 'cerca de um minuto', ...handlers }));
-    byText(el, 'ouvir a resposta').click();
-    byText(el, 'gravar de novo').click();
+    byText(el, 'Ouvir a resposta').click();
+    byText(el, 'Gravar de novo').click();
     // regravar passa pela confirmação (ENG-392): abrir ainda não apaga nada
     expect(handlers.onRerecord).not.toHaveBeenCalled();
     // o portal do Radix monta num segundo passe — esperar é o contrato, não flake
@@ -114,7 +114,7 @@ describe('ConversationStage — fluxo do gravador (Chromium real; CLAUDE.md gate
       base({ recorderState: 'recorded', answerLength: 'cerca de um minuto', onRerecord }),
     );
 
-    byText(el, 'gravar de novo').click();
+    byText(el, 'Gravar de novo').click();
 
     const dialog = await vi.waitFor(() => {
       const found = document.body.querySelector<HTMLElement>('[role="alertdialog"]');
@@ -133,7 +133,7 @@ describe('ConversationStage — fluxo do gravador (Chromium real; CLAUDE.md gate
     const onPrev = vi.fn();
     const onNext = vi.fn();
     const el = mount(base({ onPrev, onNext }));
-    byText(el, '← anterior').click();
+    byText(el, '← Anterior').click();
     byText(el, 'Próxima pergunta').click();
     expect(onPrev).toHaveBeenCalledTimes(1);
     expect(onNext).toHaveBeenCalledTimes(1);

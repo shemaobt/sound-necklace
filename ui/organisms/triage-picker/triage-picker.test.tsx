@@ -101,12 +101,12 @@ describe('TriagePicker — escolher tipo revela o passo de confiança', () => {
     expect(getByText('Na dúvida')).toBeTruthy();
   });
 
-  it('"trocar tipo" volta para a grade sem emitir nada e descarta a escolha', () => {
+  it('"Trocar tipo" volta para a grade sem emitir nada e descarta a escolha', () => {
     const onConfirm = vi.fn();
     const { container, getByText, queryByText } = render(<TriagePicker onConfirm={onConfirm} />);
     fireEvent.click(container.querySelector('[role="radio"][title="BEREAVEMENT_SCENE"]')!);
     fireEvent.click(getByText('Certeza'));
-    fireEvent.click(getByText('trocar tipo'));
+    fireEvent.click(getByText('Trocar tipo'));
 
     expect(container.querySelectorAll('[role="radio"][title]')).toHaveLength(SCENE_KINDS.length);
     expect(queryByText('Certeza')).toBeNull();
@@ -117,7 +117,7 @@ describe('TriagePicker — escolher tipo revela o passo de confiança', () => {
     expect(queryByText('Confirmar')).toBeNull();
   });
 
-  it('o foco entra no trio ao escolher e volta à grade no "trocar tipo" (WCAG 2.4.3)', () => {
+  it('o foco entra no trio ao escolher e volta à grade no "Trocar tipo" (WCAG 2.4.3)', () => {
     const { container, getByText } = render(<TriagePicker />);
     const kindCard = container.querySelector<HTMLElement>('[role="radio"][title="APPEAL_SCENE"]')!;
     kindCard.focus();
@@ -125,7 +125,7 @@ describe('TriagePicker — escolher tipo revela o passo de confiança', () => {
     const trioRadios = Array.from(container.querySelectorAll<HTMLElement>('[role="radio"]'));
     expect(trioRadios).toContain(document.activeElement);
 
-    fireEvent.click(getByText('trocar tipo'));
+    fireEvent.click(getByText('Trocar tipo'));
     const gridTabbable = container.querySelector<HTMLElement>('[role="radio"][tabindex="0"]');
     expect(document.activeElement).toBe(gridTabbable);
   });
