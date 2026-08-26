@@ -40,6 +40,13 @@ function asReference(qs: readonly MapQuestion[]): ReferenceQuestion[] {
 }
 
 describe('roteiros do Mapeamento — port verbatim da referência (L1030–1056)', () => {
+  it('a entrevista abre com a redação aprovada (ENG-604)', () => {
+    expect(L1_Q[0]!.k).toBe('recontar');
+    expect(L1_Q[0]!.q).toBe(
+      'Descreva esta história, explicando o que acontece, do começo ao fim. Não é para recontar a história, é para falar sobre ela.',
+    );
+  });
+
   it('L1_Q é byte-idêntico ao literal da referência (11 perguntas)', () => {
     expect(asReference(L1_Q)).toStrictEqual(extractFromReference('L1_Q'));
     expect(L1_Q).toHaveLength(11);

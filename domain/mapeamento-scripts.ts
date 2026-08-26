@@ -28,8 +28,8 @@ export const L1_Q: readonly MapQuestion[] = [
   {
     k: 'recontar',
     field: 'whole',
-    q: 'Conte essa história com as suas palavras, como se fosse para alguém que nunca ouviu.',
-    q_en: 'Tell this story in your own words, as if to someone who has never heard it.',
+    q: 'Descreva esta história, explicando o que acontece, do começo ao fim. Não é para recontar a história, é para falar sobre ela.',
+    q_en: 'Describe this story, explaining what happens, from beginning to end. This is not a retelling of the story, it is talking about it.',
   },
   {
     k: 'arco_inicio_fim',
