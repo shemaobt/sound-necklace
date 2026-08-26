@@ -225,14 +225,6 @@
   color: var(--cds-cream);
 }
 
-.cds-conversation-stage-typed-hint {
-  margin: 4px 0 0;
-  font-family: var(--cds-font-quiet-voice);
-  font-style: italic;
-  font-size: 14px;
-  color: rgba(246, 245, 235, 0.6);
-}
-
 /* Encostado na dica, com a margem negativa descontando o padding do próprio botão:
    o rótulo alinha com a linha de texto acima, e não como um segundo bloco solto. */
 .cds-conversation-stage-skip {

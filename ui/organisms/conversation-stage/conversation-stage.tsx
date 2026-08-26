@@ -392,9 +392,6 @@ export function ConversationStage({
                     t('conversationStage.idleHint')
                   )}
                 </p>
-                <p className="cds-conversation-stage-typed-hint">
-                  {t('conversationStage.typedHint')}
-                </p>
                 {/* A decisão de deixar a pergunta sem resposta é tomada AQUI, no mesmo
                     instante em que se decidiria gravar — no rodapé, entre voltar e
                     avançar, ela ficava escondida de quem está olhando o microfone.

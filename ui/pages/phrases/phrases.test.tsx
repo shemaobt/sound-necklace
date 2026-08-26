@@ -546,8 +546,26 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
     );
     renderStation(<Phrases />);
 
-    expect(screen.getByText(/Toque no colar onde esta frase começa e termina/)).toBeTruthy();
+    expect(
+      screen.getByText(/Divida a cena: toque no colar onde esta frase começa e termina\./),
+    ).toBeTruthy();
     expect(screen.queryByText(/para reouvir/)).toBeNull();
+  });
+});
+
+/**
+ * A revisão de copy (ENG-603) pediu que a estação enquadrasse o gesto como
+ * DIVIDIR a cena em frases — "cortar" descreve o que se faz ao colar, não o que
+ * se está fazendo com a história. Continua sendo uma linha só (§9.2).
+ */
+describe('Segmentação — a instrução manda dividir a cena (ENG-603)', () => {
+  it('a linha única enquadra o gesto como dividir a cena', () => {
+    load(segmenting({}));
+    renderStation(<Phrases />);
+
+    expect(
+      screen.getByText('Divida a cena: toque no colar onde esta frase começa e termina.'),
+    ).toBeTruthy();
   });
 });
 

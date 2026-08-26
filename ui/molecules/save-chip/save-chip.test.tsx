@@ -16,18 +16,14 @@ describe('SaveChip — selo de salvamento automático', () => {
     expect(getByText('Salvando…')).toBeTruthy();
   });
 
-  it('salvo: mostra o ✓ e a copy de "pode sair e voltar"', () => {
+  it('salvo: mostra o ✓ e a copy de salvo', () => {
     const { container, getByText } = render(
-      <SaveChip
-        status="saved"
-        savingLabel="Salvando…"
-        savedLabel="Tudo salvo — pode sair e voltar"
-      />,
+      <SaveChip status="saved" savingLabel="Salvando…" savedLabel="Tudo salvo" />,
     );
     expect(container.querySelector('.cds-save-chip')?.getAttribute('data-status')).toBe('saved');
     expect(container.querySelector('.cds-save-chip-check')).not.toBeNull();
     expect(container.querySelector('.cds-save-chip-dot')).toBeNull();
-    expect(getByText('Tudo salvo — pode sair e voltar')).toBeTruthy();
+    expect(getByText('Tudo salvo')).toBeTruthy();
   });
 
   it('a copy chega por prop (nada de dígito ou texto fixo embutido)', () => {
