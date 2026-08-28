@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, WaveformBar } from '../../atoms';
 import { ConversationProgressBar, type ConversationTrecho, QuestionCard } from '../../molecules';
+import {
+  type ConversationMode,
+  ConversationModeGlyph,
+} from '../conversation-mode-picker/conversation-mode-picker';
 import { StorytellerGuide } from '../storyteller-guide';
 import './conversation-stage.css';
 
@@ -105,6 +109,23 @@ export interface ConversationStageProps {
    * era `recorderState === 'idle'`, ou seja, o guia mexia a boca em silêncio.
    */
   speaking?: boolean;
+  /**
+   * O modo em que a conversa está (ENG-649). Ausente = ninguém escolheu ainda e a
+   * pílula não existe — ela DIZ o modo, e não teria o que dizer.
+   */
+  mode?: ConversationMode;
+  /**
+   * Leva ao outro modo. É a saída de emergência do "mãos livres": tem de estar
+   * alcançável em todo instante em que ele está correndo, e por isso mora no
+   * cabeçalho da pergunta, longe do microfone.
+   */
+  onToggleMode?: () => void;
+  /**
+   * A próxima pergunta está a caminho sozinha. Toma o lugar do convite a falar —
+   * a tela do ouvinte tem UMA linha (§9.2) — para que a chegada seja VISTA vindo,
+   * em palavras antes de em movimento (movimento reduzido, §4.5).
+   */
+  autoAdvancing?: boolean;
 }
 
 /** Quadrado de parar (protótipo recording), herdando a cor do botão. */
@@ -233,6 +254,9 @@ export function ConversationStage({
   onSpeakQuestion,
   onSpeakExample,
   speaking = false,
+  mode,
+  onToggleMode,
+  autoAdvancing = false,
 }: ConversationStageProps) {
   const { t } = useTranslation();
   const [confirmingRerecord, setConfirmingRerecord] = useState(false);
@@ -260,6 +284,22 @@ export function ConversationStage({
 
   return (
     <div className="cds-conversation-stage">
+      {mode && onToggleMode ? (
+        <div className="cds-conversation-stage-mode">
+          <button
+            type="button"
+            className="cds-conversation-stage-mode-pill"
+            title={t('conversationMode.pillTitle')}
+            aria-disabled={locked || undefined}
+            onClick={guard(onToggleMode)}
+          >
+            <ConversationModeGlyph mode={mode} size={13} />
+            {mode === 'auto'
+              ? t('conversationMode.pillHandsFree')
+              : t('conversationMode.pillTouchByTouch')}
+          </button>
+        </div>
+      ) : null}
       <div className="cds-conversation-stage-main">
         <div className="cds-conversation-stage-guide">
           <StorytellerGuide speaking={speaking} />
@@ -355,6 +395,12 @@ export function ConversationStage({
               ) : null}
             </div>
 
+            {autoAdvancing ? (
+              <div className="cds-conversation-stage-countdown" aria-hidden="true">
+                <span className="cds-conversation-stage-countdown-run" />
+              </div>
+            ) : null}
+
             <div className="cds-conversation-stage-recorder" data-state={recorderState}>
               {/* o microfone nunca some (protótipo toggleRecord): escondê-lo com a
                   resposta pronta deixava "Toque e fale a sua resposta" mandando
@@ -397,6 +443,8 @@ export function ConversationStage({
                     </>
                   ) : recorderState === 'checking' ? (
                     t('conversationStage.checkingAnswer')
+                  ) : autoAdvancing ? (
+                    t('conversationMode.autoAdvance')
                   ) : (
                     t('conversationStage.idleHint')
                   )}
