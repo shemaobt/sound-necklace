@@ -500,6 +500,8 @@ export const en: Dict = {
     rerecordKeep: 'Keep the recording',
     prev: '← Previous',
     next: 'Next question',
+    /* O exemplo falado (ENG-611). Ver o comentário em pt.ts. */
+    example: 'What do you mean?',
     skip: 'No answer',
     unskip: 'Ask again',
     progressAria: 'conversation progress',

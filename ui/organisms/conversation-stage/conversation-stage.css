@@ -227,7 +227,8 @@
 
 /* Encostado na dica, com a margem negativa descontando o padding do próprio botão:
    o rótulo alinha com a linha de texto acima, e não como um segundo bloco solto. */
-.cds-conversation-stage-skip {
+.cds-conversation-stage-skip,
+.cds-conversation-stage-example {
   margin: 6px 0 0 -10px;
 }
 

@@ -729,6 +729,36 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
   });
 });
 
+describe('Conversation — o «Como assim?» só existe onde há exemplo (ENG-611)', () => {
+  beforeEach(() => {
+    if (appStore.getState().muted) appStore.getState().toggleMuted(); // som LIGADO por padrão
+  });
+  afterEach(() => {
+    if (appStore.getState().muted) appStore.getState().toggleMuted();
+  });
+
+  /**
+   * A guarda da regra do dono: nada morto na tela do ouvinte — o exemplo falado
+   * aparece SÓ na pergunta que tem um exemplo escrito de verdade. Enquanto o
+   * roteiro congelado não tiver nenhum, esta varredura descreve o app inteiro:
+   * o link não existe em pergunta nenhuma, nem com a voz disponível e o som ligado.
+   */
+  it('nenhuma pergunta do roteiro oferece o exemplo falado — nenhuma tem exemplo escrito', async () => {
+    const state = mapping();
+    const total = questionSequence(state).length;
+    load(state);
+    renderStation(<Conversation speaker={new FixtureSpeechSynthesizer()} />);
+
+    for (let i = 0; i < total; i += 1) {
+      expect(
+        screen.queryByRole('button', { name: 'Como assim?' }),
+        `pergunta ${i + 1}: ${questionText()}`,
+      ).toBeNull();
+      if (i < total - 1) await next();
+    }
+  });
+});
+
 describe('Conversation — a passagem para o relatório (ENG-250)', () => {
   it('a resposta em VOZ chega tocável ao relatório: o card promete voz, não um campo vazio', async () => {
     const recorder = new FixtureVoiceRecorder();

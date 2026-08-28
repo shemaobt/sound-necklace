@@ -40,3 +40,14 @@ export function questionNoteFor(slot: QuestionSlot, lang: string): string | unde
   // sem nota EN cai no PT-BR: uma nota que some é pior que uma nota no idioma errado
   return EN_NOTE[slot.level][slot.k] ?? slot.question.note;
 }
+
+/**
+ * Exemplo falado da pergunta — o «Como assim?» (ENG-611). Segue o mesmo eixo do
+ * texto da pergunta: `example_en` sob a UI em inglês, `example` em PT-BR. NÃO cai
+ * de um idioma para o outro: falar português com a voz inglesa (ou o contrário) é
+ * pior que não oferecer o exemplo. `undefined` = esta pergunta não tem exemplo
+ * NESTE idioma, e a tela não desenha o link.
+ */
+export function questionExampleFor(slot: QuestionSlot, lang: string): string | undefined {
+  return lang.startsWith('en') ? slot.question.example_en : slot.question.example;
+}

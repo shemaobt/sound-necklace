@@ -12,6 +12,13 @@
  * serializa — o artefato normalizou para inglês (ENG-326). Não existe na
  * referência: é copy autoral, revisada por humano na PR congelada. `field`
  * já era inglês; `note` NUNCA sai no .md, então segue só em PT.
+ *
+ * `example`/`example_en` (ENG-611) são o exemplo falado do «Como assim?»: a voz
+ * da entrevista os lê a pedido do ouvinte. Moram AQUI, e não em `ui/i18n`, porque
+ * o carve-out da voz (PRD v2 §1.1, §12) só permite aquela voz falar string
+ * CONGELADA e de autoria humana vinda deste arquivo. Nunca entram em artefato.
+ * São OPCIONAIS de propósito: pergunta sem exemplo não ganha link nenhum na tela
+ * (decisão do dono) — controle que não faz nada ensina que o app está quebrado.
  */
 
 export interface MapQuestion {
@@ -22,6 +29,10 @@ export interface MapQuestion {
   /** Inglês — a célula do relatório .md (PRD §10.4). */
   readonly q_en: string;
   readonly note?: string;
+  /** PT-BR — exemplo falado a pedido (ENG-611). Ausente = a pergunta não oferece exemplo. */
+  readonly example?: string;
+  /** Inglês — o mesmo exemplo sob a UI em inglês. Ausente = sem exemplo naquele idioma. */
+  readonly example_en?: string;
 }
 
 export const L1_Q: readonly MapQuestion[] = [

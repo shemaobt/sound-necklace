@@ -15,7 +15,7 @@ import {
   type SessionState,
   voiceAnswerPath,
 } from '../../../domain';
-import { questionTextFor } from '../../i18n/conversation-questions';
+import { questionExampleFor, questionTextFor } from '../../i18n/conversation-questions';
 import { Button } from '../../atoms';
 import { type ConversationTrecho, TrechoIndicator } from '../../molecules';
 import {
@@ -311,6 +311,13 @@ function QuestionScreen({
   const questionText = questionTextFor(slot, i18n.language);
   const speechLang = i18n.language.startsWith('en') ? 'en-US' : 'pt-BR';
   const canSpeak = speaker !== null && !muted;
+  /**
+   * O exemplo falado desta pergunta (ENG-611) — congelado em `domain/`, no idioma
+   * da UI. `undefined` aqui apaga o link inteiro: pergunta sem exemplo escrito não
+   * ganha controle nenhum, e com o som desligado ele some junto com "Ouvir a
+   * pergunta" (a única coisa que ele faz é falar).
+   */
+  const exampleText = questionExampleFor(slot, i18n.language);
 
   // O lip-sync segue o estado REAL da porta (start/end do utterance), nunca um palpite.
   // Assina ANTES do efeito que fala — senão a 1ª transição sai antes de haver ouvinte.
@@ -521,6 +528,12 @@ function QuestionScreen({
           canSpeak
             ? () => (speaking ? speaker.stop() : speaker.speak(questionText, speechLang))
             : undefined
+        }
+        onSpeakExample={
+          // MESMA porta da pergunta: pedir o exemplo com a pergunta ainda sendo lida
+          // interrompe a leitura, porque `speak` cancela a fala em curso (contrato da
+          // porta). Duas vozes no mesmo ar seria o único desfecho pior.
+          canSpeak && exampleText ? () => speaker.speak(exampleText, speechLang) : undefined
         }
       />
     </section>
