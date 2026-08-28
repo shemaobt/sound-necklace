@@ -24,6 +24,12 @@ export {
   type NavNext,
   type StationNavProps,
 } from './nav-footer/nav-footer';
+export {
+  ConversationModeGlyph,
+  ConversationModePicker,
+  type ConversationMode,
+  type ConversationModePickerProps,
+} from './conversation-mode-picker/conversation-mode-picker';
 export { GoalReached, type GoalReachedProps } from './goal-reached/goal-reached';
 export { Necklace, type NecklaceProps, type NecklaceSegment } from './necklace/necklace';
 export { SIZE_EXPORT, SIZE_L, SIZE_M, SIZE_SEG, type Size } from './necklace/geometry';
