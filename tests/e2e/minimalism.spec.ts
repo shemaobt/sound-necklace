@@ -120,6 +120,14 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await scanTriagem('Triage — revisão');
   await page.getByRole('button', { name: 'Continuar →' }).click();
 
+  // ——— Fim de bloco: a tela que fecha a Triagem (ENG-651) ———
+  // ela vive num portal, FORA do `main`: o scan tem de apontar para a própria tela,
+  // senão mediria a estação que ficou atrás dela.
+  await scanListenerSurface(page.locator('.cds-block-done'), {
+    label: 'Fim de bloco — a Triagem fechada',
+  });
+  await page.getByRole('button', { name: 'Seguir para as frases' }).click();
+
   // ——— Segmentação: ancoragem (primeira cena produtiva, sem frases) ———
   await expect(
     page.getByText(/Divida a cena: toque no colar onde esta frase começa e termina\./),

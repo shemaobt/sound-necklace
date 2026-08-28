@@ -14,6 +14,7 @@ Path: @/ui/pages/phrases
 - **Wiring layer.** Per @/.dependency-cruiser.cjs, @/ui/pages may import @/domain, @/ui/state, @/ui/organisms, @/ui/molecules, @/ui/atoms, @/ui/tokens and adapters. It also reuses three pure helpers from the sibling station @/ui/pages/cut (`playActionOn`, `sceneColor`, `sceneLabel`) — same anchoring ceremony, no duplicated cardinal.
 - Reads session state via `useSessionStore` and writes only through `sessionStore.apply` (see @/ui/state/docs.md), so the store's editability gates (online/review/lock) can silently pause an anchor/move/boundary-drag without losing in-memory state.
 - Advancing dispatches `confirmFrasesDone` (@/domain/phrases.ts), which — after the empty-scene soft warning — either enters the next productive scene or moves the guided flow to Conversation (`mode='conversation'`).
+- **A `kind: 'mapeamento'` result also closes a BLOCK (ENG-651):** the station then calls the optional `onBlockClosed('segmentacao')` prop. It never recomputes which scene was the last productive one — `confirmFrasesDone` returning `mapeamento` instead of `next-scene` IS the domain's answer, and the station only relays it. The screen belongs to the shell (@/ui/app/docs.md).
 - The itinerant `Player` (@/ui/app/player-slot.tsx, @/adapters/audio) is injected by prop, not constructed here — see the audio seam below.
 
 ### Core Implementation

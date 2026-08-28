@@ -16,6 +16,7 @@ Path: @/ui/pages/triage
 - **Wiring layer.** Per @/.dependency-cruiser.cjs, @/ui/pages may import adapters, @/domain, @/ui/state and the ui component layers. The two organisms it consumes (`TriagePicker`, `CoverageDrawer`) are **not** in @/ui/organisms/index.ts (that barrel was frozen by ENG-225), so they are imported by direct path — the same sibling-direct-import pattern segmentação uses.
 - Reads session state via `useSessionStore` and writes only through `sessionStore.apply` (see @/ui/state/docs.md), so the store's editability gates (online/review/lock) can silently pause a classify/none-fit without losing in-memory state.
 - The gate hands the guided flow to Segmentação; the all-none-fit case leaves Segmentação/Conversation locked (`modeLocks`), so this station is the productivity gate into phrase work.
+- **The gate also closes a BLOCK, not just a step (ENG-651).** After the gate moves the session, the station calls the optional `onBlockClosed('triagem')` prop — and only if `sessionStore`'s mode actually became `segmentacao`, so the announcement follows the domain's decision rather than the click. The screen itself belongs to the shell (@/ui/app/docs.md): this station is leaving the screen at that very moment and cannot hold it.
 - The itinerant `Player` (@/adapters/audio) is injected by prop, not constructed here — same audio seam as the escuta stations (`player` defaults to `null`).
 
 ### Core Implementation

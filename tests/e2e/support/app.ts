@@ -204,6 +204,17 @@ export class ColarApp {
     }
     // todas classificadas → momento de revisão
     await this.page.getByRole('button', { name: 'Continuar →' }).click();
+    await this.passBlockDone('Seguir para as frases');
+  }
+
+  /**
+   * O fim de bloco (ENG-651) sobe nos DOIS limites do fluxo, por cima da estação
+   * já chegada. O primário continua para ela — é o caminho de quem está a
+   * trabalhar, e o único que não sai da sessão. O `click` do Playwright já espera
+   * o botão aparecer: a barreira é o botão, não um tempo.
+   */
+  async passBlockDone(primary: 'Seguir para as frases' | 'Começar a conversa'): Promise<void> {
+    await this.page.getByRole('button', { name: primary }).click();
   }
 
   // ——— Segmentação ———
@@ -232,6 +243,7 @@ export class ColarApp {
     const continuar = this.page.getByRole('button', { name: 'Continuar →' });
     if (await continuar.count()) await continuar.click();
     else await this.page.getByRole('button', { name: 'Já segmentei todas as cenas →' }).click();
+    await this.passBlockDone('Começar a conversa');
   }
 
   // ——— Conversation ———

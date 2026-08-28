@@ -13,10 +13,12 @@ import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
 import { setMode, type Mode, type SessionState } from '../../domain';
 import type { SaveStatus } from '../molecules';
+import { BlockDone, type ClosedBlock } from '../organisms/block-done/block-done';
 import { BreakSuggestion } from '../organisms/break-suggestion/break-suggestion';
 import { GoalReached } from '../organisms/goal-reached/goal-reached';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
+import { phrasePalette, scenePalette } from '../tokens';
 import {
   appStore,
   progressStore,
@@ -137,6 +139,12 @@ function SessionStations({
   // numa entrada in-SPA. O primeiro clique de navegação assume e nunca é puxado.
   const [manualExport, setManualExport] = useState<boolean | null>(null);
   const viewingExport = manualExport ?? initialExport;
+  // O bloco que ACABOU de fechar (ENG-651). Mora aqui, e não na estação, por dois
+  // motivos: a estação que confirma é justamente a que sai de cena, e só o shell
+  // pode garantir que uma tela cheia por vez suba. Nasce e morre com a vista da
+  // sessão — o `key={route.id}` do App remonta este `null` a cada sessão, então
+  // reabrir uma já passada do limite não repete nada; um re-render não o perde.
+  const [closedBlock, setClosedBlock] = useState<ClosedBlock | null>(null);
   // O relógio líquido da sessão pulsa aqui, no único lugar que sabe QUAL sessão
   // está aberta; a Export lê o total ao concluir. Nada disto sai do browser.
   useSessionClock(sessionId);
@@ -149,6 +157,7 @@ function SessionStations({
   const [goalReached, setGoalReached] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
   const [breakOpen, setBreakOpen] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
   // O progresso de tela (quanto se ouviu, quantos artefatos se baixou) é por
   // sessão: este componente é remontado por `key={sessionId}`, então zerar na
   // montagem basta — sem isso a barra da sessão seguinte abriria já andada.
@@ -190,7 +199,7 @@ function SessionStations({
             // toExport); a Export é estado local do shell, então a chave é nossa
             onGoToExport: () => setManualExport(true),
           }
-        : { player, sound };
+        : { player, sound, onBlockClosed: (block: ClosedBlock) => setClosedBlock(block) };
 
   return (
     <>
@@ -218,7 +227,7 @@ function SessionStations({
           com a vista da sessão: a tela de espera a substitui inteira, e o `key` por
           sessão rearma a sugestão ao começar, retomar ou reabrir para revisão. */}
       <BreakSuggestion
-        busy={recording || goalOpen}
+        busy={recording || goalOpen || blockOpen}
         onTakeBreak={() => navigate('/dashboard')}
         onOpenChange={setBreakOpen}
       />
@@ -228,10 +237,38 @@ function SessionStations({
           troca pela porta silenciosa. */}
       <GoalReached
         reached={goalReached}
-        busy={recording || breakOpen}
+        busy={recording || breakOpen || blockOpen}
         chime={() => sound.advance()}
         onOpenChange={setGoalOpen}
         onStopForToday={() => navigate('/dashboard')}
+      />
+      {/* Um bloco fechou (ENG-651): a estação seguinte já está montada atrás desta
+          tela, e o primário só a descobre. As contas tomam a cor dos dados (§4.2):
+          a paleta de frases quando a Segmentação fecha, as cores das próprias
+          cenas quando a Triagem fecha.
+
+          Precedência: esta tela NÃO espera pela meta, embora a meta espere por ela.
+          É o que o protótipo faz — `pausaShow` e `metaShow` guardam ambos em
+          `!blockDone` (L1022, L1030) e o `blockDone` não guarda em nada —, e é a
+          única resolução estável: `open` aqui e na meta são DERIVADOS do render, e
+          duas derivações que se olham entram em oscilação (as duas abrem no mesmo
+          render lendo o `false` anterior da outra, as duas fecham no seguinte, e
+          assim sem fim). Com a pausa não há esse risco: o `open` dela é estado
+          travado, não derivação, por isso a espera é de mão dupla. */}
+      <BlockDone
+        block={closedBlock}
+        busy={recording || breakOpen}
+        onOpenChange={setBlockOpen}
+        tints={
+          closedBlock === 'segmentacao'
+            ? phrasePalette.slice(0, 5)
+            : scenePalette.slice(0, Math.min(5, Math.max(1, session.parts.length)))
+        }
+        onContinue={() => setClosedBlock(null)}
+        onRest={() => {
+          setClosedBlock(null);
+          navigate('/dashboard');
+        }}
       />
     </>
   );

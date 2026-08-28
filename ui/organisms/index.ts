@@ -4,6 +4,7 @@
  * adapters (dependency-cruiser garante). Consumidores (pages/templates) importam
  * DESTE barrel; irmãos importam-se por caminho direto.
  */
+export { BlockDone, type BlockDoneProps, type ClosedBlock } from './block-done/block-done';
 export {
   BREAK_AFTER_MS,
   BreakSuggestion,
