@@ -185,6 +185,12 @@ export const en: Dict = {
     reviewOwn: '🔒 Review mode — segmentation is locked.',
     unlock: 'Unlock to edit',
   },
+  breakSuggestion: {
+    headline: 'That was plenty of good work for now.',
+    body: 'A coffee, a stretch — the necklace stays exactly where you left it.',
+    take: 'Take a break',
+    keepGoing: 'Keep going a little longer',
+  },
   review: {
     continue: 'Continue →',
   },

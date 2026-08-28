@@ -5,6 +5,11 @@
  * DESTE barrel; irmãos importam-se por caminho direto.
  */
 export {
+  BREAK_AFTER_MS,
+  BreakSuggestion,
+  type BreakSuggestionProps,
+} from './break-suggestion/break-suggestion';
+export {
   ConversationStage,
   type ConversationProgress,
   type ConversationStageProps,

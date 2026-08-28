@@ -13,6 +13,7 @@ import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
 import { setMode, type Mode, type SessionState } from '../../domain';
 import type { SaveStatus } from '../molecules';
+import { BreakSuggestion } from '../organisms/break-suggestion/break-suggestion';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
 import { appStore, sessionStore, useAppStore, useSessionClock, useSessionStore } from '../state';
@@ -130,6 +131,9 @@ function SessionStations({
   // O relógio líquido da sessão pulsa aqui, no único lugar que sabe QUAL sessão
   // está aberta; a Export lê o total ao concluir. Nada disto sai do browser.
   useSessionClock(sessionId);
+  // Microfone aberto: a pausa sugerida (ENG-650) não sobe por cima de uma resposta
+  // sendo gravada. É o mesmo sinal app-global que trava o "← Histórias" (ENG-393).
+  const recording = useAppStore((s) => s.recording);
 
   const stations = stepperStations(session, { viewingExport });
   const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'listen';
@@ -182,6 +186,11 @@ function SessionStations({
           </main>
         </ConnectionGate>
       </PlayerSlotProvider>
+      {/* Depois de um bom tempo, uma sugestão de descanso — uma vez por sessão, e
+          nunca por cima de algo em curso (ENG-650). Montada aqui, ela nasce e morre
+          com a vista da sessão: a tela de espera a substitui inteira, e o `key` por
+          sessão rearma a sugestão ao começar, retomar ou reabrir para revisão. */}
+      <BreakSuggestion busy={recording} onTakeBreak={() => navigate('/dashboard')} />
     </>
   );
 }
