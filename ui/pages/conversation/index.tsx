@@ -29,6 +29,11 @@ import { cardinal, sceneOrdinal } from '../cut/cutting';
 import { clearSkipped, isSkipped, lastAnsweredIndex, markSkipped } from './answered';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
 import { type BulkOutcome, PendingDraftsDialog } from './pending-drafts-dialog';
+import {
+  type ConversationMode,
+  ConversationModePicker,
+} from '../../organisms/conversation-mode-picker/conversation-mode-picker';
+import { useOpenMicWhenSpoken, useSpeakOnArrival, useSpokenYet } from './hands-free';
 import { StationNav } from '../../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../../state';
@@ -124,6 +129,13 @@ const PREPARE_TIMEOUT_MS = 8000;
 
 /** Nenhuma gravação descoberta ainda — identidade estável, fora do render. */
 const NO_VOICE: ReadonlySet<string> = new Set<string>();
+
+/**
+ * A pausa entre parar de gravar e a próxima pergunta chegar sozinha (ENG-649,
+ * protótipo v4 `_armAuto`). Curta o bastante para não virar espera, longa o
+ * bastante para ser vista vindo e desfeita com um toque.
+ */
+const AUTO_ADVANCE_MS = 2600;
 
 /**
  * Advancing past an answer recorded IN THIS SITTING starts its transcription.
@@ -232,6 +244,19 @@ interface QuestionScreenProps {
   /** A pergunta está marcada como sem resposta (ver `./answered`). */
   skipped: boolean;
   onToggleSkip: () => void;
+  /**
+   * Como a conversa anda agora (ENG-649) — a pílula do palco o diz e o troca.
+   * `null` = ninguém escolheu ainda: o pedido está por cima, a pílula não existe
+   * (não teria o que dizer) e nada automático corre.
+   */
+  mode: ConversationMode | null;
+  onToggleMode: () => void;
+  /**
+   * Há uma pergunta DEPOIS desta. Só então o avanço automático se arma: a última
+   * pergunta não empurra ninguém para o relatório — chegar ao fim da entrevista é
+   * um ato, e um ato que ninguém pediu não acontece sozinho.
+   */
+  hasNext: boolean;
 }
 
 /**
@@ -256,6 +281,9 @@ function QuestionScreen({
   onVoiceSaved,
   skipped,
   onToggleSkip,
+  mode,
+  onToggleMode,
+  hasNext,
 }: QuestionScreenProps) {
   const { t, i18n } = useTranslation();
   /**
@@ -336,13 +364,15 @@ function QuestionScreen({
     });
   }, [recorder, path]);
 
-  // Chegar numa pergunta a faz ser falada (a tela remonta por `key={path}`). Com o som
-  // desligado não fala; sair da pergunta cancela a fala em curso (nada de voz órfã).
-  useEffect(() => {
-    if (!speaker || muted) return;
-    speaker.speak(questionText, speechLang);
-    return () => speaker.stop();
-  }, [speaker, muted, questionText, speechLang]);
+  const handsFree = mode === 'auto';
+  /**
+   * Chegar numa pergunta a faz ser falada — em MÃOS LIVRES (a tela remonta por
+   * `key={path}`). Em toque a toque o app fica calado até alguém tocar "Ouvir a
+   * pergunta": é o que separa os dois modos, e é o modo quieto que precisa ser
+   * mesmo quieto. Sair da pergunta cancela a fala em curso (nada de voz órfã).
+   */
+  const spoken = useSpokenYet({ willSpeak: handsFree && canSpeak, speaker });
+  useSpeakOnArrival({ handsFree, speaker, muted, text: questionText, lang: speechLang });
 
   useEffect(() => {
     let alive = true;
@@ -396,6 +426,53 @@ function QuestionScreen({
     });
   }, [player, listen?.key]);
 
+  /**
+   * A próxima pergunta chegando sozinha (ENG-649, protótipo v4 `_armAuto`). Vive
+   * nesta tela, que remonta a cada pergunta (`key={path}`): sair da estação a
+   * desmonta, e o desmonte cancela — um relógio que sobrevivesse à saída faria a
+   * conversa andar numa tela que não existe mais.
+   */
+  const [autoAdvancing, setAutoAdvancing] = useState(false);
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelAuto = useCallback((): void => {
+    if (autoTimer.current !== null) {
+      clearTimeout(autoTimer.current);
+      autoTimer.current = null;
+    }
+    setAutoAdvancing(false);
+  }, []);
+  useEffect(() => cancelAuto, [cancelAuto]);
+  const armAuto = (): void => {
+    if (!handsFree || !hasNext) return;
+    cancelAuto();
+    setAutoAdvancing(true);
+    autoTimer.current = setTimeout(() => {
+      autoTimer.current = null;
+      setAutoAdvancing(false);
+      onNext();
+    }, AUTO_ADVANCE_MS);
+  };
+  /**
+   * Todo ato deliberado mata a espera. Envolver os handlers — em vez de espalhar
+   * `cancelAuto()` por dentro de cada um — é o que faz um controle novo no palco
+   * nascer cancelando, em vez de nascer esquecido. Gravar e regravar são a exceção:
+   * eles cancelam por dentro, porque abrir o microfone é um ato mesmo quando é o
+   * mãos livres que o pede, e nenhum embrulho estaria lá nesse caminho.
+   */
+  const deliberate =
+    <A extends unknown[]>(run: (...args: A) => void) =>
+    (...args: A): void => {
+      cancelAuto();
+      run(...args);
+    };
+
+  // A fala em curso morre ao sair da pergunta, venha ela da chegada automática ou
+  // do botão "Ouvir a pergunta" — este efeito não pertence ao mãos livres.
+  useEffect(() => {
+    if (!speaker) return;
+    return () => speaker.stop();
+  }, [speaker, path]);
+
   const playSpan = (): void => {
     if (!player || !listen) return;
     player.toggle(listen.key, listen.s, listen.e);
@@ -403,8 +480,21 @@ function QuestionScreen({
     setSpanPlaying(st.key === listen.key && st.playing && !st.paused);
   };
 
+  /**
+   * Uma abertura de microfone por vez. Entre pedir `start()` e o estado virar
+   * "gravando" há um await, e nesse intervalo a tela ainda se diz parada — um
+   * segundo pedido chegando ali abriria um segundo microfone e jogaria fora o
+   * que já estava sendo dito. É o caminho que o mãos livres criou: silenciar a
+   * pergunta para gravar TERMINA a fala, e o fim da fala é justamente o que
+   * manda o microfone abrir.
+   */
+  const openingRef = useRef(false);
   const onRecord = async (): Promise<void> => {
-    if (!recorder) return;
+    if (!recorder || openingRef.current) return;
+    openingRef.current = true;
+    // abrir o microfone É o ato deliberado que encerra a espera pela próxima
+    // pergunta — inclusive quando quem abre é o próprio mãos livres
+    cancelAuto();
     // O microfone abre num silêncio: a história tocando no colar, a pergunta na
     // voz do guia e a resposta anterior em reprodução entravam TODAS pelo mesmo
     // ar — a gravação saía com a fala da pessoa por baixo do som do app.
@@ -412,7 +502,12 @@ function QuestionScreen({
     setSpanPlaying(false);
     speaker?.stop();
     recorder.stopPlayback();
-    const rec = await recorder.start(path);
+    let rec;
+    try {
+      rec = await recorder.start(path);
+    } finally {
+      openingRef.current = false;
+    }
     // desmontou durante o await (navegou depressa) → descarta e não escreve estado
     if (!mountedRef.current) {
       rec.cancel();
@@ -461,6 +556,7 @@ function QuestionScreen({
     setRecorderState('recorded');
     // Voz salva no caminho canônico: avisa o shell para registrá-lo em meta.voice (§10.4).
     onVoiceSaved?.(path);
+    armAuto();
   };
   const onPlay = (): void => {
     if (!recorder) return;
@@ -483,6 +579,21 @@ function QuestionScreen({
     setRecorderState('idle');
     void onRecord();
   };
+
+  /**
+   * O microfone abrindo sozinho, em mãos livres, quando a pergunta acaba de ser
+   * falada. `idle` é a trava inteira — é ela que o mantém fora de uma gravação em
+   * curso, de uma resposta que já existe, da procura e do salvamento.
+   */
+  useOpenMicWhenSpoken({
+    handsFree,
+    spoken,
+    ready: recorderState === 'idle',
+    // o MESMO caminho do toque no microfone, sem o toque: não existe segunda
+    // maneira de abrir uma gravação, e por isso a trava contra reentrância vale
+    // para os dois
+    open: () => void onRecord(),
+  });
 
   return (
     <section className="cds-conversation">
@@ -508,7 +619,7 @@ function QuestionScreen({
         levels={levels}
         onRecord={onRecord}
         onStop={onStop}
-        onPlay={onPlay}
+        onPlay={deliberate(onPlay)}
         onRerecord={onRerecord}
         answerLength={answerLength}
         // toque recusado durante a gravação: responde ao ouvido, não com texto (§9.4)
@@ -518,22 +629,29 @@ function QuestionScreen({
         onStopPlay={() => recorder?.stopPlayback()}
         progress={progress}
         trechos={trechos}
-        onPrev={onPrev}
-        onNext={onNext}
+        onPrev={deliberate(onPrev)}
+        onNext={deliberate(onNext)}
         skipped={skipped}
-        onToggleSkip={onToggleSkip}
+        onToggleSkip={deliberate(onToggleSkip)}
         speaking={speaking}
+        mode={mode ?? undefined}
+        onToggleMode={deliberate(onToggleMode)}
+        autoAdvancing={autoAdvancing}
         onSpeakQuestion={
           // falando ⇒ pausar; calado ⇒ (re)falar — o rótulo do organismo acompanha (ENG-317)
           canSpeak
-            ? () => (speaking ? speaker.stop() : speaker.speak(questionText, speechLang))
+            ? deliberate(() =>
+                speaking ? speaker.stop() : speaker.speak(questionText, speechLang),
+              )
             : undefined
         }
         onSpeakExample={
           // MESMA porta da pergunta: pedir o exemplo com a pergunta ainda sendo lida
           // interrompe a leitura, porque `speak` cancela a fala em curso (contrato da
           // porta). Duas vozes no mesmo ar seria o único desfecho pior.
-          canSpeak && exampleText ? () => speaker.speak(exampleText, speechLang) : undefined
+          canSpeak && exampleText
+            ? deliberate(() => speaker.speak(exampleText, speechLang))
+            : undefined
         }
       />
     </section>
@@ -603,6 +721,16 @@ export function Conversation({
    * the interview.
    */
   const [atReport, setAtReport] = useState(() => resumedAtReport);
+  /**
+   * Como a conversa anda nesta passagem (ENG-649). `null` = a dupla ainda não
+   * escolheu, e o pedido do modo está de pé.
+   *
+   * É estado de TELA, de propósito: não entra no DTO da sessão. O protótipo v4
+   * re-pergunta a cada entrada na conversa, e re-perguntar é o comportamento
+   * certo — quem conduz pode ser outra pessoa, num outro dia, com outra dupla.
+   */
+  // `setMode` já é o do domínio (o modo da SESSÃO); este é o da conversa.
+  const [mode, setPassMode] = useState<ConversationMode | null>(null);
   // Preparo pré-revisão (ENG-337): a descoberta das respostas roda ANTES de abrir
   // o relatório — ele chega pronto, sem "procurando" pipocando linha a linha. Uma
   // vez pronto, re-entradas abrem direto (o preparo re-roda por baixo, silencioso).
@@ -871,26 +999,49 @@ export function Conversation({
   };
   const trecho = blockEyebrow(mapped, slot, i18n.language, blockLabels);
 
+  /**
+   * O pedido do modo COBRE a pergunta até alguém escolher, em vez de tomar o lugar
+   * dela (protótipo v4). A pergunta atrás fica inalcançável — o diálogo é modal —,
+   * mas monta: quando a escolha chega, a procura pela resposta já gravada acabou, e
+   * o mãos livres não estreia com uma espera. Nada automático corre enquanto não há
+   * modo, porque tudo que é automático depende de `mãos livres`.
+   *
+   * Ele NÃO aparece na espera nem no relatório: uma pergunta que ninguém está
+   * fazendo não tem andamento a decidir.
+   */
   return (
-    <QuestionScreen
-      key={path}
-      slot={slot}
-      path={path}
-      listen={listenFor(mapped, slot, t)}
-      trecho={trecho}
-      progress={{ total, current: idx }}
-      trechos={trechos}
-      onPrev={goPrev}
-      onNext={goNext}
-      player={player}
-      recorder={recorder}
-      speaker={speaker}
-      sound={sound}
-      muted={muted}
-      onVoiceSaved={onAnswerRecorded}
-      skipped={skipped}
-      onToggleSkip={toggleSkip}
-    />
+    <>
+      {mode === null ? (
+        <ConversationModePicker
+          onChoose={(chosen) => {
+            sound?.advance();
+            setPassMode(chosen);
+          }}
+        />
+      ) : null}
+      <QuestionScreen
+        key={path}
+        slot={slot}
+        path={path}
+        listen={listenFor(mapped, slot, t)}
+        trecho={trecho}
+        progress={{ total, current: idx }}
+        trechos={trechos}
+        onPrev={goPrev}
+        onNext={goNext}
+        player={player}
+        recorder={recorder}
+        speaker={speaker}
+        sound={sound}
+        muted={muted}
+        onVoiceSaved={onAnswerRecorded}
+        skipped={skipped}
+        onToggleSkip={toggleSkip}
+        mode={mode}
+        onToggleMode={() => setPassMode(mode === 'auto' ? 'manual' : 'auto')}
+        hasNext={idx < total - 1}
+      />
+    </>
   );
 }
 
