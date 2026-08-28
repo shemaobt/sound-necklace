@@ -22,17 +22,25 @@ import './story-progress.css';
  * aqui dentro, e não por prop, de propósito: a Escuta 1 publica a cada conta nova,
  * e assinar isso no shell faria a sessão inteira re-renderizar durante a
  * reprodução. Assinando aqui, só esta faixa re-renderiza.
+ *
+ * Os caminhos de voz chegam como GETTER, não como array: assim a leitura do ref de
+ * `meta.voice` — que o próprio App documenta como proibida em render (ENG-321) —
+ * sai do render do shell, e a prop tem identidade estável (`useCallback`) em vez de
+ * um array novo a cada render vindo do `?? []`. Estável é o que o React Compiler
+ * precisa para memoizar esta faixa sozinho; um `useMemo` à mão aqui DESLIGA a
+ * compilação do componente inteiro (`react-hooks` reprova, e com razão) e sai pior
+ * do que não ter memo nenhum.
  */
 export function StoryProgress({
   session,
   viewingExport = false,
-  voice = NO_VOICE,
+  voicePaths = noVoice,
 }: {
   session: SessionState;
   /** O shell está na cauda Guardar (estado local dele — ver stepper-model). */
   viewingExport?: boolean;
-  /** Caminhos com resposta gravada (`meta.voice`). */
-  voice?: readonly string[];
+  /** Getter dos caminhos com resposta gravada (`meta.voice`) — ver acima. */
+  voicePaths?: () => readonly string[];
 }) {
   const { t } = useTranslation();
   const heardBeads = useProgressStore((s) => s.heardBeads);
@@ -41,6 +49,7 @@ export function StoryProgress({
   const stations = stepperStations(session, { viewingExport });
   const stationIndex = stations.findIndex((s) => s.state === 'current');
   const current = stations[stationIndex];
+
   if (!current) return null;
 
   const percent = storyProgressPercent({
@@ -48,7 +57,7 @@ export function StoryProgress({
     stationIndex,
     heardBeads,
     artifactsDownloaded,
-    voice,
+    voice: voicePaths(),
   });
 
   return (
@@ -62,3 +71,5 @@ export function StoryProgress({
 }
 
 const NO_VOICE: readonly string[] = [];
+/** Identidade estável: um `() => []` novo a cada render furaria a memoização. */
+const noVoice = (): readonly string[] => NO_VOICE;

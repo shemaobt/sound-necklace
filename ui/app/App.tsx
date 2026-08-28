@@ -187,7 +187,7 @@ function SessionStations({
 
   return (
     <>
-      <StoryProgress session={session} viewingExport={viewingExport} voice={voicePaths()} />
+      <StoryProgress session={session} viewingExport={viewingExport} voicePaths={voicePaths} />
       <Stepper stations={stations} onNavigate={navigateStation} />
       <ReviewBanner review={review} lock={lock} onUnlock={() => sessionStore.getState().unlock()} />
       <PlayerSlotProvider
