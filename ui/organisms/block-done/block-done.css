@@ -1,0 +1,129 @@
+/*
+ * O fim de bloco (protótipo v4 "FIM DE BLOCO", linhas 842-855): OPACO, sem véu e
+ * sem desfoque — ao contrário das outras duas telas cheias, esta não deixa ver a
+ * estação por trás. O bloco fechou; a tela é o respiro entre um e o outro.
+ * Coluna centrada, a marca da casa esmaecida no canto, e todo o movimento (só o
+ * aparecer) dentro da guarda de prefers-reduced-motion (§4.5).
+ */
+.cds-block-done {
+  position: fixed;
+  inset: 0;
+  /* Acima de TODO o chrome, não só da estação: o cabeçalho é `sticky z-index:30`
+     e a camada de addons `fixed z-index:20`, de modo que sem um z-index próprio
+     esta tela ficava por baixo dos dois — o "← Histórias" e o "?" apareciam
+     sobre o fim de bloco, oferecendo saídas que ela não oferece. O 56 é o valor
+     do protótipo para esta tela (docs/design/prototype.html L843), e a pausa
+     sugerida está em 57 na mesma escala. */
+  z-index: 56;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 0 80px;
+  overflow: hidden;
+  background: var(--cds-olive, #3f3e20);
+  color: var(--cds-cream, #f6f5eb);
+  font-family: var(--cds-font-load-bearing, 'Montserrat', sans-serif);
+  text-align: center;
+}
+
+/* a marca da casa esmaecida ao fundo (protótipo: icon-branco a opacity .05),
+   pinada no canto inferior-direito para não ficar atrás da coluna */
+.cds-block-done-watermark {
+  position: absolute;
+  right: -90px;
+  bottom: -100px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.cds-block-done-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(246, 245, 235, 0.5);
+}
+
+/* as contas do bloco fechado: cinco, a última quadrada, cor vinda dos dados */
+.cds-block-done-beads {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cds-block-done-headline {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice, 'Merriweather', Georgia, serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 32px;
+  line-height: 1.3;
+}
+
+.cds-block-done-subtitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(246, 245, 235, 0.6);
+}
+
+.cds-block-done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+/* os botões herdam o gap acima: o invólucro só existe para dar contexto ao css */
+.cds-block-done-action {
+  display: contents;
+}
+
+/* Primário sobre o oliva: creme cheio com tinta oliva (protótipo blockContinue).
+   O átomo não tem essa variante — é override de contexto, camada de look. */
+.cds-block-done-action[data-kind='continue'] .cds-button {
+  background: var(--cds-cream, #f6f5eb);
+  border-color: transparent;
+  color: var(--cds-olive, #3f3e20);
+}
+
+.cds-block-done-action[data-kind='continue'] .cds-button:hover:enabled,
+.cds-block-done-action[data-kind='continue'] .cds-button:active:enabled,
+.cds-block-done-action[data-kind='continue'] .cds-button:focus-visible:enabled {
+  background: color-mix(in srgb, var(--cds-cream, #f6f5eb) 88%, transparent);
+}
+
+/* Secundário: contorno creme (mesmo override do seam modal e da pausa). */
+.cds-block-done-action[data-kind='rest'] .cds-button {
+  border-color: rgba(246, 245, 235, 0.4);
+  color: var(--cds-cream, #f6f5eb);
+}
+
+.cds-block-done-action[data-kind='rest'] .cds-button:hover:enabled,
+.cds-block-done-action[data-kind='rest'] .cds-button:active:enabled,
+.cds-block-done-action[data-kind='rest'] .cds-button:focus-visible:enabled {
+  border-color: var(--cds-cream, #f6f5eb);
+  background: color-mix(in srgb, var(--cds-cream, #f6f5eb) 12%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-block-done {
+    animation: cds-block-done-fade 250ms ease-out both;
+  }
+
+  @keyframes cds-block-done-fade {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

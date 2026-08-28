@@ -29,6 +29,7 @@ import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button } from '../../atoms';
 import { BeadStrip, type BeadStripItem } from '../../molecules';
 import {
+  type ClosedBlock,
   Necklace,
   type NecklaceSegment,
   SeamModal,
@@ -86,9 +87,15 @@ export interface PhrasesProps {
   player?: Player | null;
   /** A voz da UI (§9): travar a frase, mover a costura, recusar e avançar têm som. */
   sound?: UiSound;
+  /**
+   * Fechar a ÚLTIMA cena produtiva fecha um BLOCO (ENG-651). Quem sabe que essa é a
+   * última é o domínio — `confirmFrasesDone` devolvendo `mapeamento` —, e quem
+   * desenha a tela é o shell; a estação só passa o recado.
+   */
+  onBlockClosed?: (block: ClosedBlock) => void;
 }
 
-export function Phrases({ player = null, sound }: PhrasesProps) {
+export function Phrases({ player = null, sound, onBlockClosed }: PhrasesProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
@@ -337,6 +344,9 @@ export function Phrases({ player = null, sound }: PhrasesProps) {
         setPick(null);
         sound?.advance();
         sessionStore.getState().apply(() => result.state);
+        // `mapeamento` é a resposta do domínio para "era a última produtiva" — a
+        // estação não recalcula qual cena era, só repassa (ENG-651).
+        if (result.kind === 'mapeamento') onBlockClosed?.('segmentacao');
         return;
     }
   };

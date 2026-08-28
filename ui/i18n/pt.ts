@@ -236,6 +236,26 @@ export const pt = {
     keepGoing: 'Seguir mais um pouco',
     stopForToday: 'Guardar por hoje',
   },
+  /**
+   * O fim de bloco (ENG-651; protótipo v4 "FIM DE BLOCO"). Nos dois limites
+   * estruturais do fluxo, uma tela marca que um bloco fechou. A manchete nomeia o
+   * bloco que TERMINOU; o primário nomeia o que começa. Tela de quem ouve: nenhum
+   * dígito, nenhuma contagem, nenhum id (§9.2).
+   */
+  blockDone: {
+    eyebrow: 'Um bloco fechado',
+    rest: 'Guardar e descansar',
+    triagem: {
+      headline: 'As cenas todas têm nome.',
+      subtitle: 'Agora vem a parte de dentro: as frases de cada cena.',
+      primary: 'Seguir para as frases',
+    },
+    segmentacao: {
+      headline: 'Todas as frases no cordão.',
+      subtitle: 'Falta só a conversa sobre o sentido — a parte mais gostosa.',
+      primary: 'Começar a conversa',
+    },
+  },
   /** Momento de revisão inferido: uma manchete + um único "Continuar →". */
   review: {
     continue: 'Continuar →',

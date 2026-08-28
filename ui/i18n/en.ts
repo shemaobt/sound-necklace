@@ -208,6 +208,20 @@ export const en: Dict = {
     keepGoing: 'Keep going a little longer',
     stopForToday: 'Put it away for today',
   },
+  blockDone: {
+    eyebrow: 'One block closed',
+    rest: 'Save and rest',
+    triagem: {
+      headline: 'Every scene has a name now.',
+      subtitle: 'Now for what is inside: the phrases of each scene.',
+      primary: 'On to the phrases',
+    },
+    segmentacao: {
+      headline: 'Every phrase on the cord.',
+      subtitle: 'Only the conversation about meaning is left — the best part.',
+      primary: 'Start the conversation',
+    },
+  },
   review: {
     continue: 'Continue →',
   },

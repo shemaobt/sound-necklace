@@ -42,6 +42,8 @@ async function triageGleaningThenNoneFit(page: Page): Promise<void> {
   await page.getByRole('radio', { name: 'Nenhum se encaixa', exact: true }).click();
   // todas classificadas → momento de revisão
   await page.getByRole('button', { name: 'Continuar →' }).click();
+  // …e a Triagem fecha um bloco: a tela do fim de bloco continua para as frases
+  await page.getByRole('button', { name: 'Seguir para as frases' }).click();
 }
 
 /**

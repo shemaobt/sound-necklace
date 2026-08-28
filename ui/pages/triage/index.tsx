@@ -17,7 +17,7 @@ import {
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { sceneColor } from '../cut/cutting';
 import { ProgressDots } from '../../molecules';
-import { Necklace, SIZE_L, StationNav } from '../../organisms';
+import { Necklace, SIZE_L, StationNav, type ClosedBlock } from '../../organisms';
 import { CoverageDrawer } from '../../organisms/coverage-drawer/coverage-drawer';
 import { TriagePicker } from '../../organisms/triage-picker/triage-picker';
 import { sessionStore, useSessionStore } from '../../state';
@@ -41,6 +41,11 @@ export interface TriageProps {
   player?: Player | null;
   /** A voz da UI (§9): escolher um tipo, travar a cena e avançar têm som. */
   sound?: UiSound;
+  /**
+   * Confirmar a triagem fecha um BLOCO, não só uma etapa (ENG-651). Quem desenha a
+   * tela de fim de bloco é o shell — esta estação sai de cena no mesmo instante.
+   */
+  onBlockClosed?: (block: ClosedBlock) => void;
 }
 
 type Translate = (key: string) => string;
@@ -68,7 +73,7 @@ function nextPending(parts: ScenePart[], from: number): number {
   return -1;
 }
 
-export function Triage({ player = null, sound }: TriageProps) {
+export function Triage({ player = null, sound, onBlockClosed }: TriageProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [focusIdx, setFocusIdx] = useState(0);
@@ -164,6 +169,9 @@ export function Triage({ player = null, sound }: TriageProps) {
       const moved = setMode(st, 'segmentacao');
       return moved.mode === 'segmentacao' ? enterSegmentacao(moved) : moved;
     });
+    // Só anuncia o bloco fechado se o modo tiver mesmo mudado: quem decide é o
+    // `setMode` do domínio, não o clique.
+    if (sessionStore.getState().session?.mode === 'segmentacao') onBlockClosed?.('triagem');
   };
 
   return (
