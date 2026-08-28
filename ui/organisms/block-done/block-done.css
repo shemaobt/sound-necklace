@@ -8,6 +8,13 @@
 .cds-block-done {
   position: fixed;
   inset: 0;
+  /* Acima de TODO o chrome, não só da estação: o cabeçalho é `sticky z-index:30`
+     e a camada de addons `fixed z-index:20`, de modo que sem um z-index próprio
+     esta tela ficava por baixo dos dois — o "← Histórias" e o "?" apareciam
+     sobre o fim de bloco, oferecendo saídas que ela não oferece. O 56 é o valor
+     do protótipo para esta tela (docs/design/prototype.html L843), e a pausa
+     sugerida está em 57 na mesma escala. */
+  z-index: 56;
   display: flex;
   flex-direction: column;
   align-items: center;
