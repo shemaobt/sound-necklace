@@ -9,6 +9,7 @@ import { KindCard } from './kind-card/kind-card';
 import { QuestionCard } from './question-card/question-card';
 import { SelectionBand } from './selection-band/selection-band';
 import { StepperStation } from './stepper-station/stepper-station';
+import { StoryProgressBar } from './story-progress-bar/story-progress-bar';
 import { TrustChip } from './trust-chip/trust-chip';
 
 const telha = { base: '#BE4A01', lit: '#E8813E', deep: '#8F3701' };
@@ -62,6 +63,7 @@ describe('moléculas não mostram dígitos ao ouvinte (PRD v2 §9.2)', () => {
         <ol>
           <StepperStation label="Ouvir" state="current" />
         </ol>
+        <StoryProgressBar percent={37} dividers={[8, 22, 34, 60, 92]} />
         <TrustChip>Nada sai do seu navegador.</TrustChip>
       </>,
     );

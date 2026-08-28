@@ -31,6 +31,7 @@ import { reviewIsDone } from '../../app/resume-placement';
 import {
   freezeClock,
   netTimeParts,
+  progressStore,
   readClock,
   resumeClock,
   sessionStore,
@@ -226,6 +227,12 @@ export function Export({ store, sessionId, sound, saveBytes = domSaveBytes }: Ex
   // não anda mais. Lido do estado, não do relógio a cada render — senão ele
   // escorregaria enquanto a tela de conclusão ficasse aberta.
   const [netMs, setNetMs] = useState<number | null>(null);
+
+  // A barra da história no topo fecha em Guardar conforme os três artefatos saem
+  // (ENG-648). O número é de tela — não entra em artefato nenhum.
+  useEffect(() => {
+    progressStore.getState().noteDownloaded(Object.values(downloaded).filter(Boolean).length);
+  }, [downloaded]);
 
   useEffect(() => {
     if (!store || !sessionId) return;

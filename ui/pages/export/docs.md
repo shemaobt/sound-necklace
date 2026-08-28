@@ -31,6 +31,7 @@ Path: @/ui/pages/export
 ### Things to Know
 
 - **Two filename sets.** `saveBytes` uses the slug-prefixed @/contracts helpers `retornoFilename`/`manifestoFilename`/`reportFilename(slug)` (e.g. `historia-anchoring-return.json`), distinct from the **unprefixed** display filenames shown inside the `ArtifactCards` organism (`anchoring-return.json`).
+- **The download count feeds the whole-story bar** (ENG-648): an effect on `downloaded` publishes how many of the three artifacts have been saved to @/ui/state's `progressStore`, which closes the last of the six stations on @/ui/app/story-progress.tsx's bar. The store only grows, so `reopen`'s reset of the flags does not walk the bar backwards. Screen-only: it enters neither the DTO nor any artifact.
 - **The download is the system-boundary seam.** `saveBytes(filename, bytes)` defaults to a Blob + object URL + anchor click (`domSaveBytes`); tests inject a spy to assert byte-identity against `store.getArtifacts(id)`.
 - **The semFim advisory** renders only in `edit` when `retornoExportStatus(session).semFim > 0`: the literal "N frase(s) ainda sem fim travado." (the "(s)" is literal, the count exact). It is advisory — it does not block completion.
 - **Facilitator surface.** Unlike listener screens, this is §7.2/§8.8 facilitator-facing, so the counts/numbers in the advisory and the document cards are allowed.

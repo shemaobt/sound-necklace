@@ -1,0 +1,62 @@
+/*
+ * Barra da história inteira (protótipo v4, linhas 1661-1668): trilho de 8px,
+ * preenchimento telha, cinco divisórias e o marcador creme com halo. As cores
+ * vêm das custom properties de chrome (ui/app/app.css), que já trocam sozinhas
+ * entre tema claro, tema escuro e o oliva cerimonial. O marcador é creme nos dois
+ * temas — é o ponto que se procura com o olho, e ele não muda de cor.
+ * Todo movimento fica sob prefers-reduced-motion: no-preference (§9.3).
+ */
+.cds-story-progress-wrap {
+  width: 480px;
+  max-width: 56vw;
+}
+
+.cds-story-progress-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cds-chrome-progress-track);
+}
+
+.cds-story-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--cds-chrome-accent);
+}
+
+.cds-story-progress-tick {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--cds-chrome-progress-line);
+}
+
+.cds-story-progress-marker {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: #f6f5eb;
+  box-shadow:
+    0 0 0 3px var(--cds-chrome-accent),
+    0 2px 6px rgba(10, 7, 3, 0.35);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* o preenchimento e o marcador andam juntos: a barra desliza, não pisca de um
+     estado para o outro */
+  .cds-story-progress-fill {
+    transition: width 0.35s ease;
+  }
+
+  .cds-story-progress-marker {
+    transition: left 0.35s ease;
+  }
+}

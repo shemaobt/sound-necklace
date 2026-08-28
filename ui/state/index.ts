@@ -24,3 +24,9 @@ export {
   startClock,
   useSessionClock,
 } from './session-clock';
+export {
+  createProgressStore,
+  progressStore,
+  useProgressStore,
+  type ProgressStore,
+} from './progress-store';

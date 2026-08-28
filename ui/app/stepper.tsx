@@ -5,9 +5,10 @@ import type { StepperStationView } from './stepper-model';
 import './stepper.css';
 
 /**
- * O fio de contas (novos componentes.html, "Progresso geral · as etapas"): faixa de
- * 46px centrada com o NOME da etapa atual em cima e as seis contas-etapa (retângulos
- * telha) soltas, sem linha conectora.
+ * O fio de contas (novos componentes.html, "Progresso geral · as etapas"): as seis
+ * contas-etapa (retângulos telha) soltas, sem linha conectora. O NOME da etapa atual
+ * subiu para a faixa da barra da história (ui/app/story-progress.tsx, ENG-648), que
+ * fica logo acima — mantê-lo aqui o mostraria duas vezes seguidas.
  * Indicador de progresso, não navegação livre — uma estação só é clicável quando o
  * modo já foi legitimamente alcançado (`reachable`); clicar numa travada não faz
  * nada. O clique é delegado no `<ol>` e mapeado por posição, porque a conta em si
@@ -26,7 +27,6 @@ export function Stepper({
     done: t('stationState.done'),
     future: t('stationState.future'),
   };
-  const current = stations.find((s) => s.state === 'current');
   const handleClick = (event: React.MouseEvent<HTMLOListElement>) => {
     const li = (event.target as HTMLElement).closest('li');
     const list = li?.parentElement;
@@ -38,10 +38,6 @@ export function Stepper({
 
   return (
     <div className="cds-stepper">
-      {/* o <ol> abaixo já nomeia cada etapa para leitores de tela */}
-      <p className="cds-stepper-name" aria-hidden="true">
-        {current ? t(current.labelKey) : ''}
-      </p>
       <ol className="cds-stepper-dots" aria-label={t('shell.stepperAria')} onClick={handleClick}>
         {stations.map((s) => (
           <StepperStation

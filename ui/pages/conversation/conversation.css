@@ -11,7 +11,7 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  min-height: calc(100vh - var(--cds-shell-inset, 110px));
+  min-height: calc(100vh - var(--cds-shell-inset, 138px));
   padding: clamp(1rem, 3vh, 2rem) 0 0;
   text-align: center;
 }
@@ -58,7 +58,7 @@
  * teto ali só criaria uma região de rolagem sem nada para rolar.
  */
 .cds-conversation:has(.cds-report) {
-  height: calc(100vh - var(--cds-shell-inset, 110px));
+  height: calc(100vh - var(--cds-shell-inset, 138px));
   min-height: 0;
   overflow-y: auto;
 }

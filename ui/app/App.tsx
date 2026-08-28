@@ -16,7 +16,14 @@ import type { SaveStatus } from '../molecules';
 import { BreakSuggestion } from '../organisms/break-suggestion/break-suggestion';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
-import { appStore, sessionStore, useAppStore, useSessionClock, useSessionStore } from '../state';
+import {
+  appStore,
+  progressStore,
+  sessionStore,
+  useAppStore,
+  useSessionClock,
+  useSessionStore,
+} from '../state';
 import { AddonsLayer } from './addons-layer';
 import i18n from '../i18n';
 import { interviewLocale } from '../i18n/interview-language';
@@ -37,6 +44,7 @@ import { initTheme, readTheme, toggleTheme, type Theme } from './theme';
 import { useEditorLock } from './use-editor-lock';
 import { voiceStoreFor } from './voice-adapter';
 import { Stepper } from './stepper';
+import { StoryProgress } from './story-progress';
 
 /**
  * Tema em vigor (ENG-391). A verdade mora no atributo do `<html>`, posto pelo script
@@ -134,6 +142,12 @@ function SessionStations({
   // Microfone aberto: a pausa sugerida (ENG-650) não sobe por cima de uma resposta
   // sendo gravada. É o mesmo sinal app-global que trava o "← Histórias" (ENG-393).
   const recording = useAppStore((s) => s.recording);
+  // O progresso de tela (quanto se ouviu, quantos artefatos se baixou) é por
+  // sessão: este componente é remontado por `key={sessionId}`, então zerar na
+  // montagem basta — sem isso a barra da sessão seguinte abriria já andada.
+  useEffect(() => {
+    progressStore.getState().reset();
+  }, []);
 
   const stations = stepperStations(session, { viewingExport });
   const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'listen';
@@ -173,6 +187,7 @@ function SessionStations({
 
   return (
     <>
+      <StoryProgress session={session} viewingExport={viewingExport} voicePaths={voicePaths} />
       <Stepper stations={stations} onNavigate={navigateStation} />
       <ReviewBanner review={review} lock={lock} onUnlock={() => sessionStore.getState().unlock()} />
       <PlayerSlotProvider
