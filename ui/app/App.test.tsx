@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FixtureAuthProvider } from '../../adapters/api';
@@ -914,5 +914,30 @@ describe('App shell — o passo que a sessão salva reporta (ENG-514)', () => {
     await waitFor(async () => {
       expect((await appSessionStore().get(id)).progress.current_step).toBe('conversation');
     });
+  });
+});
+
+describe('App shell — a barra da história inteira (ENG-648)', () => {
+  const NOMES = ['Ouvir', 'Cortar', 'Triagem', 'Frases', 'Conversa', 'Guardar'];
+
+  it('numa estação da sessão, a barra fica sob o cabeçalho, com as cinco marcas de etapa', async () => {
+    act(() => {
+      navigate('/session/s1');
+      sessionStore.getState().load(sampleSession());
+    });
+    const { container } = render(<App />);
+    await screen.findAllByText('Ouvir');
+    const faixa = container.querySelector<HTMLElement>('.cds-story-progress');
+    expect(faixa).not.toBeNull();
+    expect(faixa!.querySelectorAll('.cds-story-progress-tick')).toHaveLength(5);
+    expect(within(faixa!).getByText('Ouvir')).toBeDefined();
+  });
+
+  it('na Setup não há barra nem nome de estação', async () => {
+    act(() => navigate('/setup'));
+    const { container } = render(<App />);
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+    expect(container.querySelector('.cds-story-progress')).toBeNull();
+    for (const nome of NOMES) expect(screen.queryByText(nome)).toBeNull();
   });
 });

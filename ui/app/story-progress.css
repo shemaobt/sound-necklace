@@ -1,0 +1,25 @@
+/*
+ * Faixa de progresso do topo (protótipo v4, `ui.wizardStyle`/`ui.wizardName`):
+ * 46px, coluna centrada, nome da etapa em caixa alta espaçada sobre a barra.
+ * Cores via custom properties de chrome (app.css).
+ */
+.cds-story-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 46px;
+  flex: none;
+  border-bottom: 1px solid var(--cds-chrome-hairline);
+  background: var(--cds-chrome-band-bg);
+}
+
+.cds-story-progress-name {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cds-chrome-fg-soft);
+}

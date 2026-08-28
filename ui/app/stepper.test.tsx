@@ -14,7 +14,8 @@ describe('Stepper — fio de contas (redesign §5.1)', () => {
   it('rende cada estação e marca a atual com aria-current', () => {
     render(<Stepper stations={stations} onNavigate={() => {}} />);
     expect(screen.getByText('Ouvir')).toBeDefined();
-    // 'Triagem' aparece no li (sr-only) e no nome visível — mira o li
+    // o nome visível da etapa mora na faixa da barra da história (ENG-648); aqui
+    // 'Triagem' vem do rótulo sr-only do li
     const atual = screen
       .getAllByText('Triagem')
       .find((el) => el.closest('li'))!
@@ -39,10 +40,5 @@ describe('Stepper — fio de contas (redesign §5.1)', () => {
   it('não exibe nenhum dígito (§9.2)', () => {
     const { container } = render(<Stepper stations={stations} onNavigate={() => {}} />);
     expect(container.textContent).not.toMatch(/\d/);
-  });
-
-  it('mostra o nome da etapa atual acima do fio', () => {
-    const { container } = render(<Stepper stations={stations} onNavigate={() => {}} />);
-    expect(container.querySelector('.cds-stepper-name')?.textContent).toBe('Triagem');
   });
 });
