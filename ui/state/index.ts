@@ -25,6 +25,14 @@ export {
   useSessionClock,
 } from './session-clock';
 export {
+  createGoalStore,
+  goalStore,
+  TODAY_GOALS,
+  useGoalStore,
+  type GoalStore,
+  type TodayGoal,
+} from './goal-store';
+export {
   createProgressStore,
   progressStore,
   useProgressStore,
