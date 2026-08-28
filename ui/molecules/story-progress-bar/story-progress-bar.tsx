@@ -1,0 +1,51 @@
+import './story-progress-bar.css';
+
+/**
+ * A barra da história inteira (protótipo v4, "BARRA ÚNICA — a história inteira,
+ * com marcas de etapa"): um trilho fino com o preenchimento do quanto já andou,
+ * as divisórias das etapas nas fronteiras e um marcador na cabeça do
+ * preenchimento. É a história toda numa linha — não o progresso da estação atual.
+ *
+ * Presentacional: recebe a porcentagem já calculada e as fronteiras já em
+ * porcentagem; não sabe o que é uma cena, uma frase ou uma pergunta. Sem dígito
+ * nenhum (§9.2) — o quanto se andou lê-se no comprimento aceso, nunca num "3 de
+ * 6"; e sem nome acessível próprio, porque quem anuncia as etapas a leitores de
+ * tela é o `<ol>` do fio de contas logo abaixo.
+ *
+ * Toda porcentagem chega de uma divisão, e várias delas têm denominador que pode
+ * ser zero numa sessão real (nenhuma cena, nenhuma cena produtiva). Um `NaN` num
+ * `width` de CSS não é erro: é uma barra que simplesmente não aparece. Por isso o
+ * clamp mora aqui também, na última porta antes do estilo.
+ */
+export function StoryProgressBar({
+  percent,
+  dividers,
+}: {
+  /** 0–100: o quanto da história inteira já foi feito. */
+  percent: number;
+  /** Fronteiras entre as etapas, em porcentagem (0 e 100 excluídos). */
+  dividers: readonly number[];
+}) {
+  const pct = clampPercent(percent);
+  return (
+    <div className="cds-story-progress-wrap" aria-hidden="true">
+      <div className="cds-story-progress-track">
+        <div className="cds-story-progress-fill" style={{ width: `${pct}%` }} />
+        {dividers.map((at) => (
+          <div
+            key={at}
+            className="cds-story-progress-tick"
+            style={{ left: `${clampPercent(at)}%` }}
+          />
+        ))}
+        <div className="cds-story-progress-marker" style={{ left: `calc(${pct}% - 7px)` }} />
+      </div>
+    </div>
+  );
+}
+
+/** 0–100, e nunca `NaN`/`Infinity` — ver o comentário do componente. */
+function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, value));
+}
