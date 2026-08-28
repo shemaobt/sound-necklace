@@ -260,8 +260,8 @@ const REPORT_PT_TO_EN = [
   ['_(sem resposta)_', '_(no answer)_'],
   // as 21 perguntas (domain/mapeamento-scripts.ts: q → q_en)
   [
-    'Conte essa história com as suas palavras, como se fosse para alguém que nunca ouviu.',
-    'Tell this story in your own words, as if to someone who has never heard it.',
+    'Descreva esta história, explicando o que acontece, do começo ao fim. Não é para recontar a história, é para falar sobre ela.',
+    'Describe this story, explaining what happens, from beginning to end. This is not a retelling of the story, it is talking about it.',
   ],
   ['Como a história começa? E como ela termina?', 'How does the story begin? And how does it end?'],
   [

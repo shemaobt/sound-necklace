@@ -4,7 +4,7 @@
 > `source_domain: oral_archive` · `speaker_role: LISTENER_NOT_STORYTELLER` · manifest: `fnv1a32:d31a8419`
 
 ## Level 1 — the whole story
-- **Tell this story in your own words, as if to someone who has never heard it.** _(whole)_
+- **Describe this story, explaining what happens, from beginning to end. This is not a retelling of the story, it is talking about it.** _(whole)_
   A story about gleaning and returning home.
 - **How does the story begin? And how does it end?** _(arc)_
   _(no answer)_

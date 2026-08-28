@@ -4,7 +4,7 @@ Path: @/tests/golden
 
 ### Overview
 
-- **The merge gate.** Replays scripted decision sets both through the untouchable v1 reference (@/docs/reference/index.html) and through @/domain + @/contracts, then byte-diffs the produced artifacts (`anchoring-return.json`, `bead-manifest.json`, report `.md`). Equality proves `domain ≡ reference`.
+- **The merge gate.** Replays scripted decision sets both through the v1 reference (@/docs/reference/index.html — untouchable, with one exception on record: ENG-604, owner decision, see @/CLAUDE.md) and through @/domain + @/contracts, then byte-diffs the produced artifacts (`anchoring-return.json`, `bead-manifest.json`, report `.md`). Equality proves `domain ≡ reference`.
 - Real infrastructure is live (ENG-212): decision scripts in `cases/`, reference-generated goldens committed under `expected/`, the Playwright driver @/tests/golden/generate.mjs, and the byte-diff runner @/tests/golden/golden.test.ts. Since ENG-233 the `minimal-flow` case fully replays and byte-compares all three artifacts. **ENG-238 flipped `STRICT = true`**: the full 14-case edge pack is registered and every case replays — a case without a registered replayer now **FAILS** the harness (no more PENDENTE). The gate is at full strength and never weakens again.
 - Runs as the CI job `golden-harness` (@/.github/workflows/ci.yml) via `pnpm golden` (Vitest, unit project, running @/tests/golden/golden.test.ts) on every PR. It is the one gate that can never be relaxed.
 

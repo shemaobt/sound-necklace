@@ -47,8 +47,10 @@ tests/
   golden/    the merge gate (see §5)
   e2e/       Playwright acceptance specs (E6 issues)
 fixtures/    bucket audios + acousteme payloads · session states
-docs/        specs (PRDs, plano, this file) + reference/index.html (UNTOUCHABLE)
+docs/        specs (PRDs, plano, this file) + reference/index.html (UNTOUCHABLE¹)
 ```
+
+¹ One exception is on record: ENG-604 (owner decision, 2026-08-26) replaced the wording of the first level-1 interview question inside `L1_Q`. Any further edit requires a new owner decision — see `CLAUDE.md`.
 
 **Layer rules (mechanically enforced by `.dependency-cruiser.cjs`):**
 
@@ -131,7 +133,7 @@ Rationale: the planning contract forbids two `loop-ready` issues from declaring 
 
 ## 5. Golden-harness design (the merge gate)
 
-**Requirement (PRD §10):** given the same audio, grid and decisions, v2's artifacts must equal the v1 prototype's **byte for byte**. The prototype `docs/reference/index.html` is the executable reference and is never modified.
+**Requirement (PRD §10):** given the same audio, grid and decisions, v2's artifacts must equal the v1 prototype's **byte for byte**. The prototype `docs/reference/index.html` is the executable reference and is never modified — with the single exception registered above (ENG-604), which is why `golden:verify` still regenerates every golden from it and still passes.
 
 **Chosen driving approach — Playwright `page.evaluate` over the unmodified reference, generating committed goldens:**
 

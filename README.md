@@ -8,7 +8,8 @@ session exports three artifacts (`retorno-ancoragem.json`, `manifesto-contas.jso
 
 This is a complete from-scratch implementation. The v1 prototype
 (`docs/reference/index.html`) survives only as the executable behavior contract — never
-modify it. **Read `CLAUDE.md` and `docs/architecture.md` before writing code**; the
+modify it, save for the one exception registered in `CLAUDE.md` (ENG-604), which took an
+owner decision. **Read `CLAUDE.md` and `docs/architecture.md` before writing code**; the
 product spec is `docs/PRD-colar-de-sons-v2.md` and the visual spec is
 `docs/PRD-redesign.md`.
 

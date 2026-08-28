@@ -53,7 +53,7 @@ const FILL = 'senha-fixture';
 const PREPARING_REVIEW = 'Trazendo os áudios de volta para a revisão…';
 /** A primeira pergunta da entrevista (domain `L1_Q`) — âncora de "abriu na Conversa". */
 const FIRST_QUESTION =
-  'Conte essa história com as suas palavras, como se fosse para alguém que nunca ouviu.';
+  'Descreva esta história, explicando o que acontece, do começo ao fim. Não é para recontar a história, é para falar sobre ela.';
 /** O palco da Export. */
 const EXPORT_HEADLINE = 'A história está inteira no colar.';
 

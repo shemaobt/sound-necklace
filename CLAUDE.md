@@ -10,7 +10,7 @@ All specs live in `docs/`:
 - `docs/PRD-colar-de-sons-as-built.md` — code-level description of the v1 prototype. **Not committed to this repo**: treat any citation of it as a pointer to the executable reference below, which is the authoritative behavior source.
 - `docs/PRD-redesign.md` — the visual/interaction design spec (Shemá system, v2).
 - `docs/plano-de-acao-mvp.md` — MVP scope cut, acceptance criteria, sacrifice order.
-- `docs/reference/index.html` — **the executable reference.** The v1 prototype. Read its code to resolve any behavior/contract doubt. NEVER modify this file.
+- `docs/reference/index.html` — **the executable reference.** The v1 prototype. Read its code to resolve any behavior/contract doubt. NEVER modify this file. **One registered exception, ENG-604 (owner decision, 2026-08-26):** the `q` of the first level-1 question (`recontar`, inside the `L1_Q` literal) was replaced with the approved wording. The alternative — an approved-divergence table in `domain/mapeamento-scripts.test.ts` — was weighed and rejected, so as not to build a machine for exceptions; editing the reference keeps `q` byte-identical to it and leaves that test with no carve-out. The edit is marked by a comment on the line itself. Any further edit requires a new owner decision — the rule still stands, it now has one recorded case.
 
 **Precedence rules (memorize):**
 1. Behavior, data, rules → **PRD v2 wins**; in any remaining doubt, `docs/reference/index.html` behavior wins.

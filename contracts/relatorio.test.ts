@@ -99,7 +99,7 @@ describe('buildMapReport — Nível 1', () => {
       baseState({ mapping: { ...emptyMapping(), level1: { recontar: 'A story.' } } }),
     );
     expect(md).toContain(
-      '- **Tell this story in your own words, as if to someone who has never heard it.** _(whole)_\n  A story.',
+      '- **Describe this story, explaining what happens, from beginning to end. This is not a retelling of the story, it is talking about it.** _(whole)_\n  A story.',
     );
   });
 

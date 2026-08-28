@@ -696,7 +696,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
 
     expect(tts.spoken).toEqual([
       {
-        text: 'Tell this story in your own words, as if to someone who has never heard it.',
+        text: 'Describe this story, explaining what happens, from beginning to end. This is not a retelling of the story, it is talking about it.',
         lang: 'en-US',
       },
     ]);

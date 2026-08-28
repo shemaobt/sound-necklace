@@ -1,7 +1,8 @@
 # Golden harness — o portão de merge
 
 Reproduz conjuntos roteirizados de decisões através da referência executável
-(`docs/reference/index.html`, INTOCÁVEL) e do `domain/`+`contracts/`, e compara
+(`docs/reference/index.html`, INTOCÁVEL — uma única exceção registrada, ENG-604,
+por decisão do dono; veja o `CLAUDE.md`) e do `domain/`+`contracts/`, e compara
 os artefatos **byte a byte**. Nenhum PR mergeia vermelho. Se a sua mudança
 quebra o harness, a mudança está errada — não o harness.
 
