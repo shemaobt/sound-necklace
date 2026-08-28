@@ -27,11 +27,16 @@ contracts still come from PRD v2 + `docs/reference/index.html`.
 
 ## Viewing
 
-The prototypes are self-contained HTML + `support.js` (React from `window` —
-provided by the dc runtime). Open via a local static server from THIS directory
-so relative paths resolve: `npx serve docs/design` → open the `.dc.html` file.
-Screenshots referenced by `Telas.dc.html` and the font files are NOT imported
-(they exceed the 256 KiB transfer cap): view them in the design project itself.
+`prototype.html` is the dc **source** form, not a self-contained page: it loads
+the `support.js` runtime (React from `window`) and resolves `assets/` relatively.
+Serve from THIS directory so those paths work — `npx serve docs/design`. Note
+that **`support.js` is not in this repo**; without it the dc DSL (`<x-dc>`,
+`sc-if`, `{{ }}`) is never processed and the page does not render. Take a
+bundled export from the design project to view it standalone.
+
+The brand SVGs and the TTFs under `assets/fonts/` ARE in the repo. One weight the
+prototype asks for is not: it references `Montserrat-700.ttf`, which ships here
+as `Montserrat-Bold.ttf`, so that weight falls back until the names reconcile.
 
 ## Fonts
 
