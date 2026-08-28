@@ -59,6 +59,13 @@ export interface ConversationStageProps {
    */
   onRerecord?: () => void;
   /**
+   * Alguém PEDIU para regravar — a confirmação está subindo. É um aviso, não uma
+   * decisão: a confirmação é deste organismo, então sem ele a página não sabia que
+   * um ato havia acontecido e o avanço automático seguia correndo por baixo de quem
+   * estava decidindo, levando o diálogo junto quando disparava.
+   */
+  onRerecordAsk?: () => void;
+  /**
    * Duração da resposta já gravada. A confirmação de regravar diz em voz alta o
    * que está em risco; sem ela a pergunta é abstrata e a pessoa aceita no reflexo.
    */
@@ -126,6 +133,13 @@ export interface ConversationStageProps {
    * em palavras antes de em movimento (movimento reduzido, §4.5).
    */
   autoAdvancing?: boolean;
+  /**
+   * Quanto dura essa espera, em ms. Vem de quem arma o relógio, para a barra não
+   * poder discordar dele: uma barra que enche antes ou depois da pergunta chegar é
+   * uma promessa quebrada, e um número repetido no CSS quebra na primeira vez que
+   * alguém ajustar o outro.
+   */
+  autoAdvanceMs?: number;
 }
 
 /** Quadrado de parar (protótipo recording), herdando a cor do botão. */
@@ -240,6 +254,7 @@ export function ConversationStage({
   onStop,
   onPlay,
   onRerecord,
+  onRerecordAsk,
   answerLength,
   onBlocked,
   answerPlaying = false,
@@ -257,6 +272,7 @@ export function ConversationStage({
   mode,
   onToggleMode,
   autoAdvancing = false,
+  autoAdvanceMs,
 }: ConversationStageProps) {
   const { t } = useTranslation();
   const [confirmingRerecord, setConfirmingRerecord] = useState(false);
@@ -286,12 +302,16 @@ export function ConversationStage({
     <div className="cds-conversation-stage">
       {mode && onToggleMode ? (
         <div className="cds-conversation-stage-mode">
+          {/* A ÚNICA coisa no palco que a gravação não trava. A trava existe para
+              que um toque perdido não estrague a resposta em curso, e trocar de
+              modo não toca na gravação: só decide se a PRÓXIMA pergunta chega
+              sozinha. E é justamente com o microfone aberto — que em mãos livres
+              pode ter aberto sem ninguém pedir — que a saída precisa funcionar. */}
           <button
             type="button"
             className="cds-conversation-stage-mode-pill"
             title={t('conversationMode.pillTitle')}
-            aria-disabled={locked || undefined}
-            onClick={guard(onToggleMode)}
+            onClick={onToggleMode}
           >
             <ConversationModeGlyph mode={mode} size={13} />
             {mode === 'auto'
@@ -387,7 +407,14 @@ export function ConversationStage({
                   </Button>
                   {/* regravar passa pela confirmação (ENG-392): um toque errado aqui
                       apagava, em silêncio, a história que a pessoa acabou de contar */}
-                  <Button variant="ghost" size="sm" onClick={() => setConfirmingRerecord(true)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      onRerecordAsk?.();
+                      setConfirmingRerecord(true);
+                    }}
+                  >
                     <MicGlyph className="cds-conversation-stage-rerecord-glyph" />
                     {t('conversationStage.again')}
                   </Button>
@@ -397,7 +424,10 @@ export function ConversationStage({
 
             {autoAdvancing ? (
               <div className="cds-conversation-stage-countdown" aria-hidden="true">
-                <span className="cds-conversation-stage-countdown-run" />
+                <span
+                  className="cds-conversation-stage-countdown-run"
+                  style={autoAdvanceMs ? { animationDuration: `${autoAdvanceMs}ms` } : undefined}
+                />
               </div>
             ) : null}
 

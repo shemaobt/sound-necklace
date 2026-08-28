@@ -536,8 +536,11 @@
   overflow: hidden;
 }
 
+/* Sem movimento a barra não existe: uma barra cheia e parada durante 2,6 s diria
+   "acabou" o tempo inteiro, que é pior do que não dizer nada. Sob movimento
+   reduzido quem carrega a informação é a linha de texto, e ela continua lá. */
 .cds-conversation-stage-countdown-run {
-  display: block;
+  display: none;
   height: 100%;
   width: 100%;
   background: var(--cds-telha);
@@ -546,6 +549,8 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .cds-conversation-stage-countdown-run {
+    display: block;
+    /* a duração real chega por style inline, de quem arma o relógio */
     animation: cds-conversation-stage-countdown 2.6s linear forwards;
   }
 

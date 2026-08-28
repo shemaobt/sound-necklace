@@ -453,25 +453,38 @@ function QuestionScreen({
     }, AUTO_ADVANCE_MS);
   };
   /**
-   * Todo ato deliberado mata a espera. Envolver os handlers — em vez de espalhar
-   * `cancelAuto()` por dentro de cada um — é o que faz um controle novo no palco
-   * nascer cancelando, em vez de nascer esquecido. Gravar e regravar são a exceção:
-   * eles cancelam por dentro, porque abrir o microfone é um ato mesmo quando é o
+   * Alguém agiu nesta pergunta. A partir daí quem conduz é essa pessoa: o microfone
+   * não abre mais sozinho aqui (`useOpenMicWhenSpoken`), porque abrir depois de um
+   * gesto humano é o app passando por cima de quem acabou de decidir algo.
+   */
+  const [autoMicArmed, setAutoMicArmed] = useState(true);
+  /**
+   * Todo ato deliberado mata a espera pela próxima pergunta e desarma o microfone
+   * automático. Envolver os handlers — em vez de espalhar as duas chamadas por
+   * dentro de cada um — é o que faz um controle novo no palco nascer cancelando,
+   * em vez de nascer esquecido. Gravar e regravar são a exceção: eles fazem as duas
+   * coisas por dentro, porque abrir o microfone é um ato mesmo quando é o próprio
    * mãos livres que o pede, e nenhum embrulho estaria lá nesse caminho.
    */
   const deliberate =
     <A extends unknown[]>(run: (...args: A) => void) =>
     (...args: A): void => {
       cancelAuto();
+      setAutoMicArmed(false);
       run(...args);
     };
 
-  // A fala em curso morre ao sair da pergunta, venha ela da chegada automática ou
-  // do botão "Ouvir a pergunta" — este efeito não pertence ao mãos livres.
+  /**
+   * A fala em curso morre ao sair da pergunta E ao desligar o som — venha ela da
+   * chegada automática ou do botão "Ouvir a pergunta". O mudo é §13 ("nunca falar
+   * sem consentimento") e não é só sobre não começar: mudo também apaga o botão de
+   * pausar da tela, então uma fala que sobrevivesse ao mudo continuaria sem
+   * nenhum controle à vista. Este efeito não pertence ao mãos livres.
+   */
   useEffect(() => {
     if (!speaker) return;
     return () => speaker.stop();
-  }, [speaker, path]);
+  }, [speaker, path, muted]);
 
   const playSpan = (): void => {
     if (!player || !listen) return;
@@ -492,9 +505,10 @@ function QuestionScreen({
   const onRecord = async (): Promise<void> => {
     if (!recorder || openingRef.current) return;
     openingRef.current = true;
-    // abrir o microfone É o ato deliberado que encerra a espera pela próxima
-    // pergunta — inclusive quando quem abre é o próprio mãos livres
+    // abrir o microfone É o ato que encerra a espera pela próxima pergunta e
+    // desarma o automático — inclusive quando quem abre é o próprio mãos livres
     cancelAuto();
+    setAutoMicArmed(false);
     // O microfone abre num silêncio: a história tocando no colar, a pergunta na
     // voz do guia e a resposta anterior em reprodução entravam TODAS pelo mesmo
     // ar — a gravação saía com a fala da pessoa por baixo do som do app.
@@ -588,6 +602,7 @@ function QuestionScreen({
   useOpenMicWhenSpoken({
     handsFree,
     spoken,
+    armed: autoMicArmed,
     ready: recorderState === 'idle',
     // o MESMO caminho do toque no microfone, sem o toque: não existe segunda
     // maneira de abrir uma gravação, e por isso a trava contra reentrância vale
@@ -608,7 +623,7 @@ function QuestionScreen({
         header={
           <TrechoIndicator color={trecho.color} label={trecho.eyebrow}>
             {listen ? (
-              <Button variant="ghost" size="sm" onClick={playSpan}>
+              <Button variant="ghost" size="sm" onClick={deliberate(playSpan)}>
                 {spanPlaying ? listen.pauseLabel : listen.label}
               </Button>
             ) : null}
@@ -621,6 +636,10 @@ function QuestionScreen({
         onStop={onStop}
         onPlay={deliberate(onPlay)}
         onRerecord={onRerecord}
+        // pedir para regravar nasce dentro do palco (a confirmação é dele), então
+        // é ele quem avisa: sem isto a conversa andava por baixo de quem estava
+        // decidindo, e levava a confirmação junto
+        onRerecordAsk={deliberate(() => {})}
         answerLength={answerLength}
         // toque recusado durante a gravação: responde ao ouvido, não com texto (§9.4)
         onBlocked={() => sound?.refuse()}
@@ -637,6 +656,7 @@ function QuestionScreen({
         mode={mode ?? undefined}
         onToggleMode={deliberate(onToggleMode)}
         autoAdvancing={autoAdvancing}
+        autoAdvanceMs={AUTO_ADVANCE_MS}
         onSpeakQuestion={
           // falando ⇒ pausar; calado ⇒ (re)falar — o rótulo do organismo acompanha (ENG-317)
           canSpeak

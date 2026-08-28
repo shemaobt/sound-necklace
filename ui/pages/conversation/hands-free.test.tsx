@@ -18,6 +18,7 @@ import {
 import i18n from '../../i18n';
 import { NavFooterOutlet, NavFooterProvider } from '../../organisms/nav-footer/nav-footer';
 import { appStore, sessionStore } from '../../state';
+import { SPEECH_CEILING_MS, SPEECH_WATCHDOG_MS } from './hands-free';
 import Conversation from './index';
 
 /**
@@ -408,5 +409,188 @@ describe('Conversa — o microfone automático conhece os seus limites (ENG-649)
 
     expect(questionText()).toBe(ultima);
     expect(screen.queryByRole('region', { name: i18n.t('conversation.reportAria') })).toBeNull();
+  });
+});
+
+/**
+ * O microfone que abre sozinho tem de saber a diferença entre "a pergunta acabou de
+ * ser dita" e "alguém mandou calar". As duas chegam pela porta como a mesma coisa —
+ * a fala parou —, e tratá-las igual transforma o gesto de pedir silêncio no gesto
+ * que abre o microfone. Estes são os casos em que ele NÃO pode abrir.
+ */
+describe('Conversa — mandar calar não é a pergunta ter terminado (ENG-649)', () => {
+  it('pausar a pergunta não abre o microfone', async () => {
+    const tts = new FixtureSpeechSynthesizer();
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    renderConversation(<Conversation speaker={tts} recorder={recorder} />);
+    await settle();
+    await choose(HANDS_FREE);
+
+    await touch(screen.getByRole('button', { name: 'Pausar a pergunta' }));
+
+    expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
+  });
+
+  it('desligar o som no meio da pergunta não abre o microfone', async () => {
+    const tts = new FixtureSpeechSynthesizer();
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    renderConversation(<Conversation speaker={tts} recorder={recorder} />);
+    await settle();
+    await choose(HANDS_FREE);
+
+    await act(async () => appStore.getState().toggleMuted());
+    await settle();
+
+    expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
+  });
+
+  it('a voz que nunca começa não deixa o mãos livres parado para sempre', async () => {
+    // Uma porta que aceita falar e não emite nada — é o que o adapter real faz
+    // quando o navegador recusa tocar o áudio sozinho (política de autoplay).
+    const muda = {
+      speak: () => {},
+      stop: () => {},
+      onSpeaking: () => () => {},
+    };
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    renderConversation(<Conversation speaker={muda} recorder={recorder} />);
+    await settle();
+    await choose(HANDS_FREE);
+    expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(SPEECH_WATCHDOG_MS + 100);
+      await Promise.resolve();
+    });
+    await settle();
+
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeTruthy();
+  });
+
+  /**
+   * O caso que o e2e encontrou e um probe confirmou: no Chromium headless a porta
+   * real emite `speak` e `start` e NUNCA `end`. Um piso sobre "começou?" não alcança
+   * isso — a fala começou —, e o mãos livres ficava esperando para sempre.
+   */
+  it('a voz que começa e nunca termina também não deixa o mãos livres parado', async () => {
+    let emit: ((speaking: boolean) => void) | undefined;
+    const travada = {
+      speak: () => emit?.(true), // começa…
+      stop: () => {},
+      onSpeaking: (cb: (speaking: boolean) => void) => {
+        emit = cb;
+        return () => {
+          emit = undefined;
+        };
+      },
+    };
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    renderConversation(<Conversation speaker={travada} recorder={recorder} />);
+    await settle();
+    await choose(HANDS_FREE);
+
+    // …e não termina: o piso do "começou?" não vale mais, e nada acontece
+    await act(async () => {
+      vi.advanceTimersByTime(SPEECH_WATCHDOG_MS + 100);
+      await Promise.resolve();
+    });
+    await settle();
+    expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(SPEECH_CEILING_MS + 100);
+      await Promise.resolve();
+    });
+    await settle();
+
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeTruthy();
+  });
+
+  it('a resposta que não conseguiu ser guardada não reabre o microfone sozinha', async () => {
+    const tts = new FixtureSpeechSynthesizer();
+    const store = new MemoryVoiceStore();
+    const recorder = new FixtureVoiceRecorder(store);
+    // o stop embute o PUT no modo real: aqui ele falha, como uma rede caindo
+    const quebrado: VoiceRecorder = {
+      ...recorder,
+      start: async () => ({
+        onLevel: () => () => {},
+        stop: () => Promise.reject(new Error('rede caiu')),
+        cancel: () => {},
+      }),
+      has: (p: ResourcePath) => recorder.has(p),
+      play: (p: ResourcePath) => recorder.play(p),
+      duration: (p: ResourcePath) => recorder.duration(p),
+      stopPlayback: () => recorder.stopPlayback(),
+      onPlayback: (cb) => recorder.onPlayback(cb),
+      delete: (p: ResourcePath) => recorder.delete(p),
+    };
+    load(mapping());
+    renderConversation(<Conversation speaker={tts} recorder={quebrado} />);
+    await settle();
+    await choose(HANDS_FREE);
+    // a pessoa não esperou a pergunta acabar e gravou; a pergunta termina de ser
+    // dita durante a gravação, e então o salvamento falha
+    await touch(screen.getByRole('button', { name: 'Gravar a resposta' }));
+    act(() => tts.stop());
+    await settle();
+    await touch(screen.getByRole('button', { name: 'Parar' }));
+
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
+  });
+});
+
+/**
+ * A espera pela próxima pergunta morre com QUALQUER ato deliberado. Estes são os
+ * dois caminhos que não passam pelo mesmo lugar que os outros: o ▶ do trecho chega
+ * ao palco como um nó pronto, e a confirmação de regravar nasce dentro do palco.
+ */
+describe('Conversa — a espera morre com o ato, venha ele por onde vier (ENG-649)', () => {
+  it('ouvir o trecho durante a espera cancela a chegada da próxima', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    const player = {
+      toggle: vi.fn(),
+      play: vi.fn(),
+      playEdge: vi.fn(),
+      stop: vi.fn(),
+      state: { key: null, playing: false, paused: false },
+      onHead: vi.fn(() => () => {}),
+    };
+    load(mapping());
+    renderConversation(<Conversation recorder={recorder} player={player} />);
+    await settle();
+    await choose(HANDS_FREE);
+    const primeira = questionText();
+
+    await touch(screen.getByRole('button', { name: 'Parar' }));
+    await touch(screen.getByRole('button', { name: '▶ Ouvir a história' }));
+
+    await passCountdown();
+
+    expect(questionText()).toBe(primeira);
+  });
+
+  it('pedir para regravar durante a espera cancela a chegada e a pergunta fica de pé', async () => {
+    const recorder = new FixtureVoiceRecorder();
+    load(mapping());
+    renderConversation(<Conversation recorder={recorder} />);
+    await settle();
+    await choose(HANDS_FREE);
+    const primeira = questionText();
+
+    await touch(screen.getByRole('button', { name: 'Parar' }));
+    await touch(screen.getByRole('button', { name: 'Gravar de novo' }));
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
+
+    await passCountdown();
+
+    // a conversa não andou por baixo de quem estava decidindo
+    expect(questionText()).toBe(primeira);
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
   });
 });

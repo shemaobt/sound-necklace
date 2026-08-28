@@ -152,6 +152,13 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   // segunda cena produtiva + conclui a segmentação
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
+
+  // ——— Conversation: o pedido do modo (ENG-649) ———
+  // É a primeira tela do ouvinte na conversa, e a única que não vive dentro do
+  // `main` — o diálogo é portalado, então o scan aponta para ele.
+  await scanListenerSurface(page.getByRole('dialog'), {
+    label: 'Conversation — a escolha do modo',
+  });
   await app.chooseConversationMode();
 
   // ——— Conversation: nível história (L1) ———

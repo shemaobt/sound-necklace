@@ -42,6 +42,18 @@ import Conversation from './index';
  * minimalismo do ouvinte (§9.2).
  */
 
+/**
+ * Vários casos daqui ANDAM a entrevista inteira com cliques reais — 21 perguntas, e
+ * cada uma esperando a consulta "já existe resposta gravada aqui?" (o estado
+ * `checking` do #175). Sozinho o arquivo passa com folga; junto dos outros 158, em
+ * workers paralelos, o teto padrão de 5 s do Vitest é curto para o trabalho legítimo
+ * que eles fazem, e o mesmo já havia acontecido antes (ver `ANDAR`, mais abaixo).
+ *
+ * O teto sobe para caber no trabalho, e não o contrário: nenhuma asserção afrouxa —
+ * um caso que quebre continua quebrando, só que por ter quebrado.
+ */
+vi.setConfig({ testTimeout: 20_000 });
+
 const DURATION = 7.5; // 30 contas (0…29)
 const BEAD_SEC = 0.25;
 
@@ -131,14 +143,20 @@ function spyPlayer(): Player {
  */
 function renderConversation(
   ui: ReactElement,
-  mode: 'auto' | 'manual' = 'manual',
+  mode: 'auto' | 'manual' | 'report' = 'manual',
 ): ReturnType<typeof render> {
   const view = renderStation(ui);
-  const card = screen.queryByRole('button', {
-    // o cartão fala o idioma da UI; um caso corre em inglês (ENG-279)
-    name: mode === 'auto' ? /^(Mãos livres|Hands free)/ : /^(Toque a toque|Touch by touch)/,
-  });
-  if (card) fireEvent.click(card);
+  // `report`: a sessão reabre na revisão, e a revisão não pergunta modo nenhum —
+  // não há pergunta em foco cujo andamento decidir. Dizê-lo é o ponto: falhar, e
+  // não encolher os ombros, é o que impede a suíte inteira de ficar verde numa tela
+  // em que ninguém escolheu modo, no dia em que o pedido parar de aparecer.
+  if (mode === 'report') return view;
+  fireEvent.click(
+    screen.getByRole('button', {
+      // o cartão fala o idioma da UI; um caso corre em inglês (ENG-279)
+      name: mode === 'auto' ? /^(Mãos livres|Hands free)/ : /^(Toque a toque|Touch by touch)/,
+    }),
+  );
   return view;
 }
 
@@ -189,7 +207,7 @@ describe('Conversation — resume where the interview stopped (ENG-321)', () => 
     const voice = seq.map((s) => voiceAnswerPath(s));
 
     load(state);
-    const view = renderConversation(<Conversation voicePaths={() => voice} />);
+    const view = renderConversation(<Conversation voicePaths={() => voice} />, 'report');
 
     expect(view.container.querySelector('.cds-conversation-question')).toBeNull();
     expect(screen.queryByRole('button', { name: /Próxima pergunta/i })).toBeNull();
@@ -228,7 +246,7 @@ describe('Conversation — resume follows the last answer, not the first hole', 
     const voice = [seq[1]!, seq[seq.length - 1]!].map((s) => voiceAnswerPath(s));
 
     load(state);
-    const view = renderConversation(<Conversation voicePaths={() => voice} />);
+    const view = renderConversation(<Conversation voicePaths={() => voice} />, 'report');
 
     expect(view.container.querySelector('.cds-conversation-question')).toBeNull();
     expect(screen.queryByRole('button', { name: /Próxima pergunta/i })).toBeNull();
@@ -253,6 +271,7 @@ describe('Conversation — resume follows the last answer, not the first hole', 
         voicePaths={() => voice}
         onGoToExport={vi.fn()}
       />,
+      'report',
     );
 
     expect(await screen.findByRole('button', { name: 'Guardar os documentos →' })).toBeTruthy();
@@ -296,6 +315,7 @@ describe('Conversation — the footer does not survive the transcription wait', 
         stt={stt}
         sessionId="s-1"
       />,
+      'report',
     );
 
     await screen.findByText(/transcrevendo/i);
@@ -737,6 +757,27 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
     expect(speaking()).toBe('false');
   });
 
+  /**
+   * §13, o outro lado da mesma regra: desligar o som não é só não começar a falar,
+   * é PARAR o que já está sendo dito. E é em "toque a toque" que isso é mais
+   * urgente, porque lá a única fala é a que alguém pediu — e mudo faz "Pausar a
+   * pergunta" desaparecer da tela, então quem não fosse calado pelo próprio mudo
+   * ficaria falando sem nenhum controle à vista.
+   */
+  it('desligar o som cala a pergunta que já está sendo dita — inclusive em toque a toque', async () => {
+    const tts = new FixtureSpeechSynthesizer();
+    load(mapping());
+    renderConversation(<Conversation speaker={tts} />);
+    const falando = () => document.querySelector('[data-speaking]')?.getAttribute('data-speaking');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ouvir a pergunta' }));
+    expect(falando()).toBe('true');
+
+    await act(async () => appStore.getState().toggleMuted());
+
+    expect(falando()).toBe('false');
+  });
+
   it('som DESLIGADO silencia a voz e some com o botão — nunca fala sem consentimento', () => {
     const tts = new FixtureSpeechSynthesizer();
     appStore.getState().toggleMuted(); // som desligado
@@ -891,7 +932,7 @@ describe('Conversation — a pergunta que ficou sem resposta', () => {
     await skip();
     view.unmount();
 
-    renderConversation(<Conversation voicePaths={() => voice} />);
+    renderConversation(<Conversation voicePaths={() => voice} />, 'report');
 
     expect(screen.queryByRole('button', { name: 'Próxima pergunta' })).toBeNull();
   });
@@ -1354,6 +1395,7 @@ describe('Conversation — aceitar todas as transcrições a partir do aviso de 
         voicePaths={() => paths}
         onGoToExport={onGoToExport}
       />,
+      'report',
     );
     await screen.findByRole('button', { name: 'Guardar os documentos →' });
   }

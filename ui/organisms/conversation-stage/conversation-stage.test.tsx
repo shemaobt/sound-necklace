@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { splitByGuard } from '../../atoms/testing/css';
@@ -233,5 +234,89 @@ describe('ConversationStage — movimento respeita prefers-reduced-motion (§4.5
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
     const { outside } = splitByGuard(stageCss, guard);
     expect(outside).not.toMatch(/animation|@keyframes/);
+  });
+});
+
+/**
+ * A pílula do modo e a barra de espera (ENG-649). O organismo não decide nada
+ * sobre modo — mas ele decide o que a tela mostra, e é aqui que a linha única do
+ * §9.2 e a saída de emergência do mãos livres ou existem, ou não.
+ */
+describe('ConversationStage — a pílula do modo e a espera (ENG-649)', () => {
+  const modo = () => screen.queryByRole('button', { name: /trocar$/ });
+
+  it('sem modo escolhido a pílula não existe — ela DIZ o modo, e não teria o que dizer', () => {
+    render(<ConversationStage {...baseProps()} />);
+    expect(modo()).toBeNull();
+  });
+
+  it('a pílula nomeia o modo em que se está', () => {
+    const { rerender } = render(
+      <ConversationStage {...baseProps({ mode: 'auto', onToggleMode: vi.fn() })} />,
+    );
+    expect(modo()!.textContent).toContain('mãos livres');
+
+    rerender(<ConversationStage {...baseProps({ mode: 'manual', onToggleMode: vi.fn() })} />);
+    expect(modo()!.textContent).toContain('toque a toque');
+  });
+
+  /**
+   * A gravação trava o palco inteiro (ENG-393) e NÃO trava esta. Em mãos livres o
+   * microfone pode ter aberto sem ninguém pedir, e recusar a saída exatamente aí
+   * faria da saída de emergência a única coisa fora de alcance quando ela importa.
+   */
+  it('gravando, a pílula continua funcionando — é a saída, e ela não estraga a gravação', async () => {
+    const onToggleMode = vi.fn();
+    const onBlocked = vi.fn();
+    render(
+      <ConversationStage
+        {...baseProps({ recorderState: 'recording', mode: 'auto', onToggleMode, onBlocked })}
+      />,
+    );
+
+    await userEvent.click(modo()!);
+
+    expect(onToggleMode).toHaveBeenCalled();
+    expect(onBlocked).not.toHaveBeenCalled();
+  });
+
+  it('a espera toma o lugar do convite a falar — a tela do ouvinte tem UMA linha (§9.2)', () => {
+    const { rerender } = render(
+      <ConversationStage {...baseProps({ recorderState: 'recorded' })} />,
+    );
+    const linha = () => document.querySelector('.cds-conversation-stage-hint-strong')?.textContent;
+    expect(linha()).toBe('Toque e fale a sua resposta');
+
+    rerender(
+      <ConversationStage {...baseProps({ recorderState: 'recorded', autoAdvancing: true })} />,
+    );
+
+    expect(linha()).toBe('a próxima chega num instante — o botão lá em cima segura o passo');
+    expect(document.querySelectorAll('.cds-conversation-stage-hint-strong')).toHaveLength(1);
+  });
+
+  /**
+   * A barra dura o que o relógio dura. Se o número fosse repetido no CSS, ela
+   * encheria antes ou depois da pergunta chegar na primeira vez que alguém
+   * ajustasse o outro — uma promessa visível quebrando em silêncio.
+   */
+  it('a barra da espera dura exatamente o que quem arma o relógio disse', () => {
+    render(<ConversationStage {...baseProps({ autoAdvancing: true, autoAdvanceMs: 2600 })} />);
+    const barra = document.querySelector<HTMLElement>('.cds-conversation-stage-countdown-run');
+    expect(barra?.style.animationDuration).toBe('2600ms');
+  });
+
+  it('pedir para regravar avisa ANTES de abrir a confirmação — a conversa não anda por baixo', async () => {
+    const onRerecordAsk = vi.fn();
+    render(
+      <ConversationStage
+        {...baseProps({ recorderState: 'recorded', autoAdvancing: true, onRerecordAsk })}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Gravar de novo/ }));
+
+    expect(onRerecordAsk).toHaveBeenCalled();
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
   });
 });
