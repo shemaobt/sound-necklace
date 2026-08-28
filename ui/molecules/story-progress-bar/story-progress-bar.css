@@ -60,3 +60,16 @@
     transition: left 0.35s ease;
   }
 }
+
+/* A marca da meta de hoje (protótipo v4, `topBar.goal`): um traço fino que
+   TRANSBORDA o trilho em cima e embaixo, para se ler como um alvo e não como mais
+   uma divisória de etapa. Creme no escuro, oliva no claro — que é exatamente o
+   `--cds-chrome-fg` dos três temas. */
+.cds-story-progress-goal {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--cds-chrome-fg);
+}
