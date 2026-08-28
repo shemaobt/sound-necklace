@@ -204,6 +204,17 @@ export const pt = {
     reviewOwn: '🔒 Modo de revisão — a segmentação está travada.',
     unlock: 'Destravar para editar',
   },
+  /**
+   * A pausa sugerida (ENG-650; protótipo v4 "PAUSA SUGERIDA"). Depois de um bom
+   * tempo de trabalho o app SUGERE descansar. Nunca diz QUANTO tempo passou: é
+   * tela de quem ouve, e §9.2 não admite número, contagem nem id.
+   */
+  breakSuggestion: {
+    headline: 'Já foi bastante coisa boa por agora.',
+    body: 'Um cafezinho, um alongamento — o colar fica guardado exatamente onde parou.',
+    take: 'Fazer uma pausa',
+    keepGoing: 'Seguir mais um pouco',
+  },
   /** Momento de revisão inferido: uma manchete + um único "Continuar →". */
   review: {
     continue: 'Continuar →',
