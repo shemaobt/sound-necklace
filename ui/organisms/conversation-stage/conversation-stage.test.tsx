@@ -172,17 +172,17 @@ describe('ConversationStage — "Ouvir a pergunta" condicional', () => {
 });
 
 /**
- * Entrevista só-voz (design parity): o palco do Conversation não tem mais canal
- * digitado — a digitação passou a viver só no relatório (já editável, ver
- * ui/pages/report). A cópia contratual "nunca por você" permanece, mas
- * agora é permanente (idle), não condicionada a um slot de texto.
+ * Entrevista só-voz (design parity): o palco do Conversation não tem canal
+ * digitado — a digitação vive só no relatório (já editável, ver ui/pages/report).
+ * A linha sobre a facilitadora escrever depois saiu na revisão de copy (ENG-603):
+ * sob o microfone fica UMA linha (§9.2), e ela é o convite a falar.
  */
 describe('ConversationStage — entrevista só-voz (design parity)', () => {
-  it('a cópia "A facilitadora pode escrever depois — nunca por você." está SEMPRE visível (idle) e NÃO há textarea no palco', () => {
-    const hint = 'A facilitadora pode escrever depois — nunca por você.';
-    render(<ConversationStage {...baseProps({ recorderState: 'idle' })} />);
+  it('sob o microfone fica só o convite a falar — nada sobre a facilitadora escrever depois', () => {
+    const { container } = render(<ConversationStage {...baseProps({ recorderState: 'idle' })} />);
 
-    expect(screen.getByText(hint)).toBeTruthy();
+    const hint = container.querySelector('.cds-conversation-stage-hint')!;
+    expect(hint.textContent).toBe('Toque e fale a sua resposta');
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 });

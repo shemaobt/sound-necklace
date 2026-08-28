@@ -25,7 +25,7 @@ export const pt = {
   },
   autosave: {
     saving: 'Salvando…',
-    saved: 'Tudo salvo — pode sair e voltar',
+    saved: 'Tudo salvo',
   },
   /** Abertura em dois painéis do protótipo Shemá v2 (ENG-278): herói cerimonial + formulário. */
   login: {
@@ -313,7 +313,7 @@ export const pt = {
   },
   phrases: {
     reviewHeadline: 'As frases desta cena estão prontas. Toque numa frase para reouvir.',
-    instruction: 'Toque no colar onde esta frase começa e termina.',
+    instruction: 'Divida a cena: toque no colar onde esta frase começa e termina.',
     instructionReplay: ' Toque numa frase pronta para reouvir.',
     halfSelection: 'Toque no colar onde esta frase termina.',
     stripAria: 'frases desta cena',
@@ -545,7 +545,6 @@ export const pt = {
       'A resposta que já foi gravada será apagada, e uma nova gravação começa na hora. Isso não tem volta.',
     rerecordConfirm: 'Apagar e gravar de novo',
     rerecordKeep: 'Manter a gravação',
-    typedHint: 'A facilitadora pode escrever depois — nunca por você.',
     prev: '← Anterior',
     next: 'Próxima pergunta',
     skip: 'Sem resposta',

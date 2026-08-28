@@ -20,7 +20,7 @@ export const en: Dict = {
   },
   autosave: {
     saving: 'Saving…',
-    saved: 'All saved — you can leave and come back',
+    saved: 'All saved',
   },
   login: {
     verse: 'On earth as it is in heaven.',
@@ -273,7 +273,7 @@ export const en: Dict = {
   },
   phrases: {
     reviewHeadline: 'The phrases of this scene are ready. Tap a phrase to hear it again.',
-    instruction: 'Tap the necklace where this phrase begins and ends.',
+    instruction: 'Divide the scene: tap the necklace where this phrase begins and ends.',
     instructionReplay: ' Tap a finished phrase to hear it again.',
     halfSelection: 'Tap the necklace where this phrase ends.',
     stripAria: 'phrases in this scene',
@@ -498,7 +498,6 @@ export const en: Dict = {
       'The answer already recorded will be erased, and a new recording starts right away. There is no undo.',
     rerecordConfirm: 'Erase and record again',
     rerecordKeep: 'Keep the recording',
-    typedHint: 'The facilitator can write later — never for you.',
     prev: '← Previous',
     next: 'Next question',
     skip: 'No answer',

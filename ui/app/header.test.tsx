@@ -204,3 +204,16 @@ describe('Header — voltar durante a gravação (ENG-393)', () => {
     ).toBe('true');
   });
 });
+
+/**
+ * O selo de salvo dizia "pode sair e voltar" — uma promessa sobre o que a pessoa
+ * pode fazer depois, não sobre o que acabou de acontecer. A revisão de copy
+ * (ENG-603) tirou a promessa: o selo relata o estado e nada mais.
+ */
+describe('Header — o selo de salvo relata, não promete (ENG-603)', () => {
+  it('numa sessão salva, o selo diz só que está tudo salvo', () => {
+    render(<Header muted={false} onToggleMuted={() => {}} onBack={() => {}} autosave="saved" />);
+
+    expect(screen.getByText('Tudo salvo')).toBeTruthy();
+  });
+});

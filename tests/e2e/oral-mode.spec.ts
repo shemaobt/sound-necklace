@@ -226,7 +226,9 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   await app.triage();
 
   // ——— Segmentação: o toque-início de frase dá som antes de qualquer confirm ———
-  await expect(page.getByText(/Toque no colar onde esta frase começa e termina/)).toBeVisible();
+  await expect(
+    page.getByText(/Divida a cena: toque no colar onde esta frase começa e termina\./),
+  ).toBeVisible();
   await assertPlaysWithoutText(page, () => app.clickBead(SCENARIO.crossingPhrase.s));
   await app.clickBead(SCENARIO.crossingPhrase.e); // completa a seleção
   await page.getByRole('button', { name: '✓ Confirmar esta frase' }).click(); // cruza a borda → seam modal

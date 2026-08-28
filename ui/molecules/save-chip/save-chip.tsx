@@ -5,8 +5,8 @@ export type SaveStatus = 'saving' | 'saved';
 /**
  * Selo de salvamento automático (design "novos componentes", card "Selo de
  * salvamento automático"): uma pílula que pisca "Salvando…" (ponto pulsante) a
- * cada mudança e volta a "Tudo salvo — pode sair e voltar" (✓). Confirma que dá
- * para fechar e continuar depois sem perder nada (§7.3). Presentacional: a copy
+ * cada mudança e volta a "Tudo salvo" (✓) — o estado do autosave (§7.3), sem
+ * prometer o que vem depois (ENG-603). Presentacional: a copy
  * chega por prop; as cores vêm das variáveis de chrome (claro/escuro). Sem
  * `aria-live`: o texto fica legível sob demanda, mas não anuncia a cada gravação
  * (tela do ouvinte — nada de spinner gritando, §9.2).
