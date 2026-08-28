@@ -151,18 +151,47 @@ describe('StoryProgress — uma barra no topo, para a história inteira (ENG-648
     expect(larguras.at(-1)!).toBeGreaterThan(larguras[0]!);
   });
 
-  it('sessão degenerada — sem cena, sem cena produtiva — ainda desenha a barra, sem NaN', () => {
-    const semNada: SessionState = {
-      ...base(),
-      mode: 'mapeamento',
-      whole: heard,
-      partsConfirmed: true,
-    };
-    const faixa = band(semNada);
+  /**
+   * As duas estações cujo denominador é o que a sessão ainda não tem: a Triagem
+   * divide pelo número de cenas, as Frases pelo de cenas produtivas. Estar numa
+   * estação ANTERIOR não serve de teste — lá o denominador é `totalBeads`, que é
+   * sempre positivo, e o zero-a-dividir nunca chega a se formar.
+   *
+   * São duas afirmações com alvos diferentes, e é de propósito. "Nenhum estilo
+   * com NaN" segura o clamp da molécula. "A barra desenha o caminho já andado"
+   * segura a divisão do modelo: com `ratio` devolvendo `NaN`, o clamp da molécula
+   * o transforma em zero e a barra COLAPSA para vazia — silenciosamente, e sem
+   * um só `NaN` no DOM para denunciar. Quem chegou à Triagem já ouviu e já cortou;
+   * a barra tem de mostrar isso.
+   */
+  function expectDrawsWithGroundCovered(session: SessionState, viewingExport = false): void {
+    const faixa = band(session, viewingExport);
     expect(faixa.querySelector('.cds-story-progress-fill')).not.toBeNull();
     for (const el of faixa.querySelectorAll('[style]')) {
       expect(el.getAttribute('style')).not.toMatch(/NaN|Infinity/);
     }
+    expect(fillWidth(session, viewingExport)).toBeGreaterThan(0);
+  }
+
+  it('na Triagem sem nenhuma cena, a barra ainda mostra o caminho já andado', () => {
+    expectDrawsWithGroundCovered({
+      ...base(),
+      mode: 'triagem',
+      whole: heard,
+      partsConfirmed: true,
+      parts: [],
+    });
+  });
+
+  it('nas Frases sem nenhuma cena produtiva, a barra ainda mostra o caminho já andado', () => {
+    // uma cena por classificar não é produtiva (domain `productiveScenes`)
+    expectDrawsWithGroundCovered({
+      ...base(),
+      mode: 'segmentacao',
+      whole: heard,
+      partsConfirmed: true,
+      parts: [part('PT1', false)],
+    });
   });
 
   it('não mostra dígito algum ao ouvinte (§9.2)', () => {
