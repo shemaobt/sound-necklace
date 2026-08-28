@@ -152,6 +152,7 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   // segunda cena produtiva + conclui a segmentação
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
+  await app.chooseConversationMode();
 
   // ——— Conversation: nível história (L1) ———
   await expect(page.getByRole('button', { name: LISTEN[1] })).toBeVisible();

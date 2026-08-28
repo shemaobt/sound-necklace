@@ -52,6 +52,7 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
+  await app.chooseConversationMode();
 
   const conversation = await app.answerConversation();
   expect(conversation.voicedLevels).toEqual([1, 2, 3]); // ≥1 por nível por voz

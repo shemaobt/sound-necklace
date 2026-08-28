@@ -93,6 +93,7 @@ test('a conversa faz todas as perguntas e chaveia cada resposta', async ({ page 
   await app.nextScene(); // "Pronto com esta cena →"
   await app.cutPhrase(4, 5);
   await app.finishPhrases(); // "Já segmentei todas as cenas →" → conversation
+  await app.chooseConversationMode();
 
   // ——— a conversa inteira: 41 perguntas, enunciado a enunciado ———
   const questionText = page.locator('.cds-question-card-text');
