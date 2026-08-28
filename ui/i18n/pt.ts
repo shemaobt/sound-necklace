@@ -547,6 +547,10 @@ export const pt = {
     rerecordKeep: 'Manter a gravação',
     prev: '← Anterior',
     next: 'Próxima pergunta',
+    /* O exemplo falado (ENG-611). É o nome do próprio item, e é como o dono se
+       refere a ele. Não é uma segunda instrução (§9.2): é um controle, e só
+       existe na pergunta que tem exemplo escrito. */
+    example: 'Como assim?',
     skip: 'Sem resposta',
     unskip: 'Voltar a perguntar',
     progressAria: 'progresso da conversa',

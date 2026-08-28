@@ -92,6 +92,14 @@ export interface ConversationStageProps {
   /** porta de fala (TTS): o botão "Ouvir a pergunta" só aparece quando fornecida */
   onSpeakQuestion?: () => void;
   /**
+   * Fala o exemplo desta pergunta — o «Como assim?» (ENG-611). Ausente = SEM o
+   * link: a pergunta não tem exemplo escrito (ou não há voz). Nada de botão
+   * desabilitado na tela do ouvinte — um controle que não faz nada ensina que o
+   * app está quebrado, e o §9 manda o erro guiar, não punir. É a MESMA porta de
+   * voz da pergunta: quem a liga é a página, e não existe segundo caminho de fala.
+   */
+  onSpeakExample?: () => void;
+  /**
    * O guia está FALANDO agora (ENG-280) — dirige o lip-sync. Vem do estado real da porta
    * de voz (`onSpeaking`: start/end do utterance), nunca de um palpite: até a ENG-280 isto
    * era `recorderState === 'idle'`, ou seja, o guia mexia a boca em silêncio.
@@ -223,6 +231,7 @@ export function ConversationStage({
   skipped = false,
   onToggleSkip,
   onSpeakQuestion,
+  onSpeakExample,
   speaking = false,
 }: ConversationStageProps) {
   const { t } = useTranslation();
@@ -392,6 +401,23 @@ export function ConversationStage({
                     t('conversationStage.idleHint')
                   )}
                 </p>
+                {/* O exemplo falado, embaixo do microfone: ajuda opcional de quem não
+                    entendeu a pergunta. Fantasma como o "sem resposta" — o microfone
+                    continua sendo a única ação dominante (§9.2) — e ele NÃO é uma
+                    segunda linha de instrução: é um controle, e só existe onde há
+                    exemplo escrito. */}
+                {onSpeakExample ? (
+                  <p className="cds-conversation-stage-example">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      ariaDisabled={locked}
+                      onClick={guard(onSpeakExample)}
+                    >
+                      {t('conversationStage.example')}
+                    </Button>
+                  </p>
+                ) : null}
                 {/* A decisão de deixar a pergunta sem resposta é tomada AQUI, no mesmo
                     instante em que se decidiria gravar — no rodapé, entre voltar e
                     avançar, ela ficava escondida de quem está olhando o microfone.
