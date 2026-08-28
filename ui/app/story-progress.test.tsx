@@ -11,7 +11,7 @@ import {
   type ScenePart,
   type SessionState,
 } from '../../domain';
-import { progressStore } from '../state';
+import { goalStore, progressStore, TODAY_GOALS } from '../state';
 import { StoryProgress } from './story-progress';
 
 const TOTAL_BEADS = 8;
@@ -91,6 +91,7 @@ function fillWidth(session: SessionState, viewingExport = false): number {
 
 beforeEach(() => {
   progressStore.getState().reset();
+  goalStore.setState(goalStore.getInitialState(), true);
 });
 
 describe('StoryProgress — uma barra no topo, para a história inteira (ENG-648)', () => {
@@ -201,6 +202,108 @@ describe('StoryProgress — uma barra no topo, para a história inteira (ENG-648
       expect(`${el.getAttribute('aria-label') ?? ''}${el.getAttribute('title') ?? ''}`).not.toMatch(
         /\d/,
       );
+    }
+  });
+});
+
+/**
+ * A marca da meta de hoje (ENG-653): a mesma barra ganha um traço fixo onde os
+ * dois combinaram chegar. A meta é escolha da facilitadora no Setup e vive no
+ * `goalStore`; aqui prova-se o que se VÊ na barra.
+ *
+ * Toda afirmação é de ORDEM, nunca de porcentagem: fixar um número testaria a
+ * aritmética recém-escrita contra ela mesma.
+ */
+
+/** Onde a marca está, em porcentagem — lida do `left: calc(N% - 1.5px)`. */
+function goalAt(session: SessionState, viewingExport = false): number | null {
+  const el = band(session, viewingExport).querySelector<HTMLElement>('.cds-story-progress-goal');
+  if (!el) return null;
+  const found = /calc\((-?[\d.]+)%/.exec(el.style.left);
+  return found ? Number.parseFloat(found[1]!) : Number.NaN;
+}
+
+/** Uma sessão na Triagem com `count` cenas por classificar. */
+function triageWith(count: number): SessionState {
+  return {
+    ...base(),
+    mode: 'triagem',
+    whole: heard,
+    partsConfirmed: true,
+    parts: Array.from({ length: count }, (_, i) => part(`PT${i + 1}`, false)),
+  };
+}
+
+describe('A marca da meta de hoje na barra (ENG-653)', () => {
+  it('sem meta escolhida, não há marca nenhuma na barra', () => {
+    const faixa = band(AT.conversation());
+    expect(faixa.querySelector('.cds-story-progress-goal')).toBeNull();
+  });
+
+  it('escolher "fechar a Triagem" põe a marca; escolher de novo a tira', () => {
+    goalStore.getState().chooseGoal('triage');
+    expect(goalAt(AT.conversation())).not.toBeNull();
+
+    goalStore.getState().chooseGoal('triage');
+    expect(goalAt(AT.conversation())).toBeNull();
+  });
+
+  it('"a história toda" marca a ponta, e a Triagem fecha antes das Frases', () => {
+    goalStore.getState().chooseGoal('triage');
+    const triagem = goalAt(AT.conversation())!;
+    goalStore.getState().chooseGoal('phrases');
+    const frases = goalAt(AT.conversation())!;
+    goalStore.getState().chooseGoal('wholeStory');
+    const historia = goalAt(AT.conversation())!;
+
+    expect(triagem).toBeLessThan(frases);
+    expect(frases).toBeLessThan(historia);
+    expect(historia).toBe(100);
+  });
+
+  it('sob a meta de "2 cenas", a marca anda quando o número de cenas muda', () => {
+    goalStore.getState().chooseGoal('twoScenes');
+
+    // duas cenas de duas = a meta é o fim das Frases; duas de oito, bem antes
+    const deDuas = goalAt(triageWith(2))!;
+    const deOito = goalAt(triageWith(8))!;
+
+    expect(deOito).toBeLessThan(deDuas);
+  });
+
+  /**
+   * O denominador que a sessão real zera: a Triagem antes de existir cena alguma.
+   * São duas afirmações com alvos diferentes. "Nada de NaN e a barra desenha o
+   * caminho já andado" segura os clamps. "A marca de 2 cenas fica ANTES da marca
+   * de fechar as Frases" segura o recuo de quatro cenas: sem ele, `2/0` vira
+   * infinito, a fração satura em 1 e as duas metas caem exatamente no mesmo
+   * ponto — sem um só NaN no DOM para denunciar.
+   */
+  it('sem cena nenhuma, a barra e a marca ainda dizem coisas diferentes', () => {
+    const semCena = triageWith(0);
+
+    goalStore.getState().chooseGoal('twoScenes');
+    const duasCenas = goalAt(semCena)!;
+    goalStore.getState().chooseGoal('phrases');
+    const fecharFrases = goalAt(semCena)!;
+
+    expect(duasCenas).toBeLessThan(fecharFrases);
+
+    const faixa = band(semCena);
+    for (const el of faixa.querySelectorAll('[style]')) {
+      expect(el.getAttribute('style')).not.toMatch(/NaN|Infinity/);
+    }
+    expect(fillWidth(semCena)).toBeGreaterThan(0);
+  });
+
+  it('sem cena nenhuma, meta alguma leva NaN ou infinito ao estilo', () => {
+    const semCena = triageWith(0);
+    for (const meta of TODAY_GOALS) {
+      goalStore.setState({ goal: meta });
+      const faixa = band(semCena);
+      for (const el of faixa.querySelectorAll('[style]')) {
+        expect(el.getAttribute('style')).not.toMatch(/NaN|Infinity/);
+      }
     }
   });
 });

@@ -7,7 +7,7 @@ import { FixtureBucketSource, type BucketSource } from '../../../adapters/bucket
 import { AcoustemeGranularityResolver } from '../../../adapters/granularity';
 import { FixtureProjectSettings } from '../../../adapters/project-settings';
 import { FixtureSessionStore } from '../../../adapters/sessions';
-import { sessionStore } from '../../state';
+import { goalStore, sessionStore } from '../../state';
 import { pt } from '../../i18n/pt';
 import headerCss from '../../app/header.css?raw';
 import lockCss from './granularity-lock.css?raw';
@@ -583,3 +583,57 @@ describe('Setup — a ação de seguir não depende do tamanho da lista (ENG-386
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/**
+ * A meta de hoje (ENG-653): antes de começar, a facilitadora diz até onde os dois
+ * pretendem chegar. Seis escolhas fixas, nenhuma delas obrigatória — e escolher a
+ * mesma de novo desfaz a escolha. As contagens nos rótulos são permitidas: este é
+ * um cartão de FACILITADORA (§7.2), não uma tela de quem ouve.
+ */
+describe('Setup — até onde vamos hoje (ENG-653)', () => {
+  const CHIPS = [
+    '2 cenas',
+    '4 cenas',
+    '12 conversas',
+    'fechar a Triagem',
+    'fechar as Frases',
+    'a história toda',
+  ];
+
+  beforeEach(() => {
+    goalStore.setState(goalStore.getInitialState(), true);
+  });
+
+  it('oferece as seis metas, e nenhuma vem escolhida', async () => {
+    renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    expect(screen.getByText('Até onde vamos hoje?')).toBeTruthy();
+    expect(screen.getByText('Dá para mudar no meio. A meta é conforto, não regra.')).toBeTruthy();
+    for (const rotulo of CHIPS) {
+      expect(screen.getByRole('button', { name: rotulo, pressed: false })).toBeTruthy();
+    }
+  });
+
+  it('escolher uma meta a marca; escolher a mesma de novo a desmarca', async () => {
+    renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    await userEvent.click(screen.getByRole('button', { name: 'fechar a Triagem' }));
+    expect(screen.getByRole('button', { name: 'fechar a Triagem', pressed: true })).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'fechar a Triagem' }));
+    expect(screen.getByRole('button', { name: 'fechar a Triagem', pressed: false })).toBeTruthy();
+  });
+
+  it('escolher outra meta troca a anterior — a meta é uma só', async () => {
+    renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    await userEvent.click(screen.getByRole('button', { name: '2 cenas' }));
+    await userEvent.click(screen.getByRole('button', { name: 'a história toda' }));
+
+    expect(screen.getByRole('button', { name: '2 cenas', pressed: false })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'a história toda', pressed: true })).toBeTruthy();
+  });
+});

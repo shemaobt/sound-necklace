@@ -16,15 +16,23 @@ import './story-progress-bar.css';
  * ser zero numa sessão real (nenhuma cena, nenhuma cena produtiva). Um `NaN` num
  * `width` de CSS não é erro: é uma barra que simplesmente não aparece. Por isso o
  * clamp mora aqui também, na última porta antes do estilo.
+ *
+ * A marca da meta de hoje (ENG-653) é o terceiro elemento do trilho, ao lado do
+ * preenchimento e das divisórias: um traço fixo onde os dois combinaram chegar. Sem
+ * meta ela NÃO é renderizada — não é um elemento escondido —, porque um traço
+ * invisível ainda é um traço para quem lê o DOM.
  */
 export function StoryProgressBar({
   percent,
   dividers,
+  goal = null,
 }: {
   /** 0–100: o quanto da história inteira já foi feito. */
   percent: number;
   /** Fronteiras entre as etapas, em porcentagem (0 e 100 excluídos). */
   dividers: readonly number[];
+  /** 0–100 da meta de hoje, ou `null`/omitida quando não há meta. */
+  goal?: number | null;
 }) {
   const pct = clampPercent(percent);
   return (
@@ -38,6 +46,12 @@ export function StoryProgressBar({
             style={{ left: `${clampPercent(at)}%` }}
           />
         ))}
+        {goal === null ? null : (
+          <div
+            className="cds-story-progress-goal"
+            style={{ left: `calc(${clampPercent(goal)}% - 1.5px)` }}
+          />
+        )}
         <div className="cds-story-progress-marker" style={{ left: `calc(${pct}% - 7px)` }} />
       </div>
     </div>

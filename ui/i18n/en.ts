@@ -126,6 +126,17 @@ export const en: Dict = {
     consentCheck: 'I confirm consent to use this in the project pipeline.',
     creating: 'Creating…',
     create: 'Create the session →',
+    goal: {
+      heading: 'How far are we going today?',
+      eyebrow: 'facilitator only',
+      note: 'You can change it midway. The goal is comfort, not a rule.',
+      twoScenes: '2 scenes',
+      fourScenes: '4 scenes',
+      twelveTalks: '12 conversations',
+      triage: 'finish Triage',
+      phrases: 'finish Phrases',
+      wholeStory: 'the whole story',
+    },
   },
   export: {
     headline: 'The whole story is in the necklace.',
@@ -190,6 +201,12 @@ export const en: Dict = {
     body: 'A coffee, a stretch — the necklace stays exactly where you left it.',
     take: 'Take a break',
     keepGoing: 'Keep going a little longer',
+  },
+  goalReached: {
+    headline: "Today's goal is on the cord.",
+    body: 'Still some breath left? What comes next is a short one.',
+    keepGoing: 'Keep going a little longer',
+    stopForToday: 'Put it away for today',
   },
   review: {
     continue: 'Continue →',

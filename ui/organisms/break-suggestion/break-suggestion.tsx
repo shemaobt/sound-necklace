@@ -32,17 +32,23 @@ export const BREAK_SETTLE_MS = 4_000;
 
 export interface BreakSuggestionProps {
   /**
-   * Há algo em curso que não pode ser interrompido — hoje, o microfone aberto.
-   * As outras superfícies do protótipo (espera, fim de bloco, meta alcançada)
-   * entram por aqui quando existirem; a tela de espera já é estrutural, porque
-   * substitui a vista da sessão inteira e desmonta esta sugestão junto.
+   * Há algo em curso que não pode ser interrompido — o microfone aberto, ou outra
+   * tela cheia no ar (a meta alcançada, ENG-653). As demais superfícies do
+   * protótipo entram por aqui quando existirem; a tela de espera já é estrutural,
+   * porque substitui a vista da sessão inteira e desmonta esta sugestão junto.
    */
   busy: boolean;
   /** Guardar e descansar: o shell leva ao painel; a sessão fica salva. */
   onTakeBreak: () => void;
+  /**
+   * Abriu ou fechou. A exclusão entre telas cheias é de MÃO DUPLA (ENG-653): o
+   * `busy` acima impede que esta suba por cima das outras, e este aviso é como o
+   * shell impede que as outras subam por cima desta.
+   */
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function BreakSuggestion({ busy, onTakeBreak }: BreakSuggestionProps) {
+export function BreakSuggestion({ busy, onTakeBreak, onOpenChange }: BreakSuggestionProps) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<'armed' | 'open' | 'spent'>('armed');
   // marcado no primeiro efeito, não no render: ler o relógio ao renderizar é
@@ -59,7 +65,12 @@ export function BreakSuggestion({ busy, onTakeBreak }: BreakSuggestionProps) {
     return () => clearInterval(timer);
   }, [phase, busy]);
 
-  if (phase !== 'open') return null;
+  const open = phase === 'open';
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
+
+  if (!open) return null;
 
   /** Fechar sem sair — o destino de "Seguir mais um pouco", do Esc e do latch. */
   const keepGoing = (): void => setPhase('spent');

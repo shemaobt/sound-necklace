@@ -1,0 +1,147 @@
+/*
+ * A meta de hoje alcançada (protótipo v4 "META ALCANÇADA", linhas 870-883): véu
+ * quente escuro com desfoque sobre a estação e uma coluna centrada — quatro contas
+ * (a última quadrada, fechando o trecho combinado), uma linha em Merriweather
+ * itálico, uma linha de apoio e dois botões pílula.
+ *
+ * Fica ACIMA da tela de fim de bloco no empilhamento (protótipo: z-index 57 contra
+ * 56), porque é a última coisa a dizer antes de guardar.
+ *
+ * Todo movimento (o véu que aparece) vive dentro da guarda de prefers-reduced-motion
+ * (§4.5); parado, a tela é a mesma, quieta.
+ */
+
+.cds-goal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 57;
+  background: rgba(28, 27, 14, 0.88);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.cds-goal {
+  position: fixed;
+  inset: 0;
+  z-index: 57;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cds-cream, #f6f5eb);
+  font-family: var(--cds-font-load-bearing, 'Montserrat', sans-serif);
+}
+
+.cds-goal-column {
+  display: flex;
+  max-width: 560px;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 0 40px;
+  text-align: center;
+}
+
+/* as contas do trecho combinado: três redondas e a última quadrada, que é como o
+   protótipo desenha "este pedaço fechou" */
+.cds-goal-beads {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.cds-goal-bead {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.cds-goal-bead:nth-child(1) {
+  background: radial-gradient(circle at 34% 28%, #fff3e2, #c4a96a);
+}
+
+.cds-goal-bead:nth-child(2) {
+  background: radial-gradient(circle at 34% 28%, #fff3e2, #a9873f);
+}
+
+.cds-goal-bead:nth-child(3) {
+  background: radial-gradient(circle at 34% 28%, #fff3e2, #8f6c3a);
+}
+
+.cds-goal-bead:nth-child(4) {
+  border-radius: 6px;
+  background: radial-gradient(circle at 34% 28%, #fff3e2, #77704b);
+}
+
+.cds-goal-headline {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice, 'Merriweather', Georgia, serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 30px;
+  line-height: 1.3;
+}
+
+.cds-goal-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(246, 245, 235, 0.65);
+}
+
+.cds-goal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+/* os botões herdam o gap acima: o invólucro só existe para dar contexto ao css */
+.cds-goal-action {
+  display: contents;
+}
+
+/* Primário sobre o véu: telha cheia com halo (protótipo metaSeguir). O átomo não
+   tem essa variante — é override de contexto, camada de look. */
+.cds-goal-action[data-kind='keep'] .cds-button {
+  background: var(--cds-telha, #be4a01);
+  border-color: transparent;
+  color: var(--cds-cream, #f6f5eb);
+  box-shadow: 0 4px 16px rgba(190, 74, 1, 0.4);
+}
+
+.cds-goal-action[data-kind='keep'] .cds-button:hover:enabled,
+.cds-goal-action[data-kind='keep'] .cds-button:active:enabled,
+.cds-goal-action[data-kind='keep'] .cds-button:focus-visible:enabled {
+  background: #8f3701;
+}
+
+/* Secundário sobre o véu: contorno creme (mesmo override do seam modal). */
+.cds-goal-action[data-kind='stop'] .cds-button {
+  border-color: rgba(246, 245, 235, 0.4);
+  color: var(--cds-cream, #f6f5eb);
+}
+
+.cds-goal-action[data-kind='stop'] .cds-button:hover:enabled,
+.cds-goal-action[data-kind='stop'] .cds-button:active:enabled,
+.cds-goal-action[data-kind='stop'] .cds-button:focus-visible:enabled {
+  border-color: var(--cds-cream, #f6f5eb);
+  background: color-mix(in srgb, var(--cds-cream, #f6f5eb) 12%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-goal-scrim,
+  .cds-goal {
+    animation: cds-goal-fade 250ms ease-out both;
+  }
+
+  @keyframes cds-goal-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}

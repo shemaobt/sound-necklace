@@ -14,6 +14,7 @@ import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts'
 import { setMode, type Mode, type SessionState } from '../../domain';
 import type { SaveStatus } from '../molecules';
 import { BreakSuggestion } from '../organisms/break-suggestion/break-suggestion';
+import { GoalReached } from '../organisms/goal-reached/goal-reached';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
 import {
@@ -142,6 +143,12 @@ function SessionStations({
   // Microfone aberto: a pausa sugerida (ENG-650) não sobe por cima de uma resposta
   // sendo gravada. É o mesmo sinal app-global que trava o "← Histórias" (ENG-393).
   const recording = useAppStore((s) => s.recording);
+  // Exclusão entre telas cheias, de mão dupla (ENG-653): cada uma diz ao shell que
+  // está no ar, e o shell repassa isso como `busy` à outra. A meta de hoje só sabe
+  // que chegou porque a faixa do topo — que já calcula as duas pontas — avisa.
+  const [goalReached, setGoalReached] = useState(false);
+  const [goalOpen, setGoalOpen] = useState(false);
+  const [breakOpen, setBreakOpen] = useState(false);
   // O progresso de tela (quanto se ouviu, quantos artefatos se baixou) é por
   // sessão: este componente é remontado por `key={sessionId}`, então zerar na
   // montagem basta — sem isso a barra da sessão seguinte abriria já andada.
@@ -187,7 +194,12 @@ function SessionStations({
 
   return (
     <>
-      <StoryProgress session={session} viewingExport={viewingExport} voicePaths={voicePaths} />
+      <StoryProgress
+        session={session}
+        viewingExport={viewingExport}
+        voicePaths={voicePaths}
+        onGoalReached={setGoalReached}
+      />
       <Stepper stations={stations} onNavigate={navigateStation} />
       <ReviewBanner review={review} lock={lock} onUnlock={() => sessionStore.getState().unlock()} />
       <PlayerSlotProvider
@@ -205,7 +217,22 @@ function SessionStations({
           nunca por cima de algo em curso (ENG-650). Montada aqui, ela nasce e morre
           com a vista da sessão: a tela de espera a substitui inteira, e o `key` por
           sessão rearma a sugestão ao começar, retomar ou reabrir para revisão. */}
-      <BreakSuggestion busy={recording} onTakeBreak={() => navigate('/dashboard')} />
+      <BreakSuggestion
+        busy={recording || goalOpen}
+        onTakeBreak={() => navigate('/dashboard')}
+        onOpenChange={setBreakOpen}
+      />
+      {/* A meta de hoje alcançada (ENG-653). Montada ao lado da pausa, pelo mesmo
+          motivo: nasce e morre com a vista da sessão, e o `key` por sessão rearma o
+          "uma vez só". O chime é o `advance` do UiSound, que o cabeçalho mudo já
+          troca pela porta silenciosa. */}
+      <GoalReached
+        reached={goalReached}
+        busy={recording || breakOpen}
+        chime={() => sound.advance()}
+        onOpenChange={setGoalOpen}
+        onStopForToday={() => navigate('/dashboard')}
+      />
     </>
   );
 }

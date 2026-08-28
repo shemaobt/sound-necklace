@@ -13,12 +13,12 @@ import {
   type ProjectSettings,
   toSessionDto,
 } from '../../../contracts';
-import { Skeleton } from '../../atoms';
+import { Chip, Skeleton } from '../../atoms';
 import { PreparingSession } from '../../organisms';
 import { ShemaIcon } from '../../tokens';
 import { buildBeads, createSession, hashPCM } from '../../../domain';
 import { navigate as routerNavigate } from '../../app/router';
-import { sessionStore } from '../../state';
+import { goalStore, sessionStore, TODAY_GOALS, useGoalStore } from '../../state';
 import { useRefreshOnFocus } from '../../app/use-refresh-on-focus';
 import { GranularityLock } from './granularity-lock';
 import {
@@ -79,6 +79,46 @@ function ProjectGranularity({ level }: { level: GranularityLevel }) {
       <p className="cds-setup-gran-value">{t(LEVEL_TITLE_KEY[level])}</p>
       <p className="cds-setup-note" role="note">
         {t('setup.granFromProject')}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Até onde vamos hoje (ENG-653, protótipo v4 linhas 343-349): antes de começar, a
+ * facilitadora diz o quanto os dois pretendem andar nesta sentada. Seis escolhas
+ * fixas, nenhuma obrigatória, e escolher a que já está escolhida desfaz a escolha —
+ * "sem meta" é um estado válido, e a barra do topo simplesmente não ganha marca.
+ *
+ * É um cartão de FACILITADORA, com o eyebrow dizendo isso: por isso os rótulos podem
+ * contar cenas e conversas. A marca que sai daqui, essa sim, é vista pelos dois e não
+ * carrega número nenhum (§9.2).
+ *
+ * A escolha NÃO entra no DTO da sessão — ver `ui/state/goal-store.ts` para o porquê.
+ */
+function TodayGoalCard() {
+  const { t } = useTranslation();
+  const goal = useGoalStore((s) => s.goal);
+  return (
+    <div className="cds-setup-goal">
+      <div className="cds-setup-goal-head">
+        <h2 className="cds-setup-heading" id="cds-setup-goal-label">
+          {t('setup.goal.heading')}
+        </h2>
+        <p className="cds-setup-goal-eyebrow">{t('setup.goal.eyebrow')}</p>
+      </div>
+      <div className="cds-setup-goal-chips" role="group" aria-labelledby="cds-setup-goal-label">
+        {TODAY_GOALS.map((option) => (
+          <Chip
+            key={option}
+            label={t(`setup.goal.${option}`)}
+            selected={goal === option}
+            onClick={() => goalStore.getState().chooseGoal(option)}
+          />
+        ))}
+      </div>
+      <p className="cds-setup-goal-note" role="note">
+        {t('setup.goal.note')}
       </p>
     </div>
   );
@@ -451,6 +491,8 @@ export function Setup({
               />
               <span>{t('setup.consentCheck')}</span>
             </label>
+
+            <TodayGoalCard />
 
             {/* O pé da coluna: a recusa explicada e o botão, juntos e sempre à
                   vista. O botão segue SEMPRE clicável e validando no clique (§9.5

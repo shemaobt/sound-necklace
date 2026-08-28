@@ -136,6 +136,19 @@ export const pt = {
     consentCheck: 'Confirmo o consentimento de uso no pipeline do projeto.',
     creating: 'Criando…',
     create: 'Criar a sessão →',
+    /* A meta de hoje (ENG-653): cartão de FACILITADORA, e por isso os rótulos
+       podem contar cenas e conversas — §9.2 vale para quem ouve. */
+    goal: {
+      heading: 'Até onde vamos hoje?',
+      eyebrow: 'só a facilitadora',
+      note: 'Dá para mudar no meio. A meta é conforto, não regra.',
+      twoScenes: '2 cenas',
+      fourScenes: '4 cenas',
+      twelveTalks: '12 conversas',
+      triage: 'fechar a Triagem',
+      phrases: 'fechar as Frases',
+      wholeStory: 'a história toda',
+    },
   },
   export: {
     headline: 'A história está inteira no colar.',
@@ -214,6 +227,14 @@ export const pt = {
     body: 'Um cafezinho, um alongamento — o colar fica guardado exatamente onde parou.',
     take: 'Fazer uma pausa',
     keepGoing: 'Seguir mais um pouco',
+  },
+  /* A meta de hoje alcançada (ENG-653): sem número nenhum — esta tela é vista
+     pelos dois, e quem ouve não conta nada (§9.2). */
+  goalReached: {
+    headline: 'A meta de hoje está no cordão.',
+    body: 'E ainda tem fôlego? O que vem agora é curtinho.',
+    keepGoing: 'Seguir mais um pouco',
+    stopForToday: 'Guardar por hoje',
   },
   /** Momento de revisão inferido: uma manchete + um único "Continuar →". */
   review: {

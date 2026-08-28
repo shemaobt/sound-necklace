@@ -23,6 +23,7 @@ export {
   type NavNext,
   type StationNavProps,
 } from './nav-footer/nav-footer';
+export { GoalReached, type GoalReachedProps } from './goal-reached/goal-reached';
 export { Necklace, type NecklaceProps, type NecklaceSegment } from './necklace/necklace';
 export { SIZE_EXPORT, SIZE_L, SIZE_M, SIZE_SEG, type Size } from './necklace/geometry';
 export { SeamModal, type SeamCordSide, type SeamModalProps } from './seam-modal/seam-modal';
