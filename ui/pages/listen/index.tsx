@@ -5,7 +5,7 @@ import type { Player } from '../../../adapters/audio';
 import type { UiSound } from '../../../adapters/ui-sound';
 import { confirmWhole } from '../../../domain';
 import { Necklace, SIZE_L, StationNav } from '../../organisms';
-import { sessionStore, useSessionStore } from '../../state';
+import { progressStore, sessionStore, useSessionStore } from '../../state';
 import { ShemaIcon } from '../../tokens';
 import { makeTransportHandlers } from './transport';
 import './listen.css';
@@ -56,6 +56,8 @@ export function Listen({ player = null, sound }: ListenProps) {
       // cumulativa das contas visitadas), não apenas alcançou o fim: amostrar as
       // últimas contas não é ter ouvido. A folga de 10% absorve o frame perdido.
       heard.current.add(h);
+      // a barra da história no topo mede a Escuta pelo mesmo número (ENG-648)
+      progressStore.getState().noteHeard(heard.current.size);
       if (heard.current.size >= totalBeads * 0.9) setHeardEnough(true);
     });
   }, [player, totalBeads]);
