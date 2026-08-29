@@ -248,6 +248,19 @@ export class ColarApp {
 
   // ——— Conversation ———
 
+  /**
+   * A conversa abre pedindo COMO ela vai andar (ENG-649) e nenhuma pergunta é
+   * alcançável antes da escolha. O E2E escolhe "Toque a toque": é o modo em que
+   * nada acontece sem um toque, e portanto o único em que uma spec pode afirmar
+   * que o que aconteceu foi o que ela mandou acontecer.
+   */
+  async chooseConversationMode(mode: 'auto' | 'manual' = 'manual'): Promise<void> {
+    // o cartão fala o idioma da UI, e uma spec percorre o fluxo em inglês
+    const rotulo =
+      mode === 'auto' ? /^(Mãos livres|Hands free)/ : /^(Toque a toque|Touch by touch)/;
+    await this.page.getByRole('button', { name: rotulo }).click();
+  }
+
   /** Grava uma resposta por voz (gravador fixture): gravar → parar. */
   async recordVoiceAnswer(): Promise<void> {
     await this.page.getByRole('button', { name: 'Gravar a resposta' }).click();

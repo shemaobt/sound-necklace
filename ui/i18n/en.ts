@@ -506,6 +506,22 @@ export const en: Dict = {
     redoFailed_one: '1 answer could not be redone — you can try again.',
     redoFailed_other: '{{count}} answers could not be redone — you can try again.',
   },
+  conversationMode: {
+    eyebrow: 'Before we begin · choose together',
+    title: 'How shall we talk?',
+    handsFree: 'Hands free',
+    handsFreeDescription:
+      'the question speaks, the microphone opens, the next one comes on its own',
+    handsFreeTag: 'no touch at all',
+    touchByTouch: 'Touch by touch',
+    touchByTouchDescription: 'you touch to record and to move on — each step in its own time',
+    touchByTouchTag: "you're in control",
+    footer: 'you can switch mid-conversation — the button stays up there',
+    pillHandsFree: 'hands free · switch',
+    pillTouchByTouch: 'touch by touch · switch',
+    pillTitle: 'switch the conversation mode',
+    autoAdvance: 'the next one arrives in a moment — the button up there holds the step',
+  },
   conversationStage: {
     listen: 'Listen to the question',
     pause: 'Pause the question',

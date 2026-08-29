@@ -55,6 +55,7 @@ test('baixa os três artefatos direto do dashboard, byte-idênticos, sem abrir a
   await app.nextScene();
   await app.cutPhrase(6, 7);
   await app.finishPhrases();
+  await app.chooseConversationMode();
 
   await app.answerConversation();
   await app.completeSession();

@@ -568,6 +568,32 @@ export const pt = {
     redoFailed_one: '1 resposta não pôde ser refeita — dá para tentar de novo.',
     redoFailed_other: '{{count}} respostas não puderam ser refeitas — dá para tentar de novo.',
   },
+  /**
+   * A escolha do modo da conversa (ENG-649). Cópia da Márcia, verbatim do
+   * protótipo v4 — o cartão é a confirmação, então o que ele promete é o
+   * contrato: em mãos livres a pergunta fala, o microfone abre e a próxima
+   * entra sozinha.
+   */
+  conversationMode: {
+    eyebrow: 'Antes de começar · escolham juntos',
+    title: 'Como vamos conversar?',
+    handsFree: 'Mãos livres',
+    handsFreeDescription: 'a pergunta fala, o microfone abre, a próxima entra sozinha',
+    handsFreeTag: 'sem nenhum toque',
+    touchByTouch: 'Toque a toque',
+    touchByTouchDescription: 'vocês tocam para gravar e para seguir — cada passo no seu tempo',
+    touchByTouchTag: 'vocês no controle',
+    footer: 'dá para trocar no meio da conversa — o botão fica ali em cima',
+    /* A pílula diz em que modo se está e leva ao outro — é a saída de emergência
+       do mãos livres, e por isso fica visível o tempo todo. */
+    pillHandsFree: 'mãos livres · trocar',
+    pillTouchByTouch: 'toque a toque · trocar',
+    pillTitle: 'trocar o modo da conversa',
+    /* A espera antes da próxima pergunta. Toma o lugar do convite a falar — a
+       tela do ouvinte tem UMA linha (§9.2) — e é o que torna a chegada visível
+       mesmo sem animação (movimento reduzido). */
+    autoAdvance: 'a próxima chega num instante — o botão lá em cima segura o passo',
+  },
   conversationStage: {
     listen: 'Ouvir a pergunta',
     pause: 'Pausar a pergunta',

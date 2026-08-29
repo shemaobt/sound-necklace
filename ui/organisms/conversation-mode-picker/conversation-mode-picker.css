@@ -1,0 +1,161 @@
+/* O pedido do modo da conversa (ENG-649) — protótipo v4, linhas 714-737.
+   Cartão OLIVA sobre véu escurecido: é a tela do ouvinte, e ela é oliva; o creme
+   dos diálogos da facilitadora (regravar, rascunhos pendentes) chamaria a atenção
+   para o lugar errado. */
+
+.cds-mode-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 7, 3, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.cds-mode-picker {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4rem;
+  width: min(48.75rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: 2.4rem 2.75rem;
+  border: 1px solid rgba(246, 245, 235, 0.14);
+  border-radius: var(--cds-radius-frame);
+  background: var(--cds-olive);
+  box-shadow: 0 28px 70px -22px rgba(10, 7, 3, 0.6);
+  color: var(--cds-cream);
+}
+
+.cds-mode-picker-eyebrow {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgba(246, 245, 235, 0.5);
+}
+
+.cds-mode-picker-title {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 28px;
+  text-align: center;
+  color: var(--cds-cream);
+}
+
+/* O rodapé é a descrição acessível do diálogo; ele já está escrito embaixo, e
+   repeti-lo em voz seria dizer a mesma frase duas vezes. */
+.cds-mode-picker-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cds-mode-picker-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.125rem;
+}
+
+.cds-mode-picker-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  width: 320px;
+  max-width: 100%;
+  padding: 26px;
+  border: 2px solid rgba(246, 245, 235, 0.25);
+  border-radius: 22px;
+  background: rgba(246, 245, 235, 0.07);
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.cds-mode-picker-card:hover,
+.cds-mode-picker-card:focus-visible {
+  border-color: var(--cds-cream);
+  background: rgba(246, 245, 235, 0.12);
+}
+
+.cds-mode-picker-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cds-mode-picker-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(246, 245, 235, 0.12);
+  color: var(--cds-cream);
+}
+
+.cds-mode-picker-card[data-mode='auto'] .cds-mode-picker-icon {
+  background: rgba(190, 74, 1, 0.25);
+  /* telha clareada do protótipo v4 — não há token para ela; é o único lugar do
+     sistema que a usa, e a ficha do issue a nomeia por valor. */
+  color: #f0b489;
+}
+
+.cds-mode-picker-card-title {
+  font-family: var(--cds-font-load-bearing);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--cds-cream);
+}
+
+.cds-mode-picker-card-body {
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: rgba(246, 245, 235, 0.75);
+}
+
+.cds-mode-picker-card-tag {
+  font-family: var(--cds-font-load-bearing);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(246, 245, 235, 0.6);
+}
+
+.cds-mode-picker-card[data-mode='auto'] .cds-mode-picker-card-tag {
+  color: #f0b489;
+}
+
+.cds-mode-picker-footer {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: 12.5px;
+  text-align: center;
+  color: rgba(246, 245, 235, 0.5);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-mode-picker-card {
+    transition: all 0.22s var(--cds-motion-easing);
+  }
+}

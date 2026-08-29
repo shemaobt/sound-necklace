@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -65,13 +65,20 @@ function loadMapping(): void {
   });
 }
 
+/**
+ * A conversa abre pedindo o modo (ENG-649) e escolher é a única saída. O modo aqui
+ * não importa: a fala de chegada, que o segundo caso mede, vale nos dois — então
+ * fica o quieto, que é o que estes casos sempre descreveram.
+ */
 function renderConversation(speaker: InstanceType<typeof FixtureSpeechSynthesizer>) {
-  return render(
+  const view = render(
     <NavFooterProvider>
       <Conversation speaker={speaker} />
       <NavFooterOutlet />
     </NavFooterProvider>,
   );
+  fireEvent.click(screen.getByRole('button', { name: /^Toque a toque/ }));
+  return view;
 }
 
 beforeEach(() => {

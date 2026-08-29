@@ -155,6 +155,13 @@ function SessionStations({
   // está no ar, e o shell repassa isso como `busy` à outra. A meta de hoje só sabe
   // que chegou porque a faixa do topo — que já calcula as duas pontas — avisa.
   const [goalReached, setGoalReached] = useState(false);
+  /**
+   * O pedido do modo da conversa (ENG-649) é a quarta tela de largura inteira que
+   * pode querer este instante — a chegada à Conversa fecha um bloco, e os dois
+   * sobem juntos. Entra no mesmo `busy` das outras três, dos dois lados: ele espera
+   * por elas, e elas por ele.
+   */
+  const [modePickerOpen, setModePickerOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
   const [breakOpen, setBreakOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
@@ -198,6 +205,8 @@ function SessionStations({
             // a prévia do relatório fecha com "Guardar os documentos →" (protótipo
             // toExport); a Export é estado local do shell, então a chave é nossa
             onGoToExport: () => setManualExport(true),
+            overlayBusy: breakOpen || goalOpen || blockOpen,
+            onModePickerChange: setModePickerOpen,
           }
         : { player, sound, onBlockClosed: (block: ClosedBlock) => setClosedBlock(block) };
 
@@ -227,7 +236,7 @@ function SessionStations({
           com a vista da sessão: a tela de espera a substitui inteira, e o `key` por
           sessão rearma a sugestão ao começar, retomar ou reabrir para revisão. */}
       <BreakSuggestion
-        busy={recording || goalOpen || blockOpen}
+        busy={recording || goalOpen || blockOpen || modePickerOpen}
         onTakeBreak={() => navigate('/dashboard')}
         onOpenChange={setBreakOpen}
       />
@@ -237,7 +246,7 @@ function SessionStations({
           troca pela porta silenciosa. */}
       <GoalReached
         reached={goalReached}
-        busy={recording || breakOpen || blockOpen}
+        busy={recording || breakOpen || blockOpen || modePickerOpen}
         chime={() => sound.advance()}
         onOpenChange={setGoalOpen}
         onStopForToday={() => navigate('/dashboard')}
@@ -257,6 +266,8 @@ function SessionStations({
           travado, não derivação, por isso a espera é de mão dupla. */}
       <BlockDone
         block={closedBlock}
+        // o fim de bloco NÃO espera pelo pedido do modo: ele é o momento anterior,
+        // e o pedido é que se cala enquanto ele está de pé (mão única, como com a meta)
         busy={recording || breakOpen}
         onOpenChange={setBlockOpen}
         tints={

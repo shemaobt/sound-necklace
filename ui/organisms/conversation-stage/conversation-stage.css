@@ -489,3 +489,77 @@
     animation: cds-conversation-stage-rec-pulse 1.1s ease-in-out infinite;
   }
 }
+
+/* ——— a pílula do modo da conversa (ENG-649, protótipo v4 linha 622) ———
+   Fica no alto, à direita, fora do caminho do microfone: é a saída de emergência
+   do "mãos livres", e uma saída de emergência que se procura não é uma saída. */
+.cds-conversation-stage-mode {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -12px;
+}
+
+.cds-conversation-stage-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 1px solid rgba(246, 245, 235, 0.28);
+  border-radius: var(--cds-radius-pill);
+  background: rgba(246, 245, 235, 0.06);
+  font-family: var(--cds-font-load-bearing);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(246, 245, 235, 0.72);
+  cursor: pointer;
+}
+
+.cds-conversation-stage-mode-pill:hover,
+.cds-conversation-stage-mode-pill:focus-visible {
+  border-color: var(--cds-cream);
+  color: var(--cds-cream);
+}
+
+.cds-conversation-stage-mode-pill[aria-disabled='true'] {
+  opacity: 0.45;
+}
+
+/* A espera antes da próxima pergunta. A BARRA é o enfeite; quem carrega a
+   informação é a linha de texto que a acompanha, e por isso a barra some inteira
+   sob movimento reduzido em vez de ficar parada mentindo um progresso. */
+.cds-conversation-stage-countdown {
+  width: 320px;
+  max-width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(246, 245, 235, 0.16);
+  overflow: hidden;
+}
+
+/* Sem movimento a barra não existe: uma barra cheia e parada durante 2,6 s diria
+   "acabou" o tempo inteiro, que é pior do que não dizer nada. Sob movimento
+   reduzido quem carrega a informação é a linha de texto, e ela continua lá. */
+.cds-conversation-stage-countdown-run {
+  display: none;
+  height: 100%;
+  width: 100%;
+  background: var(--cds-telha);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-conversation-stage-countdown-run {
+    display: block;
+    /* a duração real chega por style inline, de quem arma o relógio */
+    animation: cds-conversation-stage-countdown 2.6s linear forwards;
+  }
+
+  @keyframes cds-conversation-stage-countdown {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+}

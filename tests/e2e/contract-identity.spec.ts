@@ -95,6 +95,7 @@ test('minimal-flow: os três artefatos exportados pela UI são byte-idênticos a
 
   await app.cutPhrase(0, 4); // frase contida em PT1 (0–9) → trava direto
   await app.finishPhrases(); // 1 cena produtiva → finaliza a segmentação
+  await app.chooseConversationMode();
 
   // Respostas digitadas nas posições exatas: L1 recontar(0), L2 PT1 quem(12),
   // L2 PT2 descrever(16), L3 P1 oque(21). `tempo`(4) vazio é inerte → omitido.
@@ -139,6 +140,7 @@ test('seam-small-move: manifesto+retorno exportados pela UI são byte-idênticos
   await app.cutPhrase(0, 13); // fim 13 cruza a borda 11 (delta 2 ≤ max(3, 25%)) → oferta simples
   await app.moveSeam(); // a costura desliza: PT1 → 0–13, PT2 → 14–23
   await app.finishPhrases();
+  await app.chooseConversationMode();
 
   await app.completeSession(); // sem respostas: o gate de export só pede ≥1 frase produtiva
 
@@ -171,6 +173,7 @@ test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate co
   await triageGleaningThenNoneFit(page);
   await app.cutPhrase(0, 4);
   await app.finishPhrases();
+  await app.chooseConversationMode();
   await typeAnswersAt(app, page, [
     [0, 'A story about gleaning and returning home.'],
     [12, 'Two women and the reapers.'],
@@ -190,6 +193,9 @@ test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate co
   await page.getByRole('button', { name: 'Configurações' }).click();
   await page.getByRole('radio', { name: 'English' }).click();
   await page.goto(sessionUrl);
+  // reabrir a sessão reabre a entrevista, e ela re-pergunta o modo (ENG-649): a
+  // escolha é da passagem, não da sessão — e o pedido cobre o cabeçalho até vir
+  await app.chooseConversationMode();
   // a prova de que a UI virou inglês, agora que o cabeçalho não tem Configurações
   await expect(page.getByRole('button', { name: 'Back to stories' })).toBeVisible();
 

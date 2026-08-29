@@ -236,6 +236,7 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
+  await app.chooseConversationMode();
 
   // ——— Conversation → relatório: pergunta tocada + gravação por voz, avanço in-station ———
   await expect(page.locator('.cds-conversation-stage-panel-header button')).toBeVisible(); // ▶ ouvir o trecho

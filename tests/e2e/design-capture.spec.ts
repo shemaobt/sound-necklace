@@ -59,6 +59,9 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
+  // a entrevista abre pedindo o modo (ENG-649): a escolha é a primeira tela dela
+  await shot('09-conversation-modo');
+  await app.chooseConversationMode();
   await shot('09-conversation');
 
   // os três estados da resposta em voz: vazio (acima) → gravando → pronta. É onde

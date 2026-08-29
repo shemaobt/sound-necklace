@@ -228,6 +228,19 @@ function watchWhileRouting(needle: string): () => { review: boolean; needle: boo
   };
 }
 
+/**
+ * A entrevista abre pedindo COMO ela vai andar (ENG-649), e nenhuma pergunta é
+ * alcançável antes da escolha — inclusive ao voltar para a Conversa depois de sair
+ * dela, porque o modo é da passagem, não da sessão. Estes casos escolhem o modo
+ * quieto: nada acontece sem um toque, que é o que eles sempre descreveram.
+ */
+async function chooseTouchByTouch(): Promise<void> {
+  const card = await screen.findByRole('button', { name: /^Toque a toque/ });
+  await act(async () => {
+    card.click();
+  });
+}
+
 /** Persiste um estado de mapeamento no store app-global; devolve o id da sessão. */
 async function persistMapeamento(state: SessionState, voice: string[] = []): Promise<string> {
   const store = appSessionStore();
@@ -499,6 +512,7 @@ describe('App shell', () => {
       sessionStore.getState().load(completableSession());
     });
     render(<App />);
+    await chooseTouchByTouch();
 
     const mic = await screen.findByRole('button', { name: 'Gravar a resposta' });
     await act(async () => {
@@ -542,6 +556,7 @@ describe('App shell', () => {
     act(() => navigate(`/session/${summary.id}`));
     render(<App />);
 
+    await chooseTouchByTouch();
     // grava a resposta de voz da primeira pergunta (L1 "recontar")
     const mic = await screen.findByRole('button', { name: 'Gravar a resposta' });
     await act(async () => {
@@ -823,6 +838,8 @@ describe('App shell — onde a sessão retomada abre (ENG-511)', () => {
     act(() => navigate(`/session/${id}`));
     render(<App />);
 
+    await chooseTouchByTouch();
+
     expect(await screen.findByText(FIRST_QUESTION)).toBeDefined();
     expect(screen.queryByText(EXPORT_HEADLINE)).toBeNull();
   });
@@ -897,10 +914,13 @@ describe('App shell — o passo que a sessão salva reporta (ENG-514)', () => {
     await act(async () => {
       screen.getByText('Conversa').click();
     });
+    // esta sessão reabre na REVISÃO, e a revisão não pergunta o modo — quem
+    // pergunta é a pergunta, e ela só volta pelo "← Anterior"
     const anterior = await screen.findByRole('button', { name: '← Anterior' });
     await act(async () => {
       anterior.click();
     });
+    await chooseTouchByTouch();
     const mic = await screen.findByRole('button', { name: 'Gravar a resposta' });
     await act(async () => {
       mic.click();
