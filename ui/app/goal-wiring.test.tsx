@@ -98,6 +98,12 @@ async function openInterview(): Promise<void> {
   act(() => navigate(`/session/${id}`));
   render(<App />);
   await screen.findByText(FIRST_QUESTION);
+  /* Estar NA entrevista quer dizer que a dupla já escolheu como ela anda (ENG-649):
+     enquanto o pedido do modo está de pé ele é a tela da vez, e as telas cheias do
+     shell esperam por ele como esperam umas pelas outras. */
+  await act(async () => {
+    screen.getByRole('button', { name: /^Toque a toque/ }).click();
+  });
 }
 
 /** Deixa o limiar da pausa sugerida passar. */

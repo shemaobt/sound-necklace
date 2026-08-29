@@ -211,17 +211,6 @@ describe('Conversa — a escolha do modo abre a entrevista (ENG-649)', () => {
 });
 
 describe('Conversa — mãos livres: nada precisa ser tocado (ENG-649)', () => {
-  it('chegar numa pergunta a FALA, na voz da porta', async () => {
-    const tts = new FixtureSpeechSynthesizer();
-    load(mapping());
-    renderConversation(<Conversation speaker={tts} />);
-    await settle();
-
-    await choose(HANDS_FREE);
-
-    expect(tts.spoken).toEqual([{ text: questionText(), lang: 'pt-BR' }]);
-  });
-
   it('o microfone abre sozinho quando a pergunta acaba de ser falada', async () => {
     const tts = new FixtureSpeechSynthesizer();
     const recorder = new FixtureVoiceRecorder();
@@ -289,8 +278,15 @@ describe('Conversa — mãos livres: nada precisa ser tocado (ENG-649)', () => {
   });
 });
 
-describe('Conversa — toque a toque: o modo quieto é mesmo quieto (ENG-649)', () => {
-  it('nem fala, nem abre o microfone, nem avança — nada sem um toque', async () => {
+/**
+ * O teste mais importante do conjunto. Ele não diz que o toque a toque é MUDO — a
+ * pergunta é falada nos dois modos (decisão do dono, 2026-08-29), porque quem não lê
+ * depende dessa voz igual nos dois. Ele diz o que o modo quieto garante de verdade,
+ * que é o que o próprio cartão promete: toque para GRAVAR e toque para SEGUIR.
+ * Nada grava sozinho, e nada empurra ninguém adiante.
+ */
+describe('Conversa — toque a toque: fala, e ainda assim não grava nem anda (ENG-649)', () => {
+  it('a pergunta é falada ao chegar, e mesmo assim nada grava nem avança sem um toque', async () => {
     const tts = new FixtureSpeechSynthesizer();
     const recorder = new FixtureVoiceRecorder();
     load(mapping());
@@ -300,12 +296,15 @@ describe('Conversa — toque a toque: o modo quieto é mesmo quieto (ENG-649)', 
     await choose(TOUCH_BY_TOUCH);
     const primeira = questionText();
 
-    // 1. chegar na pergunta não a fala
-    expect(tts.spoken).toEqual([]);
-    // 2. o microfone não abre sozinho
+    // 1. chegar na pergunta A FALA — a voz não é do modo, é do app
+    expect(tts.spoken).toEqual([{ text: primeira, lang: 'pt-BR' }]);
+
+    // 2. e ainda assim o microfone não abre sozinho, nem quando a fala termina
+    act(() => tts.stop());
+    await settle();
     expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
 
-    // 3. mesmo depois de uma resposta gravada à mão, nada avança sozinho
+    // 3. nem depois de uma resposta gravada à mão nada avança sozinho
     await touch(screen.getByRole('button', { name: 'Gravar a resposta' }));
     await touch(screen.getByRole('button', { name: 'Parar' }));
 
@@ -592,5 +591,57 @@ describe('Conversa — a espera morre com o ato, venha ele por onde vier (ENG-64
     // a conversa não andou por baixo de quem estava decidindo
     expect(questionText()).toBe(primeira);
     expect(screen.getByRole('alertdialog')).toBeTruthy();
+  });
+});
+
+/**
+ * O pedido do modo é a QUARTA tela de largura inteira que pode querer a chegada à
+ * conversa: o fim de bloco (ENG-651), a meta do dia (ENG-653) e a sugestão de pausa
+ * (ENG-650) já disputam esse instante pelo `busy` do shell. A ficha desta issue já
+ * dizia — "nunca enquanto uma espera ou uma tela de fim de bloco estiver de pé" —,
+ * e quando ela foi escrita nenhuma das três existia ainda.
+ *
+ * A precedência não é arbitrária: o fim de bloco fala do trabalho que ACABOU, e o
+ * pedido do modo, do que vai começar. Perguntar como conversar por cima da tela que
+ * comemora as frases troca a ordem dos dois momentos — e, pior, tapa a única ação
+ * que sai dela.
+ */
+describe('Conversa — o pedido do modo espera as telas do shell (ENG-649)', () => {
+  it('com uma sobreposição do shell de pé, o pedido não aparece', async () => {
+    load(mapping());
+    renderConversation(<Conversation overlayBusy />);
+    await settle();
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', { name: HANDS_FREE })).toBeNull();
+  });
+
+  it('quando ela sai, o pedido chega — a espera é adiamento, não perda', async () => {
+    load(mapping());
+    const view = renderConversation(<Conversation overlayBusy />);
+    await settle();
+    expect(screen.queryByRole('button', { name: HANDS_FREE })).toBeNull();
+
+    view.rerender(
+      <NavFooterProvider>
+        <Conversation />
+        <NavFooterOutlet />
+      </NavFooterProvider>,
+    );
+    await settle();
+
+    expect(screen.getByRole('button', { name: HANDS_FREE })).toBeTruthy();
+  });
+
+  it('o shell fica sabendo que o pedido está de pé, para não subir por cima dele', async () => {
+    const aberto: boolean[] = [];
+    load(mapping());
+    renderConversation(<Conversation onModePickerChange={(o) => aberto.push(o)} />);
+    await settle();
+    expect(aberto.at(-1)).toBe(true);
+
+    await choose(TOUCH_BY_TOUCH);
+
+    expect(aberto.at(-1)).toBe(false);
   });
 });

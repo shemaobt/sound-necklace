@@ -36,6 +36,8 @@ test('em mãos livres a próxima pergunta chega sozinha, e a saída continua ali
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
 
+  // `finishPhrases` já atravessa o fim de bloco (ENG-651), que vem ANTES: ele fala
+  // das frases que acabaram de fechar, e só então o modo pergunta como conversar
   await app.chooseConversationMode('auto');
 
   const pergunta = page.locator('.cds-question-card-text');

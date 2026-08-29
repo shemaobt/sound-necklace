@@ -96,6 +96,12 @@ async function openInterviewPastThreshold(): Promise<void> {
   act(() => navigate(`/session/${id}`));
   render(<App />);
   await screen.findByText(FIRST_QUESTION);
+  /* Estar NA entrevista quer dizer que a dupla já escolheu como ela anda (ENG-649):
+     enquanto o pedido do modo está de pé ele é a tela da vez, e as telas cheias do
+     shell esperam por ele como esperam umas pelas outras. */
+  await act(async () => {
+    screen.getByRole('button', { name: /^Toque a toque/ }).click();
+  });
 
   act(() => {
     vi.advanceTimersByTime(BREAK_AFTER_MS + 60_000);
@@ -150,6 +156,12 @@ describe('A pausa sugerida no shell (ENG-650)', () => {
     act(() => navigate(`/session/${id}`));
     render(<App />);
     await screen.findByText(FIRST_QUESTION);
+    /* Estar NA entrevista quer dizer que a dupla já escolheu como ela anda (ENG-649):
+     enquanto o pedido do modo está de pé ele é a tela da vez, e as telas cheias do
+     shell esperam por ele como esperam umas pelas outras. */
+    await act(async () => {
+      screen.getByRole('button', { name: /^Toque a toque/ }).click();
+    });
 
     act(() => appStore.getState().setRecording(true));
     act(() => {

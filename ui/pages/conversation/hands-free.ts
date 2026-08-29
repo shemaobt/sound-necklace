@@ -3,17 +3,20 @@ import { useEffect, useRef, useState } from 'react';
 import type { SpeechSynthesizer } from '../../../adapters/tts/types';
 
 /**
- * Os DOIS automatismos de "Mãos livres" que o dono ainda pode vetar (ENG-649):
- * falar a pergunta ao chegar nela, e abrir o microfone quando ela acaba de ser
- * falada. O protótipo v4 implementa só o terceiro — o avanço automático —, e a
- * cópia do cartão promete os três; publicar a promessa sem cumpri-la seria mentir
- * na tela de quem não pode conferir lendo. Então eles existem, e existem AQUI.
+ * O automatismo de "Mãos livres" que o dono ainda pode vetar (ENG-649): o microfone
+ * que abre sozinho quando a pergunta acaba de ser falada.
  *
- * O microfone que abre sem ninguém tocar tem uma aresta de privacidade, e o dono
- * foi avisado. Se o veto vier, o conserto é apagar este arquivo e as três chamadas
- * em `QuestionScreen`: o pedido do modo, a pílula e o avanço automático não passam
- * por aqui e continuam de pé. Nada mais no app importa deste módulo — é essa
- * ausência de ramificações que faz o veto ser barato.
+ * O protótipo v4 implementa só o avanço automático, e a cópia do cartão promete
+ * três coisas; publicar a promessa sem cumpri-la seria mentir na tela de quem não
+ * pode conferir lendo. Das três, a fala ao chegar deixou de morar aqui — o dono
+ * decidiu (2026-08-29) que ela vale nos DOIS modos, e ela voltou a ser o efeito
+ * incondicional da ENG-280, em `QuestionScreen`. Sobrou este, que é o que tem a
+ * aresta de privacidade: um microfone abrindo sem ninguém tocar.
+ *
+ * Se o veto vier, o conserto é apagar este arquivo e as duas chamadas em
+ * `QuestionScreen`. O pedido do modo, a pílula, o avanço automático e a voz da
+ * pergunta não passam por aqui e continuam de pé — nada mais no app importa deste
+ * módulo, e é essa ausência de ramificações que faz o veto ser barato.
  */
 
 /**
@@ -44,26 +47,6 @@ export const SPEECH_WATCHDOG_MS = 4000;
  * do guia ainda falando é o erro pior dos dois.
  */
 export const SPEECH_CEILING_MS = 20000;
-
-/**
- * Fala a pergunta ao chegar nela, e cala ao sair (nada de voz órfã em cima da
- * pergunta seguinte). Sob "toque a toque" NÃO fala: o modo quieto é quieto — quem
- * quiser ouvir toca "Ouvir a pergunta", que continua sendo o mesmo caminho de fala.
- */
-export function useSpeakOnArrival(params: {
-  handsFree: boolean;
-  speaker: SpeechSynthesizer | null;
-  muted: boolean;
-  text: string;
-  lang: string;
-}): void {
-  const { handsFree, speaker, muted, text, lang } = params;
-  useEffect(() => {
-    if (!speaker || muted || !handsFree) return;
-    speaker.speak(text, lang);
-    return () => speaker.stop();
-  }, [speaker, muted, handsFree, text, lang]);
-}
 
 /**
  * Abre o microfone sozinho, UMA vez por pergunta, quando a pergunta terminou de

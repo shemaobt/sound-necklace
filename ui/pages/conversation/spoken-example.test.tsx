@@ -66,9 +66,9 @@ function loadMapping(): void {
 }
 
 /**
- * A conversa abre pedindo o modo (ENG-649) e escolher é a única saída. Aqui é
- * "Mãos livres", porque o segundo caso mede a fala de CHEGADA — a que só existe
- * nesse modo — e o primeiro precisa da mesma tela para tocar o «Como assim?».
+ * A conversa abre pedindo o modo (ENG-649) e escolher é a única saída. O modo aqui
+ * não importa: a fala de chegada, que o segundo caso mede, vale nos dois — então
+ * fica o quieto, que é o que estes casos sempre descreveram.
  */
 function renderConversation(speaker: InstanceType<typeof FixtureSpeechSynthesizer>) {
   const view = render(
@@ -77,7 +77,7 @@ function renderConversation(speaker: InstanceType<typeof FixtureSpeechSynthesize
       <NavFooterOutlet />
     </NavFooterProvider>,
   );
-  fireEvent.click(screen.getByRole('button', { name: /^Mãos livres/ }));
+  fireEvent.click(screen.getByRole('button', { name: /^Toque a toque/ }));
   return view;
 }
 

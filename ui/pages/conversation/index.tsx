@@ -33,7 +33,7 @@ import {
   type ConversationMode,
   ConversationModePicker,
 } from '../../organisms/conversation-mode-picker/conversation-mode-picker';
-import { useOpenMicWhenSpoken, useSpeakOnArrival, useSpokenYet } from './hands-free';
+import { useOpenMicWhenSpoken, useSpokenYet } from './hands-free';
 import { StationNav } from '../../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../../organisms/preparing-session/preparing-session';
 import { appStore, sessionStore, useAppStore, useSessionStore } from '../../state';
@@ -85,6 +85,18 @@ export interface ConversationProps {
    * cabeçalho levava adiante, e chrome não é ação.
    */
   onGoToExport?: () => void;
+  /**
+   * Uma tela de largura inteira do shell está de pé — o fim de bloco (ENG-651), a
+   * meta do dia (ENG-653) ou a sugestão de pausa (ENG-650). O pedido do modo espera
+   * a vez: ele fala do que vai começar, e essas falam do que acabou ou do corpo de
+   * quem está ali. É o mesmo `busy` com que as três já se esperam entre si.
+   */
+  overlayBusy?: boolean;
+  /**
+   * Avisa o shell que o pedido do modo está de pé, para que as três não subam por
+   * cima dele — o outro lado do `busy`, na forma que elas já usam (`onOpenChange`).
+   */
+  onModePickerChange?: (open: boolean) => void;
 }
 
 /** A tela do relatório (ENG-250) entra por add-a-file: presente → renderiza; ausente → o passo fica em espera. */
@@ -366,13 +378,36 @@ function QuestionScreen({
 
   const handsFree = mode === 'auto';
   /**
-   * Chegar numa pergunta a faz ser falada — em MÃOS LIVRES (a tela remonta por
-   * `key={path}`). Em toque a toque o app fica calado até alguém tocar "Ouvir a
-   * pergunta": é o que separa os dois modos, e é o modo quieto que precisa ser
-   * mesmo quieto. Sair da pergunta cancela a fala em curso (nada de voz órfã).
+   * Chegar numa pergunta a faz ser falada, NOS DOIS MODOS (ENG-280; decisão do dono
+   * em 2026-08-29). A tela remonta por `key={path}`, então isto vale a cada
+   * pergunta. Ela chegou a ser exclusiva do mãos livres enquanto esta issue estava
+   * aberta, e o dono desfez: quem não lê depende dessa voz igual nos dois modos, e
+   * o que o "Toque a toque" promete é toque para GRAVAR e para SEGUIR — nunca para
+   * ouvir. O que sobrou de exclusivo do mãos livres é o microfone que abre sozinho
+   * e a próxima pergunta que chega sozinha.
+   *
+   * Com o som desligado não fala, e desligá-lo no meio CALA o que está sendo dito:
+   * o efeito roda de novo e a limpeza da passagem anterior para a voz (§13 — nunca
+   * falar sem consentimento; mudo também apaga o botão de pausar da tela, então uma
+   * fala que sobrevivesse a ele ficaria sem nenhum controle à vista). Sair da
+   * pergunta cala pelo mesmo caminho — nada de voz órfã sobre a pergunta seguinte.
    */
-  const spoken = useSpokenYet({ willSpeak: handsFree && canSpeak, speaker });
-  useSpeakOnArrival({ handsFree, speaker, muted, text: questionText, lang: speechLang });
+  /**
+   * A espera pela fala acabar é sobre a VOZ, não sobre o modo: ela corre nos dois,
+   * e só quem a consome — o microfone automático — é que é do mãos livres. Assim
+   * trocar de modo no meio da pergunta encontra a resposta pronta, em vez de
+   * recomeçar uma espera por uma fala que já aconteceu.
+   *
+   * ANTES do efeito que fala, e isto é carregado: os efeitos correm na ordem em que
+   * são declarados, e a porta emite o início da fala de forma síncrona — assinar
+   * depois de mandar falar perde essa primeira transição, e o microfone nunca abre.
+   */
+  const spoken = useSpokenYet({ willSpeak: canSpeak, speaker });
+  useEffect(() => {
+    if (!speaker || muted) return;
+    speaker.speak(questionText, speechLang);
+    return () => speaker.stop();
+  }, [speaker, muted, questionText, speechLang]);
 
   useEffect(() => {
     let alive = true;
@@ -473,18 +508,6 @@ function QuestionScreen({
       setAutoMicArmed(false);
       run(...args);
     };
-
-  /**
-   * A fala em curso morre ao sair da pergunta E ao desligar o som — venha ela da
-   * chegada automática ou do botão "Ouvir a pergunta". O mudo é §13 ("nunca falar
-   * sem consentimento") e não é só sobre não começar: mudo também apaga o botão de
-   * pausar da tela, então uma fala que sobrevivesse ao mudo continuaria sem
-   * nenhum controle à vista. Este efeito não pertence ao mãos livres.
-   */
-  useEffect(() => {
-    if (!speaker) return;
-    return () => speaker.stop();
-  }, [speaker, path, muted]);
 
   const playSpan = (): void => {
     if (!player || !listen) return;
@@ -689,6 +712,8 @@ export function Conversation({
   stt = null,
   sessionId = null,
   recordingVersion,
+  overlayBusy = false,
+  onModePickerChange,
 }: ConversationProps) {
   const { t, i18n } = useTranslation();
   const muted = useAppStore((s) => s.muted);
@@ -751,6 +776,16 @@ export function Conversation({
    */
   // `setMode` já é o do domínio (o modo da SESSÃO); este é o da conversa.
   const [mode, setPassMode] = useState<ConversationMode | null>(null);
+  /**
+   * O pedido está de pé: ninguém escolheu, e nenhuma tela do shell está na frente.
+   * Derivado, e não estado — as três telas do shell derivam o `open` delas do mesmo
+   * jeito, e duas derivações que se olham não oscilam enquanto só uma delas espera
+   * pela outra (é a mesma nota que o `BlockDone` deixou sobre a meta).
+   */
+  const askingMode = mode === null && !overlayBusy;
+  useEffect(() => {
+    onModePickerChange?.(askingMode);
+  }, [askingMode, onModePickerChange]);
   // Preparo pré-revisão (ENG-337): a descoberta das respostas roda ANTES de abrir
   // o relatório — ele chega pronto, sem "procurando" pipocando linha a linha. Uma
   // vez pronto, re-entradas abrem direto (o preparo re-roda por baixo, silencioso).
@@ -1026,12 +1061,14 @@ export function Conversation({
    * o mãos livres não estreia com uma espera. Nada automático corre enquanto não há
    * modo, porque tudo que é automático depende de `mãos livres`.
    *
-   * Ele NÃO aparece na espera nem no relatório: uma pergunta que ninguém está
-   * fazendo não tem andamento a decidir.
+   * Ele NÃO aparece na espera, no relatório, nem enquanto uma tela do shell estiver
+   * de pé: uma pergunta que ninguém está fazendo não tem andamento a decidir, e o
+   * fim de bloco fala do trabalho que ACABOU — perguntar como conversar por cima
+   * dele troca a ordem dos dois momentos e ainda tapa a única saída daquela tela.
    */
   return (
     <>
-      {mode === null ? (
+      {askingMode ? (
         <ConversationModePicker
           onChoose={(chosen) => {
             sound?.advance();

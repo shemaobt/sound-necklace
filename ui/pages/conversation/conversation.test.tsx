@@ -696,7 +696,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
   it('com o som ligado, o guia fala a pergunta ao chegar nela, em pt-BR', () => {
     const tts = new FixtureSpeechSynthesizer();
     load(mapping());
-    renderConversation(<Conversation speaker={tts} />, 'auto');
+    renderConversation(<Conversation speaker={tts} />);
 
     expect(tts.spoken).toEqual([{ text: questionText(), lang: 'pt-BR' }]);
   });
@@ -704,7 +704,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
   it('falando, o botão pausa; pausado, "Ouvir a pergunta" repete (ENG-317)', async () => {
     const tts = new FixtureSpeechSynthesizer();
     load(mapping());
-    renderConversation(<Conversation speaker={tts} />, 'auto');
+    renderConversation(<Conversation speaker={tts} />);
 
     // chegar na pergunta já fala → o botão oferece pausar, e pausar NÃO fala de novo
     await userEvent.click(screen.getByRole('button', { name: 'Pausar a pergunta' }));
@@ -719,7 +719,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
   it('avançar fala a pergunta NOVA', async () => {
     const tts = new FixtureSpeechSynthesizer();
     load(mapping());
-    renderConversation(<Conversation speaker={tts} />, 'auto');
+    renderConversation(<Conversation speaker={tts} />);
     const primeira = questionText();
 
     await next();
@@ -732,7 +732,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
     const tts = new FixtureSpeechSynthesizer();
     await act(() => i18n.changeLanguage('en'));
     load(mapping());
-    renderConversation(<Conversation speaker={tts} />, 'auto');
+    renderConversation(<Conversation speaker={tts} />);
 
     expect(tts.spoken).toEqual([
       {
@@ -746,7 +746,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
   it('o guia anima enquanto a VOZ fala (não enquanto o gravador está ocioso)', async () => {
     const tts = new FixtureSpeechSynthesizer();
     load(mapping());
-    renderConversation(<Conversation speaker={tts} />, 'auto');
+    renderConversation(<Conversation speaker={tts} />);
     const speaking = () => document.querySelector('[data-speaking]')?.getAttribute('data-speaking');
 
     // a fala de chegada já acendeu o lip-sync
@@ -770,7 +770,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
     renderConversation(<Conversation speaker={tts} />);
     const falando = () => document.querySelector('[data-speaking]')?.getAttribute('data-speaking');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ouvir a pergunta' }));
+    // chegar na pergunta já a fala (ENG-280), nos dois modos
     expect(falando()).toBe('true');
 
     await act(async () => appStore.getState().toggleMuted());
@@ -782,7 +782,7 @@ describe('Conversation — a voz do guia (ENG-280)', () => {
     const tts = new FixtureSpeechSynthesizer();
     appStore.getState().toggleMuted(); // som desligado
     load(mapping());
-    renderConversation(<Conversation speaker={tts} />, 'auto');
+    renderConversation(<Conversation speaker={tts} />);
 
     expect(tts.spoken).toEqual([]);
     expect(screen.queryByRole('button', { name: 'Ouvir a pergunta' })).toBeNull();
