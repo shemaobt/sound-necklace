@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { hashPCM, type PcmLike } from './hash';
 
 /**
- * Gerador local de PCM sintético (LCG do contrato do harness,
- * tests/golden/README.md) — duplicado aqui de propósito: domain/ (inclusive
- * testes) não pode importar de tests/ (regra domain-nao-importa-camadas).
+ * Gerador local de PCM sintético — o mesmo LCG de adapters/audio/pcm.ts,
+ * duplicado aqui de propósito: domain/ (inclusive testes) não pode importar de
+ * adapters/ (regra domain-nao-importa-camadas).
  */
 function makePcm(seed: number, samples: number): Float32Array {
   const A = 1103515245n;
@@ -20,8 +20,8 @@ function makePcm(seed: number, samples: number): Float32Array {
   return pcm;
 }
 
-it('makePcm local está em sincronia com o contrato do harness (vetores seed 42 do README)', () => {
-  // x₁ = 1250496027, x₂ = 1116302264 (tests/golden/README.md)
+it('makePcm local está em sincronia com o do adapter (vetores conhecidos da seed 42)', () => {
+  // x₁ = 1250496027, x₂ = 1116302264 — os mesmos de adapters/audio/pcm.test.ts
   const pcm = makePcm(42, 2);
   expect(pcm[0]).toBe(Math.fround(1250496027 / 2 ** 30 - 1));
   expect(pcm[1]).toBe(Math.fround(1116302264 / 2 ** 30 - 1));
@@ -69,12 +69,14 @@ describe('hashPCM — vetores conhecidos (oráculo independente)', () => {
   });
 });
 
-describe('hashPCM — vetores derivados da referência (goldens comitados)', () => {
-  it('N=441000 > 100k: stride 4, hash do caso golden manifest-only', () => {
+/** Vetores obtidos da referência quando o harness dourado ainda os gerava
+ *  (ENG-691 o removeu); os hashes ficam como o registro daquela conferência. */
+describe('hashPCM — vetores derivados da referência', () => {
+  it('N=441000 > 100k: stride 4', () => {
     expect(hashPCM(pcmOf(makePcm(42, 441000), 1, 44100), 0.25)).toBe('fnv1a32:5a1b22f1');
   });
 
-  it('N=455000: hash do caso golden partial-bead', () => {
+  it('N=455000, conta parcial', () => {
     expect(hashPCM(pcmOf(makePcm(7, 455000), 1, 44100), 0.3)).toBe('fnv1a32:1a884f38');
   });
 });

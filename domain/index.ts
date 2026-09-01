@@ -1,8 +1,8 @@
 /**
  * domain/ — núcleo puro, congelado (CLAUDE.md).
  * Módulos chegam pelas issues E1 (ENG-214 grid/hash/ids → ENG-216
- * estado/seleção/cenas → ENG-219 triagem/gates → ENG-223 frases/costura
- * → ENG-226 roteiros/answer store).
+ * estado/seleção/cenas → ENG-219 triagem/gates → ENG-223 frases/costura).
+ * Os roteiros da entrevista e o answer store (ENG-226) saíram na ENG-691.
  * Zero imports de framework/IO — enforcement em .dependency-cruiser.cjs.
  */
 export const DOMAIN_LAYER = 'domain' as const;
@@ -16,7 +16,6 @@ export {
   type Current,
   type Frase,
   type Layer,
-  type Mapping,
   type Mode,
   type ScenePart,
   type SessionInit,
@@ -94,15 +93,3 @@ export {
   type FraseErrorCode,
   type FrasesDoneResult,
 } from './phrases';
-export { L1_Q, L2_Q, L3_Q, type MapQuestion } from './mapeamento-scripts';
-export {
-  ensureMapping,
-  productiveFrases,
-  questionSequence,
-  setAnswer,
-  EN_ANSWER_PREFIX,
-  voiceAnswerPath,
-  type AnswerSlot,
-  type ProductiveFrase,
-  type QuestionSlot,
-} from './mapping';

@@ -165,10 +165,9 @@ export function reanchorFrase(state: SessionState): SessionState {
 }
 
 /** Remove e libera o P#; assume o ÚLTIMO destravado ou auto-add (L850–855).
- *  Port 1:1 do reference (fiel — o golden depende disto): a próxima frase NÃO
- *  absorve o espaço aqui; a absorção pós-remoção é um passo composto na UI
- *  (`absorbNextFrase`, #3), fora do escopo byte-idêntico do golden.
- *  Desvio preservado: índice fora do intervalo não remove nada. */
+ *  Port 1:1 do reference: a próxima frase NÃO absorve o espaço aqui; a absorção
+ *  pós-remoção é um passo composto na UI (`absorbNextFrase`, #3), posterior ao
+ *  reference. Desvio preservado: índice fora do intervalo não remove nada. */
 export function removeFrase(state: SessionState, i: number): SessionState {
   const frases = state.frases.filter((_, k) => k !== i);
   const base = { ...state, frases, selection: null, pendingStart: null };
@@ -185,7 +184,7 @@ export function removeFrase(state: SessionState, i: number): SessionState {
  * como o reprime pós-drag): a frase SEGUINTE da MESMA cena (a travada de menor
  * início depois de `gapStart`) estica seu início para trás até `gapStart`,
  * engolindo o vão que a removida deixou. Sem seguinte, no-op. Fica FORA do
- * `removeFrase` de propósito — o golden testa aquele contra o reference, que não
+ * `removeFrase` de propósito — aquele é o port fiel do reference, que não
  * absorve; esta é feature nova pós-reference, como o `dragPhraseBoundary`.
  */
 export function absorbNextFrase(
@@ -295,12 +294,15 @@ export type FrasesDoneResult =
   | { kind: 'noop'; state: SessionState; warnedEmptyScene: string | null }
   | { kind: 'warn-empty'; state: SessionState; warnedEmptyScene: string; message: string }
   | { kind: 'next-scene'; state: SessionState; warnedEmptyScene: null }
-  | { kind: 'mapeamento'; state: SessionState; warnedEmptyScene: string | null };
+  | { kind: 'finished'; state: SessionState; warnedEmptyScene: string | null };
 
 /**
  * confirmFrasesDone (L917–929): cena vazia avisa uma vez POR CENA (o marcador
  * entra e sai como dado); a segunda chamada segue mesmo assim. Última produtiva
- * (ou nenhuma) pede mapeamento — o redirect do gates decide o modo efetivo.
+ * (ou nenhuma) ENCERRA a sessão — `finished`, modo `concluida`; o redirect do
+ * gates ainda decide o modo efetivo (sem produtiva, cai na triagem). Aqui a
+ * referência ia ao Mapeamento; a entrevista saiu do produto (ENG-691) e não há
+ * estação depois desta.
  * No ramo sem cena ativa a referência NÃO toca o marcador (L917–918) —
  * preservado; o reset a null só acontece após passar o check de aviso (L925).
  */
@@ -311,7 +313,7 @@ export function confirmFrasesDone(
   if (state.review) return { kind: 'noop', state, warnedEmptyScene };
   const sc = activeScene(state);
   if (!sc) {
-    return { kind: 'mapeamento', state: setMode(state, 'mapeamento'), warnedEmptyScene };
+    return { kind: 'finished', state: setMode(state, 'concluida'), warnedEmptyScene };
   }
   const n = state.frases.filter((f) => f.locked && f.span && f.part_link === sc.part_id).length;
   if (n === 0 && warnedEmptyScene !== sc.part_id) {
@@ -328,5 +330,5 @@ export function confirmFrasesDone(
   if (next) {
     return { kind: 'next-scene', state: enterScene(state, next.part_id), warnedEmptyScene: null };
   }
-  return { kind: 'mapeamento', state: setMode(state, 'mapeamento'), warnedEmptyScene: null };
+  return { kind: 'finished', state: setMode(state, 'concluida'), warnedEmptyScene: null };
 }

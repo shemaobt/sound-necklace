@@ -22,7 +22,6 @@ describe('createSession — espelho do reset de segment() (referência L454–46
     expect(s.frases).toEqual([]);
     expect(s.current).toEqual({ layer: 'whole', index: -1 });
     expect(s.activeSceneId).toBeNull();
-    expect(s.mapping).toBeNull();
     expect(s.selection).toBeNull();
     expect(s.pendingStart).toBeNull();
     expect(s.mode).toBe('escuta');

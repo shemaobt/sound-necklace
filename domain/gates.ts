@@ -32,32 +32,30 @@ export function triagemDone(state: SessionState): TriagemDone {
   return { enabled, message };
 }
 
+/** Estações alcançáveis. A ENG-691 tirou daqui a chave `mapeamento`: a
+ *  entrevista saiu do produto, e o fim do fluxo (`concluida`) não é estação. */
 export interface ModeLocks {
   escuta: boolean;
   triagem: boolean;
   segmentacao: boolean;
-  mapeamento: boolean;
 }
 
-/** Abas como indicador de progresso: cada `true` = passo alcançável. Mapeamento
- *  exige produtiva E ≥1 frase travada com span — mais estrito que o redirect. */
+/** Abas como indicador de progresso: cada `true` = passo alcançável. */
 export function modeLocks(state: SessionState): ModeLocks {
   const prod = productiveScenes(state).length;
-  const nFrases = state.frases.filter((f) => f.locked && f.span).length;
   return {
     escuta: true,
     triagem: state.partsConfirmed,
     segmentacao: prod > 0,
-    mapeamento: prod > 0 && nFrases > 0,
   };
 }
 
-/** Redirect do fluxo guiado: pedir segmentação/mapeamento sem cena produtiva
- *  cai na Triagem. NÃO checa frases — o guiado ALCANÇA mapeamento com zero
- *  frases (espelho do quirk da referência L983–984). */
+/** Redirect do fluxo guiado: pedir a segmentação — ou o encerramento que vem
+ *  depois dela — sem cena produtiva cai na Triagem. NÃO checa frases: encerrar
+ *  com zero frases é alcançável (espelho do quirk da referência L983–984). */
 export function resolveMode(state: SessionState, requested: Mode): Mode {
   const prod = productiveScenes(state).length;
-  if ((requested === 'segmentacao' || requested === 'mapeamento') && prod === 0) return 'triagem';
+  if ((requested === 'segmentacao' || requested === 'concluida') && prod === 0) return 'triagem';
   return requested;
 }
 
