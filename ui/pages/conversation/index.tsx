@@ -8,9 +8,11 @@ import type { SpeechSynthesizer } from '../../../adapters/tts/types';
 import type { UiSound } from '../../../adapters/ui-sound';
 import type { Recording, Unsubscribe, VoiceRecorder } from '../../../adapters/voice/types';
 import {
+  EN_ANSWER_PREFIX,
   ensureMapping,
   type QuestionSlot,
   questionSequence,
+  setAnswer,
   setMode,
   type SessionState,
   voiceAnswerPath,
@@ -27,6 +29,7 @@ import {
 import type { PaletteEntry } from '../../tokens';
 import { cardinal, sceneOrdinal } from '../cut/cutting';
 import { clearSkipped, isSkipped, lastAnsweredIndex, markSkipped } from './answered';
+import { type SameAsPrevious, sameAsPreviousFor } from './same-as-previous';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
 import { type BulkOutcome, PendingDraftsDialog } from './pending-drafts-dialog';
 import {
@@ -138,6 +141,14 @@ interface BulkConfirmHandle {
  * o preparo nunca vira beco.
  */
 const PREPARE_TIMEOUT_MS = 8000;
+
+/**
+ * A chave reservada onde vive o INGLÊS de uma resposta (ENG-327/ENG-370). Escrever a
+ * célula à mão apaga esse rascunho — mesma mecânica de `writeTyped` na revisão.
+ */
+function enSlotOf(slot: QuestionSlot): QuestionSlot {
+  return { ...slot, k: EN_ANSWER_PREFIX + slot.k };
+}
 
 /** Nenhuma gravação descoberta ainda — identidade estável, fora do render. */
 const NO_VOICE: ReadonlySet<string> = new Set<string>();
@@ -269,6 +280,17 @@ interface QuestionScreenProps {
    * um ato, e um ato que ninguém pediu não acontece sozinho.
    */
   hasNext: boolean;
+  /**
+   * Esta pergunta oferece o atalho "é igual à cena anterior" (ENG-671), com a frase
+   * congelada que o toque escreve. `null` = não oferece — a regra (nível 2, da
+   * segunda cena em diante, sem resposta ainda, não dispensado) é do pai, que é quem
+   * lê a sessão e quem lembra o que já foi dispensado.
+   */
+  sameAsPrevious: SameAsPrevious | null;
+  /** Escreve a frase na célula desta pergunta. */
+  onAnswerSame: (answer: string) => void;
+  /** Dispensa o atalho NESTA pergunta, para o resto da passagem. */
+  onDismissSame: () => void;
 }
 
 /**
@@ -296,6 +318,9 @@ function QuestionScreen({
   mode,
   onToggleMode,
   hasNext,
+  sameAsPrevious,
+  onAnswerSame,
+  onDismissSame,
 }: QuestionScreenProps) {
   const { t, i18n } = useTranslation();
   /**
@@ -309,6 +334,17 @@ function QuestionScreen({
   const [levels, setLevels] = useState<number[]>([]);
   const [speaking, setSpeaking] = useState(false);
   const [recordError, setRecordError] = useState(false);
+  /**
+   * O atalho "é igual à cena anterior" (ENG-671), já filtrado pelo que só a TELA sabe:
+   * `idle` é a trava inteira, como no microfone automático — mantém o atalho fora de
+   * uma gravação em curso, de uma resposta já gravada e da procura por ela. Oferecer
+   * "é a mesma" durante a procura seria afirmar que esta pergunta não tem resposta
+   * antes de saber. Sem porta de voz, `idle` é o estado desde o início.
+   *
+   * A dispensa ("Mudou") NÃO mora aqui: ela é do pai, porque esta tela remonta a cada
+   * pergunta e um atalho dispensado voltaria a se oferecer a cada ida e volta.
+   */
+  const offeredSame = recorderState === 'idle' ? sameAsPrevious : null;
 
   // O "← Histórias" do cabeçalho vive fora desta estação e é o único caminho de
   // saída que o palco não desenha (ENG-393). Espelhar o estado num efeito, em vez
@@ -613,6 +649,10 @@ function QuestionScreen({
   const onRerecord = (): void => {
     setLevels([]);
     setAnswerSeconds(undefined);
+    // dispensa o atalho ANTES de voltar a `idle` (ENG-671): abrir o microfone é uma
+    // ida à porta, e nesse intervalo a célula vazia + `idle` reabriam o atalho POR
+    // CIMA da gravação que está começando — com a permissão do microfone já pedida
+    onDismissSame();
     setRecorderState('idle');
     void onRecord();
   };
@@ -626,7 +666,9 @@ function QuestionScreen({
     handsFree,
     spoken,
     armed: autoMicArmed,
-    ready: recorderState === 'idle',
+    // com o atalho de pé o microfone NÃO abre sozinho: ele é a pergunta que se faz
+    // antes de gravar, e abrir o microfone por baixo dela responderia pela dupla
+    ready: recorderState === 'idle' && offeredSame === null,
     // o MESMO caminho do toque no microfone, sem o toque: não existe segunda
     // maneira de abrir uma gravação, e por isso a trava contra reentrância vale
     // para os dois
@@ -680,6 +722,23 @@ function QuestionScreen({
         onToggleMode={deliberate(onToggleMode)}
         autoAdvancing={autoAdvancing}
         autoAdvanceMs={AUTO_ADVANCE_MS}
+        sameAsPrevious={
+          offeredSame
+            ? {
+                kind: offeredSame.kind,
+                // `deliberate` como todo toque desta tela: sem ele, responder pelo
+                // atalho em mãos livres abria o microfone no mesmo instante (a
+                // pergunta deixa de oferecer atalho, o `ready` do microfone volta a
+                // ser verdadeiro) e a sala passava a ser gravada sobre uma resposta
+                // que ACABOU de ser dada
+                onAnswer: deliberate(() => {
+                  sound?.lock(); // decisão presa (protótipo v4 `quickSame`)
+                  onAnswerSame(offeredSame.answer);
+                }),
+                onDismiss: deliberate(onDismissSame),
+              }
+            : undefined
+        }
         onSpeakQuestion={
           // falando ⇒ pausar; calado ⇒ (re)falar — o rótulo do organismo acompanha (ENG-317)
           canSpeak
@@ -776,6 +835,14 @@ export function Conversation({
    */
   // `setMode` já é o do domínio (o modo da SESSÃO); este é o da conversa.
   const [mode, setPassMode] = useState<ConversationMode | null>(null);
+  /**
+   * As perguntas em que o atalho "é igual à cena anterior" já foi dispensado
+   * (ENG-671; protótipo v4 `quickOpen`). Vive aqui, e não na tela da pergunta, porque
+   * aquela remonta a cada pergunta: dispensado lá, o atalho voltava a se oferecer a
+   * cada ida e volta, por cima de quem já tinha dito que mudou. É estado de PASSAGEM,
+   * como o modo — não entra no DTO da sessão.
+   */
+  const [dismissedSame, setDismissedSame] = useState<ReadonlySet<number>>(() => new Set());
   /**
    * O pedido está de pé: ninguém escolheu, e nenhuma tela do shell está na frente.
    * Derivado, e não estado — as três telas do shell derivam o `open` delas do mesmo
@@ -1020,6 +1087,27 @@ export function Conversation({
   };
   const skipped = isSkipped(mapped.mapping, slot);
   /**
+   * O atalho "é igual à cena anterior" (ENG-671). Responder é escrever a frase inglesa
+   * congelada do roteiro na célula, pelo MESMO `setAnswer` de qualquer outra resposta
+   * de texto: para o artefato ela não é um tipo novo de resposta, é resposta.
+   *
+   * E, como toda resposta escrita por mão humana, ela DESCARTA o inglês da máquina
+   * (ENG-370, `writeTyped` da revisão): uma tradução que descreve outro texto é pior
+   * no artefato do que nenhuma, porque contradiz a resposta em silêncio.
+   */
+  const sameAsPrevious = dismissedSame.has(idx)
+    ? null
+    : sameAsPreviousFor(mapped.mapping, sequence, idx);
+  const answerSame = (answer: string): void => {
+    sessionStore.getState().apply((s) => setAnswer(setAnswer(s, enSlotOf(slot), ''), slot, answer));
+  };
+  const dismissSame = (): void =>
+    setDismissedSame((prev) => {
+      const next = new Set(prev);
+      next.add(idx);
+      return next;
+    });
+  /**
    * Marcar segue para a próxima pergunta: registrar a recusa e continuar parado nela
    * pediria dois toques para uma decisão só. Desfazer NÃO navega — quem desfaz quer
    * justamente ficar nesta pergunta.
@@ -1097,6 +1185,9 @@ export function Conversation({
         mode={mode}
         onToggleMode={() => setPassMode(mode === 'auto' ? 'manual' : 'auto')}
         hasNext={idx < total - 1}
+        sameAsPrevious={sameAsPrevious}
+        onAnswerSame={answerSame}
+        onDismissSame={dismissSame}
       />
     </>
   );

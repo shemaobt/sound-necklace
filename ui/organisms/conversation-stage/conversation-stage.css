@@ -232,6 +232,45 @@
   margin: 6px 0 0 -10px;
 }
 
+/*
+ * O atalho "é igual à cena anterior" (ENG-671; protótipo v4 L671-680): dois botões
+ * em pill sobre uma faixa separada da pergunta, e a legenda que promete a saída.
+ * Ocupa o lugar da área de resposta enquanto está de pé — nunca ao lado dela.
+ */
+.cds-conversation-stage-same {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 1px solid rgba(246, 245, 235, 0.16);
+  padding-top: 18px;
+}
+
+.cds-conversation-stage-same-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+/* o "Mudou" é o segundo: a saída existe, mas não disputa o olhar com a resposta */
+.cds-conversation-stage-same-actions .cds-button {
+  border: 1.5px solid rgba(246, 245, 235, 0.45);
+  border-radius: 999px;
+  padding: 14px 26px;
+  color: var(--cds-cream);
+}
+
+.cds-conversation-stage-same-actions .cds-button:last-child {
+  border-color: rgba(232, 129, 62, 0.55);
+  color: #f0b489;
+}
+
+.cds-conversation-stage-same-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: rgba(246, 245, 235, 0.5);
+}
+
 .cds-conversation-stage-footer {
   display: flex;
   align-items: center;

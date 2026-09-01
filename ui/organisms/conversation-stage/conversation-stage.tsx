@@ -140,6 +140,28 @@ export interface ConversationStageProps {
    * alguém ajustar o outro.
    */
   autoAdvanceMs?: number;
+  /**
+   * O atalho "é igual à cena anterior" está sendo oferecido (ENG-671). Ausente = sem
+   * atalho, e a tela é a de sempre. Quem decide quando oferecê-lo é a página (a regra
+   * vive em `ui/pages/conversation/same-as-previous`); daqui só sai o toque.
+   *
+   * Um objeto só, e não três props soltas: com elas era representável desenhar o
+   * atalho sem a saída — e o atalho TOMA O LUGAR da área de resposta, então uma
+   * saída ausente é uma tela sem nenhum caminho adiante. `kind` é tudo o que o
+   * rótulo do botão precisa saber; a frase que o toque escreve não passa por aqui.
+   *
+   * Enquanto ele está de pé, a área da resposta NÃO está na tela: o atalho é a
+   * pergunta que se faz antes de gravar, e a legenda promete que «Mudou» devolve a
+   * gravação de sempre (protótipo v4 `answerAreaShow`). Duas ações dominantes ao
+   * mesmo tempo seria a tela do ouvinte perdendo o seu único foco (§9.2).
+   */
+  sameAsPrevious?: {
+    kind: 'people' | 'place';
+    /** Um toque diz que a resposta é a mesma da cena anterior. */
+    onAnswer: () => void;
+    /** "Mudou": não responde nada — só dispensa o atalho e devolve a gravação. */
+    onDismiss: () => void;
+  };
 }
 
 /** Quadrado de parar (protótipo recording), herdando a cor do botão. */
@@ -273,6 +295,7 @@ export function ConversationStage({
   onToggleMode,
   autoAdvancing = false,
   autoAdvanceMs,
+  sameAsPrevious,
 }: ConversationStageProps) {
   const { t } = useTranslation();
   const [confirmingRerecord, setConfirmingRerecord] = useState(false);
@@ -361,160 +384,191 @@ export function ConversationStage({
           >
             <div className="cds-conversation-stage-divider" aria-hidden="true" />
 
-            <div className="cds-conversation-stage-wave-row">
-              {recorderState === 'checking' ? (
-                // enquanto não se sabe, o esqueleto ocupa o lugar da onda: prometer
-                // o fio de som aqui seria dizer "não há resposta" antes de saber
-                <div className="cds-conversation-stage-wave-skeleton" aria-hidden="true">
-                  {Array.from({ length: WAVE_BARS }, (_, i) => (
-                    <span key={i} style={{ height: 10 + ((i * 7) % 34) }} />
-                  ))}
+            {sameAsPrevious ? (
+              /* O atalho da revisão v4 (ENG-671): um toque responde "é igual à cena
+                 anterior" e a resposta fica escrita; «Mudou» não responde nada e
+                 devolve a gravação de sempre. O eco da resposta anterior (o chip do
+                 protótipo) é outra fatia — ENG-672 — e nada de amostra chumbada entra
+                 aqui no lugar dele. */
+              <div className="cds-conversation-stage-same">
+                <div className="cds-conversation-stage-same-actions">
+                  <Button variant="ghost" onClick={sameAsPrevious.onAnswer}>
+                    {sameAsPrevious.kind === 'people'
+                      ? t('conversationStage.samePeople')
+                      : t('conversationStage.samePlace')}
+                  </Button>
+                  <Button variant="ghost" onClick={sameAsPrevious.onDismiss}>
+                    {t('conversationStage.sameChanged')}
+                  </Button>
                 </div>
-              ) : recorderState === 'idle' ? (
-                // sem resposta ainda, o protótipo promete o fio de som em palavras —
-                // barras chapadas aqui viravam um traço morto espremendo o microfone
-                <p className="cds-conversation-stage-empty-wave">
-                  {t('conversationStage.emptyWave')}
+                <p className="cds-conversation-stage-same-hint">
+                  {t('conversationStage.sameHint')}
                 </p>
-              ) : (
-                <div className="cds-conversation-stage-waveform" aria-hidden="true">
-                  {recorderState === 'recording'
-                    ? // barras vivas: nível real quando o gravador o emite; senão a
-                      // altura formulaica do protótipo (recBars: 10 + (i*7 % 34))
-                      Array.from({ length: WAVE_BARS }, (_, i) => (
-                        <WaveformBar key={i} height={levels[i] ?? 10 + ((i * 7) % 34)} active />
-                      ))
-                    : // reproduzindo a resposta, as barras acendem (ENG-322)
-                      Array.from({ length: WAVE_BARS }, (_, i) => (
-                        <WaveformBar key={i} height={10 + ((i * 7) % 34)} active={answerPlaying} />
-                      ))}
-                </div>
-              )}
-
-              {recorderState === 'recorded' ? (
-                <div className="cds-conversation-stage-review">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={answerOpening}
-                    onClick={answerPlaying ? onStopPlay : onPlay}
-                  >
-                    {answerOpening
-                      ? t('conversationStage.openingAnswer')
-                      : answerPlaying
-                        ? t('conversationStage.pausePlayback')
-                        : t('conversationStage.play')}
-                  </Button>
-                  {/* regravar passa pela confirmação (ENG-392): um toque errado aqui
-                      apagava, em silêncio, a história que a pessoa acabou de contar */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      onRerecordAsk?.();
-                      setConfirmingRerecord(true);
-                    }}
-                  >
-                    <MicGlyph className="cds-conversation-stage-rerecord-glyph" />
-                    {t('conversationStage.again')}
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-
-            {autoAdvancing ? (
-              <div className="cds-conversation-stage-countdown" aria-hidden="true">
-                <span
-                  className="cds-conversation-stage-countdown-run"
-                  style={autoAdvanceMs ? { animationDuration: `${autoAdvanceMs}ms` } : undefined}
-                />
               </div>
-            ) : null}
+            ) : (
+              <>
+                <div className="cds-conversation-stage-wave-row">
+                  {recorderState === 'checking' ? (
+                    // enquanto não se sabe, o esqueleto ocupa o lugar da onda: prometer
+                    // o fio de som aqui seria dizer "não há resposta" antes de saber
+                    <div className="cds-conversation-stage-wave-skeleton" aria-hidden="true">
+                      {Array.from({ length: WAVE_BARS }, (_, i) => (
+                        <span key={i} style={{ height: 10 + ((i * 7) % 34) }} />
+                      ))}
+                    </div>
+                  ) : recorderState === 'idle' ? (
+                    // sem resposta ainda, o protótipo promete o fio de som em palavras —
+                    // barras chapadas aqui viravam um traço morto espremendo o microfone
+                    <p className="cds-conversation-stage-empty-wave">
+                      {t('conversationStage.emptyWave')}
+                    </p>
+                  ) : (
+                    <div className="cds-conversation-stage-waveform" aria-hidden="true">
+                      {recorderState === 'recording'
+                        ? // barras vivas: nível real quando o gravador o emite; senão a
+                          // altura formulaica do protótipo (recBars: 10 + (i*7 % 34))
+                          Array.from({ length: WAVE_BARS }, (_, i) => (
+                            <WaveformBar key={i} height={levels[i] ?? 10 + ((i * 7) % 34)} active />
+                          ))
+                        : // reproduzindo a resposta, as barras acendem (ENG-322)
+                          Array.from({ length: WAVE_BARS }, (_, i) => (
+                            <WaveformBar
+                              key={i}
+                              height={10 + ((i * 7) % 34)}
+                              active={answerPlaying}
+                            />
+                          ))}
+                    </div>
+                  )}
 
-            <div className="cds-conversation-stage-recorder" data-state={recorderState}>
-              {/* o microfone nunca some (protótipo toggleRecord): escondê-lo com a
+                  {recorderState === 'recorded' ? (
+                    <div className="cds-conversation-stage-review">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={answerOpening}
+                        onClick={answerPlaying ? onStopPlay : onPlay}
+                      >
+                        {answerOpening
+                          ? t('conversationStage.openingAnswer')
+                          : answerPlaying
+                            ? t('conversationStage.pausePlayback')
+                            : t('conversationStage.play')}
+                      </Button>
+                      {/* regravar passa pela confirmação (ENG-392): um toque errado aqui
+                      apagava, em silêncio, a história que a pessoa acabou de contar */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          onRerecordAsk?.();
+                          setConfirmingRerecord(true);
+                        }}
+                      >
+                        <MicGlyph className="cds-conversation-stage-rerecord-glyph" />
+                        {t('conversationStage.again')}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+
+                {autoAdvancing ? (
+                  <div className="cds-conversation-stage-countdown" aria-hidden="true">
+                    <span
+                      className="cds-conversation-stage-countdown-run"
+                      style={
+                        autoAdvanceMs ? { animationDuration: `${autoAdvanceMs}ms` } : undefined
+                      }
+                    />
+                  </div>
+                ) : null}
+
+                <div className="cds-conversation-stage-recorder" data-state={recorderState}>
+                  {/* o microfone nunca some (protótipo toggleRecord): escondê-lo com a
                   resposta pronta deixava "Toque e fale a sua resposta" mandando
                   tocar num botão que não estava mais lá */}
-              <button
-                type="button"
-                className="cds-conversation-stage-mic"
-                data-recording={recorderState === 'recording' || undefined}
-                disabled={recorderState === 'saving'}
-                aria-label={
-                  recorderState === 'recording'
-                    ? t('conversationStage.stop')
-                    : recorderState === 'saving'
-                      ? t('conversationStage.saving')
-                      : t('conversationStage.record')
-                }
-                onClick={recorderState === 'recording' ? onStop : onRecord}
-              >
-                {recorderState === 'recording' ? (
-                  <StopGlyph />
-                ) : recorderState === 'saving' ? (
-                  <SavingGlyph />
-                ) : (
-                  <MicGlyph />
-                )}
-              </button>
+                  <button
+                    type="button"
+                    className="cds-conversation-stage-mic"
+                    data-recording={recorderState === 'recording' || undefined}
+                    disabled={recorderState === 'saving'}
+                    aria-label={
+                      recorderState === 'recording'
+                        ? t('conversationStage.stop')
+                        : recorderState === 'saving'
+                          ? t('conversationStage.saving')
+                          : t('conversationStage.record')
+                    }
+                    onClick={recorderState === 'recording' ? onStop : onRecord}
+                  >
+                    {recorderState === 'recording' ? (
+                      <StopGlyph />
+                    ) : recorderState === 'saving' ? (
+                      <SavingGlyph />
+                    ) : (
+                      <MicGlyph />
+                    )}
+                  </button>
 
-              <div className="cds-conversation-stage-hint">
-                {/* A linha continua sendo UMA só (§9.2): a procura toma o lugar do
+                  <div className="cds-conversation-stage-hint">
+                    {/* A linha continua sendo UMA só (§9.2): a procura toma o lugar do
                     convite, não se soma a ele. É `role="status"` porque quem conduz
                     pode estar olhando para o microfone quando ela aparece. */}
-                <p
-                  className="cds-conversation-stage-hint-strong"
-                  role={recorderState === 'checking' ? 'status' : undefined}
-                >
-                  {locked ? (
-                    <>
-                      <span className="cds-conversation-stage-rec-dot" aria-hidden="true" />
-                      {t('conversationStage.recordingLabel')}
-                    </>
-                  ) : recorderState === 'checking' ? (
-                    t('conversationStage.checkingAnswer')
-                  ) : autoAdvancing ? (
-                    t('conversationMode.autoAdvance')
-                  ) : (
-                    t('conversationStage.idleHint')
-                  )}
-                </p>
-                {/* O exemplo falado, embaixo do microfone: ajuda opcional de quem não
+                    <p
+                      className="cds-conversation-stage-hint-strong"
+                      role={recorderState === 'checking' ? 'status' : undefined}
+                    >
+                      {locked ? (
+                        <>
+                          <span className="cds-conversation-stage-rec-dot" aria-hidden="true" />
+                          {t('conversationStage.recordingLabel')}
+                        </>
+                      ) : recorderState === 'checking' ? (
+                        t('conversationStage.checkingAnswer')
+                      ) : autoAdvancing ? (
+                        t('conversationMode.autoAdvance')
+                      ) : (
+                        t('conversationStage.idleHint')
+                      )}
+                    </p>
+                    {/* O exemplo falado, embaixo do microfone: ajuda opcional de quem não
                     entendeu a pergunta. Fantasma como o "sem resposta" — o microfone
                     continua sendo a única ação dominante (§9.2) — e ele NÃO é uma
                     segunda linha de instrução: é um controle, e só existe onde há
                     exemplo escrito. */}
-                {onSpeakExample ? (
-                  <p className="cds-conversation-stage-example">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      ariaDisabled={locked}
-                      onClick={guard(onSpeakExample)}
-                    >
-                      {t('conversationStage.example')}
-                    </Button>
-                  </p>
-                ) : null}
-                {/* A decisão de deixar a pergunta sem resposta é tomada AQUI, no mesmo
+                    {onSpeakExample ? (
+                      <p className="cds-conversation-stage-example">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          ariaDisabled={locked}
+                          onClick={guard(onSpeakExample)}
+                        >
+                          {t('conversationStage.example')}
+                        </Button>
+                      </p>
+                    ) : null}
+                    {/* A decisão de deixar a pergunta sem resposta é tomada AQUI, no mesmo
                     instante em que se decidiria gravar — no rodapé, entre voltar e
                     avançar, ela ficava escondida de quem está olhando o microfone.
                     Fantasma e pequeno de propósito: o microfone continua sendo a única
                     ação dominante da tela (§9.2). */}
-                {onToggleSkip ? (
-                  <p className="cds-conversation-stage-skip">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      ariaDisabled={locked}
-                      onClick={guard(onToggleSkip)}
-                    >
-                      {skipped ? t('conversationStage.unskip') : t('conversationStage.skip')}
-                    </Button>
-                  </p>
-                ) : null}
-              </div>
-            </div>
+                    {onToggleSkip ? (
+                      <p className="cds-conversation-stage-skip">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          ariaDisabled={locked}
+                          onClick={guard(onToggleSkip)}
+                        >
+                          {skipped ? t('conversationStage.unskip') : t('conversationStage.skip')}
+                        </Button>
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </>
+            )}
           </QuestionCard>
         </div>
       </div>

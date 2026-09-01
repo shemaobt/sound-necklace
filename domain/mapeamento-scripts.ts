@@ -19,6 +19,15 @@
  * CONGELADA e de autoria humana vinda deste arquivo. Nunca entram em artefato.
  * São OPCIONAIS de propósito: pergunta sem exemplo não ganha link nenhum na tela
  * (decisão do dono) — controle que não faz nada ensina que o app está quebrado.
+ *
+ * `same_as_previous_en` (ENG-671) é a resposta que o atalho "é igual à cena
+ * anterior" escreve na célula com um toque. Mora AQUI, e nunca em `ui/i18n`,
+ * porque ela ENTRA NO ARTEFATO: o relatório .md a serializa como qualquer outra
+ * célula, e artefato nunca passa pela camada de idioma (CLAUDE.md, ENG-326). É
+ * inglesa e congelada pelo mesmo motivo que `q_en` — é copy autoral, revisada por
+ * humano, e nenhum modelo a produz: uma pessoa a escreveu e uma pessoa a dispara.
+ * Só as duas perguntas de nível 2 que o roteiro repete cena a cena a carregam;
+ * ausente = esta pergunta não oferece o atalho.
  */
 
 export interface MapQuestion {
@@ -33,6 +42,8 @@ export interface MapQuestion {
   readonly example?: string;
   /** Inglês — o mesmo exemplo sob a UI em inglês. Ausente = sem exemplo naquele idioma. */
   readonly example_en?: string;
+  /** Inglês — a resposta do atalho "igual à cena anterior" (ENG-671). Ausente = sem atalho. */
+  readonly same_as_previous_en?: string;
 }
 
 export const L1_Q: readonly MapQuestion[] = [
@@ -119,12 +130,14 @@ export const L2_Q: readonly MapQuestion[] = [
     field: 'beings_in_scene',
     q: 'Quem aparece nesse trecho? Pessoas, animais, um grupo, alguém de quem se fala?',
     q_en: 'Who appears in this stretch? People, animals, a group, someone who is spoken about?',
+    same_as_previous_en: 'Same people as the previous scene.',
   },
   {
     k: 'onde',
     field: 'places_in_scene',
     q: 'Onde isso acontece? É o mesmo lugar de antes ou mudou?',
     q_en: 'Where does this happen? Is it the same place as before, or has it changed?',
+    same_as_previous_en: 'Same place as the previous scene.',
   },
   {
     k: 'objeto',

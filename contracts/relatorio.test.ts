@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBeads,
   createSession,
+  L1_Q,
+  L2_Q,
+  L3_Q,
   questionSequence,
   voiceAnswerPath,
   type Frase,
@@ -377,5 +380,80 @@ describe('buildMapReport — rascunho não confirmado não entra no artefato (EN
 
     expect(md).not.toContain('She gleaned in the field.');
     expect(md).toContain('_(no answer)_');
+  });
+});
+
+/**
+ * O atalho "é igual à cena anterior" (ENG-671): a célula recebe uma frase INGLESA
+ * congelada, escrita por um toque humano em vez de por uma transcrição. Do ponto de
+ * vista do artefato ela é texto comum — sem distintivo, sem estado novo, sem PT-BR —
+ * e é isto que estes casos provam de ponta a ponta.
+ */
+describe('relatório — a resposta dada pelo atalho "igual à cena anterior" (ENG-671)', () => {
+  const quem = L2_Q.find((q) => q.k === 'quem')!;
+  const onde = L2_Q.find((q) => q.k === 'onde')!;
+
+  it('as duas frases congeladas são as que o dono aprovou, em inglês', () => {
+    expect(quem.same_as_previous_en).toBe('Same people as the previous scene.');
+    expect(onde.same_as_previous_en).toBe('Same place as the previous scene.');
+  });
+
+  it('só as perguntas de quem e onde a carregam — nenhuma outra do roteiro', () => {
+    const carriers = [...L1_Q, ...L2_Q, ...L3_Q].filter((q) => q.same_as_previous_en !== undefined);
+    expect(carriers).toStrictEqual([quem, onde]);
+  });
+
+  it('a frase sai no .md como texto comum de célula', () => {
+    const md = buildMapReport(
+      baseState({
+        parts: [part({ part_id: 'PT1' }), part({ part_id: 'PT2', span: { s: 10, e: 19 } })],
+        frases: [],
+        mapping: {
+          level1: {},
+          level2: {
+            PT1: { quem: 'the two women', onde: 'on the road' },
+            PT2: { quem: quem.same_as_previous_en!, onde: onde.same_as_previous_en! },
+          },
+          level3: {},
+        },
+      }),
+    );
+
+    expect(md).toContain('- **' + quem.q_en + '** Same people as the previous scene.');
+    expect(md).toContain('- **' + onde.q_en + '** Same place as the previous scene.');
+    expect(md).not.toContain('igual à cena anterior');
+  });
+
+  /**
+   * A resposta do atalho não tem gravação, e por isso o gate nunca a olha. O que
+   * este caso prova é que ela também não fica em dívida por baixo: numa sessão em
+   * que uma pergunta foi respondida pelo toque e OUTRA foi gravada sem texto, quem
+   * segura a exportação é só a gravada. Sem o contraste, o zero seria zero de vazio.
+   */
+  it('a resposta do atalho não fica pendente — só a gravada sem texto fica', () => {
+    const gravada = voiceAnswerPath({ level: 2, partId: 'PT1', k: 'quem' });
+    const state = baseState({
+      parts: [part({ part_id: 'PT1' }), part({ part_id: 'PT2', span: { s: 10, e: 19 } })],
+      frases: [],
+      mapping: {
+        level1: {},
+        level2: { PT1: {}, PT2: { quem: quem.same_as_previous_en! } },
+        level3: {},
+      },
+    });
+
+    const status = reportExportStatus(state, new Set([gravada]));
+    expect(status.pendingSlots).toBe(1);
+    expect(status.canExport).toBe(false);
+
+    // confirmado o texto da gravada, a sessão exporta — a do atalho nunca pesou
+    const confirmada = {
+      ...state,
+      mapping: {
+        ...state.mapping!,
+        level2: { ...state.mapping!.level2, PT1: { quem: 'the two women' } },
+      },
+    };
+    expect(reportExportStatus(confirmada, new Set([gravada])).canExport).toBe(true);
   });
 });

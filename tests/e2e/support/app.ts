@@ -261,8 +261,21 @@ export class ColarApp {
     await this.page.getByRole('button', { name: rotulo }).click();
   }
 
-  /** Grava uma resposta por voz (gravador fixture): gravar → parar. */
+  /**
+   * Grava uma resposta por voz (gravador fixture): gravar → parar.
+   *
+   * Da SEGUNDA cena em diante, as perguntas de quem e onde abrem no atalho "é igual
+   * à cena anterior" (ENG-671), e a gravação de sempre está atrás de «Mudou» — que é
+   * o toque de quem, justamente, vai gravar uma resposta nova.
+   */
   async recordVoiceAnswer(): Promise<void> {
+    // Enquanto a tela ainda PROCURA a resposta já gravada, o esqueleto da onda está
+    // no lugar dela e o atalho não se ofereceu ainda — perguntar por ele agora leria
+    // "não há" cedo demais. O esqueleto sumindo é o fim da procura, e só depois dele
+    // a ausência do atalho é uma resposta.
+    await expect(this.page.locator('.cds-conversation-stage-wave-skeleton')).toHaveCount(0);
+    const mudou = this.page.getByRole('button', { name: /^(Mudou|It changed)$/ });
+    if (await mudou.isVisible()) await mudou.click();
     await this.page.getByRole('button', { name: 'Gravar a resposta' }).click();
     await this.page.getByRole('button', { name: 'Parar' }).click();
     await expect(

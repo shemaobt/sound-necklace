@@ -627,6 +627,14 @@ export const pt = {
     example: 'Como assim?',
     skip: 'Sem resposta',
     unskip: 'Voltar a perguntar',
+    /* O atalho "é igual à cena anterior" (ENG-671) — cópia verbatim do protótipo
+       v4 (docs/design/prototype.html L674-677). O que o toque ESCREVE na célula
+       não está aqui: é a frase inglesa congelada de `domain/mapeamento-scripts`,
+       porque ela entra no artefato e artefato nunca passa por i18n. */
+    samePeople: 'São as mesmas pessoas',
+    samePlace: 'É o mesmo lugar de antes',
+    sameChanged: 'Mudou',
+    sameHint: 'um toque responde — «Mudou» abre a gravação de sempre',
     progressAria: 'progresso da conversa',
   },
 };

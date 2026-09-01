@@ -552,6 +552,11 @@ export const en: Dict = {
     example: 'What do you mean?',
     skip: 'No answer',
     unskip: 'Ask again',
+    /* O atalho "é igual à cena anterior" (ENG-671). Ver o comentário em pt.ts. */
+    samePeople: 'The same people',
+    samePlace: 'The same place as before',
+    sameChanged: 'It changed',
+    sameHint: 'one touch answers — “It changed” opens the usual recording',
     progressAria: 'conversation progress',
   },
 };
