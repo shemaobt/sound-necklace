@@ -9,61 +9,28 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Required checks (CLAUDE.md "Quality gates"): golden-harness, typecheck, lint,
-# depcruise, test. Nomes de job = nomes dos required status checks — não renomear.
+# Required checks (CLAUDE.md "Quality gates"): typecheck, lint, depcruise, test.
+# Nomes de job = nomes dos required status checks — não renomear. O job
+# `golden-harness` saiu na ENG-691 junto com o harness dourado; a exigência dele
+# como check obrigatório já havia sido retirada no GitHub.
 #
-# ENG-515: três jobs precisam do Chromium (golden-harness → `golden:verify`, que
-# regenera da referência; test → `test:browser`; e2e → as specs). O antigo
-# `playwright install --with-deps chromium` travava até o job estourar o teto e ser
-# CANCELADO — e cancelamento se lê como `fail` no `gh pr checks`, o que já deixou o
-# golden vermelho num PR de camada congelada sem significar nada.
+# ENG-515: dois jobs precisam do Chromium (test → `test:browser`; e2e → as specs).
+# O antigo `playwright install --with-deps chromium` travava até o job estourar o
+# teto e ser CANCELADO — e cancelamento se lê como `fail` no `gh pr checks`.
 #
 # Medido, e NÃO era o download: o download do Chromium leva 9-11 s e não falhou uma
 # vez; quem travava era o `apt-get update` do `--with-deps` contra o espelho
 # `azure.archive.ubuntu.com` (83 s quando dava certo, >5 min quando não). E o
 # `install-deps` instalava 9 pacotes — TODOS de fonte (CJK, cirílico, tailandês) e
 # ZERO bibliotecas: a imagem `ubuntu-latest` já traz tudo que o Chromium precisa
-# para subir. Pagávamos um ponto de falha flaky, em três jobs, por fontes que estas
-# suítes não renderizam (o `golden:verify` extrai strings via `page.evaluate`, sem
-# screenshot nem métrica de fonte; a UI é PT/EN). Por isso o `apt` saiu de vez.
+# para subir. Pagávamos um ponto de falha flaky por fontes que estas suítes não
+# renderizam (a UI é PT/EN). Por isso o `apt` saiu de vez.
 #
-# Sobrou, igual nos três: cache do navegador (chave = versão INSTALADA do Playwright)
+# Sobrou, igual nos dois: cache do navegador (chave = versão INSTALADA do Playwright)
 # e `timeout-minutes` PRÓPRIO no download, bem abaixo do teto do job. Sem nada de
 # `continue-on-error`: sem navegador, o job TEM de ficar vermelho. Se um dia faltar
 # uma lib do sistema, o Chromium falha ao subir — alto e visível, não em silêncio.
 jobs:
-  golden-harness:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
-        with:
-          cache: true
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-      - run: pnpm install --frozen-lockfile
-      # runner: replay via domain/contracts vs goldens comitados (byte a byte)
-      - run: pnpm golden
-      # verify: regenera da referência intocada e prova goldens ≡ referência
-      - name: Resolve Playwright version
-        id: playwright-version
-        # a versão vem do que está INSTALADO: chave chumbada envelhece calada e
-        # passaria a servir um navegador de outra versão
-        run: echo "version=$(pnpm exec playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
-      - name: Download Chromium
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 5
-        run: pnpm exec playwright install chromium
-      - run: pnpm golden:verify
-
   typecheck:
     runs-on: ubuntu-latest
     timeout-minutes: 15

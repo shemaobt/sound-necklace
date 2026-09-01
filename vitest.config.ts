@@ -10,12 +10,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'node',
-          include: [
-            'domain/**/*.test.ts',
-            'contracts/**/*.test.ts',
-            'adapters/**/*.test.ts',
-            'tests/golden/**/*.test.ts',
-          ],
+          include: ['domain/**/*.test.ts', 'contracts/**/*.test.ts', 'adapters/**/*.test.ts'],
           // mesmo escudo do projeto dom: `.browser.test.ts` casa com o padrão acima e
           // rodaria aqui, em node, onde não existe o IndexedDB que ele veio testar
           exclude: ['adapters/**/*.browser.test.ts'],

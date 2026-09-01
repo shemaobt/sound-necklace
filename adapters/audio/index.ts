@@ -15,5 +15,5 @@ export {
 } from './types';
 export { createPlayer, edgeWindow, type PlaybackHandle, type PlaybackTransport } from './player';
 export { FixtureAudioEngine, FixtureTransport, pcmSpecBytes } from './fixture';
-export type { PcmSpec } from '../../tests/golden/pcm';
+export type { PcmSpec } from './pcm';
 export { WebAudioEngine } from './web-audio';

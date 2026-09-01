@@ -1,11 +1,11 @@
 /**
  * Modo fixture do engine de áudio — roda headless (sem AudioContext):
- * o "áudio" é o PCM sintético do harness dourado (tests/golden/pcm.ts) e o
+ * o "áudio" é o PCM sintético determinístico de ./pcm.ts e o
  * relógio é falso, avançado manualmente por advance(dt) — onHead/onended
  * ficam determinísticos em teste. Bytes de entrada do decode = JSON de PcmSpec.
  */
 
-import { makePcm, type PcmSpec } from '../../tests/golden/pcm';
+import { makePcm, type PcmSpec } from './pcm';
 import type { PlaybackHandle, PlaybackTransport } from './player';
 import { createPlayer } from './player';
 import type { AudioEngine, DecodedAudio, Player } from './types';

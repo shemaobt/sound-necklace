@@ -2,7 +2,7 @@
  * Dados de fixture do bucket do projeto (§7.4) consumidos pela FixtureBucketSource.
  *
  * Cada entrada = um `BucketAudio` (metadados que a Setup lista) + um `PcmSpec`: o
- * áudio sintético determinístico do harness (tests/golden/pcm.ts). Os BYTES que
+ * áudio sintético determinístico do adapter (adapters/audio/pcm.ts). Os BYTES que
  * `fetchBytes` devolve em modo fixture são esse PcmSpec como JSON — o formato que o
  * FixtureAudioEngine decodifica (LCG bit-idêntico Node/Chromium), então o fluxo
  * fixture Setup→decode→grade→hash roda ponta a ponta sem rede nem WAV real.
@@ -18,7 +18,7 @@
  */
 
 import type { BucketAudio } from '../../contracts';
-import type { PcmSpec } from '../../tests/golden/pcm';
+import type { PcmSpec } from '../../adapters/audio';
 
 export interface BucketFixtureEntry {
   audio: BucketAudio;
@@ -82,10 +82,10 @@ export const BUCKET_FIXTURE_AUDIOS: BucketFixtureEntry[] = [
     },
     pcm: { seed: 303, sampleRate: 8000, samples: 20000, channels: 1 },
   },
-  // Espelham os casos golden `minimal-flow` e `seam-small-move` (mesmo PcmSpec do
-  // caso → mesmo manifest_id), para a ENG-253 dirigir a UI real e provar identidade
-  // byte a byte do export contra tests/golden/expected/*. A granularidade Média (25
-  // frames × 20 ms) resolve para o beadSec 0.5 dos casos (grade de 24 contas em 12 s).
+  // Herdam nome e PcmSpec dos casos `minimal-flow` e `seam-small-move` do harness
+  // dourado, que saiu na ENG-691; o e2e continua dirigindo a UI real com eles. A
+  // granularidade Média (25 frames × 20 ms) resolve para o beadSec 0.5 desses áudios
+  // (grade de 24 contas em 12 s).
   {
     audio: {
       id: 'aud_fluxo_minimo',
