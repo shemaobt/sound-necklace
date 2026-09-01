@@ -59,7 +59,11 @@
 [data-cds-theme="dark"]  .cds-themebtn .cds-ico-moon{display:none}
 
 /* ---------- 1.1 · scrollbar fina (todas as janelas de rolagem) ---------- */
-.cds-scroll{scrollbar-width:thin;scrollbar-color:rgba(138,137,112,.5) transparent}
+/* Só o pseudo-elemento: `scrollbar-width`/`scrollbar-color` estão ausentes de
+   propósito (ENG-674, ENG-677). No Chromium as duas gramáticas não convivem —
+   declarar as padrão DESLIGA a barra customizada, e a largura em px abaixo é
+   descartada em silêncio, sem aviso e sem pista visual. O preço é o Firefox
+   ficar com a barra padrão da plataforma. Não devolva as padrão aqui.       */
 .cds-scroll::-webkit-scrollbar{width:9px;height:9px}
 .cds-scroll::-webkit-scrollbar-thumb{background:rgba(138,137,112,.45);border-radius:99px;
   border:2px solid transparent;background-clip:content-box}
