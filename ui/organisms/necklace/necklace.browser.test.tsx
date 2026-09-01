@@ -590,3 +590,107 @@ describe('Necklace — arrastar fronteira (ENG-342)', () => {
     root.unmount();
   });
 });
+
+/**
+ * ENG-670 — a barra de rolagem do colar tem de dar para AGARRAR.
+ *
+ * O colar é a superfície principal do app e quem a dirige nem sempre tem ponteiro
+ * fino: a barra que a plataforma dá de graça é um fio pensado para mouse preciso
+ * em desktop. Só Chromium prova isto — a largura que uma barra OCUPA só existe
+ * onde há layout e barra de verdade, e jsdom não tem nenhum dos dois.
+ */
+describe('Necklace — a barra de rolagem dá para agarrar (ENG-670)', () => {
+  /**
+   * WCAG 2.2 SC 2.5.8 (Target Size — Minimum): 24×24px CSS é o piso para um alvo
+   * que precisa ser acertado sem precisão.
+   *
+   * Este é o REQUISITO, e mora aqui; a largura ESCOLHIDA mora no CSS. Se as duas
+   * coincidirem, coincidem por motivos diferentes — o teste continua caindo se
+   * alguém devolver a barra ao padrão da plataforma.
+   */
+  const ALVO_MINIMO_WCAG = 24;
+
+  /** O que a barra TIRA do conteúdo, em px de tela. */
+  const calha = (el: HTMLElement): number => el.offsetWidth - el.clientWidth;
+
+  interface Aberto {
+    root: Root;
+    host: HTMLDivElement;
+    win: HTMLElement;
+  }
+
+  const abertos: Aberto[] = [];
+  afterEach(() => {
+    for (const a of abertos.splice(0)) {
+      a.root.unmount();
+      a.host.remove();
+    }
+  });
+
+  /** Um colar mais alto que o teto da janela: com certeza há barra de rolagem. */
+  function abrir(largura: number): Aberto {
+    const host = document.createElement('div');
+    host.style.width = `${largura}px`;
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    flushSync(() => root.render(<Necklace totalBeads={120} beadSec={0.25} maxHeight={90} />));
+    const a: Aberto = {
+      root,
+      host,
+      win: host.querySelector('.cds-necklace-window') as HTMLElement,
+    };
+    abertos.push(a);
+    return a;
+  }
+
+  /** A calha que a plataforma daria a um scroller sem estilo nenhum. */
+  function calhaPadraoDaPlataforma(): number {
+    const controle = document.createElement('div');
+    controle.style.cssText = 'width:300px;height:100px;overflow-y:scroll';
+    controle.innerHTML = '<div style="height:400px"></div>';
+    document.body.appendChild(controle);
+    const medida = calha(controle);
+    controle.remove();
+    return medida;
+  }
+
+  it('a barra deixou de ser o fio que a plataforma dá de graça', () => {
+    const { win } = abrir(500);
+
+    // o cenário é o do relato: há mais contas do que cabem, então há barra
+    expect(win.scrollHeight).toBeGreaterThan(win.clientHeight);
+
+    expect(calha(win), 'a barra do colar continua no fio do sistema').toBeGreaterThan(
+      calhaPadraoDaPlataforma(),
+    );
+    expect(calha(win), 'estreita demais para acertar sem precisão').toBeGreaterThanOrEqual(
+      ALVO_MINIMO_WCAG,
+    );
+  });
+
+  /**
+   * A guarda de regressão da ENG-506, e a que mais importa aqui: a folga que
+   * protege a última coluna vive no SCROLLER, nunca no elemento que o organismo
+   * mede. `clientWidth` INCLUI padding — padding no medido inflaria a largura, e a
+   * fileira ganharia contas que não cabem, andando por cima da barra.
+   *
+   * A varredura cobre um slot inteiro de larguras porque medir com e sem os 16px
+   * só muda a conta em ~2/3 das larguras: numa largura só, o erro passaria
+   * despercebido conforme a calha da plataforma.
+   */
+  const FOLGA_ENG506 = 16;
+
+  it('a fileira conta as contas pela largura útil, não pela folga da barra (ENG-506)', () => {
+    for (let largura = 400; largura < 400 + SIZE_M.slot; largura++) {
+      const { win, host } = abrir(largura);
+      const contas = Array.from(host.querySelectorAll<HTMLElement>('.cds-necklace-bead'));
+      const primeira = contas[0];
+      if (!primeira) throw new Error(`nenhuma conta renderizada com host de ${largura}px`);
+      const naFileira = contas.filter((b) => b.style.top === primeira.style.top).length;
+
+      expect(naFileira, `host ${largura}px · janela útil ${win.clientWidth}px`).toBe(
+        Math.max(1, Math.floor((win.clientWidth - FOLGA_ENG506) / SIZE_M.slot)),
+      );
+    }
+  });
+});
