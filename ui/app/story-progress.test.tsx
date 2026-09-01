@@ -1,4 +1,4 @@
-import { render, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -203,6 +203,30 @@ describe('StoryProgress — uma barra no topo, para a história inteira (ENG-648
         /\d/,
       );
     }
+  });
+});
+
+/**
+ * O anúncio das etapas a quem não vê a tela (ENG-668). Quem nomeava as seis
+ * estações era o `<ol>` do fio de contas; com ele fora, é esta faixa que diz em que
+ * etapa a sessão está — e diz de novo quando a etapa muda. As asserções são pela
+ * árvore de acessibilidade (região nomeada + região viva), nunca por classe.
+ */
+describe('a faixa diz a etapa a quem não vê a tela (ENG-668)', () => {
+  it('a faixa é uma região nomeada e carrega o nome da etapa atual', () => {
+    render(<StoryProgress session={AT.triage()} />);
+
+    const regiao = screen.getByRole('region', { name: 'Progresso da sessão' });
+    expect(within(regiao).getByText('Triagem')).toBeDefined();
+  });
+
+  it('mudou a etapa, mudou o que a faixa anuncia', () => {
+    const { rerender } = render(<StoryProgress session={AT.triage()} />);
+    const regiao = screen.getByRole('region', { name: 'Progresso da sessão' });
+    expect(within(regiao).getByRole('status').textContent).toBe('Triagem');
+
+    rerender(<StoryProgress session={AT.phrases()} />);
+    expect(within(regiao).getByRole('status').textContent).toBe('Frases');
   });
 });
 

@@ -22,11 +22,21 @@ import { ColarApp, SCENARIO } from './support';
  * - NUDGE DE BORDA (§9.3): o dwell dispara o playback da janela da fronteira SEM
  *   mudar a seleção (as bandas de seleção continuam idênticas).
  * - ZERO CHROME: do momento em que a Escuta 1 assume até o relatório, nenhum
- *   clique/foco alcança o cabeçalho ou o fio de contas — as transições de estação
- *   são por modo de domínio e "Próxima pergunta", nunca pelo stepper.
+ *   clique/foco alcança o cabeçalho ou a faixa de progresso do topo — as transições
+ *   de estação são por modo de domínio e "Próxima pergunta", nunca pelo chrome. (O
+ *   fio de contas, que era a outra metade do chrome, saiu na ENG-668.)
  * - SINAL NÃO-TEXTUAL: as contas são `aria-hidden` e sem texto (posição/cor); a
  *   linha de instrução e a ação dominante carregam `data-role` identificável.
  */
+
+/**
+ * O chrome do shell: cabeçalho e faixa de progresso do topo. Vive numa constante
+ * porque a sonda o usa para VIGIAR e o teste, para provar que a vigia não é vazia —
+ * um seletor que não casa com nada transformaria "o ouvinte não tocou em chrome"
+ * numa asserção sempre verdadeira. (Era `.cds-header, .cds-stepper`; o fio de contas
+ * saiu na ENG-668 e o `.cds-stepper` teria virado exatamente esse seletor morto.)
+ */
+const CHROME = '.cds-header, .cds-story-progress';
 
 interface OralSpy {
   events: { kind: 'sound' | 'text' }[];
@@ -48,7 +58,7 @@ declare global {
  * captura registram todo clique/foco que alcance chrome enquanto `chromeOn`.
  */
 async function installOralSpy(page: Page): Promise<void> {
-  await page.addInitScript(() => {
+  await page.addInitScript((CHROME: string) => {
     const spy: OralSpy = {
       events: [],
       chrome: [],
@@ -101,12 +111,12 @@ async function installOralSpy(page: Page): Promise<void> {
     const chromeHit = (ev: Event): void => {
       if (!spy.chromeOn) return;
       const target = ev.target;
-      const chrome = target instanceof Element ? target.closest('.cds-header, .cds-stepper') : null;
+      const chrome = target instanceof Element ? target.closest(CHROME) : null;
       if (chrome) spy.chrome.push(`${ev.type}:${chrome.className}`);
     };
     addEventListener('click', chromeHit, true);
     addEventListener('focusin', chromeHit, true);
-  });
+  }, CHROME);
 }
 
 /**
@@ -248,6 +258,13 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   await expect(page.getByRole('region', { name: 'relatório' })).toBeVisible();
 
   // ——— o caminho inteiro do ouvinte nunca tocou em chrome ———
+  // primeiro: o chrome que a sonda vigia EXISTE na página. Sem isto, a asserção
+  // seguinte passaria igualmente numa página sem chrome nenhum — e um seletor que
+  // deixou de casar (uma classe renomeada, uma faixa removida) não se anuncia.
+  expect(
+    await page.locator(CHROME).count(),
+    'a sonda vigia um chrome que não está na página',
+  ).toBeGreaterThan(0);
   const chrome = await page.evaluate(() => window.__oral.chrome);
   expect(chrome, `o caminho do ouvinte interagiu com chrome: ${JSON.stringify(chrome)}`).toEqual(
     [],

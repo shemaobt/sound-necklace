@@ -192,8 +192,8 @@ export const pt = {
     returnOk: '✓ Retomado: {{cenas}} cena(s), {{frases}} frase(s).',
   },
   /**
-   * Os SEIS rótulos das estações, numa fonte ÚNICA: o fio de contas do shell e o
-   * relance do dashboard leem daqui. Duplicar isto fazia o stepper dizer "Ouvir"
+   * Os SEIS rótulos das estações, numa fonte ÚNICA: a faixa de progresso do shell e
+   * o relance do dashboard leem daqui. Duplicar isto fazia o shell dizer "Ouvir"
    * enquanto o dashboard dizia "Listen".
    */
   stations: {
@@ -205,7 +205,8 @@ export const pt = {
     save: 'Guardar',
   },
   shell: {
-    stepperAria: 'Progresso da sessão',
+    /** Nome acessível da faixa do topo — a etapa atual + a barra (ENG-668). */
+    progressAria: 'Progresso da sessão',
     loadingSession: 'carregando a sessão…',
     preparingEyebrow: 'Um momento',
     preparingSession: 'Preparando o colar da sua história…',
@@ -283,11 +284,6 @@ export const pt = {
        cena porque, sem número, era lido como uma conta do colar. Em toda outra
        superfície "Cena N" vai por extenso (`cut.sceneLabel` + `sceneOrdinal`). */
     sceneDot: 'Cena {{n}}',
-  },
-  stationState: {
-    current: 'etapa atual',
-    done: 'concluído',
-    future: 'não concluído',
   },
   /** Grade Shemá v2 do dashboard (ENG-278): header próprio, cartões de história, sair. */
   dashboard: {

@@ -14,10 +14,14 @@ import './story-progress.css';
  * estação — a Setup não a tem porque não é uma estação do fio, e o shell nem
  * monta esta faixa fora de uma sessão aberta.
  *
- * O nome é uma palavra, nunca uma contagem (§9.2): "TRIAGEM", jamais "3 de 6". Vai
- * `aria-hidden` como ia no fio de contas, porque quem anuncia as etapas a leitores
- * de tela é o `<ol>` rotulado do fio, logo abaixo — dois anúncios da mesma coisa
- * seriam ruído.
+ * O nome é uma palavra, nunca uma contagem (§9.2): "TRIAGEM", jamais "3 de 6". E é
+ * ELE que diz a etapa a quem não vê a tela (ENG-668): o fio de contas saiu, e com ele
+ * o `<ol>` rotulado que era o único lugar do DOM a nomear as seis estações. Esta
+ * faixa é agora uma região nomeada — o leitor de tela a encontra e lê "Triagem" —, e o
+ * nome vive numa região viva (`role="status"`), de modo que TROCAR de etapa se anuncia
+ * sozinho. A região nasce com o texto dentro de propósito: uma região viva criada
+ * junto com a sua mensagem não é anunciada (a mesma regra do relatório e dos
+ * artefatos), que é exatamente o que se quer na montagem — nada mudou ainda.
  *
  * Lê o quanto já se ouviu e quantos artefatos já se baixou do `progressStore`
  * aqui dentro, e não por prop, de propósito: a Escuta 1 publica a cada conta nova,
@@ -91,12 +95,12 @@ export function StoryProgress({
   if (!current) return null;
 
   return (
-    <div className="cds-story-progress">
-      <p className="cds-story-progress-name" aria-hidden="true">
+    <section className="cds-story-progress" aria-label={t('shell.progressAria')}>
+      <p className="cds-story-progress-name" role="status">
         {t(current.labelKey)}
       </p>
       <StoryProgressBar percent={percent} dividers={STAGE_BOUNDARIES} goal={goalAt} />
-    </div>
+    </section>
   );
 }
 

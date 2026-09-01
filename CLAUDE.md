@@ -27,8 +27,8 @@ We follow a **clean architecture in the general sense** — dependencies always 
 - `ui/` — Shemá design system + the flow stations, organized by **atomic design**:
   - `ui/tokens/` — Shemá design tokens (colors, type, radii, motion) from the Claude Design prototypes.
   - `ui/atoms/` — pearl/bead, cord line, chip, button, confidence disc (filled/half/dashed), waveform bar, play glyph.
-  - `ui/molecules/` — bead row, selection band + edge beads, scene/phrase chip, confidence trio, question card, document card, stepper station.
-  - `ui/organisms/` — the necklace (rendering + interaction), the "fio de contas" stepper, the Triagem picker, the coverage drawer, the seam modal, the conversation stage (guide + mic + thread), the dashboard session list.
+  - `ui/molecules/` — bead row, selection band + edge beads, scene/phrase chip, confidence trio, question card, document card, whole-story progress bar.
+  - `ui/organisms/` — the necklace (rendering + interaction), the Triagem picker, the coverage drawer, the seam modal, the conversation stage (guide + mic + thread), the dashboard session list.
   - `ui/templates/` + `ui/pages/` — station layouts and the wired screens (Setup, Escuta 1/2, Triagem, Segmentação, Mapeamento, Export, Dashboard, Login).
   - `ui/i18n/` — the language layer (PT default + EN): i18next init, the two dictionaries, and the display translators for scene-kind labels and the interview questions. Chrome only — see the UI rules below.
   - Dependency rule inside ui/: atoms and molecules are **purely presentational** (props in, events out — no domain, adapter or i18n imports — copy arrives as props); organisms may consume domain state via props/hooks and may pull copy from `ui/i18n`; only pages/templates/`ui/app` (the wiring layer / composition root) wire adapters. `ui/` may be merged autonomously when tests pass.

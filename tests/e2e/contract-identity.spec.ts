@@ -200,7 +200,7 @@ test('a UI em inglês não move um byte: a mesma sessão exportada em EN bate co
   await expect(page.getByRole('button', { name: 'Back to stories' })).toBeVisible();
 
   // Conclui e baixa com a UI em inglês.
-  await app.gotoStep('Save');
+  await app.gotoExport();
   const complete = page.getByRole('button', { name: 'Finish and save the documents' });
   await expect(complete).toBeEnabled();
   await complete.click();

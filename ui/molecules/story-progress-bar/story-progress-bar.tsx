@@ -9,8 +9,10 @@ import './story-progress-bar.css';
  * Presentacional: recebe a porcentagem já calculada e as fronteiras já em
  * porcentagem; não sabe o que é uma cena, uma frase ou uma pergunta. Sem dígito
  * nenhum (§9.2) — o quanto se andou lê-se no comprimento aceso, nunca num "3 de
- * 6"; e sem nome acessível próprio, porque quem anuncia as etapas a leitores de
- * tela é o `<ol>` do fio de contas logo abaixo.
+ * 6". Segue `aria-hidden` depois de o fio de contas sair (ENG-668): quem diz a etapa
+ * a leitores de tela é o nome da etapa na faixa em volta (ui/app/story-progress.tsx),
+ * e dar um papel de barra de progresso a este trilho poria no ouvido justamente a
+ * porcentagem que §9.2 mantém fora dos olhos.
  *
  * Toda porcentagem chega de uma divisão, e várias delas têm denominador que pode
  * ser zero numa sessão real (nenhuma cena, nenhuma cena produtiva). Um `NaN` num

@@ -13,7 +13,6 @@ import {
   voiceAnswerPath,
   type SessionState,
 } from '../../domain';
-import { markSkipped } from '../pages/conversation/answered';
 import { sessionStore } from '../state';
 import { App } from './App';
 import { appAuth } from './auth-adapter';
@@ -174,6 +173,19 @@ function fullyAnsweredSession(answer = 'resposta'): SessionState {
 }
 
 /**
+ * A entrevista a UMA pergunta do fim: tudo respondido menos a última. É o estado que
+ * abre NA entrevista (a revisão ainda não acabou) e chega à revisão com um clique —
+ * o caminho pelo qual uma facilitadora alcança a Export desde a ENG-668, quando o fio
+ * de contas (a única navegação de um clique entre estações) saiu.
+ */
+function answeredButLastQuestion(): SessionState {
+  let s = ensureMapping(completableSession());
+  const sequence = questionSequence(s);
+  for (const slot of sequence.slice(0, -1)) s = setAnswer(s, slot, 'resposta');
+  return s;
+}
+
+/**
  * A entrevista terminou, mas UMA resposta foi gravada e nunca virou texto confirmado:
  * a revisão ainda tem trabalho dentro (`reportExportStatus` recusa a exportação). A
  * pendência fica na PRIMEIRA pergunta — a última respondida é o que leva à revisão.
@@ -185,18 +197,6 @@ function answeredWithPendingDraft(answer = 'resposta'): {
   const full = fullyAnsweredSession(answer);
   const first = questionSequence(full)[0]!;
   return { state: setAnswer(full, first, ''), voice: [voiceAnswerPath(first)] };
-}
-
-/**
- * A entrevista chegou ao fim com a ÚLTIMA pergunta RECUSADA: recusar é responder, então
- * a sessão está pronta — e nenhuma gravação ficou sem texto. É a última porque é nela
- * que "← Anterior" pousa ao sair da revisão, que é por onde se volta ao microfone.
- */
-function answeredWithLastSkipped(): SessionState {
-  const full = fullyAnsweredSession();
-  const sequence = questionSequence(full);
-  const slot = sequence[sequence.length - 1]!;
-  return markSkipped(setAnswer(full, slot, ''), slot);
 }
 
 /**
@@ -239,6 +239,42 @@ async function chooseTouchByTouch(): Promise<void> {
   await act(async () => {
     card.click();
   });
+}
+
+/**
+ * Da pergunta em que a entrevista está até a revisão, clicando "Próxima pergunta".
+ * Desde a ENG-668 é por aqui que se chega à Export: o fio de contas, que abria um
+ * atalho para qualquer estação, saiu.
+ */
+async function walkToReview(): Promise<void> {
+  for (let step = 0; step < 60; step++) {
+    if (screen.queryByRole('region', { name: 'relatório' })) return;
+    const proxima = screen.queryByRole('button', { name: 'Próxima pergunta' });
+    if (!proxima) throw new Error('a entrevista não ofereceu "Próxima pergunta"');
+    await act(async () => {
+      proxima.click();
+    });
+  }
+  throw new Error('a revisão não apareceu depois de 60 passos');
+}
+
+/**
+ * Da entrevista à Export pela porta da facilitadora: a revisão e o seu rodapé,
+ * "Guardar os documentos →". Com uma resposta gravada ainda sem texto o rodapé avisa
+ * antes de deixar passar (ENG-512) — sair mesmo assim faz parte do caminho.
+ */
+async function goToExport(): Promise<void> {
+  await walkToReview();
+  const guardar = await screen.findByRole('button', { name: 'Guardar os documentos →' });
+  await act(async () => {
+    guardar.click();
+  });
+  const mesmoAssim = screen.queryByRole('button', { name: 'Ir mesmo assim' });
+  if (mesmoAssim) {
+    await act(async () => {
+      mesmoAssim.click();
+    });
+  }
 }
 
 /** Persiste um estado de mapeamento no store app-global; devolve o id da sessão. */
@@ -359,23 +395,62 @@ describe('App shell', () => {
       navigate(`/session/${summary.id}`);
     });
     render(<App />);
-    // 'Ouvir' aparece 2×: no rótulo sr-only do li E no nome visível da etapa atual
-    expect((await screen.findAllByText('Ouvir')).length).toBeGreaterThan(0);
-    expect(screen.getByText('Guardar')).toBeDefined();
+    // a barra do topo é o chrome da sessão montada: ela nomeia a etapa
+    expect(await screen.findByText('Ouvir')).toBeDefined();
   });
 
-  it('numa sessão carregada, mostra o fio de contas', async () => {
+  it('numa sessão carregada, a barra do topo diz a etapa', async () => {
     act(() => {
       navigate('/session/s1');
       sessionStore.getState().load(sampleSession());
     });
     render(<App />);
     // a estação chega quando a hidratação da rota resolve — aqui, falhando (ENG-511)
-    expect((await screen.findAllByText('Ouvir')).length).toBeGreaterThan(0);
-    expect(screen.getByText('Guardar')).toBeDefined();
+    const faixa = await screen.findByRole('region', { name: 'Progresso da sessão' });
+    expect(within(faixa).getByText('Ouvir')).toBeDefined();
   });
 
-  it('entrar em Guardar leva à Export e conclui pela store injetada pelo shell', async () => {
+  /**
+   * ENG-668 — o fio de contas saiu. Ele era o único lugar que nomeava as SEIS
+   * estações de uma vez (rótulo sr-only por conta) e a única navegação de um
+   * clique entre elas; a barra do topo herdou o anúncio, e só o da etapa ATUAL.
+   */
+  it('as outras cinco estações não estão em lugar nenhum da página', async () => {
+    act(() => {
+      navigate('/session/s1');
+      sessionStore.getState().load(sampleSession());
+    });
+    render(<App />);
+    await screen.findAllByText('Ouvir');
+
+    for (const outra of ['Cortar', 'Triagem', 'Frases', 'Conversa', 'Guardar']) {
+      expect(screen.queryByText(outra), `"${outra}" continua na página`).toBeNull();
+    }
+    expect(screen.getAllByText('Ouvir')).toHaveLength(1);
+  });
+
+  it('o anúncio da etapa acompanha a sessão quando ela avança', async () => {
+    act(() => {
+      navigate('/session/s1');
+      sessionStore.getState().load(sampleSession());
+    });
+    render(<App />);
+    const faixa = await screen.findByRole('region', { name: 'Progresso da sessão' });
+    expect(within(faixa).getByRole('status').textContent).toBe('Ouvir');
+
+    // a história inteira confirmada leva a sessão de Ouvir a Cortar
+    act(() => {
+      sessionStore.getState().load({
+        ...sampleSession(),
+        whole: { id: 'S1', span: { s: 0, e: 15 }, confirmed: true },
+      });
+    });
+    await waitFor(() => {
+      expect(within(faixa).getByRole('status').textContent).toBe('Cortar');
+    });
+  });
+
+  it('a revisão leva à Export, que conclui pela store injetada pelo shell', async () => {
     const store = appSessionStore();
     const summary = await store.create({
       projectId: 'p1',
@@ -389,15 +464,15 @@ describe('App shell', () => {
     });
     await act(async () => {
       navigate(`/session/${summary.id}`);
-      sessionStore.getState().load(completableSession());
+      sessionStore.getState().load(answeredButLastQuestion());
     });
     render(<App />);
 
-    const guardar = await screen.findByText('Guardar');
-    await act(async () => {
-      guardar.click();
-    });
-    expect(screen.getByText('A história está inteira no colar.')).toBeDefined();
+    // o caminho da facilitadora até a Export: a última pergunta, a revisão e o rodapé
+    // dela — "Guardar os documentos →" (ENG-668: não há mais fio de contas)
+    await chooseTouchByTouch();
+    await goToExport();
+    expect(await screen.findByText('A história está inteira no colar.')).toBeDefined();
 
     // O shell passou store + sessionId: concluir vira status "concluída" na store.
     const concluir = await screen.findByRole('button', {
@@ -521,11 +596,13 @@ describe('App shell', () => {
     expect(await screen.findByRole('button', { name: 'Parar' })).toBeDefined();
   });
 
-  it('persiste o caminho da resposta de voz em meta.voice — e sem inglês confirmado, não exporta', async () => {
+  it('persiste o caminho da resposta de voz em meta.voice', async () => {
     // Gravar voz no Conversation (§8.7) deve entrar no `meta.voice` da sessão persistida,
     // de modo que o Export/relatório reflita a resposta como caminho `respostas/…` em vez
     // de "Sem resposta" (ENG-276). O gravador em si já funciona; o que faltava era o shell
-    // fiar o caminho salvo de volta ao DTO.
+    // fiar o caminho salvo de volta ao DTO. O DTO é a junta: que a Export RECUSE com uma
+    // gravação sem inglês confirmado prova-se na própria estação
+    // (ui/pages/export/export.test.tsx), que lê a mesma custódia.
     const store = appSessionStore();
     const summary = await store.create({
       projectId: 'p1',
@@ -571,21 +648,6 @@ describe('App shell', () => {
     await waitFor(async () => {
       expect((await store.load(summary.id)).voice).toContain('respostas/level1/recontar.webm');
     });
-
-    // ...mas gravar não basta para exportar (ENG-327): sem o inglês confirmado, a
-    // resposta não vira texto nenhum, e guardar assim perderia em silêncio o que
-    // foi dito. Então concluir é recusado, com o motivo na tela.
-    await act(async () => {
-      screen.getByText('Guardar').click();
-    });
-    const concluir = await screen.findByRole('button', {
-      name: 'Concluir e guardar os documentos',
-    });
-    await act(async () => {
-      concluir.click();
-    });
-    expect((await store.get(summary.id)).status).toBe('in_progress');
-    expect(screen.getByText(/sem o texto em inglês confirmado/i)).toBeTruthy();
   });
 
   it('fia o player de áudio: tocar a cena acende a cabeça de reprodução no colar', async () => {
@@ -674,11 +736,9 @@ describe('App shell', () => {
       sessionStore.getState().load(completableSession());
     });
     render(<App />);
-    const guardar = await screen.findByText('Guardar');
-    await act(async () => {
-      guardar.click();
-    });
-    expect(screen.getByText('A história está inteira no colar.')).toBeDefined();
+    await chooseTouchByTouch();
+    await goToExport();
+    expect(await screen.findByText('A história está inteira no colar.')).toBeDefined();
 
     // Abrir outra sessão que NÃO chegou ao gate: a Export não pode "grudar".
     await act(async () => {
@@ -699,7 +759,7 @@ describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
     const id = await persistCuttingSession();
     act(() => navigate(`/session/${id}`));
     render(<App />);
-    await screen.findAllByText('Ouvir'); // a estação, e com ela o gate de conexão
+    await screen.findByText('Cortar'); // a estação, e com ela o gate de conexão
     expect(screen.queryByText(/Sem conexão/)).toBeNull();
 
     // context.setOffline do Playwright dispara o evento 'offline' na window.
@@ -843,20 +903,6 @@ describe('App shell — onde a sessão retomada abre (ENG-511)', () => {
     expect(await screen.findByText(FIRST_QUESTION)).toBeDefined();
     expect(screen.queryByText(EXPORT_HEADLINE)).toBeNull();
   });
-
-  it('de Guardar dá para voltar à entrevista: o clique manda, a hidratação não desfaz', async () => {
-    const id = await persistMapeamento(fullyAnsweredSession());
-
-    act(() => navigate(`/session/${id}`));
-    render(<App />);
-    await screen.findByText(EXPORT_HEADLINE);
-
-    await act(async () => {
-      screen.getByText('Conversa').click();
-    });
-    expect(screen.queryByText(EXPORT_HEADLINE)).toBeNull();
-    expect(await screen.findByRole('region', { name: 'relatório' })).toBeDefined();
-  });
 });
 
 /**
@@ -898,42 +944,6 @@ describe('App shell — o passo que a sessão salva reporta (ENG-514)', () => {
     await saveOnce(id, 'ainda-por-confirmar');
 
     expect((await appSessionStore().get(id)).progress.current_step).toBe('conversation');
-  });
-
-  it('gravar uma resposta que ainda não tem texto devolve o passo à Conversa', async () => {
-    // a bandeira é dado DERIVADO: se ela ficasse valendo a do último salvamento, o
-    // cartão continuaria dizendo "só falta guardar" com uma resposta por transcrever
-    const id = await persistMapeamento(answeredWithLastSkipped());
-    act(() => navigate(`/session/${id}`));
-    render(<App />);
-    await screen.findByText(EXPORT_HEADLINE);
-    await saveOnce(id, 'pronta-antes-de-gravar');
-    expect((await appSessionStore().get(id)).progress.current_step).toBe('save');
-
-    // a facilitadora volta da revisão e grava a resposta que tinha ficado sem
-    await act(async () => {
-      screen.getByText('Conversa').click();
-    });
-    // esta sessão reabre na REVISÃO, e a revisão não pergunta o modo — quem
-    // pergunta é a pergunta, e ela só volta pelo "← Anterior"
-    const anterior = await screen.findByRole('button', { name: '← Anterior' });
-    await act(async () => {
-      anterior.click();
-    });
-    await chooseTouchByTouch();
-    const mic = await screen.findByRole('button', { name: 'Gravar a resposta' });
-    await act(async () => {
-      mic.click();
-    });
-    const parar = await screen.findByRole('button', { name: 'Parar' });
-    await act(async () => {
-      parar.click();
-    });
-
-    // gravar persiste na hora (§8.7) — e o passo salvo acompanha
-    await waitFor(async () => {
-      expect((await appSessionStore().get(id)).progress.current_step).toBe('conversation');
-    });
   });
 });
 

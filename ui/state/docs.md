@@ -11,7 +11,7 @@ Path: @/ui/state
 ### How it fits into the larger codebase
 
 - Sits between @/domain and the wiring layer (@/ui/pages, @/ui/templates, @/ui/app). Per @/.dependency-cruiser.cjs it may import @/domain (types + reducers) and zustand, but NEVER adapters — persistence arrives as an injected `autosave` port instead. This ban is a required CI boundary check.
-- Consumed by @/ui/app: `App` reads session/review/lock/online/muted through `useSessionStore`/`useAppStore`, dispatches `setMode` via `sessionStore.apply`, and reflects the connectivity port into `setOnline`. Stepper reachability, the review banner, and the connection gate all derive from these flags.
+- Consumed by @/ui/app: `App` reads session/review/lock/online/muted through `useSessionStore`/`useAppStore`, dispatches `setMode` via `sessionStore.apply`, and reflects the connectivity port into `setOnline`. The review banner and the connection gate derive from these flags, as does the station model that names the current step in the progress band (@/ui/app/stepper-model.ts).
 - Holds the three editability gates spread across the PRD: review mode (§8.10), the single-editor advisory lock (§7.3), and the online-only gate (§13). The domain gate math (`modeLocks`, whole-story/scene gates) stays in @/domain; this store layers the human/collaboration/network gates on top.
 
 ### Core Implementation

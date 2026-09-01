@@ -1,6 +1,6 @@
 /*
- * Layout do shell (Protótipo.dc.html): cabeçalho de 64px, fio de contas de 46px,
- * a estação ativa ocupando o resto. As cores do chrome são custom properties que
+ * Layout do shell (Protótipo.dc.html): cabeçalho de 64px, faixa da barra da história
+ * de 46px, a estação ativa ocupando o resto. As cores do chrome são custom properties que
  * a variante escura das telas cerimoniais (Escuta 1 = .cds-listen; Conversa =
  * .cds-conversation-stage) troca via :has() — CSS puro, sem prop-drilling; quando
  * o Conversation alterna para a prévia do relatório, o palco sai do DOM e o chrome
@@ -14,10 +14,10 @@
   color: var(--cds-ui-body-ink);
 
   /* Altura do chrome que a estação NÃO ocupa: cabeçalho 64px + faixa da barra da
-     história 46px + fio de contas 28px.
-     As estações medem a altura útil por esta variável, em vez do 110px literal — o
+     história 46px. O fio de contas (mais 28px) saiu na ENG-668.
+     As estações medem a altura útil por esta variável, em vez do número literal — o
      rodapé de navegação (74px), quando existe, entra sozinho na conta abaixo. */
-  --cds-shell-inset: 138px;
+  --cds-shell-inset: 110px;
 
   /* chrome claro (default) */
   --cds-chrome-bg: rgba(255, 255, 255, 0.5);
@@ -31,8 +31,6 @@
      clara, e sobre o oliva cerimonial — só o escuro do TEMA precisa clarear */
   --cds-chrome-accent: var(--cds-telha);
   --cds-chrome-hairline: var(--cds-hairline);
-  --cds-chrome-dot-future-bg: var(--cds-frame);
-  --cds-chrome-dot-future-border: rgba(63, 62, 32, 0.24);
   --cds-chrome-progress-track: rgba(63, 62, 32, 0.12);
   --cds-chrome-progress-line: rgba(63, 62, 32, 0.22);
   --cds-chrome-save-bg: rgba(119, 125, 69, 0.14);
@@ -60,8 +58,6 @@
   --cds-chrome-mark: var(--cds-ui-accent);
   --cds-chrome-accent: var(--cds-ui-accent);
   --cds-chrome-hairline: var(--cds-ui-hairline);
-  --cds-chrome-dot-future-bg: var(--cds-ui-elevated);
-  --cds-chrome-dot-future-border: var(--cds-ui-hairline-strong);
   --cds-chrome-progress-track: rgba(246, 245, 235, 0.14);
   --cds-chrome-progress-line: rgba(246, 245, 235, 0.34);
   --cds-chrome-save-bg: rgba(119, 125, 69, 0.24);
@@ -82,8 +78,6 @@
   --cds-chrome-mark: var(--cds-cream);
   --cds-chrome-accent: var(--cds-telha);
   --cds-chrome-hairline: rgba(246, 245, 235, 0.2);
-  --cds-chrome-dot-future-bg: rgba(246, 245, 235, 0.1);
-  --cds-chrome-dot-future-border: rgba(246, 245, 235, 0.3);
   --cds-chrome-progress-track: rgba(246, 245, 235, 0.14);
   --cds-chrome-progress-line: rgba(246, 245, 235, 0.34);
   --cds-chrome-save-bg: rgba(119, 125, 69, 0.24);
@@ -93,7 +87,7 @@
 
 /* estação com rodapé publicado: a barra de 74px sai da altura útil sozinha */
 .cds-app:has(.cds-nav-footer) {
-  --cds-shell-inset: 212px;
+  --cds-shell-inset: 184px;
 }
 
 .cds-app-main {

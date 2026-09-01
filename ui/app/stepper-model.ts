@@ -1,14 +1,23 @@
 import { modeLocks, type SessionState } from '../../domain';
-import type { StationState } from '../molecules';
 
 /**
- * Deriva os seis estados do fio de contas (redesign §5.1) a partir do modo e dos
- * gates puros do domínio (`modeLocks`). Quatro modos viram seis estações porque
- * Escuta tem dois passos (Ouvir/Cortar) e Guardar é a cauda. É indicador de
- * progresso: `reachable` espelha os gates (estação travada = inalcançável);
- * `state` é concluída/atual/futura pela posição no fluxo. `key` = diretório em
- * ui/pages (a station-registry resolve por ele).
+ * Deriva os seis estados das estações (redesign §5.1) a partir do modo e dos gates
+ * puros do domínio (`modeLocks`). Quatro modos viram seis estações porque Escuta tem
+ * dois passos (Ouvir/Cortar) e Guardar é a cauda. É indicador de progresso:
+ * `reachable` espelha os gates (estação travada = inalcançável); `state` é
+ * concluída/atual/futura pela posição no fluxo. `key` = diretório em ui/pages (a
+ * station-registry resolve por ele).
+ *
+ * O fio de contas, que desenhava isto, saiu na ENG-668; a derivação ficou porque o
+ * shell continua perguntando duas coisas a ela: que estação montar e que nome a
+ * faixa de progresso anuncia.
  */
+
+/**
+ * Concluída, atual ou futura. Morava na conta-etapa do fio de contas, que saiu na
+ * ENG-668; a derivação continua, e o tipo veio com ela.
+ */
+export type StationState = 'current' | 'done' | 'future';
 
 export interface StepperStationView {
   key: string;
