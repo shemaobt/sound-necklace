@@ -512,9 +512,10 @@ export function Setup({
       </div>
 
       {/* Uma linha, não dois parágrafos (decisão do dono): a tela carregava informação
-          demais. O que não encolhe é a divulgação em si — o PRD §4 conta "disclosed on
-          the setup screen" entre as condições que tornam a voz sintética aceitável, e a
-          policy do provedor de TTS pede o mesmo. Fora do caminho da decisão, no pé. */}
+          demais. A metade que divulgava uso de modelo saiu inteira (ENG-700): as três
+          exceções que ela divulgava foram embora com a entrevista (ENG-689/ENG-691) e
+          divulgar o que não acontece é pior do que não divulgar. Sobrou a custódia —
+          onde o áudio e o trabalho ficam. Fora do caminho da decisão, no pé. */}
       <footer className="cds-setup-notes">
         <p role="note">{t('setup.disclosure')}</p>
       </footer>

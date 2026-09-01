@@ -419,16 +419,53 @@ describe('Setup — cópias fixadas (§8.1/O7)', () => {
   });
 
   /**
-   * Dois parágrafos viraram um a pedido do dono — a tela tinha texto demais. O que
-   * NÃO pode encolher junto é a divulgação: o PRD §4 conta "disclosed on the setup
-   * screen" entre as condições que tornam a voz sintética aceitável, e a policy da
-   * ElevenLabs exige o mesmo. Uma frase curta ainda divulga; nenhuma frase, não.
+   * ENG-700: o rodapé ERA a divulgação de uso de modelo — e as três exceções que ele
+   * divulgava (voz sintética, transcrição de máquina, tradução de máquina) saíram
+   * junto com a Conversa (ENG-689/ENG-691). O produto não faz nenhuma delas, então a
+   * linha descrevia algo que não acontece, e divulgação errada é pior que divulgação
+   * nenhuma: é a única frase da tela que quem lê tem o direito de tomar por verdade.
+   *
+   * A asserção é sobre a IDEIA, não sobre a frase removida — qualquer redação que
+   * volte a prometer voz de máquina, pergunta ou resposta cai aqui, nos dois idiomas,
+   * e a varredura é da TELA inteira, não só do rodapé.
    */
-  it('divulga que a voz do guia é sintética (§12; exigência da policy da ElevenLabs)', async () => {
-    renderSetup(ports());
+  const PROMESSA_DE_VOZ_E_PERGUNTAS = {
+    pt: /sintétic|artificial|\bvoz\b|robô|pergunt|respost|entrevist|transcri|tradu[zçc]/i,
+    en: /synthetic|artificial|\bvoice\b|robot|question|answer|interview|transcri|translat/i,
+  };
+
+  it('não diz a ninguém que há voz de máquina, pergunta ou resposta (ENG-700)', async () => {
+    const { container } = renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
-    expect(screen.getByText(/sintética/i)).toBeTruthy();
-    expect(screen.getByText(/escritas por pessoas/i)).toBeTruthy();
+
+    expect(container.textContent).not.toMatch(PROMESSA_DE_VOZ_E_PERGUNTAS.pt);
+
+    await act(() => i18n.changeLanguage('en'));
+    expect(container.textContent).not.toMatch(PROMESSA_DE_VOZ_E_PERGUNTAS.en);
+  });
+
+  /**
+   * O que sobrevive do rodapé é a custódia: onde o áudio fica. Uma divulgação falsa
+   * não pode ser trocada por uma oca — apagar a linha inteira também passaria no teste
+   * de cima, e a facilitadora perderia a única frase que diz onde o material dela mora.
+   */
+  it('o rodapé continua dizendo onde o áudio fica (ENG-700)', async () => {
+    const { container } = renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    // escopado ao RODAPÉ: a tela tem outras notas (a da meta, a da grade do projeto), e
+    // a da grade sozinha casaria "áudio" + "projeto" — a asserção passaria com o rodapé
+    // apagado, que é justamente o que ela existe para impedir. Reconsultado a cada
+    // idioma: um nó guardado antes da troca poderia ficar órfão com o texto PT.
+    const rodape = () =>
+      within(container.querySelector('footer') as HTMLElement).getByRole('note').textContent ?? '';
+
+    expect(rodape()).toMatch(/áudio/i);
+    expect(rodape()).toMatch(/projeto/i);
+
+    await act(() => i18n.changeLanguage('en'));
+    expect(rodape()).toMatch(/audio/i);
+    expect(rodape()).toMatch(/project/i);
   });
 
   /**
