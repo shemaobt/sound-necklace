@@ -556,6 +556,8 @@ export const en: Dict = {
     /* O eco da cena anterior (ENG-678). Ver o comentário em pt.ts. */
     samePreviousText: 'in the previous scene: “{{answer}}”',
     samePreviousVoice: 'in the previous scene: a recorded answer',
+    samePreviousPlay: 'Listen to the previous scene\u2019s answer',
+    samePreviousPause: 'Pause the previous scene\u2019s answer',
     samePeople: 'The same people',
     samePlace: 'The same place as before',
     sameChanged: 'It changed',

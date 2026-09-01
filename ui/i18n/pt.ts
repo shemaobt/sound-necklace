@@ -638,6 +638,10 @@ export const pt = {
        §9.2 proíbe dígito nesta tela, e o tamanho não ajuda a decidir se é o mesmo. */
     samePreviousText: 'na cena anterior: “{{answer}}”',
     samePreviousVoice: 'na cena anterior: uma resposta gravada',
+    /* O chip de voz é um CONTROLE: o nome diz a ação (é o que um leitor de tela
+       precisa ouvir), o texto visível diz o conteúdo. Sem duração em nenhum dos dois. */
+    samePreviousPlay: 'Ouvir a resposta da cena anterior',
+    samePreviousPause: 'Pausar a resposta da cena anterior',
     samePeople: 'São as mesmas pessoas',
     samePlace: 'É o mesmo lugar de antes',
     sameChanged: 'Mudou',

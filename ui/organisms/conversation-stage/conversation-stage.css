@@ -248,6 +248,9 @@
 /* o chip do eco (protótipo v4 L672): pill discreta, uma linha só — texto longo
    é cortado aqui, no CSS, e não no DOM: o que se lê cabe, o que se guarda não muda */
 .cds-conversation-stage-same-previous {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   margin: 0;
   width: fit-content;
   max-width: min(100%, 46ch);
@@ -261,6 +264,18 @@
   color: rgba(246, 245, 235, 0.75);
   font-size: 13px;
   font-weight: 600;
+}
+
+/* como botão (o eco em voz), o chip herda a pill e ganha o alvo de toque */
+button.cds-conversation-stage-same-previous {
+  cursor: pointer;
+  transition: border-color 0.22s;
+}
+
+button.cds-conversation-stage-same-previous:hover,
+button.cds-conversation-stage-same-previous[data-playing] {
+  border-color: rgba(246, 245, 235, 0.45);
+  color: var(--cds-cream);
 }
 
 .cds-conversation-stage-same-actions {

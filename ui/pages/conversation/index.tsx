@@ -381,6 +381,10 @@ function QuestionScreen({
   // Entre o toque e o som há fetch+decode no modo real (ENG-336): o botão diz
   // que está abrindo; qualquer emissão da porta encerra a espera.
   const [answerOpening, setAnswerOpening] = useState(false);
+  // O mesmo par, para a resposta da CENA ANTERIOR que o chip toca (ENG-678). São
+  // caminhos diferentes, e por isso estados diferentes: a porta emite UM caminho.
+  const [previousPlaying, setPreviousPlaying] = useState(false);
+  const [previousOpening, setPreviousOpening] = useState(false);
   // O TRECHO (história/cena/frase) está tocando agora — para o botão alternar
   // "▶ ouvir" ⇄ "⏸ pausar" (protótipo playBlock/blockPlaying).
   const [spanPlaying, setSpanPlaying] = useState(false);
@@ -409,13 +413,16 @@ function QuestionScreen({
 
   // Ouvir ⇄ pausar da resposta gravada: o estado vem dos eventos de reprodução da
   // porta (nunca palpite) e é DESTA pergunta — outra resposta tocando não acende aqui.
+  const previousPath = sameAsPrevious?.previous.voicePath;
   useEffect(() => {
     if (!recorder) return;
     return recorder.onPlayback((p) => {
       setAnswerPlaying(p === path);
+      setPreviousPlaying(previousPath !== undefined && p === previousPath);
       setAnswerOpening(false);
+      setPreviousOpening(false);
     });
-  }, [recorder, path]);
+  }, [recorder, path, previousPath]);
 
   const handsFree = mode === 'auto';
   /**
@@ -647,6 +654,33 @@ function QuestionScreen({
     });
   };
   /**
+   * Ouvir ⇄ pausar a resposta da CENA ANTERIOR, do chip (ENG-678). Mesma forma do
+   * `onPlay` desta pergunta — a falha vira o som de recusa (§9.4) e o controle volta
+   * ao repouso, nunca uma promessa de reprodução que não aconteceu.
+   *
+   * Cala a fala da guia antes: chegar na pergunta a faz ser FALADA (ENG-280), então
+   * o instante em que este chip é tocado é justamente aquele em que a guia costuma
+   * estar no ar. Duas vozes ao mesmo tempo, e a que interessa é a gravada.
+   *
+   * NÃO para o áudio do trecho (o ▶ do cabeçalho): esse é um toque deliberado de
+   * quem conduz, e o `onPlay` desta mesma tela nunca o parou — mudar isso aqui só
+   * criaria duas regras para o mesmo gesto.
+   */
+  const onPlayPrevious = (): void => {
+    if (!recorder || !previousPath) return;
+    if (previousPlaying) {
+      recorder.stopPlayback();
+      return;
+    }
+    speaker?.stop();
+    setPreviousOpening(true);
+    void recorder.play(previousPath).catch(() => {
+      setPreviousOpening(false);
+      sound?.refuse();
+    });
+  };
+
+  /**
    * Só chega aqui depois da confirmação (ENG-392) — e então é uma intenção só:
    * a resposta antiga sai e a nova gravação começa na hora. Devolver o microfone
    * parado obrigaria a um segundo toque para fazer o que já foi decidido.
@@ -757,7 +791,20 @@ function QuestionScreen({
           sameShortcut
             ? {
                 kind: sameShortcut.kind,
-                previous: sameShortcut.previous,
+                previous:
+                  sameShortcut.previous.kind === 'text'
+                    ? sameShortcut.previous
+                    : {
+                        kind: 'voice',
+                        playing: previousPlaying,
+                        opening: previousOpening,
+                        // `deliberate` como todo toque desta tela. Aqui é CONSISTÊNCIA,
+                        // não correção: com o atalho de pé o microfone automático já
+                        // está travado, então não há caminho em que isto mude o que
+                        // acontece — mas um toque que não desarma o automático seria o
+                        // único da tela, e a próxima mudança herdaria a exceção.
+                        onTogglePlay: deliberate(onPlayPrevious),
+                      },
                 // `deliberate` como todo toque desta tela: sem ele, responder pelo
                 // atalho em mãos livres abria o microfone no mesmo instante (a
                 // pergunta deixa de oferecer atalho, o `ready` do microfone volta a

@@ -156,6 +156,11 @@ export interface ConversationStageProps {
    * ninguém, e não existe aqui a terceira possibilidade (nada a ecoar): quando não há
    * o que ecoar, a página não oferece o atalho, e este objeto inteiro é ausente.
    *
+   * No caso de VOZ o chip é um controle, não um rótulo: quem ouve não lê, e durante a
+   * entrevista o eco quase sempre é uma gravação sem palavras — "ver o que a cena
+   * anterior respondeu" só pode significar ouvi-la. A porta que toca é a mesma que
+   * disse que a gravação existe; quem a liga é a página.
+   *
    * Enquanto ele está de pé, a área da resposta NÃO está na tela: o atalho é a
    * pergunta que se faz antes de gravar, e a legenda promete que «Mudou» devolve a
    * gravação de sempre (protótipo v4 `answerAreaShow`). Duas ações dominantes ao
@@ -163,7 +168,17 @@ export interface ConversationStageProps {
    */
   sameAsPrevious?: {
     kind: 'people' | 'place';
-    previous: { kind: 'text'; text: string } | { kind: 'voice' };
+    previous:
+      | { kind: 'text'; text: string }
+      | {
+          kind: 'voice';
+          /** A resposta anterior está tocando AGORA (eventos reais da porta). */
+          playing: boolean;
+          /** Pedida e ainda abrindo (fetch+decode no modo real) — ENG-336. */
+          opening: boolean;
+          /** Ouvir ⇄ pausar, num controle só. */
+          onTogglePlay: () => void;
+        };
     /** Um toque diz que a resposta é a mesma da cena anterior. */
     onAnswer: () => void;
     /** "Mudou": não responde nada — só dispensa o atalho e devolve a gravação. */
@@ -200,6 +215,23 @@ function SavingGlyph() {
       strokeLinecap="round"
     >
       <path d="M12 3a9 9 0 1 1-9 9" />
+    </svg>
+  );
+}
+
+/** Triângulo de tocar (protótipo v4 L672), herdando a cor do controle. */
+function PlayGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width={13}
+      height={13}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M8 5v14l11-7z" />
     </svg>
   );
 }
@@ -398,17 +430,41 @@ export function ConversationStage({
                  O «Noemi e Rute» do protótipo é amostra chumbada e NUNCA chega aqui:
                  sem resposta real, a página não oferece o atalho. */
               <div className="cds-conversation-stage-same">
-                {/* O eco da cena anterior. SEM o ▶ do protótipo: aqui ele não tocaria
-                    nada, e um controle que não faz nada ensina que o app está
-                    quebrado. Texto longo é cortado pelo CSS, nunca por corte no DOM —
-                    o que se lê pode caber numa linha, o que a página GUARDA não muda. */}
-                <p className="cds-conversation-stage-same-previous">
-                  {sameAsPrevious.previous.kind === 'text'
-                    ? t('conversationStage.samePreviousText', {
-                        answer: sameAsPrevious.previous.text,
-                      })
-                    : t('conversationStage.samePreviousVoice')}
-                </p>
+                {/* O eco da cena anterior. Com TEXTO é um rótulo; com VOZ é o ▶ do
+                    protótipo, e ele toca de verdade — é a única forma de o chip
+                    cumprir o que promete para quem não lê. Texto longo é cortado pelo
+                    CSS, nunca por corte no DOM: o que se lê pode caber numa linha, o
+                    que a página GUARDA não muda. Sem duração em lugar nenhum (§9.2). */}
+                {sameAsPrevious.previous.kind === 'text' ? (
+                  <p className="cds-conversation-stage-same-previous">
+                    {t('conversationStage.samePreviousText', {
+                      answer: sameAsPrevious.previous.text,
+                    })}
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    className="cds-conversation-stage-same-previous"
+                    data-playing={sameAsPrevious.previous.playing || undefined}
+                    // o NOME diz a ação; o texto visível diz o conteúdo. Os dois são
+                    // precisos, e é a ação que um leitor de tela precisa ouvir.
+                    aria-label={
+                      sameAsPrevious.previous.opening
+                        ? t('conversationStage.openingAnswer')
+                        : sameAsPrevious.previous.playing
+                          ? t('conversationStage.samePreviousPause')
+                          : t('conversationStage.samePreviousPlay')
+                    }
+                    onClick={sameAsPrevious.previous.onTogglePlay}
+                  >
+                    {sameAsPrevious.previous.playing ? (
+                      <PauseGlyph />
+                    ) : (
+                      <PlayGlyph className="cds-conversation-stage-same-previous-glyph" />
+                    )}
+                    {t('conversationStage.samePreviousVoice')}
+                  </button>
+                )}
                 <div className="cds-conversation-stage-same-actions">
                   <Button variant="ghost" onClick={sameAsPrevious.onAnswer}>
                     {sameAsPrevious.kind === 'people'

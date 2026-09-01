@@ -80,6 +80,21 @@ test('responder "são as mesmas" num toque leva a frase inglesa ao relatório', 
   // enquanto o atalho está de pé, a gravação de sempre não está na tela
   await expect(page.getByRole('button', { name: 'Gravar a resposta' })).toBeHidden();
 
+  /* E o eco TOCA: quem ouve não lê, e durante a entrevista esta é a única forma de
+     ver o que a cena anterior respondeu. O que só o navegador prova é que o controle
+     EXISTE, tem nome de ação e é alcançável por um toque — e que tocá-lo não derruba
+     o atalho por baixo de quem ainda vai decidir.
+
+     O alternar ouvir⇄pausar NÃO é afirmado aqui: a resposta gravada pelo fixture dura
+     uma fração de segundo, então o estado "pausar" é uma janela de corrida real, e
+     esperá-la seria um teste que passa por sorte. Ele é provado em jsdom, contra a
+     porta de voz de verdade, onde a emissão é determinística. */
+  const ouvirAnterior = page.getByRole('button', { name: 'Ouvir a resposta da cena anterior' });
+  await expect(ouvirAnterior).toBeVisible();
+  await ouvirAnterior.click();
+  await expect(chip).toBeVisible();
+  await expect(page.getByRole('button', { name: 'São as mesmas pessoas' })).toBeVisible();
+
   await page.getByRole('button', { name: 'São as mesmas pessoas' }).click();
 
   // respondida, a pergunta volta a ser uma pergunta comum

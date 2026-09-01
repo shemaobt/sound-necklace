@@ -437,6 +437,13 @@ class DeferredHasRecorder extends FixtureVoiceRecorder {
   }
 }
 
+/** Tem a gravação, mas a reprodução falha — a rede caiu entre o `has` e o `play`. */
+class FailingPlayRecorder extends FixtureVoiceRecorder {
+  override async play(): Promise<void> {
+    throw new Error('sem rede');
+  }
+}
+
 /**
  * O que só se vê com uma porta de voz de verdade ligada: a pergunta que JÁ TEM
  * gravação, a que está reabrindo o microfone, o microfone que abre sozinho, e a
@@ -563,6 +570,89 @@ describe('Conversation — o atalho diante de uma gravação (ENG-671)', () => {
     expect(shortcut('São as mesmas pessoas')).toBeTruthy();
   });
 
+  /** Uma sessão com a resposta de `quem` da CENA 1 gravada e nada mais. */
+  async function voiceInScene1(): Promise<{
+    store: MemoryVoiceStore;
+    open: (r: VoiceRecorder) => void;
+  }> {
+    const state = mapping();
+    const anterior = questionSequence(state)[indexOfL2(state, 'PT1', 'quem')]!;
+    const store = new MemoryVoiceStore();
+    await store.put(voiceAnswerPath(anterior), new Uint8Array([1, 2, 3]));
+    return {
+      store,
+      open: (recorder) =>
+        openAt(indexOfL2(state, 'PT2', 'quem'), {
+          recorder,
+          speaker: new FixtureSpeechSynthesizer(),
+          then: (s) => setAnswer(s, anterior, ''),
+        }),
+    };
+  }
+
+  const OUVIR_ANTERIOR = 'Ouvir a resposta da cena anterior';
+  const PAUSAR_ANTERIOR = 'Pausar a resposta da cena anterior';
+
+  /**
+   * Quem ouve NÃO LÊ. Durante a entrevista o eco quase sempre é uma gravação sem
+   * palavras, e "ver o que a cena anterior respondeu" só pode significar OUVI-LA —
+   * senão o chip promete um contexto que não entrega justamente onde a decisão é
+   * tomada. A porta que toca é a mesma que responde `has` (adapters/voice/types.ts).
+   */
+  it('o chip de voz oferece ouvir a resposta anterior, e tocar acende o pausar', async () => {
+    const { store, open } = await voiceInScene1();
+    open(new FixtureVoiceRecorder(store));
+    await settle();
+
+    fireEvent.click(screen.getByRole('button', { name: OUVIR_ANTERIOR }));
+    await settle();
+
+    expect(screen.getByRole('button', { name: PAUSAR_ANTERIOR })).toBeTruthy();
+  });
+
+  it('o mesmo controle pausa a resposta anterior', async () => {
+    const { store, open } = await voiceInScene1();
+    open(new FixtureVoiceRecorder(store));
+    await settle();
+
+    fireEvent.click(screen.getByRole('button', { name: OUVIR_ANTERIOR }));
+    await settle();
+    fireEvent.click(screen.getByRole('button', { name: PAUSAR_ANTERIOR }));
+    await settle();
+
+    expect(screen.getByRole('button', { name: OUVIR_ANTERIOR })).toBeTruthy();
+  });
+
+  /** A recusa se responde ao ouvido (§9.4) — e o controle volta ao repouso, sem
+   *  prometer uma reprodução que não aconteceu. */
+  it('falha ao tocar não deixa o chip dizendo que está tocando', async () => {
+    const { store, open } = await voiceInScene1();
+    open(new FailingPlayRecorder(store));
+    await settle();
+
+    fireEvent.click(screen.getByRole('button', { name: OUVIR_ANTERIOR }));
+    await settle();
+
+    expect(screen.getByRole('button', { name: OUVIR_ANTERIOR })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: PAUSAR_ANTERIOR })).toBeNull();
+  });
+
+  /**
+   * Chegar na pergunta a faz ser FALADA (ENG-280). Tocar a resposta anterior por
+   * cima da guia seriam duas vozes no mesmo ar — e a que interessa é a gravada.
+   */
+  it('tocar a resposta anterior cala a pergunta que estava sendo falada', async () => {
+    const { store, open } = await voiceInScene1();
+    open(new FixtureVoiceRecorder(store));
+    await settle();
+    expect(screen.getByRole('button', { name: 'Pausar a pergunta' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: OUVIR_ANTERIOR }));
+    await settle();
+
+    expect(screen.getByRole('button', { name: 'Ouvir a pergunta' })).toBeTruthy();
+  });
+
   it('a cena anterior sem texto E sem gravação não oferece nada', async () => {
     const state = mapping();
     const anterior = questionSequence(state)[indexOfL2(state, 'PT1', 'quem')]!;
@@ -636,6 +726,17 @@ describe('Conversation — o chip da resposta anterior (ENG-678)', () => {
 
     expect(chipText()).toContain('as duas mulheres e os ceifeiros');
     expect(chipText()).not.toContain('Noemi sozinha');
+  });
+
+  it('o chip de TEXTO não oferece controle de ouvir: não há gravação a tocar', () => {
+    const state = mapping();
+    const anterior = questionSequence(state)[indexOfL2(state, 'PT1', 'quem')]!;
+    openAt(indexOfL2(state, 'PT2', 'quem'), {
+      then: (s) => setAnswer(s, anterior, 'as duas mulheres e os ceifeiros'),
+    });
+
+    expect(chipText()).toContain('as duas mulheres e os ceifeiros');
+    expect(shortcut('Ouvir a resposta da cena anterior')).toBeNull();
   });
 
   it('nunca mostra o texto de amostra do protótipo', () => {
