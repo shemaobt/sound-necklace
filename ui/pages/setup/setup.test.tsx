@@ -426,8 +426,15 @@ describe('Setup — cópias fixadas (§8.1/O7)', () => {
    * nenhuma: é a única frase da tela que quem lê tem o direito de tomar por verdade.
    *
    * A asserção é sobre a IDEIA, não sobre a frase removida — qualquer redação que
-   * volte a prometer voz de máquina, pergunta ou resposta cai aqui, nos dois idiomas,
-   * e a varredura é da TELA inteira, não só do rodapé.
+   * volte a prometer voz de máquina, pergunta ou resposta cai aqui, nos dois idiomas.
+   * Varre a tela inteira NO ESTADO INICIAL (a trava de granularidade e o popup do
+   * tutorial têm estados próprios, fora deste container), e não só o rodapé.
+   *
+   * `voz`/`voice` entram crus, sem exigir o adjetivo de máquina: é vocabulário
+   * verdadeiro do produto em OUTRAS telas ("contada em voz alta", no login), mas nesta
+   * não há motivo legítimo para a palavra aparecer — a tela de Preparação é a
+   * superfície da divulgação. O teste é o pedágio deliberado: quem trouxer "voz" para
+   * cá tem de justificar num PR.
    */
   const PROMESSA_DE_VOZ_E_PERGUNTAS = {
     pt: /sintétic|artificial|\bvoz\b|robô|pergunt|respost|entrevist|transcri|tradu[zçc]/i,

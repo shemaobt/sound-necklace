@@ -461,8 +461,8 @@ export function Dashboard({ auth = defaultAuth(), store = defaultSessionStore() 
    * Renomear, depois de escrever. Mesma partilha de responsabilidade do apagar: a
    * escrita decide se o nome mudou, a releitura só repinta a casa — por isso ela
    * também vive fora do try. Muda o nome de exibição e nada mais: o `story_slug`
-   * não viaja no pedido (§10.6), então os documentos guardados seguem com o nome
-   * de arquivo de sempre.
+   * não viaja no pedido (§10.6), então o que a história tem guardado segue com o
+   * nome de sempre.
    */
   const onRenameConfirmed = useCallback(
     async (name: string): Promise<void> => {

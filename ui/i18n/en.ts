@@ -82,7 +82,7 @@ export const en: Dict = {
   setup: {
     eyebrow: 'Preparation',
     title: 'New session',
-    disclosure: 'The audio and your work stay saved in your project.',
+    disclosure: 'The audio and your work stay in your project.',
     gridWarning: 'Lock the bead size before anchoring. Changing it later shifts the boundaries.',
     noAudio: 'Choose an audio file first.',
     bucketError: "Could not load the project's audios. Reload the page.",

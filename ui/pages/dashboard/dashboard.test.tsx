@@ -10,6 +10,7 @@ import {
 } from '../../../adapters/sessions';
 import type { ArtifactTriple, SessionStateDto } from '../../../contracts';
 import i18n from '../../i18n';
+import { pt } from '../../i18n/pt';
 import dashboardCss from './dashboard.css?raw';
 import sessionListCss from '../../organisms/session-list/session-list.css?raw';
 import Dashboard, { formatWhen } from './index';
@@ -539,8 +540,9 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
 
   /**
    * A decisão que a issue inteira gira em torno: renomear muda o nome de EXIBIÇÃO, e
-   * só. O `story_slug` nomeia os três documentos (§10.5/§10.6) e o pipeline os lê pelo
-   * nome — um rename que arrastasse o slug renomearia, calado, arquivos já guardados.
+   * só. O `story_slug` nomeia o que a história tem guardado no servidor (§10.5/§10.6)
+   * — um rename que arrastasse o slug desarquivaria isso, calado. (Os três documentos
+   * que ele nomeava saíram com a exportação, ENG-689/ENG-691.)
    */
 
   it('desistir não muda o nome nem pede nada à store', async () => {
@@ -706,8 +708,8 @@ describe('Dashboard — fronteira de IO real (ENG-247)', () => {
  */
 describe('Dashboard — os diálogos não prometem o que saiu no corte (ENG-700)', () => {
   const PROMESSA = {
-    pt: /\bvoz\b|respost|pergunt|entrevist|document|artefato|relatório/i,
-    en: /\bvoice\b|answer|question|interview|document|artifact|report\b/i,
+    pt: /\bvoz(es)?\b|gravaç|respost|pergunt|entrevist|document|artefato|relatório/i,
+    en: /\bvoices?\b|recording|answer|question|interview|document|artifact|report/i,
   };
 
   // o diálogo é RECONSULTADO depois da troca de idioma: um nó guardado antes dela
@@ -739,6 +741,11 @@ describe('Dashboard — os diálogos não prometem o que saiu no corte (ENG-700)
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseRename('Frágil');
     await screen.findByRole('dialog');
+
+    // pinado dos DOIS lados: sem esta linha, apagar o corpo do diálogo passaria na
+    // asserção de ausência — a explicação de que o nome guardado não se move é o que
+    // torna o renomear seguro de usar
+    expect(screen.getByText(pt.dashboard.renameDialog.body)).toBeTruthy();
 
     await assertaNosDoisIdiomas();
   });

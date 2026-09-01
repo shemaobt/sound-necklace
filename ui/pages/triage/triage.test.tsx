@@ -309,7 +309,7 @@ describe('Triage — momento de revisão quando todas as cenas estão classifica
 });
 
 describe('Triage — todas "nenhum se encaixa" (PRD v2 §8.5)', () => {
-  it('mostra a explicação de bloqueio e mantém a Segmentação travada', () => {
+  it('mostra a explicação de bloqueio e mantém a Segmentação travada', async () => {
     load(
       triaging([
         lockedPart('PT1', { s: 0, e: 4 }, 'none_fit'),
@@ -332,11 +332,11 @@ describe('Triage — todas "nenhum se encaixa" (PRD v2 §8.5)', () => {
     expect(avisos()).toMatch(/Segmentação/);
     expect(avisos()).not.toMatch(/mapeament|conversa|entrevist/i);
 
-    act(() => void i18n.changeLanguage('en'));
+    await act(() => i18n.changeLanguage('en'));
     expect(avisos()).toMatch(/Segmentation/);
     expect(avisos()).not.toMatch(/mapping|conversation|interview/i);
     // de volta ao PT: o resto do caso procura os controles pelos nomes em português
-    act(() => void i18n.changeLanguage('pt'));
+    await act(() => i18n.changeLanguage('pt'));
 
     // todas "nenhum se encaixa" NÃO é momento de revisão: o corpo não ganha CTA e o
     // avanço do rodapé continua apagado (o gate do domínio é quem manda).

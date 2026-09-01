@@ -169,7 +169,8 @@ export const pt = {
     returnOk: '✓ Retomado: {{cenas}} cena(s), {{frases}} frase(s).',
   },
   /**
-   * Os SEIS rótulos das estações, numa fonte ÚNICA: a faixa de progresso do shell e
+   * Os rótulos das QUATRO estações que sobraram (ENG-689/ENG-691), numa fonte ÚNICA:
+   * a faixa de progresso do shell e
    * o relance do dashboard leem daqui. Duplicar isto fazia o shell dizer "Ouvir"
    * enquanto o dashboard dizia "Listen".
    */
