@@ -17,7 +17,6 @@ export { ProgressDots } from './progress-dots/progress-dots';
 export { QuestionCard } from './question-card/question-card';
 export { SaveChip, type SaveStatus } from './save-chip/save-chip';
 export { SelectionBand, type SelectionBandRow } from './selection-band/selection-band';
-export { StepperStation, type StationState } from './stepper-station/stepper-station';
 export { StoryProgressBar } from './story-progress-bar/story-progress-bar';
 export { TrechoIndicator } from './trecho-indicator/trecho-indicator';
 export { TrustChip } from './trust-chip/trust-chip';

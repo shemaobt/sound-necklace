@@ -20,8 +20,7 @@ import {
   type Span,
 } from '../../../domain';
 import { Header } from '../../app/header';
-import { Stepper } from '../../app/stepper';
-import { stepperStations } from '../../app/stepper-model';
+import { StoryProgress } from '../../app/story-progress';
 import i18n from '../../i18n';
 import { questionTextFor } from '../../i18n/conversation-questions';
 import { NavFooterOutlet, NavFooterProvider } from '../../organisms/nav-footer/nav-footer';
@@ -36,8 +35,8 @@ import Conversation from './index';
  * que mora no shell, DEPOIS da estação — descia com ele: para alcançar "guardar os
  * documentos" era preciso rolar por toda a entrevista.
  *
- * Medido em Chromium de verdade, com o chrome real do shell (cabeçalho + fio de
- * contas) montado em volta: a pergunta é onde as coisas caem na janela, e jsdom não
+ * Medido em Chromium de verdade, com o chrome real do shell (cabeçalho + faixa da
+ * barra da história) montado em volta: a pergunta é onde as coisas caem na janela, e jsdom não
  * mede nada. Nenhuma asserção lê `overflow`, `min-height` ou classe — só onde a
  * pessoa vê e alcança as duas ações, e quem se moveu quando ela rolou.
  */
@@ -132,7 +131,7 @@ async function abrirRevisao(largura: number, altura: number): Promise<Revisao> {
       <NavFooterProvider>
         <div className="cds-app">
           <Header muted={false} onToggleMuted={() => {}} onBack={() => {}} />
-          <Stepper stations={stepperStations(state)} onNavigate={() => {}} />
+          <StoryProgress session={state} />
           <main className="cds-app-main">
             <Conversation onGoToExport={() => {}} />
           </main>

@@ -81,8 +81,8 @@ export interface ConversationProps {
   /**
    * Entra na cauda "Guardar" (protótipo `toExport`). Ausente = sem a saída: a
    * Export é estado LOCAL do shell (o domínio não tem modo `export`), então quem
-   * a abre é ele. Sem isto o relatório era um beco — só o fio de contas do
-   * cabeçalho levava adiante, e chrome não é ação.
+   * a abre é ele. Desde que o fio de contas saiu do cabeçalho (ENG-668), esta é a
+   * ÚNICA porta para a Export — e chrome nunca foi ação.
    */
   onGoToExport?: () => void;
   /**

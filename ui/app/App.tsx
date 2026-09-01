@@ -11,7 +11,7 @@ import voiceRegistration from '../../adapters/voice/register';
 import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
 import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
-import { setMode, type Mode, type SessionState } from '../../domain';
+import type { SessionState } from '../../domain';
 import type { SaveStatus } from '../molecules';
 import { BlockDone, type ClosedBlock } from '../organisms/block-done/block-done';
 import { BreakSuggestion } from '../organisms/break-suggestion/break-suggestion';
@@ -46,7 +46,6 @@ import { StationHost } from './station-host';
 import { initTheme, readTheme, toggleTheme, type Theme } from './theme';
 import { useEditorLock } from './use-editor-lock';
 import { voiceStoreFor } from './voice-adapter';
-import { Stepper } from './stepper';
 import { StoryProgress } from './story-progress';
 
 /**
@@ -79,17 +78,9 @@ const NO_PLAYBACK: Player = { stop() {} };
 /** O mudo do cabeçalho: a mesma porta, sem voz. Estável entre renders. */
 const SILENT_SOUND: UiSound = new SilentUiSound();
 
-/** Estação (diretório em ui/pages) → modo do domínio, para a navegação do fio. */
-const KEY_TO_MODE: Record<string, Mode> = {
-  listen: 'escuta',
-  cut: 'escuta',
-  triage: 'triagem',
-  phrases: 'segmentacao',
-  conversation: 'mapeamento',
-};
-
 /**
- * Corpo de uma sessão aberta: fio de contas + chrome de revisão + player + estação.
+ * Corpo de uma sessão aberta: a faixa de progresso + chrome de revisão + player +
+ * estação.
  * A cauda "Guardar" (export) não tem modo no domínio, então entrar nela é um estado
  * LOCAL (`viewingExport`). Este componente é remontado por `key={sessionId}` no App,
  * de modo que trocar de sessão zera `viewingExport` — sem isso a flag vazaria e uma
@@ -174,15 +165,6 @@ function SessionStations({
 
   const stations = stepperStations(session, { viewingExport });
   const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'listen';
-  const navigateStation = (key: string) => {
-    if (key === 'export') {
-      setManualExport(true);
-      return;
-    }
-    setManualExport(false);
-    const mode = KEY_TO_MODE[key];
-    if (mode) sessionStore.getState().apply((s) => setMode(s, mode));
-  };
   // Portas de wiring por estação: a Export conclui/baixa com o SessionStore
   // app-global + o id da rota; o Conversation grava a resposta por voz (§8.7) E toca
   // os trechos; as demais estações do colar (Escuta 1/2, Triage, Segmentação)
@@ -218,7 +200,6 @@ function SessionStations({
         voicePaths={voicePaths}
         onGoalReached={setGoalReached}
       />
-      <Stepper stations={stations} onNavigate={navigateStation} />
       <ReviewBanner review={review} lock={lock} onUnlock={() => sessionStore.getState().unlock()} />
       <PlayerSlotProvider
         activeKey={currentKey}
@@ -516,8 +497,8 @@ function useSessionPlayer(routeId: string | null): {
 }
 
 /**
- * Composition root do Colar de Sons (ENG-224): cabeçalho + fio de contas + player
- * itinerante + chrome de revisão/trava + gate online-only, montados sobre as três
+ * Composition root do Colar de Sons (ENG-224): cabeçalho + faixa de progresso +
+ * player itinerante + chrome de revisão/trava + gate online-only, montados sobre as três
  * registries por glob (docs/architecture.md §4). As estações só ADICIONAM arquivos
  * em ui/pages — este shell nunca muda depois.
  */

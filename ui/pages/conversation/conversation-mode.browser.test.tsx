@@ -16,8 +16,7 @@ import {
   type Span,
 } from '../../../domain';
 import { Header } from '../../app/header';
-import { Stepper } from '../../app/stepper';
-import { stepperStations } from '../../app/stepper-model';
+import { StoryProgress } from '../../app/story-progress';
 import i18n from '../../i18n';
 import { NavFooterOutlet, NavFooterProvider } from '../../organisms/nav-footer/nav-footer';
 import { sessionStore } from '../../state';
@@ -105,7 +104,7 @@ async function abrirConversa(): Promise<void> {
       <NavFooterProvider>
         <div className="cds-app">
           <Header muted={false} onToggleMuted={() => {}} onBack={() => {}} />
-          <Stepper stations={stepperStations(state)} onNavigate={() => {}} />
+          <StoryProgress session={state} />
           <main className="cds-app-main">
             <Conversation onGoToExport={() => {}} />
           </main>

@@ -185,7 +185,7 @@ export const en: Dict = {
     save: 'Save',
   },
   shell: {
-    stepperAria: 'Session progress',
+    progressAria: 'Session progress',
     loadingSession: 'loading the session…',
     preparingEyebrow: 'One moment',
     preparingSession: 'Preparing the necklace of your story…',
@@ -240,11 +240,6 @@ export const en: Dict = {
   progressDots: {
     dotLabel: 'go to the scene',
     sceneDot: 'Scene {{n}}',
-  },
-  stationState: {
-    current: 'current step',
-    done: 'done',
-    future: 'not done',
   },
   dashboard: {
     logout: 'Sign out',

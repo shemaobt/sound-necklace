@@ -299,7 +299,8 @@ export class ColarApp {
   async walkToReport(): Promise<void> {
     for (let step = 0; step < 60; step++) {
       if (await this.page.locator('.cds-report').count()) return;
-      await this.page.getByRole('button', { name: 'Próxima pergunta' }).click();
+      // o rótulo fala o idioma da UI, e uma spec percorre o fluxo em inglês
+      await this.page.getByRole('button', { name: /^(Próxima pergunta|Next question)$/ }).click();
     }
     throw new Error('relatório não apareceu após 60 passos');
   }
@@ -360,15 +361,25 @@ export class ColarApp {
     return confirmed;
   }
 
-  // ——— fio de contas / Export ———
+  // ——— da conversa à Export ———
 
-  /** Clica um passo do fio de contas pelo rótulo (só navega se alcançável). */
-  async gotoStep(label: string): Promise<void> {
-    await this.page.locator('.cds-stepper li', { hasText: label }).click({ force: true });
+  /**
+   * Vai da conversa à Export pela porta da facilitadora: a prévia do relatório e o
+   * seu rodapé, "Guardar os documentos →". O fio de contas — que abria um atalho
+   * para qualquer estação — saiu na ENG-668, e este é o caminho que restou (e o
+   * único que o protótipo v4 sempre teve). Os rótulos vêm nos dois idiomas porque
+   * uma spec percorre o fluxo em inglês, como em `chooseConversationMode`.
+   */
+  async gotoExport(): Promise<void> {
+    if (await this.page.locator('.cds-export').count()) return; // já se está nela
+    await this.walkToReport();
+    await this.page
+      .getByRole('button', { name: /^(Guardar os documentos|Save the documents) →$/ })
+      .click();
   }
 
   async completeSession(): Promise<void> {
-    await this.gotoStep('Guardar');
+    await this.gotoExport();
     const complete = this.page.getByRole('button', { name: 'Concluir e guardar os documentos' });
     await expect(complete).toBeEnabled();
     await complete.click();

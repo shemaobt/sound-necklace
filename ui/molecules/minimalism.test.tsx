@@ -8,7 +8,6 @@ import { DocumentCard } from './document-card/document-card';
 import { KindCard } from './kind-card/kind-card';
 import { QuestionCard } from './question-card/question-card';
 import { SelectionBand } from './selection-band/selection-band';
-import { StepperStation } from './stepper-station/stepper-station';
 import { StoryProgressBar } from './story-progress-bar/story-progress-bar';
 import { TrustChip } from './trust-chip/trust-chip';
 
@@ -60,9 +59,6 @@ describe('moléculas não mostram dígitos ao ouvinte (PRD v2 §9.2)', () => {
           title="As decisões de vocês"
           description="Onde cada cena e cada frase começa e termina."
         />
-        <ol>
-          <StepperStation label="Ouvir" state="current" />
-        </ol>
         <StoryProgressBar percent={37} dividers={[8, 22, 34, 60, 92]} />
         <TrustChip>Nada sai do seu navegador.</TrustChip>
       </>,
