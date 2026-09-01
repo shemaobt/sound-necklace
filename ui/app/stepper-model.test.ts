@@ -56,7 +56,7 @@ describe('stepperStations — estados derivados dos gates do domínio', () => {
     expect(pick(s, 'triage').state).toBe('current');
   });
 
-  it('cena produtiva destrava Frases mas não Conversa sem frase travada', () => {
+  it('cena produtiva destrava Frases, a última estação do fluxo', () => {
     const s: SessionState = {
       ...base(),
       mode: 'segmentacao',
@@ -66,70 +66,6 @@ describe('stepperStations — estados derivados dos gates do domínio', () => {
     };
     expect(pick(s, 'phrases').reachable).toBe(true);
     expect(pick(s, 'phrases').state).toBe('current');
-    expect(pick(s, 'conversation').reachable).toBe(false);
-  });
-
-  it('frase travada destrava Conversa; passos anteriores ficam concluídos', () => {
-    const s: SessionState = {
-      ...base(),
-      mode: 'mapeamento',
-      whole: { id: 'S1', span: { s: 0, e: 15 }, confirmed: true },
-      partsConfirmed: true,
-      parts: [productive],
-      frases: [
-        {
-          prop_id: 'P1',
-          statement: '',
-          qa: [],
-          span: { s: 0, e: 1 },
-          part_link: 'PT1',
-          locked: true,
-        },
-      ],
-    };
-    expect(pick(s, 'conversation').reachable).toBe(true);
-    expect(pick(s, 'conversation').state).toBe('current');
     expect(pick(s, 'triage').state).toBe('done');
-    expect(pick(s, 'phrases').state).toBe('done');
-    // Guardar (export) fica alcançável junto com a Conversa (mesmo gate), mas segue
-    // a cauda futura até o shell entrar nela.
-    expect(pick(s, 'export').reachable).toBe(true);
-    expect(pick(s, 'export').state).toBe('future');
-  });
-
-  it('Guardar só é alcançável depois de uma frase travada (gate de conversation)', () => {
-    const semFrase: SessionState = {
-      ...base(),
-      mode: 'segmentacao',
-      whole: { id: 'S1', span: { s: 0, e: 15 }, confirmed: true },
-      partsConfirmed: true,
-      parts: [productive],
-    };
-    expect(pick(semFrase, 'export').reachable).toBe(false);
-  });
-
-  it('viewingExport marca Guardar como atual e as contas anteriores como concluídas', () => {
-    const s: SessionState = {
-      ...base(),
-      mode: 'mapeamento',
-      whole: { id: 'S1', span: { s: 0, e: 15 }, confirmed: true },
-      partsConfirmed: true,
-      parts: [productive],
-      frases: [
-        {
-          prop_id: 'P1',
-          statement: '',
-          qa: [],
-          span: { s: 0, e: 1 },
-          part_link: 'PT1',
-          locked: true,
-        },
-      ],
-    };
-    const stations = stepperStations(s, { viewingExport: true });
-    const exportStation = stations.find((st) => st.key === 'export')!;
-    expect(exportStation.state).toBe('current');
-    expect(exportStation.reachable).toBe(true);
-    expect(stations.find((st) => st.key === 'conversation')!.state).toBe('done');
   });
 });

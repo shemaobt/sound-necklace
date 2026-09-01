@@ -1,10 +1,12 @@
 # Colar de Sons — Sound Necklace
 
 An ear-first web app where a facilitator and a listener from an oral culture segment a
-recorded oral story — a necklace of audio beads — into scenes and phrases, classify the
-scenes against the Ruth ontology, and answer meaning questions by voice. Each completed
-session exports three artifacts (`retorno-ancoragem.json`, `manifesto-contas.json`,
-`relatorio-mapeamento.md`) consumed by the downstream pipeline ("o Compilador").
+recorded oral story — a necklace of audio beads — into scenes and phrases and classify
+the scenes against the Ruth ontology. The app runs **Ouvir → Cortar → Triagem → Frases
+and ends there** (owner decision, 2026-09-01; ENG-689): the cuts, scenes and phrases are
+kept by the autosave for a different system to consume, and the app itself produces no
+artifact. The meaning interview will return later, in another flow and another product;
+`domain/` and `contracts/` still carry its rules until the later slices of the cut land.
 
 This is a complete from-scratch implementation. The v1 prototype
 (`docs/reference/index.html`) survives only as the executable behavior contract — never
@@ -22,9 +24,8 @@ Clean architecture in the practical sense — dependencies always point inward:
   behavioral port of the reference, guarded by the golden harness.
 - `contracts/` — schema-validated DTOs and artifact builders. **Frozen layer** (same
   rule).
-- `adapters/` — API client, Web Audio playback, voice recording (MediaRecorder →
-  WebM/Opus), TTS, sessions/locks. Every adapter ships a **fixture mode**, so the whole
-  app runs with no real API.
+- `adapters/` — API client, Web Audio playback, sessions/locks, bucket. Every adapter
+  ships a **fixture mode**, so the whole app runs with no real API.
 - `ui/` — the Shemá design system (atomic design) plus the flow stations. UI chrome is
   PT-BR by default with an EN toggle (`ui/i18n/`); **exported artifacts are English and
   never routed through i18n** (ENG-326/ENG-356 — PT-BR survives in them only as story

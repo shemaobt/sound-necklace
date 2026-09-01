@@ -16,14 +16,13 @@ import { ColarApp, SCENARIO } from './support';
  *   antes de texto" por ORDEM não é observável quando a ação também renderiza texto
  *   síncrono (o `player.play()` roda após o `apply` do domínio); a asserção honesta
  *   e viva é "som, e nenhum texto competindo". Onde o som NÃO é DOM-observável
- *   (toque que completa seleção, cujo confirm renderiza síncrono; e o Conversation,
- *   que não tem colar) a propriedade é provada pelo sinal não-textual do controle e
- *   pelo avanço in-station.
+ *   (o toque que completa a seleção, cujo confirm renderiza síncrono) a propriedade
+ *   é provada pelo sinal não-textual do controle e pelo avanço in-station.
  * - NUDGE DE BORDA (§9.3): o dwell dispara o playback da janela da fronteira SEM
  *   mudar a seleção (as bandas de seleção continuam idênticas).
- * - ZERO CHROME: do momento em que a Escuta 1 assume até o relatório, nenhum
+ * - ZERO CHROME: do momento em que a Escuta 1 assume até o fim do fluxo, nenhum
  *   clique/foco alcança o cabeçalho ou a faixa de progresso do topo — as transições
- *   de estação são por modo de domínio e "Próxima pergunta", nunca pelo chrome. (O
+ *   de estação são por modo de domínio, nunca pelo chrome. (O
  *   fio de contas, que era a outra metade do chrome, saiu na ENG-668.)
  * - SINAL NÃO-TEXTUAL: as contas são `aria-hidden` e sem texto (posição/cor); a
  *   linha de instrução e a ação dominante carregam `data-role` identificável.
@@ -187,7 +186,7 @@ async function hoverEdgeKeepsSelection(page: Page, edgeIdx: number): Promise<voi
   expect(after, 'o nudge de borda mudou a seleção').toEqual(before);
 }
 
-test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', async ({ page }) => {
+test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao fim do fluxo', async ({ page }) => {
   await installOralSpy(page);
   const app = new ColarApp(page);
 
@@ -245,17 +244,8 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao relatório', asy
   await app.moveSeam();
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
+  // ——— o fim do fluxo (ENG-689): fechar a última cena produtiva fecha a sessão ———
   await app.finishPhrases();
-  await app.chooseConversationMode();
-
-  // ——— Conversation → relatório: pergunta tocada + gravação por voz, avanço in-station ———
-  await expect(page.locator('.cds-conversation-stage-panel-header button')).toBeVisible(); // ▶ ouvir o trecho
-  await app.recordVoiceAnswer(); // o microfone é sinal não-textual (forma de onda)
-  for (let i = 0; i < 80; i++) {
-    if (await page.getByRole('region', { name: 'relatório' }).count()) break;
-    await page.getByRole('button', { name: 'Próxima pergunta' }).click();
-  }
-  await expect(page.getByRole('region', { name: 'relatório' })).toBeVisible();
 
   // ——— o caminho inteiro do ouvinte nunca tocou em chrome ———
   // primeiro: o chrome que a sonda vigia EXISTE na página. Sem isto, a asserção

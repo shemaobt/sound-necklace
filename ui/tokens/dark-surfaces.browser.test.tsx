@@ -14,7 +14,6 @@ import '../pages/dashboard/dashboard.css';
 import '../pages/cut/cut.css';
 import '../pages/phrases/phrases.css';
 import '../pages/triage/triage.css';
-import '../pages/report/report.css';
 import '../pages/settings/settings.css';
 import '../pages/login/login.css';
 import '../organisms/session-list/session-list.css';
@@ -36,7 +35,7 @@ import { THEME_ATTRIBUTE } from '../app/theme';
  * Roda no Chromium de verdade: jsdom não computa a cascata de custom properties.
  *
  * FORA desta guarda, de propósito (identidade, não superfície):
- *   · telas cerimoniais (Ouça a história, Mapeamento) — olive nos dois temas
+ *   · telas cerimoniais (Ouça a história) — olive nos dois temas
  *   · botões telha e o creme sobre eles
  *   · scenePalette/phrasePalette — a cor de uma cena é o dado, não o chrome
  */
@@ -48,10 +47,6 @@ import { THEME_ATTRIBUTE } from '../app/theme';
  * vale ficar escrita — as duas eram asserções que nenhuma migração correta
  * poderia satisfazer:
  *
- *  · `cds-question-card` não tem fundo NENHUM, nos dois temas, e não é
- *    descuido: ela só existe dentro do palco da conversa, que é cerimonial
- *    (olive sempre) e já está declarado fora desta guarda no cabeçalho acima.
- *    Dar-lhe um fundo de cartão repintaria o Mapeamento no tema claro.
  *  · `cds-dashboard-card` não existe no app: o cartão do painel é
  *    `cds-session-card` (dashboard/index.tsx). A superfície continua coberta —
  *    só que pelo seletor que de fato é usado.
@@ -66,7 +61,6 @@ const SURFACES: ReadonlyArray<{ selector: string; className: string; prop: strin
   { selector: 'estação de corte', className: 'cds-cut', prop: 'background-color' },
   { selector: 'estação de frases', className: 'cds-phrases', prop: 'background-color' },
   { selector: 'estação de triagem', className: 'cds-triage', prop: 'background-color' },
-  { selector: 'cartão do relatório', className: 'cds-report-card', prop: 'background-color' },
   { selector: 'cartão de configurações', className: 'cds-settings-card', prop: 'background-color' },
   { selector: 'campo do login', className: 'cds-login-input', prop: 'background-color' },
   { selector: 'pílula', className: 'cds-chip', prop: 'background-color' },
@@ -78,11 +72,6 @@ const SURFACES: ReadonlyArray<{ selector: string; className: string; prop: strin
   { selector: 'balão do tutorial', className: 'cds-tutorial-popup', prop: 'background-color' },
   { selector: 'título do painel', className: 'cds-dashboard-title', prop: 'color' },
   { selector: 'eyebrow da setup', className: 'cds-setup-eyebrow', prop: 'color' },
-  {
-    selector: 'linha do relatório',
-    className: 'cds-report-blockhead-rule',
-    prop: 'background-color',
-  },
 ];
 
 function resolved(className: string, prop: string, theme: 'light' | 'dark'): string {

@@ -2,9 +2,9 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { toSessionDto } from '../../contracts';
-import { buildBeads, createSession, ensureMapping, type SessionState } from '../../domain';
+import { buildBeads, createSession, type SessionState } from '../../domain';
 import { BREAK_AFTER_MS } from '../organisms/break-suggestion/break-suggestion';
-import { appStore, goalStore, sessionStore } from '../state';
+import { goalStore, sessionStore } from '../state';
 import { App } from './App';
 import { navigate } from './router';
 import { appSessionStore } from './session-adapter';
@@ -16,33 +16,32 @@ import { appSessionStore } from './session-adapter';
  * aqui prova-se o wiring — e, sobretudo, que as telas cheias não se cobrem.
  */
 
-/** A primeira pergunta da entrevista (domain `L1_Q`) — onde a pessoa está. */
-const FIRST_QUESTION =
-  'Descreva esta história, explicando o que acontece, do começo ao fim. Não é para recontar a história, é para falar sobre ela.';
+/** A instrução da Segmentação — onde a pessoa está. */
+const PHRASES = 'Divida a cena: toque no colar onde esta frase começa e termina.';
 const GOAL_HEADLINE = 'A meta de hoje está no cordão.';
 const BREAK_HEADLINE = 'Já foi bastante coisa boa por agora.';
 const DASHBOARD = 'Suas histórias';
 const KEEP_GOING = 'Seguir mais um pouco';
 
-/** Sessão em mapeamento: a Conversa já passou de longe a meta de fechar a Triagem. */
-function interviewSession(): SessionState {
+/** Sessão na Segmentação, com uma cena produtiva ainda por fechar. */
+function segmentingSession(): SessionState {
   const base = createSession({
-    durationSec: 4,
+    durationSec: 7.5,
     beadSec: 0.25,
-    beads: buildBeads(4, 0.25),
+    beads: buildBeads(7.5, 0.25),
     manifestId: 'fnv1a32:deadbeef',
     audioFilename: 'h.wav',
     slug: 'h',
   });
-  return ensureMapping({
+  return {
     ...base,
-    mode: 'mapeamento',
-    whole: { id: 'S1', span: { s: 0, e: 15 }, confirmed: true },
+    mode: 'segmentacao',
+    whole: { id: 'S1', span: { s: 0, e: 29 }, confirmed: true },
     partsConfirmed: true,
     parts: [
       {
         part_id: 'PT1',
-        span: { s: 0, e: 15 },
+        span: { s: 0, e: 29 },
         locked: true,
         scene_kind: 'BIRTH_SCENE',
         scene_kind_confidence: 'high',
@@ -54,15 +53,17 @@ function interviewSession(): SessionState {
         prop_id: 'P1',
         statement: '',
         qa: [],
-        span: { s: 0, e: 1 },
+        span: { s: 0, e: 4 },
         part_link: 'PT1',
         locked: true,
       },
     ],
-  });
+    activeSceneId: 'PT1',
+    current: { layer: 'frases', index: -1 },
+  };
 }
 
-async function persistInterview(): Promise<string> {
+async function persistSegmenting(): Promise<string> {
   const store = appSessionStore();
   const summary = await store.create({
     projectId: 'p1',
@@ -77,7 +78,7 @@ async function persistInterview(): Promise<string> {
   store.autosave(
     summary.id,
     toSessionDto(
-      interviewSession(),
+      segmentingSession(),
       {
         granularityLevel: 'medium',
         bucketAudioId: 'a1',
@@ -92,18 +93,12 @@ async function persistInterview(): Promise<string> {
   return summary.id;
 }
 
-/** Abre a entrevista de uma sessão viva. */
-async function openInterview(): Promise<void> {
-  const id = await persistInterview();
+/** Abre a Segmentação de uma sessão viva. */
+async function openPhrases(): Promise<void> {
+  const id = await persistSegmenting();
   act(() => navigate(`/session/${id}`));
   render(<App />);
-  await screen.findByText(FIRST_QUESTION);
-  /* Estar NA entrevista quer dizer que a dupla já escolheu como ela anda (ENG-649):
-     enquanto o pedido do modo está de pé ele é a tela da vez, e as telas cheias do
-     shell esperam por ele como esperam umas pelas outras. */
-  await act(async () => {
-    screen.getByRole('button', { name: /^Toque a toque/ }).click();
-  });
+  await screen.findByText(PHRASES, { exact: false });
 }
 
 /** Deixa o limiar da pausa sugerida passar. */
@@ -120,7 +115,6 @@ beforeEach(() => {
   window.history.replaceState({}, '', '/');
   sessionStore.setState(sessionStore.getInitialState(), true);
   goalStore.setState(goalStore.getInitialState(), true);
-  appStore.setState({ recording: false });
   localStorage.clear();
 });
 
@@ -130,15 +124,15 @@ afterEach(() => {
 
 describe('A meta de hoje no shell (ENG-653)', () => {
   it('sem meta escolhida, nada aparece por mais que o trabalho ande', async () => {
-    await openInterview();
+    await openPhrases();
 
     expect(screen.queryByText(GOAL_HEADLINE)).toBeNull();
-    expect(screen.getByText(FIRST_QUESTION)).toBeDefined();
+    expect(screen.getByText(PHRASES, { exact: false })).toBeDefined();
   });
 
   it('alcançada a meta, a tela aparece e "Seguir mais um pouco" deixa na mesma pergunta', async () => {
     goalStore.getState().chooseGoal('triage');
-    await openInterview();
+    await openPhrases();
 
     await screen.findByText(GOAL_HEADLINE);
     await act(async () => {
@@ -146,13 +140,13 @@ describe('A meta de hoje no shell (ENG-653)', () => {
     });
 
     expect(screen.queryByText(GOAL_HEADLINE)).toBeNull();
-    expect(screen.getByText(FIRST_QUESTION)).toBeDefined();
+    expect(screen.getByText(PHRASES, { exact: false })).toBeDefined();
     expect(screen.queryByRole('heading', { name: DASHBOARD })).toBeNull();
   });
 
   it('"Guardar por hoje" volta ao painel de histórias', async () => {
     goalStore.getState().chooseGoal('triage');
-    await openInterview();
+    await openPhrases();
     await screen.findByText(GOAL_HEADLINE);
 
     await act(async () => {
@@ -165,24 +159,8 @@ describe('A meta de hoje no shell (ENG-653)', () => {
     expect(screen.queryByText(GOAL_HEADLINE)).toBeNull();
   });
 
-  it('com o microfone aberto, a tela espera a resposta terminar', async () => {
-    // a gravação se liga DEPOIS de abrir a entrevista: o palco publica o próprio
-    // estado de gravador ao montar, e sobrescreveria uma marcação anterior
-    await openInterview();
-    act(() => appStore.getState().setRecording(true));
-
-    act(() => goalStore.getState().chooseGoal('triage'));
-
-    expect(screen.queryByText(GOAL_HEADLINE)).toBeNull();
-    expect(screen.getByText(FIRST_QUESTION)).toBeDefined();
-
-    // terminada a resposta, a meta chega — não se perde por ter chegado na hora errada
-    act(() => appStore.getState().setRecording(false));
-    await screen.findByText(GOAL_HEADLINE);
-  });
-
   it('a meta não sobe por cima da pausa sugerida — espera ela sair', async () => {
-    await openInterview();
+    await openPhrases();
     passBreakThreshold();
     await screen.findByText(BREAK_HEADLINE);
 
@@ -199,7 +177,7 @@ describe('A meta de hoje no shell (ENG-653)', () => {
 
   it('a pausa sugerida não sobe por cima da meta alcançada', async () => {
     goalStore.getState().chooseGoal('triage');
-    await openInterview();
+    await openPhrases();
     await screen.findByText(GOAL_HEADLINE);
 
     passBreakThreshold();

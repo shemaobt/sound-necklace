@@ -13,7 +13,7 @@ Path: @/adapters/sessions
 - Consumes @/contracts DTOs (`SessionStateDto`, `SessionSummary`, `ArtifactTriple`, `LockStatus`, `SessionStep`, `ResourcePath`, `CreateSessionRequest`, `RenameSessionRequest` from @/contracts/api.ts and @/contracts/session-state.ts). It imports the connectivity port (@/adapters/connectivity/types.ts) for the offline pause; it needs nothing from @/domain and never imports `ui/` — @/.dependency-cruiser.cjs enforces both directions.
 - The backend half of rename/remove is `shemaobt/shema-api` PR #153 (ENG-414) — open and green but not yet merged, so `HttpSessionStore.rename`/`.remove` are written to the agreed contract but do not exist in production yet; the app runs against `FixtureSessionStore` in the meantime.
 - @/adapters/sessions/register.ts still declares the `{ port: 'sessions', fixture, real }` registration per convention (@/docs/architecture.md §4), but the app's actual wiring is the mode-aware app-global singleton `appSessionStore()` in @/ui/app/session-adapter.ts: under `VITE_API_MODE=real` it builds the `HttpSessionStore` with the browser fetch/connectivity, the logged-in editor as a `user` thunk, an **async** token gated behind `authReady()` (every session call waits for the boot resume, so a reload cannot race a 401), and `onLockLost` feeding the review chrome.
-- Consumed by `ui/` only through the port and props/wiring (Setup creates, Dashboard lists/resumes, Export completes/reads artifacts). The listener-facing autosave freeze pairs with the connectivity gate (@/adapters/connectivity/docs.md) — losing connection pauses saving without clearing state.
+- Consumed by `ui/` only through the port and props/wiring (Setup creates, Dashboard lists/resumes/renames/removes). The listener-facing autosave freeze pairs with the connectivity gate (@/adapters/connectivity/docs.md) — losing connection pauses saving without clearing state. `complete()`/`getArtifacts()` were called only from @/ui/pages/export, which was deleted in ENG-689 (scope cut 1/4, `adapters/sessions` itself frozen and untouched by that slice) — nothing in `ui/` reaches them today.
 
 ```
 Setup ─create()─▶ SessionSummary ──▶ Dashboard list()/get()
@@ -22,8 +22,8 @@ Setup ─create()─▶ SessionSummary ──▶ Dashboard list()/get()
 FixtureSessionStore ── over ──▶ FixtureSessionBackend (shared "server")
   │  clone in / clone out (opaque custody)      │ optional mirror
   │                                             ▼
-Export ─complete(state, artifacts)─▶      KeyValueStorage (localStorage)
-        getArtifacts() byte-identical      key colar-de-sons:sessions:v1
+(nothing in ui/ calls) ─complete(state, artifacts)─▶  KeyValueStorage (localStorage)
+        getArtifacts() byte-identical                  key colar-de-sons:sessions:v1
 ```
 
 ### Core Implementation

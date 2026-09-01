@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
-import { ApiError, AuthError } from '../../adapters/api';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
-import sttRegistration from '../../adapters/stt/register';
-import type { Transcriber } from '../../adapters/stt/types';
-import ttsRegistration from '../../adapters/tts/register';
-import type { SpeechSynthesizer } from '../../adapters/tts/types';
-import voiceRegistration from '../../adapters/voice/register';
 import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
-import type { VoiceRecorder } from '../../adapters/voice/types';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
 import type { SessionState } from '../../domain';
 import type { SaveStatus } from '../molecules';
@@ -28,9 +21,7 @@ import {
   useSessionStore,
 } from '../state';
 import { AddonsLayer } from './addons-layer';
-import i18n from '../i18n';
-import { interviewLocale } from '../i18n/interview-language';
-import { API_BASE_URL, API_MODE } from './api-config';
+import { API_MODE } from './api-config';
 import { appAuth, authReady } from './auth-adapter';
 import { shouldGateToLogin } from './auth-gate';
 import { buildSessionPlayer, createDeferredPlayer, type SessionAudio } from './audio-player';
@@ -38,14 +29,12 @@ import { Header } from './header';
 import { PlayerSlotProvider, type Player } from './player-slot';
 import { NavFooterOutlet, NavFooterProvider } from '../organisms/nav-footer/nav-footer';
 import { PreparingSession } from '../organisms/preparing-session/preparing-session';
-import { reviewIsDone } from './resume-placement';
 import { buildAdapterRegistry, buildStationRegistry, type StationComponent } from './registries';
 import { ReviewBanner } from './review-banner';
 import { appSessionStore } from './session-adapter';
 import { StationHost } from './station-host';
 import { initTheme, readTheme, toggleTheme, type Theme } from './theme';
 import { useEditorLock } from './use-editor-lock';
-import { voiceStoreFor } from './voice-adapter';
 import { StoryProgress } from './story-progress';
 
 /**
@@ -80,11 +69,7 @@ const SILENT_SOUND: UiSound = new SilentUiSound();
 
 /**
  * Corpo de uma sessão aberta: a faixa de progresso + chrome de revisão + player +
- * estação.
- * A cauda "Guardar" (export) não tem modo no domínio, então entrar nela é um estado
- * LOCAL (`viewingExport`). Este componente é remontado por `key={sessionId}` no App,
- * de modo que trocar de sessão zera `viewingExport` — sem isso a flag vazaria e uma
- * sessão que nem chegou ao gate abriria na Export (ENG-270).
+ * estação. O fluxo acaba nas Frases (ENG-689): não há cauda depois delas.
  */
 function SessionStations({
   session,
@@ -93,16 +78,8 @@ function SessionStations({
   lock,
   online,
   registry,
-  exportStore,
   player,
-  recorder,
-  speaker,
   sound,
-  onVoiceSaved,
-  initialExport,
-  voicePaths,
-  stt,
-  recordingVersion,
 }: {
   session: SessionState;
   sessionId: string;
@@ -110,26 +87,9 @@ function SessionStations({
   lock: EditorLock | null;
   online: boolean;
   registry: Record<string, StationComponent>;
-  exportStore: ReturnType<typeof appSessionStore>;
   player: AudioPlayer | null;
-  recorder: VoiceRecorder | null;
-  speaker: SpeechSynthesizer | null;
   sound: UiSound;
-  onVoiceSaved: (path: string) => void;
-  /** Sessão concluída reabre na Export (ENG-320); o `key={sessionId}` remonta por sessão. */
-  initialExport: boolean;
-  /** Getter for `meta.voice` — resuming Conversation opens on the first unanswered question (ENG-321). */
-  voicePaths: () => readonly string[];
-  /** Transcrição+tradução das respostas gravadas (ENG-327). */
-  stt: Transcriber | null;
-  /** Quantas vezes cada resposta foi gravada — regravar invalida o rascunho. */
-  recordingVersion: Record<string, number>;
 }) {
-  // Escolha MANUAL da cauda "Guardar": enquanto null, a vista segue o status da
-  // sessão (concluída abre na Export — ENG-320), que pode chegar depois da montagem
-  // numa entrada in-SPA. O primeiro clique de navegação assume e nunca é puxado.
-  const [manualExport, setManualExport] = useState<boolean | null>(null);
-  const viewingExport = manualExport ?? initialExport;
   // O bloco que ACABOU de fechar (ENG-651). Mora aqui, e não na estação, por dois
   // motivos: a estação que confirma é justamente a que sai de cena, e só o shell
   // pode garantir que uma tela cheia por vez suba. Nasce e morre com a vista da
@@ -137,69 +97,38 @@ function SessionStations({
   // reabrir uma já passada do limite não repete nada; um re-render não o perde.
   const [closedBlock, setClosedBlock] = useState<ClosedBlock | null>(null);
   // O relógio líquido da sessão pulsa aqui, no único lugar que sabe QUAL sessão
-  // está aberta; a Export lê o total ao concluir. Nada disto sai do browser.
+  // está aberta. Nada disto sai do browser. Desde a ENG-689 ele ACUMULA sem ter
+  // leitor: quem mostrava o total era a tela de conclusão, que saiu — o registro
+  // fica de pé para quem vier a querê-lo, e apagá-lo é decisão de outro corte.
   useSessionClock(sessionId);
-  // Microfone aberto: a pausa sugerida (ENG-650) não sobe por cima de uma resposta
-  // sendo gravada. É o mesmo sinal app-global que trava o "← Histórias" (ENG-393).
-  const recording = useAppStore((s) => s.recording);
   // Exclusão entre telas cheias, de mão dupla (ENG-653): cada uma diz ao shell que
   // está no ar, e o shell repassa isso como `busy` à outra. A meta de hoje só sabe
   // que chegou porque a faixa do topo — que já calcula as duas pontas — avisa.
   const [goalReached, setGoalReached] = useState(false);
-  /**
-   * O pedido do modo da conversa (ENG-649) é a quarta tela de largura inteira que
-   * pode querer este instante — a chegada à Conversa fecha um bloco, e os dois
-   * sobem juntos. Entra no mesmo `busy` das outras três, dos dois lados: ele espera
-   * por elas, e elas por ele.
-   */
-  const [modePickerOpen, setModePickerOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
   const [breakOpen, setBreakOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
-  // O progresso de tela (quanto se ouviu, quantos artefatos se baixou) é por
-  // sessão: este componente é remontado por `key={sessionId}`, então zerar na
-  // montagem basta — sem isso a barra da sessão seguinte abriria já andada.
+  // O progresso de tela (quanto se ouviu) é por sessão: este componente é
+  // remontado por `key={sessionId}`, então zerar na montagem basta — sem isso a
+  // barra da sessão seguinte abriria já andada.
   useEffect(() => {
     progressStore.getState().reset();
   }, []);
 
-  const stations = stepperStations(session, { viewingExport });
+  const stations = stepperStations(session);
   const currentKey = stations.find((s) => s.state === 'current')?.key ?? 'listen';
-  // Portas de wiring por estação: a Export conclui/baixa com o SessionStore
-  // app-global + o id da rota; o Conversation grava a resposta por voz (§8.7) E toca
-  // os trechos; as demais estações do colar (Escuta 1/2, Triage, Segmentação)
-  // recebem o player para tocar contas/bordas/cenas (§8.2).
-  // O som da UI vai para TODAS: cada estação tem decisões que precisam soar (§9).
-  const stationProps =
-    currentKey === 'export'
-      ? { store: exportStore, sessionId, sound }
-      : currentKey === 'conversation'
-        ? {
-            recorder,
-            player,
-            speaker,
-            sound,
-            onVoiceSaved,
-            voicePaths,
-            stt,
-            sessionId,
-            recordingVersion,
-            // a prévia do relatório fecha com "Guardar os documentos →" (protótipo
-            // toExport); a Export é estado local do shell, então a chave é nossa
-            onGoToExport: () => setManualExport(true),
-            overlayBusy: breakOpen || goalOpen || blockOpen,
-            onModePickerChange: setModePickerOpen,
-          }
-        : { player, sound, onBlockClosed: (block: ClosedBlock) => setClosedBlock(block) };
+  // Portas de wiring por estação: as estações do colar (Escuta 1/2, Triage,
+  // Segmentação) recebem o player para tocar contas/bordas/cenas (§8.2). O som da
+  // UI vai para todas: cada estação tem decisões que precisam soar (§9).
+  const stationProps = {
+    player,
+    sound,
+    onBlockClosed: (block: ClosedBlock) => setClosedBlock(block),
+  };
 
   return (
     <>
-      <StoryProgress
-        session={session}
-        viewingExport={viewingExport}
-        voicePaths={voicePaths}
-        onGoalReached={setGoalReached}
-      />
+      <StoryProgress session={session} onGoalReached={setGoalReached} />
       <ReviewBanner review={review} lock={lock} onUnlock={() => sessionStore.getState().unlock()} />
       <PlayerSlotProvider
         activeKey={currentKey}
@@ -217,7 +146,7 @@ function SessionStations({
           com a vista da sessão: a tela de espera a substitui inteira, e o `key` por
           sessão rearma a sugestão ao começar, retomar ou reabrir para revisão. */}
       <BreakSuggestion
-        busy={recording || goalOpen || blockOpen || modePickerOpen}
+        busy={goalOpen || blockOpen}
         onTakeBreak={() => navigate('/dashboard')}
         onOpenChange={setBreakOpen}
       />
@@ -227,7 +156,7 @@ function SessionStations({
           troca pela porta silenciosa. */}
       <GoalReached
         reached={goalReached}
-        busy={recording || breakOpen || blockOpen || modePickerOpen}
+        busy={breakOpen || blockOpen}
         chime={() => sound.advance()}
         onOpenChange={setGoalOpen}
         onStopForToday={() => navigate('/dashboard')}
@@ -247,20 +176,28 @@ function SessionStations({
           travado, não derivação, por isso a espera é de mão dupla. */}
       <BlockDone
         block={closedBlock}
-        // o fim de bloco NÃO espera pelo pedido do modo: ele é o momento anterior,
-        // e o pedido é que se cala enquanto ele está de pé (mão única, como com a meta)
-        busy={recording || breakOpen}
+        busy={breakOpen}
         onOpenChange={setBlockOpen}
         tints={
           closedBlock === 'segmentacao'
             ? phrasePalette.slice(0, 5)
             : scenePalette.slice(0, Math.min(5, Math.max(1, session.parts.length)))
         }
-        onContinue={() => setClosedBlock(null)}
-        onRest={() => {
+        // A Segmentação é o FIM do fluxo (ENG-689): não há estação atrás desta tela
+        // para o primário entregar, então ele é a saída — e a saída de descansar,
+        // que levaria ao mesmo lugar, não é oferecida duas vezes.
+        onContinue={() => {
           setClosedBlock(null);
-          navigate('/dashboard');
+          if (closedBlock === 'segmentacao') navigate('/dashboard');
         }}
+        onRest={
+          closedBlock === 'segmentacao'
+            ? undefined
+            : () => {
+                setClosedBlock(null);
+                navigate('/dashboard');
+              }
+        }
       />
     </>
   );
@@ -350,47 +287,32 @@ function useAuthGate(routeName: string): void {
  * não expõe reset) — no fluxo real toda sessão tem um DTO inicial persistido pelo Setup,
  * então só afeta ids inexistentes digitados à mão.
  *
- * Devolve ONDE a sessão abre, e só depois de saber (ENG-511). O `ready` é o que impede
- * o shell de se comprometer com uma estação antes disso: o `ui/state` sobrevive à troca
- * de rota, então montar de imediato mostrava a estação da sessão ANTERIOR — com os
- * cartões de resposta dela — sob a rota da nova, até a hidratação chegar. Uma carga que
- * FALHA também resolve, sem Export: erro de leitura não pode virar "vai para Guardar".
+ * Devolve se a sessão já está POSTA, e só então o shell monta uma estação (ENG-511):
+ * o `ui/state` sobrevive à troca de rota, então montar de imediato mostrava a estação
+ * da sessão ANTERIOR sob a rota da nova, até a hidratação chegar. Uma carga que FALHA
+ * também resolve — o placeholder não pode ser eterno.
  */
 function useSessionHydration(
   routeId: string | null,
   metaRef: MutableRefObject<SessionMeta | null>,
-  /** Seeds the render-readable mirror of `meta.voiceVersion` from the loaded session. */
-  onVoiceVersion: (versions: Record<string, number>) => void,
-): { ready: boolean; initialExport: boolean } {
+): boolean {
   const loadedId = useRef<string | null>(null);
-  // Onde ESTA sessão abre: concluída reabre na Export (§7.3), não no último modo salvo
-  // do domínio (conversation) — o status vive no resumo, não no DTO de estado (ENG-320)
-  // —, e o mesmo vale para a revisão que já está inteira confirmada (ENG-511). O id
-  // acompanha o veredito para que o de uma sessão não vaze para a próxima enquanto a
-  // hidratação dela ainda voa.
-  const [placed, setPlaced] = useState<{ id: string; toExport: boolean } | null>(null);
+  // O id acompanha o veredito para que o de uma sessão não vaze para a próxima
+  // enquanto a hidratação dela ainda voa.
+  const [placed, setPlaced] = useState<string | null>(null);
   useEffect(() => {
     if (routeId === null || routeId === loadedId.current) return;
     let alive = true;
     void (async () => {
       try {
-        const store = appSessionStore();
-        const [dto, summary] = await Promise.all([store.load(routeId), store.get(routeId)]);
+        const dto = await appSessionStore().load(routeId);
         if (!alive) return;
         loadedId.current = routeId;
         const { state, meta } = fromSessionDto(dto);
-        setPlaced({
-          id: routeId,
-          toExport: summary.status === 'completed' || reviewIsDone(state, meta.voice),
-        });
-        // O meta desta sessão vive num ref para que tanto o autosave quanto o
-        // registro de respostas de voz (`onVoiceSaved`) escrevam no MESMO objeto:
-        // gravar voz muta `meta.voice`, e a próxima persistência (do domínio ou da
-        // própria voz) já o reflete (ENG-276).
+        setPlaced(routeId);
+        // O meta desta sessão vive num ref para que o autosave escreva sempre no
+        // MESMO objeto (granularidade/áudio/consentimento).
         metaRef.current = meta;
-        // sem isto o contador persistido nunca chegaria ao relatório, que continuaria
-        // comparando o `enver__` durável com um mapa vazio e re-transcrevendo tudo
-        onVoiceVersion({ ...meta.voiceVersion });
         sessionStore.getState().load(state);
         // Revisão é POR SESSÃO, mas o store é singleton e `load` não a reseta:
         // estabeleço do zero a cada (re)hidratação para a revisão de uma sessão não
@@ -399,27 +321,28 @@ function useSessionHydration(
         // leitura única que vivia aqui competiria com ele.
         sessionStore.getState().setReview(false);
         // Liga o autosave contínuo (§7.3): a partir daqui cada mutação do domínio
-        // persiste o estado INTEIRO no store app-global, sob o meta desta sessão
-        // (granularidade/áudio/consentimento/voz), de modo que um reload retome no
-        // passo exato. O adapter debounce+coalesce; o flush no pagehide fecha a janela.
+        // persiste o estado INTEIRO no store app-global, sob o meta desta sessão, de
+        // modo que um reload retome no passo exato. O adapter debounce+coalesce; o
+        // flush no pagehide fecha a janela.
+        //
+        // `reviewComplete` vai sempre `false` (ENG-689): a revisão que essa bandeira
+        // descrevia era a do relatório, e o relatório saiu do produto — não há
+        // revisão para estar pronta. O campo continua no DTO por ser camada congelada.
         sessionStore.getState().setAutosave((live) => {
           const m = metaRef.current;
-          if (m)
-            appSessionStore().autosave(routeId, toSessionDto(live, m, reviewIsDone(live, m.voice)));
+          if (m) appSessionStore().autosave(routeId, toSessionDto(live, m, false));
         });
       } catch {
-        // sessão sem estado salvo ou persistência corrompida — mantém o ui/state atual e
-        // segue para a estação do passo salvo; o que não se faz é ir para Guardar sem
-        // ter lido nada
-        if (alive) setPlaced({ id: routeId, toExport: false });
+        // sessão sem estado salvo ou persistência corrompida — mantém o ui/state atual
+        // e segue para a estação do passo salvo
+        if (alive) setPlaced(routeId);
       }
     })();
     return () => {
       alive = false;
     };
   }, [routeId, metaRef]);
-  const settled = routeId !== null && placed?.id === routeId;
-  return { ready: settled, initialExport: settled && placed.toExport };
+  return routeId !== null && placed === routeId;
 }
 
 /**
@@ -505,7 +428,6 @@ function useSessionPlayer(routeId: string | null): {
 export function App() {
   const route = useRoute();
   const muted = useAppStore((s) => s.muted);
-  const recording = useAppStore((s) => s.recording);
   const [theme, onToggleTheme] = useTheme();
   const online = useOnline();
   useAuthExpiry();
@@ -517,15 +439,7 @@ export function App() {
 
   const routeId = route.name === 'session' ? route.id : null;
   const metaRef = useRef<SessionMeta | null>(null);
-  // Mirrors `meta.voiceVersion` so the stations can read it in render — the meta itself
-  // lives in a ref, and reading a ref in render is forbidden. The ref is what gets
-  // persisted; this is the copy React is allowed to see, seeded below from the loaded
-  // session. It used to be state and NOTHING else, which is the whole bug: the report
-  // compares it against the durable `enver__` of each draft, so a counter that reset to
-  // `{}` on every load made every reopened session look re-recorded, and the entire
-  // interview was transcribed — and paid for — again.
-  const [recordingVersion, setRecordingVersion] = useState<Record<string, number>>({});
-  const { ready, initialExport } = useSessionHydration(routeId, metaRef, setRecordingVersion);
+  const ready = useSessionHydration(routeId, metaRef);
   // A trava consultiva (§7.3) tem dono único: adquire ao abrir, renova a cada 15 s,
   // solta ao sair — e abre em revisão se outra pessoa a detém. Vale nos dois modos
   // (a fixture também serve trava), então há UM caminho de código, não dois.
@@ -544,116 +458,7 @@ export function App() {
     [setStoryGain],
   );
 
-  // Registra o caminho canônico de uma resposta de voz recém-gravada no `meta.voice`
-  // desta sessão e persiste JÁ (autosave + flush): a voz é uma ação discreta e entrar
-  // no Export não dispara flush, então esperar o debounce arriscaria o relatório sair
-  // com "sem resposta" (§8.7/§10.4, ENG-276). Fora de uma sessão viva/hidratada é no-op.
-  // Versão da GRAVAÇÃO de cada resposta (ENG-327): regravar a mesma pergunta reusa
-  // o mesmo caminho canônico, então sem este contador nada distingue a gravação
-  // nova da antiga — e o rascunho velho continuaria de pé, pronto para ser
-  // confirmado e escrever no artefato a tradução de um áudio descartado.
-  const onVoiceSaved = useCallback(
-    (path: string) => {
-      const meta = metaRef.current;
-      const live = sessionStore.getState().session;
-      if (!meta || !live || routeId === null) return;
-      // both sides move together: the ref is what the autosave serializes, the state is
-      // what the stations render from
-      const next = (meta.voiceVersion[path] ?? 0) + 1;
-      meta.voiceVersion = { ...meta.voiceVersion, [path]: next };
-      setRecordingVersion((v) => ({ ...v, [path]: next }));
-      if (!meta.voice.includes(path)) meta.voice = [...meta.voice, path];
-      const store = appSessionStore();
-      store.autosave(routeId, toSessionDto(live, meta, reviewIsDone(live, meta.voice)));
-      void store.flush(routeId);
-    },
-    [routeId],
-  );
-
-  // A getter (not a direct read): `meta.voice` lives in a ref, and reading a ref
-  // in render is forbidden — Conversation reads it ONCE, in the cursor initializer
-  // (ENG-321).
-  const getVoicePaths = useCallback(() => metaRef.current?.voice ?? [], []);
-
   const registry = useMemo(() => buildStationRegistry(), []);
-  // O microfone é a implementação REAL: gravar de verdade É a feature (§8.7) — a
-  // resposta em `.webm` é o artefato que o Compilador consome, e um dublê aqui não
-  // deixa a entrevista incompleta, deixa ela MUDA sem avisar (o medidor de nível do
-  // fixture se mexe igual, ENG-298). O dublê só entra onde não existe microfone:
-  // jsdom e qualquer harness que peça `VITE_VOICE=fixture`. O e2e NÃO pede — ele roda
-  // com o microfone falso do Chromium, para o portão exigir áudio de verdade.
-  // O armazém de respostas é POR SESSÃO (§10.4: `respostas/…` é relativo à sessão —
-  // o namespace é de quem guarda, como o servidor faz). Reconstruir por routeId isola
-  // as gravações entre sessões; na mesma aba, voltar à sessão reencontra os bytes
-  // (voiceStoreFor). Sem isto, a mesma pergunta de DUAS sessões dividia UMA gravação.
-  // Import direto (não a registry): o wiring do armazém é tipado.
-  const recorder = useMemo<VoiceRecorder | null>(() => {
-    const useFixture = import.meta.env.VITE_VOICE === 'fixture';
-    return useFixture
-      ? voiceRegistration.fixture()
-      : voiceRegistration.real({ store: voiceStoreFor(routeId) });
-  }, [routeId]);
-  // 401 numa porta de IO fora do ApiClient (TTS, STT): sessão caducada no meio da
-  // entrevista — recupera em vez de derrubar em silêncio. O 401 pode ser só a corrida
-  // do boot (resume em voo) — decide após assentar; com usuário vivo, o token caducou
-  // antes do refresh agendado: renova JÁ (a próxima chamada usa o token novo) e, se a
-  // renovação falhar de forma terminal, volta ao login. Compartilhado pelas duas portas.
-  const handleUnauthorized = useCallback(() => {
-    void authReady().then(async () => {
-      if (!appAuth().currentUser()) {
-        navigate('/login', { replace: true });
-        return;
-      }
-      try {
-        await appAuth().refresh();
-      } catch (err) {
-        // RECUSA da API = sessão morta: derruba TUDO (token/refresh/usuário) antes de
-        // voltar — senão o gate ainda vê um usuário e deixa navegar com token defunto.
-        // Rede/429/5xx são transitórios (mesmo critério do login): ficam, e a próxima
-        // chamada tenta de novo.
-        const terminal =
-          err instanceof AuthError ||
-          (err instanceof ApiError && err.status < 500 && err.status !== 429);
-        if (terminal) {
-          await appAuth()
-            .logout()
-            .catch(() => undefined);
-          navigate('/login', { replace: true });
-        }
-      }
-    });
-  }, []);
-  // Transcrição+tradução das respostas (ENG-327/ENG-360): REAL quando a API está
-  // configurada (VITE_API_MODE=real), fixture caso contrário — o fixture é um modo de
-  // dev/demo com rascunhos determinísticos, e o real não tem fallback (sem backend,
-  // `progress` falha, o hook desiste e a facilitadora digita à mão — sem beco). A língua
-  // da entrevista é o idioma da UI, em BCP-47, que o servidor exige. Wiring tipado.
-  const stt = useMemo<Transcriber>(
-    () =>
-      API_MODE === 'real'
-        ? sttRegistration.real({
-            baseUrl: API_BASE_URL,
-            token: () => appAuth().token(),
-            language: () => interviewLocale(i18n.language),
-            onUnauthorized: handleUnauthorized,
-          })
-        : sttRegistration.fixture(),
-    [handleUnauthorized],
-  );
-  // A voz do guia é a implementação REAL, não a fixture: falar de verdade É a feature
-  // (ENG-280). Ela busca o clipe ElevenLabs na API com o Web Speech dentro de si como
-  // fallback (ENG-284). O wiring (ENG-247) injeta a base real e o Bearer vivo do
-  // AuthProvider; sem VITE_API_MODE=real, a base relativa 404a e o fallback assume —
-  // o comportamento de sempre. Import direto (não a registry): o wiring é tipado.
-  const speaker = useMemo<SpeechSynthesizer | null>(
-    () =>
-      ttsRegistration.real({
-        ...(API_MODE === 'real' ? { baseUrl: API_BASE_URL } : {}),
-        token: () => appAuth().token(),
-        onUnauthorized: handleUnauthorized,
-      }),
-    [handleUnauthorized],
-  );
   // O som da UI é a implementação REAL: tocar de volta É a feature num app
   // ear-first. Mudo troca a PORTA pela silenciosa — assim nenhum chamador precisa
   // saber o que é estar mudo, e o botão do cabeçalho passa a silenciar de fato
@@ -673,9 +478,6 @@ export function App() {
       muted={muted}
       onToggleMuted={() => appStore.getState().toggleMuted()}
       onBack={() => navigate('/dashboard')}
-      // gravando, sair da estação perderia a resposta em curso (ENG-393)
-      backDisabled={recording}
-      onBackBlocked={() => sound.refuse()}
       // o tema é global e sem consequência de conteúdo: pode trocar em qualquer estação
       theme={theme}
       onToggleTheme={onToggleTheme}
@@ -705,16 +507,8 @@ export function App() {
           lock={lock}
           online={online}
           registry={registry}
-          exportStore={appSessionStore()}
           player={player}
-          recorder={recorder}
-          speaker={speaker}
           sound={sound}
-          onVoiceSaved={onVoiceSaved}
-          stt={stt}
-          recordingVersion={recordingVersion}
-          initialExport={initialExport}
-          voicePaths={getVoicePaths}
         />
       );
     }

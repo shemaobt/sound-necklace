@@ -23,8 +23,7 @@
     "api:snapshot": "node scripts/api-snapshot.mjs",
     "generate:api-types": "openapi-typescript contracts/openapi.json -o contracts/generated/tripod.d.ts",
     "golden:generate": "node tests/golden/generate.mjs",
-    "golden:verify": "node tests/golden/generate.mjs --verify",
-    "voz:aquecer": "node --experimental-strip-types scripts/warm-tts.mjs"
+    "golden:verify": "node tests/golden/generate.mjs --verify"
   },
   "dependencies": {
     "@dicebear/collection": "^9.4.2",

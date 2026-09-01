@@ -1,16 +1,20 @@
 import { modeLocks, type SessionState } from '../../domain';
 
 /**
- * Deriva os seis estados das estações (redesign §5.1) a partir do modo e dos gates
- * puros do domínio (`modeLocks`). Quatro modos viram seis estações porque Escuta tem
- * dois passos (Ouvir/Cortar) e Guardar é a cauda. É indicador de progresso:
- * `reachable` espelha os gates (estação travada = inalcançável); `state` é
- * concluída/atual/futura pela posição no fluxo. `key` = diretório em ui/pages (a
- * station-registry resolve por ele).
+ * Deriva os quatro estados das estações (redesign §5.1) a partir do modo e dos gates
+ * puros do domínio (`modeLocks`). Três modos viram quatro estações porque Escuta tem
+ * dois passos (Ouvir/Cortar). É indicador de progresso: `reachable` espelha os gates
+ * (estação travada = inalcançável); `state` é concluída/atual/futura pela posição no
+ * fluxo. `key` = diretório em ui/pages (a station-registry resolve por ele).
  *
  * O fio de contas, que desenhava isto, saiu na ENG-668; a derivação ficou porque o
  * shell continua perguntando duas coisas a ela: que estação montar e que nome a
  * faixa de progresso anuncia.
+ *
+ * O fluxo TERMINA nas Frases (ENG-689). O domínio continua avançando para
+ * `mapeamento` ao fechar a última cena produtiva — é o modo congelado que marca
+ * "não há mais o que segmentar" —, e aqui esse modo não abre estação nenhuma: ele
+ * é o fim das Frases.
  */
 
 /**
@@ -32,8 +36,6 @@ const STATIONS: readonly { key: string; labelKey: string }[] = [
   { key: 'cut', labelKey: 'stations.cut' },
   { key: 'triage', labelKey: 'stations.triage' },
   { key: 'phrases', labelKey: 'stations.phrases' },
-  { key: 'conversation', labelKey: 'stations.conversation' },
-  { key: 'export', labelKey: 'stations.save' },
 ];
 
 function currentIndex(state: SessionState): number {
@@ -43,30 +45,15 @@ function currentIndex(state: SessionState): number {
     case 'triagem':
       return 2;
     case 'segmentacao':
-      return 3;
     case 'mapeamento':
-      return 4;
+      return 3;
   }
 }
 
-export function stepperStations(
-  state: SessionState,
-  opts: { viewingExport?: boolean } = {},
-): StepperStationView[] {
+export function stepperStations(state: SessionState): StepperStationView[] {
   const locks = modeLocks(state);
-  const reachable = [
-    true,
-    state.whole.confirmed,
-    locks.triagem,
-    locks.segmentacao,
-    locks.mapeamento,
-    // Guardar (export) é a cauda: alcançável exatamente quando a Conversa está —
-    // história confirmada e ≥1 frase travada numa cena produtiva (o mesmo gate de
-    // conversation). O shell a torna a conta atual ao entrar nela (`viewingExport`),
-    // pois o domínio não tem um modo `export`.
-    locks.mapeamento,
-  ];
-  const ci = opts.viewingExport ? STATIONS.length - 1 : currentIndex(state);
+  const reachable = [true, state.whole.confirmed, locks.triagem, locks.segmentacao];
+  const ci = currentIndex(state);
   return STATIONS.map((def, i) => ({
     key: def.key,
     labelKey: def.labelKey,

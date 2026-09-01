@@ -137,46 +137,18 @@ export const pt = {
     creating: 'Criando…',
     create: 'Criar a sessão →',
     /* A meta de hoje (ENG-653): cartão de FACILITADORA, e por isso os rótulos
-       podem contar cenas e conversas — §9.2 vale para quem ouve. */
+       podem contar cenas — §9.2 vale para quem ouve. As "12 conversas" saíram com
+       a Conversa (ENG-689). */
     goal: {
       heading: 'Até onde vamos hoje?',
       eyebrow: 'só a facilitadora',
       note: 'A meta é conforto, não regra.',
       twoScenes: '2 cenas',
       fourScenes: '4 cenas',
-      twelveTalks: '12 conversas',
       triage: 'fechar a Triagem',
       phrases: 'fechar as Frases',
       wholeStory: 'a história toda',
     },
-  },
-  export: {
-    headline: 'A história está inteira no colar.',
-    waitEyebrow: 'Guardando',
-    waitLine: 'Reunindo as decisões de vocês nos documentos…',
-    anchoringBlocked: 'Confirme o colar antes de exportar.',
-    /* Os dois títulos da recusa. Um gate que recusa não é uma falha: dizer "falta um
-       passo" nomeia o que fazer, enquanto "não consegui" nomeia o que deu errado.
-       Trocá-los faz a facilitadora procurar conexão quando o que falta é um clique. */
-    noticeBlocked: 'Falta um passo.',
-    noticeFailed: 'Não consegui agora.',
-    reportBlocked_one:
-      'Ainda há 1 resposta gravada sem o texto em inglês confirmado. Confirme-a no relatório — ou escreva a resposta à mão.',
-    reportBlocked_other:
-      'Ainda há {{count}} respostas gravadas sem o texto em inglês confirmado. Confirme cada uma no relatório — ou escreva a resposta à mão.',
-    reportBlockedUnknown:
-      'Não consegui conferir quais respostas foram gravadas. Recarregue a página antes de guardar.',
-    semFim: '{{n}} frase(s) ainda sem fim travado.',
-    netTimeLabel: 'Tempo de trabalho nesta sessão',
-    netTimeHm: '{{h}} h {{m}} min',
-    netTimeM: '{{m}} min',
-    netTimeShort: 'menos de 1 min',
-    reopen: 'Destravar para editar',
-    complete: 'Concluir e guardar os documentos',
-    saving: 'Guardando…',
-    saveError: 'Não consegui guardar agora. Verifique a conexão e tente de novo.',
-    reopenError: 'Não consegui destravar agora. Tente de novo.',
-    downloadError: 'Não consegui baixar o documento. Tente de novo.',
   },
   imports: {
     guidanceNoSession: 'Abra uma sessão para carregar arquivos do pipeline.',
@@ -201,8 +173,6 @@ export const pt = {
     cut: 'Cortar',
     triage: 'Triagem',
     phrases: 'Frases',
-    conversation: 'Conversa',
-    save: 'Guardar',
   },
   shell: {
     /** Nome acessível da faixa do topo — a etapa atual + a barra (ENG-668). */
@@ -251,10 +221,13 @@ export const pt = {
       subtitle: 'Agora vem a parte de dentro: as frases de cada cena.',
       primary: 'Seguir para as frases',
     },
+    /* O fim do fluxo (ENG-689): não há mais o que prometer depois das frases, e o
+       apoio não pode continuar apontando para uma conversa que saiu. O que ficou
+       verdadeiro é o que a pessoa acabou de fazer — e que está guardado. */
     segmentacao: {
       headline: 'Todas as frases no cordão.',
-      subtitle: 'Falta só a conversa sobre o sentido — a parte mais gostosa.',
-      primary: 'Começar a conversa',
+      subtitle: 'O trabalho de hoje está inteiro, e já guardado. Podem descansar.',
+      primary: 'Voltar às histórias',
     },
   },
   /** Momento de revisão inferido: uma manchete + um único "Continuar →". */
@@ -297,7 +270,6 @@ export const pt = {
     /* O menu do cartão nomeia a história: duas sessões na grade dão dois gatilhos,
        e "Ações" sozinho não diz em qual deles se está (ENG-281). */
     actions: 'Ações em {{story}}',
-    downloads: 'Baixar os documentos',
     renameSession: 'Renomear a história',
     deleteSession: 'Apagar a história',
     renameDialog: {
@@ -378,35 +350,15 @@ export const pt = {
       cut: 'Marquem onde cada cena termina, uma de cada vez.',
       triage: 'Classifiquem cada cena. Toquem para ouvi-la de novo.',
       phrases: 'Dentro de cada cena, marquem onde cada frase começa e termina.',
-      conversation: 'Façam as perguntas em voz alta e gravem as respostas.',
-      export: 'Guardem a sessão para gerar os documentos.',
     },
     never: 'Não mostrar de novo',
     triggerAria: 'Como funciona esta etapa',
     contentAria: 'Dica desta etapa',
     close: 'Fechar dica',
   },
-  artifactCards: {
-    anchoring: {
-      title: 'As decisões de vocês',
-      description: 'Onde cada cena e cada frase começa e termina, com o tipo e a confiança.',
-    },
-    manifest: {
-      title: 'O mapa das contas',
-      description: 'Como o áudio foi fatiado: cada conta com seu tempo. O par exato deste áudio.',
-    },
-    report: {
-      title: 'A conversa sobre o sentido',
-      description: 'O relatório editável, com o texto confirmado de cada resposta.',
-    },
-    saved: 'documentos salvos — nada saiu deste computador',
-  },
   connectionGate: {
     offline: 'Sem conexão',
     rest: '— a edição está pausada e nada se perde. O áudio continua tocando; retomamos assim que a conexão voltar.',
-  },
-  guide: {
-    ariaLabel: 'o guia da conversa',
   },
   triage: {
     reviewHeadline: 'Todas as cenas classificadas.',
@@ -439,52 +391,6 @@ export const pt = {
     counts: 'firme {{firm}} · hesitante {{hesitant}} · alvo {{target}}',
     absence: 'Candidatos a ausência (raras em aberto)',
   },
-  conversation: {
-    listenStory: '▶ Ouvir a história',
-    listenScene: '▶ Ouvir a cena',
-    listenPhrase: '▶ Ouvir a frase',
-    pauseStory: '⏸ Pausar a história',
-    pauseScene: '⏸ Pausar a cena',
-    pausePhrase: '⏸ Pausar a frase',
-    trechoStory: 'a história inteira',
-    trechoScene: 'uma cena',
-    blockScene: 'Cena {{ordinal}}',
-    blockPhrase: 'Frase {{ordinal}}',
-    recordError: 'A resposta não foi guardada. Grave de novo.',
-    reportAria: 'relatório',
-    reportFallback: 'A conversa terminou. O relatório abre aqui.',
-    preparingReviewEyebrow: 'Abrindo',
-    preparingReview: 'Trazendo os áudios de volta para a revisão…',
-    toExport: 'Guardar os documentos →',
-    prev: '← Anterior',
-    pendingDrafts: {
-      title_one: 'Falta confirmar a transcrição de 1 resposta.',
-      title_other: 'Faltam confirmar as transcrições de {{count}} respostas.',
-      body: 'A gravação fica guardada, mas não entra no documento — só o texto confirmado entra. Guardar os documentos vai recusar enquanto faltar alguma.',
-      review: 'Revisar as respostas',
-      anyway: 'Ir mesmo assim',
-      /* Aceitar todas ali mesmo (ENG-512). A mesma ação do topo da revisão, dita com o
-         número que ELA alcança — as que têm transcrição —, que não é o número do aviso. */
-      confirmAll_one: 'Aceitar a transcrição',
-      confirmAll_other: 'Aceitar as {{count}} transcrições',
-      bulkNote:
-        'Estes textos foram escritos por uma máquina a partir das gravações. Aceitar de uma vez toma todos como estão, sem ler um a um, e eles passam a ser a resposta que vai para o documento. As respostas já escritas à mão ficam como estão.',
-      bulkPartial_one:
-        'Mesmo assim vai sobrar 1 resposta gravada que não tem transcrição, e guardar vai continuar recusando por causa dela.',
-      bulkPartial_other:
-        'Mesmo assim vão sobrar {{count}} respostas gravadas que não têm transcrição, e guardar vai continuar recusando por causa delas.',
-      confirmed_one: '1 transcrição foi confirmada e virou a resposta do documento.',
-      confirmed_other:
-        '{{count}} transcrições foram confirmadas e viraram as respostas do documento.',
-      confirmedNone: 'Nenhuma transcrição foi confirmada.',
-      leftTitle_one: 'Ainda falta 1 resposta.',
-      leftTitle_other: 'Ainda faltam {{count}} respostas.',
-      leftBody_one:
-        'É uma gravação sem transcrição: só escrevê-la à mão resolve, e guardar os documentos vai continuar recusando enquanto ela faltar.',
-      leftBody_other:
-        'São gravações sem transcrição: só escrevê-las à mão resolve, e guardar os documentos vai continuar recusando enquanto elas faltarem.',
-    },
-  },
   seamModal: {
     headline: 'A frase passou da borda da cena.',
     subline: 'Para onde vai a costura?',
@@ -495,139 +401,6 @@ export const pt = {
     reanchor: 'Reancorar dentro da cena',
     markerBefore: 'borda de hoje',
     markerAfter: 'borda nova',
-  },
-  report: {
-    eyebrow: 'A conversa sobre o sentido',
-    headline: 'Tudo que vocês falaram, reunido.',
-    facilitatorLed: 'conduzida pela facilitadora',
-    answerDuration: 'duração da resposta',
-    answer: 'Resposta',
-    typedAria: 'Observação da facilitadora',
-    groupStory: 'A história inteira',
-    groupScene: 'Cena {{n}}',
-    groupPhrase: 'Frase {{n}}',
-    playAnswer: '▶ Ouvir a resposta',
-    pauseAnswer: '⏸ Pausar a resposta',
-    openingAnswer: 'Abrindo a resposta…',
-    noAnswerYet: 'ainda sem resposta gravada',
-    noAnswerGiven: 'sem resposta',
-    voicePending: 'procurando a resposta gravada',
-    writeAnswer: 'escrever a resposta',
-    addNote: 'Acrescentar uma observação',
-    draftsRegion: 'rascunhos das respostas',
-    draftsReady_one: 'Sugestão pronta — {{count}} resposta para revisar.',
-    draftsReady_other: 'Sugestão pronta — {{count}} respostas para revisar.',
-    transcribingEyebrow: 'Ouvindo',
-    transcribing: 'Transcrevendo a resposta…',
-    editAnswer: 'Editar a resposta',
-    discardEdit: 'Descartar a edição',
-    acceptEdit: 'Aceitar a edição',
-    draftBadge: 'sugestão — revise',
-    draftSource: 'O que se ouviu — corrija se preciso',
-    draftConfirm: 'Confirmar a transcrição',
-    draftRetry: 'tentar de novo',
-    draftFailed: 'não consegui transcrever agora — dá para escrever a resposta à mão',
-    /* Confirmar recusado. O silêncio seria o pior desfecho: a pessoa segue achando que
-       confirmou, e o documento sai com a tradução da frase anterior. */
-    confirmFailed: 'não deu para guardar esta transcrição — ela segue por confirmar',
-    confirmSuperseded: 'esta transcrição foi refeita — confira o texto novo antes de confirmar',
-    /* Confirmar tudo de uma vez. A cópia é explícita sobre o que se está aceitando:
-       texto de máquina, sem leitura resposta a resposta. Quem aceita é a facilitadora,
-       e ela precisa saber o que está assinando. */
-    bulkAction: 'Confirmar todas as transcrições',
-    bulkTitle_one: 'Confirmar 1 transcrição de uma vez?',
-    bulkTitle_other: 'Confirmar {{count}} transcrições de uma vez?',
-    bulkBody:
-      'Estes textos foram escritos por uma máquina a partir das gravações. Confirmar de uma vez aceita todos como estão, sem ler um a um, e eles passam a ser a resposta que vai para o documento. As gravações continuam guardadas, e qualquer resposta pode ser corrigida aqui depois.',
-    bulkReview: 'Rever uma a uma',
-    bulkAccept: 'Aceitar as transcrições',
-    bulkResultRegion: 'resultado da confirmação em lote',
-    bulkConfirmed_one: '1 resposta confirmada.',
-    bulkConfirmed_other: '{{count}} respostas confirmadas.',
-    bulkNothing: 'Nenhuma resposta foi confirmada.',
-    bulkRemaining_one: 'Ainda falta 1 resposta gravada sem transcrição — escreva-a à mão.',
-    bulkRemaining_other:
-      'Ainda faltam {{count}} respostas gravadas sem transcrição — escreva-as à mão.',
-    /* Refazer o que venceu. Destrutivo de um jeito que o lote acima não é: troca texto
-       já confirmado. A cópia diz o preço, e o foco nasce em "deixar como estão". */
-    redoAction: 'Refazer as transcrições vencidas',
-    redoTitle_one: 'Refazer 1 resposta já confirmada?',
-    redoTitle_other: 'Refazer {{count}} respostas já confirmadas?',
-    redoBody:
-      'Estas respostas foram confirmadas a partir de transcrições que o servidor refez depois. Refazer TROCA o texto que está ali pelo texto novo da máquina — o que estiver escrito agora nessas respostas se perde. As gravações continuam guardadas, e qualquer resposta pode ser corrigida aqui depois.',
-    redoKeep: 'Deixar como estão',
-    redoAccept: 'Refazer as respostas',
-    redoProgressRegion: 'andamento do refazer',
-    redoProgress: 'Refazendo {{done}} de {{total}}…',
-    redoDone_one: '1 resposta refeita.',
-    redoDone_other: '{{count}} respostas refeitas.',
-    redoFailed_one: '1 resposta não pôde ser refeita — dá para tentar de novo.',
-    redoFailed_other: '{{count}} respostas não puderam ser refeitas — dá para tentar de novo.',
-  },
-  /**
-   * A escolha do modo da conversa (ENG-649). Cópia da Márcia, verbatim do
-   * protótipo v4 — o cartão é a confirmação, então o que ele promete é o
-   * contrato: em mãos livres a pergunta fala, o microfone abre e a próxima
-   * entra sozinha.
-   */
-  conversationMode: {
-    eyebrow: 'Antes de começar · escolham juntos',
-    title: 'Como vamos conversar?',
-    handsFree: 'Mãos livres',
-    handsFreeDescription: 'a pergunta fala, o microfone abre, a próxima entra sozinha',
-    handsFreeTag: 'sem nenhum toque',
-    touchByTouch: 'Toque a toque',
-    touchByTouchDescription: 'vocês tocam para gravar e para seguir — cada passo no seu tempo',
-    touchByTouchTag: 'vocês no controle',
-    footer: 'dá para trocar no meio da conversa — o botão fica ali em cima',
-    /* A pílula diz em que modo se está e leva ao outro — é a saída de emergência
-       do mãos livres, e por isso fica visível o tempo todo. */
-    pillHandsFree: 'mãos livres · trocar',
-    pillTouchByTouch: 'toque a toque · trocar',
-    pillTitle: 'trocar o modo da conversa',
-    /* A espera antes da próxima pergunta. Toma o lugar do convite a falar — a
-       tela do ouvinte tem UMA linha (§9.2) — e é o que torna a chegada visível
-       mesmo sem animação (movimento reduzido). */
-    autoAdvance: 'a próxima chega num instante — o botão lá em cima segura o passo',
-  },
-  conversationStage: {
-    listen: 'Ouvir a pergunta',
-    pause: 'Pausar a pergunta',
-    saving: 'Guardando a resposta',
-    openingAnswer: 'Abrindo a resposta…',
-    pausePlayback: 'Pausar',
-    record: 'Gravar a resposta',
-    stop: 'Parar',
-    idleHint: 'Toque e fale a sua resposta',
-    /* Enquanto ainda não se sabe se esta pergunta tem resposta gravada. Toma o
-       lugar do convite a falar — a tela do ouvinte tem UMA linha (§9.2). */
-    checkingAnswer: 'Procurando a resposta já gravada',
-    emptyWave: 'a sua resposta vira um fio de som aqui',
-    recordingLabel: 'Gravando — os outros botões esperam a resposta',
-    play: 'Ouvir a resposta',
-    again: 'Gravar de novo',
-    /* O tamanho da resposta em risco, por extenso — §9.2 proíbe dígito aqui.
-       É escala, não cronômetro: numa advertência o que decide é QUANTO se
-       perde, e "cerca de dois minutos" carrega isso melhor que "2:07". */
-    answerLengthUnderMinute: 'menos de um minuto',
-    answerLengthOneMinute: 'cerca de um minuto',
-    answerLengthMinutes: 'cerca de {{minutos}} minutos',
-    rerecordTitle: 'Gravar esta resposta de novo?',
-    rerecordBody:
-      'A resposta que já foi gravada ({{duration}}) será apagada, e uma nova gravação começa na hora. Isso não tem volta.',
-    rerecordBodyUnknown:
-      'A resposta que já foi gravada será apagada, e uma nova gravação começa na hora. Isso não tem volta.',
-    rerecordConfirm: 'Apagar e gravar de novo',
-    rerecordKeep: 'Manter a gravação',
-    prev: '← Anterior',
-    next: 'Próxima pergunta',
-    /* O exemplo falado (ENG-611). É o nome do próprio item, e é como o dono se
-       refere a ele. Não é uma segunda instrução (§9.2): é um controle, e só
-       existe na pergunta que tem exemplo escrito. */
-    example: 'Como assim?',
-    skip: 'Sem resposta',
-    unskip: 'Voltar a perguntar',
-    progressAria: 'progresso da conversa',
   },
 };
 

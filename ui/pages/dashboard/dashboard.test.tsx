@@ -14,10 +14,9 @@ import sessionListCss from '../../organisms/session-list/session-list.css?raw';
 import Dashboard, { formatWhen } from './index';
 
 /**
- * Sessions dashboard (PRD v2 §7.2/§7.3/§10.5): lista as sessões com status +
- * última modificação + progresso, retoma direto na sessão, baixa os três artefatos
- * de uma sessão concluída byte-idênticos aos guardados, e abre uma nova sessão. A
- * expiração de auth (§7.1) volta ao login. Portas fixture por prop.
+ * Sessions dashboard (PRD v2 §7.2/§7.3): lista as sessões com status + última
+ * modificação + progresso, retoma direto na sessão, renomeia, apaga e abre uma nova.
+ * A expiração de auth (§7.1) volta ao login. Portas fixture por prop.
  */
 
 const STATE: SessionStateDto = { schema_version: 1 } as unknown as SessionStateDto;
@@ -114,7 +113,7 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
     await store.complete(done.id, STATE, { anchoring: 'r', manifest: 'm', report: 'l' });
     const doneSummary = await store.get(done.id);
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
     await screen.findAllByText('História em curso');
     expect(screen.getByText('Em andamento')).toBeTruthy();
@@ -125,22 +124,45 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
     ).toBeGreaterThan(0);
     // relance de progresso (§7.2): a capa nomeia ONDE a sessão parou — a recém-criada
     // fica no 1º passo e a concluída no último (a fixture põe 'listen' e 'save').
-    expect(screen.getByRole('img', { name: 'progresso: Ouvir — passo 1 de 6' })).toBeTruthy();
-    expect(screen.getByRole('img', { name: 'progresso: Guardar — passo 6 de 6' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'progresso: Ouvir — passo 1 de 4' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'progresso: Frases — passo 4 de 4' })).toBeTruthy();
     // a contagem da casa concorda com a grade
     expect(screen.getByText('2 histórias')).toBeTruthy();
   });
 });
 
+/**
+ * ENG-689 — o fluxo acaba nas Frases, mas o servidor (e a fixture que o espelha)
+ * continua sabendo dos passos que saíram do produto. Uma história que ele reporta
+ * como "conversa" ou "guardar" é, para quem olha a casa, uma história que fechou as
+ * Frases: o cartão diz a última estação que existe, e não some com o progresso.
+ */
+describe('Dashboard — o relance de progresso acaba nas Frases (ENG-689)', () => {
+  it('a história que o servidor reporta além das Frases mostra as Frases, no último passo', async () => {
+    const store = new FixtureSessionStore();
+    const emConversa = await seedInProgress(store, {
+      storyName: 'Passou das frases',
+      storySlug: 'passou-das-frases',
+    });
+    store.autosave(emConversa, { ...STATE, mode: 'mapeamento' } as unknown as SessionStateDto);
+    await store.flush(emConversa);
+    const guardada = await store.create(
+      createInput({ storyName: 'Fechada', storySlug: 'fechada' }),
+    );
+    await store.complete(guardada.id, STATE, TRIPLE);
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
+
+    await screen.findAllByText('Passou das frases');
+    expect(screen.getAllByRole('img', { name: 'progresso: Frases — passo 4 de 4' })).toHaveLength(
+      2,
+    );
+  });
+});
+
 describe('Dashboard — a marca é a do site', () => {
   it('o cabeçalho da casa traz o Colar de Sons, não mais o Shemá', async () => {
-    render(
-      <Dashboard
-        store={new FixtureSessionStore()}
-        auth={new FixtureAuthProvider()}
-        saveBytes={vi.fn()}
-      />,
-    );
+    render(<Dashboard store={new FixtureSessionStore()} auth={new FixtureAuthProvider()} />);
 
     expect(await screen.findByRole('img', { name: 'Colar de Sons' })).toBeTruthy();
     expect(screen.queryByRole('img', { name: 'Shemá' })).toBeNull();
@@ -162,7 +184,7 @@ describe('Dashboard — nenhum UUID no cartão (ENG-307)', () => {
       projectId: 'proj-fulani',
     });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
     await screen.findAllByText('Sessão real');
     expect(screen.queryByText(new RegExp(uuid))).toBeNull();
@@ -181,7 +203,7 @@ describe('Dashboard — esqueleto enquanto a lista voa (ENG-308)', () => {
         }),
     );
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
     // enquanto a API responde: esqueletos pulsando + o anúncio acessível
     expect(document.querySelectorAll('.cds-skeleton').length).toBeGreaterThan(0);
@@ -212,7 +234,7 @@ describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
     const auth = new FixtureAuthProvider();
     await auth.login({ username: 'facilitadora', password: FILL });
 
-    render(<Dashboard store={store} auth={auth} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={auth} />);
 
     expect(screen.getByRole('heading', { name: 'Colar de Sons' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Suas histórias' })).toBeTruthy();
@@ -230,7 +252,7 @@ describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
    */
   it('a casa leva às Configurações, onde o idioma se decide (ENG-340/ENG-371)', async () => {
     const store = new FixtureSessionStore();
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await screen.findByRole('list', { name: 'histórias' });
 
     expect(screen.queryByRole('button', { name: 'Mudar para inglês' })).toBeNull();
@@ -244,7 +266,7 @@ describe('Dashboard — cabeçalho próprio (protótipo Shemá v2)', () => {
     const auth = new FixtureAuthProvider();
     await auth.login({ username: 'facilitadora', password: FILL });
 
-    render(<Dashboard store={store} auth={auth} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={auth} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
 
@@ -258,84 +280,43 @@ describe('Dashboard — retomar (§7.3)', () => {
     const store = new FixtureSessionStore();
     const id = await seedInProgress(store, { storyName: 'Retomável', storySlug: 'retomavel' });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
     await userEvent.click(await screen.findByRole('button', { name: /Retomar/ }));
     expect(window.location.pathname).toBe(`/session/${id}`);
   });
 });
 
-describe('Dashboard — o menu de ações do cartão (§7.2/§10.5, ENG-305/ENG-281)', () => {
+describe('Dashboard — o menu de ações do cartão (§7.2, ENG-305/ENG-281)', () => {
   it('toda história oferece o menu de ações, terminada ou não', async () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Em curso', storySlug: 'em-curso' });
     await seedCompleted(store, TRIPLE, { storyName: 'Terminada', storySlug: 'terminada' });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
     expect(await screen.findByRole('button', { name: 'Ações em Em curso' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Ações em Terminada' })).toBeTruthy();
   });
 
-  it('baixar só se oferece quando a história terminou; apagar, a qualquer momento', async () => {
+  /** ENG-689: o app não gera mais documento nenhum, e o menu não os oferece. */
+  it('o menu não oferece documento para baixar, nem na história terminada', async () => {
     const store = new FixtureSessionStore();
-    await seedInProgress(store, { storyName: 'Em curso', storySlug: 'em-curso' });
     await seedCompleted(store, TRIPLE, { storyName: 'Terminada', storySlug: 'terminada' });
-    const dashboard = (
-      <Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />
-    );
 
-    // em andamento: nada para baixar ainda, mas dá para apagar
-    render(dashboard);
-    await userEvent.click(await screen.findByRole('button', { name: 'Ações em Em curso' }));
-    expect(screen.queryByRole('button', { name: 'Baixar os documentos' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Apagar a história' })).toBeTruthy();
-
-    // uma casa nova para o segundo cartão: fechar o primeiro menu exigiria do teste
-    // um gesto (Esc, clique fora) que não é o que ele afirma
-    cleanup();
-
-    render(dashboard);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await userEvent.click(await screen.findByRole('button', { name: 'Ações em Terminada' }));
-    expect(screen.getByRole('button', { name: 'Baixar os documentos' })).toBeTruthy();
+
+    expect(screen.queryByRole('button', { name: /[Bb]aixar/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Renomear a história' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Apagar a história' })).toBeTruthy();
-  });
-
-  it('um único "Baixar os documentos" guarda os três artefatos byte-idênticos daquela história', async () => {
-    const triple: ArtifactTriple = {
-      anchoring: '{"anchoring":true}',
-      manifest: '{"manifest":true}',
-      report: '# relatório',
-    };
-    const store = new FixtureSessionStore();
-    await seedCompleted(store, triple, { storyName: 'Concluída', storySlug: 'concluida-x' });
-    const save = vi.fn();
-
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={save} />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Ações em Concluída' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Baixar os documentos' }));
-
-    // uma escolha só e os três documentos saem — é isso que "um único" quer dizer
-    await waitFor(() => expect(save).toHaveBeenCalledTimes(3));
-    const sent = Object.fromEntries(save.mock.calls.map(([name, bytes]) => [name, bytes]));
-    expect(sent['concluida-x-anchoring-return.json']).toBe(triple.anchoring);
-    expect(sent['concluida-x-bead-manifest.json']).toBe(triple.manifest);
-    expect(sent['concluida-x-mapping-report.md']).toBe(triple.report);
-
-    // e a entrada passa a exibir o visto de já baixado (ENG-305)
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Baixar os documentos' }).textContent).toContain(
-        '✓',
-      ),
-    );
   });
 
   it('o gatilho é um ícone discreto — o nome nomeia a história, sem palavra visível (ENG-333)', async () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Qualquer', storySlug: 'qualquer' });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
     // o nome acessível existe (o findByRole já o exige) mas nenhuma letra é desenhada
     const trigger = await screen.findByRole('button', { name: 'Ações em Qualquer' });
@@ -354,7 +335,7 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
     const removed = vi.spyOn(store, 'remove');
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseDelete('Frágil');
 
     // a pergunta nomeia a história — quem pegou o cartão errado tem como perceber
@@ -373,7 +354,7 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseDelete('Frágil');
     await userEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
 
@@ -391,7 +372,7 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
     const removed = vi.spyOn(store, 'remove');
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseDelete('Frágil');
     await userEvent.click(screen.getByRole('button', { name: 'Manter a história' }));
 
@@ -405,7 +386,7 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     await seedInProgress(store, { storyName: 'Primeira', storySlug: 'primeira' });
     await seedInProgress(store, { storyName: 'Segunda', storySlug: 'segunda' });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseDelete('Segunda');
     await userEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
 
@@ -425,7 +406,7 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     const s = await alice.create(createInput({ storyName: 'Disputada', storySlug: 'disputada' }));
     await alice.acquireLock(s.id);
 
-    render(<Dashboard store={bob} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={bob} auth={new FixtureAuthProvider()} />);
     await chooseDelete('Disputada');
     await userEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
 
@@ -440,7 +421,7 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
     vi.spyOn(store, 'remove').mockRejectedValue(new Error('rede fora'));
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseDelete('Frágil');
     await userEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
 
@@ -458,7 +439,7 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
     const removed = vi.spyOn(store, 'remove');
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseDelete('Frágil');
     const destroy = screen.getByRole('button', { name: 'Apagar para sempre' });
     fireEvent.click(destroy);
@@ -478,7 +459,7 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseDelete('Frágil');
     // a listagem inicial já resolveu; só a releitura de depois do apagar é que cai
     vi.spyOn(store, 'list').mockRejectedValue(new Error('rede fora'));
@@ -496,7 +477,7 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
     const store = new FixtureSessionStore({ latencyMs: 30 });
     await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseDelete('Frágil');
     fireEvent.click(screen.getByRole('button', { name: 'Apagar para sempre' }));
     // com o apagar no ar não há o que desistir — e uma recusa que chegasse depois
@@ -513,9 +494,7 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Em curso', storySlug: 'em-curso' });
     await seedCompleted(store, TRIPLE, { storyName: 'Terminada', storySlug: 'terminada' });
-    const dashboard = (
-      <Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />
-    );
+    const dashboard = <Dashboard store={store} auth={new FixtureAuthProvider()} />;
 
     render(dashboard);
     await userEvent.click(await screen.findByRole('button', { name: 'Ações em Em curso' }));
@@ -534,7 +513,7 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'A raposa e o tanbor', storySlug: 'a-raposa' });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseRename('A raposa e o tanbor');
 
     expect(nameField().value).toBe('A raposa e o tanbor');
@@ -545,7 +524,7 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
     await seedInProgress(store, { storyName: 'Nome errado', storySlug: 'nome-errado' });
     const renamed = vi.spyOn(store, 'rename');
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseRename('Nome errado');
     // as histórias são em terena e português: acento e apóstrofo têm de voltar iguais.
     // E o que sai daqui vai aparado nas pontas — "  Ana  " é "Ana".
@@ -561,34 +540,13 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
    * só. O `story_slug` nomeia os três documentos (§10.5/§10.6) e o pipeline os lê pelo
    * nome — um rename que arrastasse o slug renomearia, calado, arquivos já guardados.
    */
-  it('depois de renomear, os documentos continuam com o nome de arquivo de antes', async () => {
-    const store = new FixtureSessionStore();
-    await seedCompleted(store, TRIPLE, { storyName: 'Nome errado', storySlug: 'nome-errado' });
-    const saved = vi.fn();
-
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={saved} />);
-    await chooseRename('Nome errado');
-    await typeNameAndSave('Nome certo');
-    await waitFor(() => expect(listed('Nome certo')).toBe(true));
-
-    // baixa pelo MESMO menu, agora que o cartão já mostra o nome novo
-    await chooseAction('Nome certo', 'Baixar os documentos');
-
-    await waitFor(() => expect(saved).toHaveBeenCalledTimes(3));
-    const names = (saved.mock.calls as [string, string][]).map(([name]) => name);
-    expect(names.sort()).toEqual([
-      'nome-errado-anchoring-return.json',
-      'nome-errado-bead-manifest.json',
-      'nome-errado-mapping-report.md',
-    ]);
-  });
 
   it('desistir não muda o nome nem pede nada à store', async () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Como está', storySlug: 'como-esta' });
     const renamed = vi.spyOn(store, 'rename');
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseRename('Como está');
     await userEvent.clear(nameField());
     await userEvent.type(nameField(), 'Nunca salvo');
@@ -605,7 +563,7 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
     await seedInProgress(store, { storyName: 'Tem nome', storySlug: 'tem-nome' });
     const renamed = vi.spyOn(store, 'rename');
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseRename('Tem nome');
     const save = screen.getByRole('button', { name: 'Salvar o nome' });
 
@@ -630,7 +588,7 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
     const s = await alice.create(createInput({ storyName: 'Disputada', storySlug: 'disputada' }));
     await alice.acquireLock(s.id);
 
-    render(<Dashboard store={bob} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={bob} auth={new FixtureAuthProvider()} />);
     await chooseRename('Disputada');
     await typeNameAndSave('Renomeada à força');
 
@@ -647,7 +605,7 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
     await seedInProgress(store, { storyName: 'Nome errado', storySlug: 'nome-errado' });
     const renamed = vi.spyOn(store, 'rename');
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseRename('Nome errado');
     await userEvent.clear(nameField());
     await userEvent.type(nameField(), 'Nome certo');
@@ -668,7 +626,7 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Nome errado', storySlug: 'nome-errado' });
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await chooseRename('Nome errado');
     // a listagem inicial já resolveu; só a releitura de depois do rename é que cai
     vi.spyOn(store, 'list').mockRejectedValue(new Error('rede fora'));
@@ -686,7 +644,7 @@ describe('Dashboard — nova história (§7.2)', () => {
   it('“Comece uma nova história” roteia para o setup', async () => {
     const store = new FixtureSessionStore();
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
     // o cartão de nova história vive na grade — só nasce quando a listagem resolve
     await userEvent.click(await screen.findByRole('button', { name: /Comece uma nova história/i }));
@@ -701,7 +659,7 @@ describe('Dashboard — expiração de auth (§7.1)', () => {
     const auth = new FixtureAuthProvider();
     await auth.login({ username: 'facilitadora', password: FILL });
 
-    render(<Dashboard store={store} auth={auth} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={auth} />);
     await screen.findAllByText('Preservável');
 
     auth.simulateExpiry();
@@ -728,7 +686,7 @@ describe('Dashboard — fronteira de IO real (ENG-247)', () => {
     const store = new FixtureSessionStore();
     vi.spyOn(store, 'list').mockRejectedValue(new Error('API fora do ar'));
 
-    render(<Dashboard store={store} auth={new FixtureAuthProvider()} saveBytes={vi.fn()} />);
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('Não consegui carregar as histórias');

@@ -1,18 +1,16 @@
 import { expect, test } from '@playwright/test';
 
-import {
-  ColarApp,
-  SCENARIO,
-  TYPED_ANSWER,
-  readPersistedState,
-  readPersistedStatus,
-} from './support';
+import { ColarApp, SCENARIO, readPersistedState } from './support';
 
 /**
- * Acceptance 1 (plano-de-acao §3.1): uma facilitadora completa um ciclo real inteiro
- * — áudio do bucket → sessão → Escuta 1/2 → Triage → Segmentação → Conversation (voz) →
- * concluída — em DUAS sessões de trabalho (reload + retomar no meio), sem manuseio de
- * arquivo e sem perda de trabalho. Modo fixture; o Playwright dirige a UI real.
+ * Acceptance 1 (plano-de-acao §3.1): uma facilitadora percorre o ciclo real inteiro
+ * — áudio do bucket → sessão → Escuta 1/2 → Triage → Segmentação — em DUAS sessões de
+ * trabalho (reload + retomar no meio), sem manuseio de arquivo e sem perda de
+ * trabalho. Modo fixture; o Playwright dirige a UI real.
+ *
+ * Desde o corte de escopo (ENG-689) o ciclo ACABA nas Frases: não há conversa, nem
+ * relatório, nem documento a guardar. O que fecha a sessão é a última cena produtiva,
+ * e o que fica é o estado salvo pelo autosave — que é o que outro sistema consome.
  */
 test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) => {
   const app = new ColarApp(page);
@@ -25,7 +23,7 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
   await app.cutScenes();
   await app.triage();
 
-  // A Triage terminada leva o domínio ao modo `phrases`; o autosave contínuo
+  // A Triage terminada leva o domínio ao modo `segmentacao`; o autosave contínuo
   // (§7.3) persiste o estado inteiro. Espera a gravação assentar antes do reload.
   await expect
     .poll(async () => (await readPersistedState(page, sessionId))?.mode)
@@ -46,31 +44,21 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
   expect(after).toEqual(before);
   expect(after?.mode).toBe('segmentacao');
 
-  // ——— assento 2: frases (com um seam-move) → conversa por voz → export ———
+  // ——— assento 2: frases (com um seam-move) → fim ———
   await app.cutPhrase(SCENARIO.crossingPhrase.s, SCENARIO.crossingPhrase.e);
   await app.moveSeam(); // a frase cruzou a borda → a costura desliza
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
-  await app.chooseConversationMode();
 
-  const conversation = await app.answerConversation();
-  expect(conversation.voicedLevels).toEqual([1, 2, 3]); // ≥1 por nível por voz
-
-  // o relatório LEVA à última tela por uma ação própria: sem isto ele é um beco —
-  // e desde a ENG-668, quando o fio de contas saiu do cabeçalho, esta é a única
-  // porta para a Export (chrome nunca foi ação)
-  await page.getByRole('button', { name: 'Guardar os documentos →' }).click();
-  await expect(page.getByText('A história está inteira no colar.')).toBeVisible();
-
-  await app.completeSession();
-  await expect.poll(() => readPersistedStatus(page, sessionId)).toBe('completed');
+  // o fim do fluxo tem UMA saída, e ela leva ao painel — nenhuma outra estação
+  await app.leaveAfterPhrases();
 
   // Zero-perda de ponta a ponta: o estado FINAL (após o reload + todo o trabalho do
-  // assento 2) ainda carrega as três cenas classificadas no assento 1 E a resposta
-  // digitada — provando que a reidratação recuperou o estado (não só que o localStorage
-  // sobreviveu ao reload) e que a resposta ≥1-digitada foi de fato gravada (§8.7/§10.4).
+  // assento 2) ainda carrega as três cenas classificadas no assento 1 E as frases do
+  // assento 2 — provando que a reidratação recuperou o estado, e não só que o
+  // localStorage sobreviveu ao reload. É este estado que o outro sistema consome.
   const finalState = await readPersistedState(page, sessionId);
   expect(finalState?.parts).toHaveLength(SCENARIO.sceneEndBeads.length);
-  expect(JSON.stringify(finalState)).toContain(TYPED_ANSWER);
+  expect(finalState?.frases.length).toBeGreaterThanOrEqual(2);
 });
