@@ -52,6 +52,14 @@ export type PreviousEcho = { kind: 'text'; text: string } | { kind: 'voice' };
  * `_hasPrevSame`, docs/design/prototype.html L1631). Procura-se de trás para frente:
  * "a cena anterior" é a última que perguntou, não a primeira.
  *
+ * E a busca ATRAVESSA as cenas que foram respondidas pelo próprio atalho. A célula
+ * delas guarda a frase inglesa congelada — que é valor de ARTEFATO —, e ecoá-la punha
+ * inglês na tela de quem ouve sob uma UI em português, dizia "a resposta anterior foi:
+ * igual à anterior" (um ponteiro, não uma resposta) e ainda vinha sem gravação para
+ * ouvir. Uma célula igual à frase congelada não é resposta: é ponteiro, e se segue.
+ * A cadeia sempre termina — a primeira cena nunca tem atalho —, ou numa resposta de
+ * verdade, ou em nada, e "nada" já significa não oferecer.
+ *
  * A oferta morre no instante em que a pergunta TEM resposta — texto na célula ou
  * recusa registrada. A resposta GRAVADA não se decide aqui: quem sabe dela é a tela,
  * pelo estado do gravador, e perguntá-la daqui seria uma ida à rede.
@@ -71,13 +79,13 @@ export function sameAsPreviousFor(
   for (let i = index - 1; i >= 0; i--) {
     const earlier = sequence[i]!;
     if (earlier.level !== 2 || earlier.k !== slot.k) continue;
+    const cell = (mapping?.level2[earlier.partId]?.[earlier.k] ?? '').trim();
+    // respondida pelo próprio atalho: ponteiro, não resposta — segue para trás
+    if (cell !== '' && cell === earlier.question.same_as_previous_en) continue;
     return {
       answer,
       kind: slot.k === 'quem' ? 'people' : 'place',
-      previous: {
-        text: (mapping?.level2[earlier.partId]?.[earlier.k] ?? '').trim(),
-        voicePath: voiceAnswerPath(earlier),
-      },
+      previous: { text: cell, voicePath: voiceAnswerPath(earlier) },
     };
   }
   return null;

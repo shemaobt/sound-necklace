@@ -10,6 +10,7 @@ import type { VoiceRecorder } from '../../../adapters/voice/types';
 import type { ResourcePath } from '../../../contracts';
 import {
   buildBeads,
+  L2_Q,
   createSession,
   ensureMapping,
   type Frase,
@@ -744,5 +745,117 @@ describe('Conversation — o chip da resposta anterior (ENG-678)', () => {
     openAt(indexOfL2(state, 'PT2', 'quem'));
 
     expect(screen.queryByText(AMOSTRA_DO_PROTOTIPO)).toBeNull();
+  });
+});
+
+/**
+ * O eco de um eco (correção de revisão). Uma cena respondida PELO ATALHO guarda na
+ * célula a frase inglesa congelada — que é valor de ARTEFATO. Ecoá-la na cena
+ * seguinte punha inglês na tela de quem ouve, sob uma UI em português, e ainda por
+ * cima não informava nada ("a resposta anterior foi: igual à anterior") nem podia ser
+ * tocada, porque uma resposta de atalho não tem gravação.
+ *
+ * A célula que É a frase congelada não é resposta: é ponteiro. A busca continua para
+ * trás até a última resposta de verdade — e a cadeia sempre termina, porque a primeira
+ * cena nunca tem atalho.
+ */
+describe('Conversation — o eco atravessa cenas respondidas pelo próprio atalho (ENG-678)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    if (appStore.getState().muted) appStore.getState().toggleMuted();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    if (appStore.getState().muted) appStore.getState().toggleMuted();
+  });
+
+  async function settle(): Promise<void> {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+  }
+
+  /** Célula de `quem` da cena `partId`, dentro do `then` do `openAt`. */
+  const write = (state: SessionState, scenes: number, partId: string, text: string): SessionState =>
+    setAnswer(
+      state,
+      questionSequence(mapping(scenes))[indexOfL2(mapping(scenes), partId, 'quem')]!,
+      text,
+    );
+
+  it('cena 1 por VOZ e cena 2 pelo atalho: a cena 3 ecoa e TOCA a resposta da cena 1', async () => {
+    const state = mapping(3);
+    const cena1 = questionSequence(state)[indexOfL2(state, 'PT1', 'quem')]!;
+    const store = new MemoryVoiceStore();
+    await store.put(voiceAnswerPath(cena1), new Uint8Array([1, 2, 3]));
+
+    openAt(indexOfL2(state, 'PT3', 'quem'), {
+      scenes: 3,
+      recorder: new FixtureVoiceRecorder(store),
+      then: (s) => write(write(s, 3, 'PT1', ''), 3, 'PT2', SAME_PEOPLE),
+    });
+    await settle();
+
+    expect(chipText()).toContain('gravada');
+    // e o que toca é a gravação da CENA 1: é a única que existe no armazenamento,
+    // então tocar a da cena 2 (que não tem nenhuma) nunca acenderia o pausar
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvir a resposta da cena anterior' }));
+    await settle();
+    expect(screen.getByRole('button', { name: 'Pausar a resposta da cena anterior' })).toBeTruthy();
+  });
+
+  it('cena 1 por TEXTO e cenas 2 e 3 pelo atalho: a cena 4 ecoa o texto da cena 1', () => {
+    const state = mapping(4);
+    openAt(indexOfL2(state, 'PT4', 'quem'), {
+      scenes: 4,
+      then: (s) =>
+        write(
+          write(write(s, 4, 'PT1', 'as duas mulheres e os ceifeiros'), 4, 'PT2', SAME_PEOPLE),
+          4,
+          'PT3',
+          SAME_PEOPLE,
+        ),
+    });
+
+    expect(chipText()).toContain('as duas mulheres e os ceifeiros');
+  });
+
+  /**
+   * O invariante, e não um caso: NENHUMA frase congelada do roteiro pode aparecer no
+   * chip. A lista sai do próprio `domain/` — se alguém acrescentar uma terceira, ela
+   * entra nesta guarda sozinha, e se o vazamento voltar por outro caminho ele cai aqui.
+   */
+  it('o chip nunca mostra uma frase congelada do roteiro', () => {
+    const state = mapping(4);
+    openAt(indexOfL2(state, 'PT4', 'quem'), {
+      scenes: 4,
+      then: (s) =>
+        write(
+          write(write(s, 4, 'PT1', 'as duas mulheres e os ceifeiros'), 4, 'PT2', SAME_PEOPLE),
+          4,
+          'PT3',
+          SAME_PEOPLE,
+        ),
+    });
+
+    const congeladas = L2_Q.map((q) => q.same_as_previous_en).filter(
+      (frase): frase is string => frase !== undefined,
+    );
+    expect(congeladas.length).toBeGreaterThan(0);
+    for (const frase of congeladas) expect(chipText()).not.toContain(frase);
+  });
+
+  it('cadeia inteira sem nenhuma resposta real: nem chip nem atalho', async () => {
+    const state = mapping(3);
+    openAt(indexOfL2(state, 'PT3', 'quem'), {
+      scenes: 3,
+      recorder: new FixtureVoiceRecorder(),
+      then: (s) => write(write(s, 3, 'PT1', ''), 3, 'PT2', SAME_PEOPLE),
+    });
+    await settle();
+
+    expect(chipText()).toBe('');
+    expect(shortcut('São as mesmas pessoas')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Gravar a resposta' })).toBeTruthy();
   });
 });
