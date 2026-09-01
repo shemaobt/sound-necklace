@@ -215,6 +215,30 @@ describe('session-state DTO — o corte da entrevista (ENG-691)', () => {
     expect(() => fromSessionDto(antigo)).toThrow();
   });
 
+  /**
+   * O salto de versão NÃO muda o veredito: o `strictObject` já derrubaria o documento
+   * de antes do corte pelas chaves extras, e derrubaria mesmo se o literal ainda
+   * aceitasse a 3. O que o salto muda é a MENSAGEM — e é a única coisa que ele
+   * acrescenta, então é o que este teste tranca. Sem ele, reverter o literal por achá-lo
+   * redundante não derrubaria nada, e a recusa voltaria a acusar `mapping` (o sintoma)
+   * em vez da versão (a razão).
+   *
+   * O erro cita as DUAS coisas — o zod reporta todas as questões —; o que se afirma
+   * aqui é que a versão está entre elas.
+   */
+  it('a recusa cita a VERSÃO do documento, que é para isso que o literal subiu', () => {
+    const antigo = {
+      ...(toSessionDto(baseSession(), meta()) as Record<string, unknown>),
+      schema_version: 3,
+      mapping: { level1: { recontar: 'Uma história.' }, level2: {}, level3: {} },
+      voice: ['respostas/level1/recontar.webm'],
+      voiceVersion: { 'respostas/level1/recontar.webm': 1 },
+      reviewComplete: true,
+    };
+
+    expect(() => fromSessionDto(antigo)).toThrow(/schema_version/);
+  });
+
   it('o modo da entrevista deixou de ser um modo — o documento que o traz reprova', () => {
     const comModoMorto = {
       ...(toSessionDto(baseSession(), meta()) as Record<string, unknown>),
