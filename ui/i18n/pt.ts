@@ -62,7 +62,7 @@ export const pt = {
       'A conta é o menor pedaço do áudio — a unidade de todo corte do projeto. Escolha o tamanho: ele vale para todas as histórias e não muda depois.',
     granTitleConfirmed: 'As contas deste cordão já têm tamanho.',
     granLeadConfirmed:
-      'Foi escolhido para o projeto inteiro e não muda mais. Mudá-lo agora mudaria a referência de tudo o que já foi cortado e exportado.',
+      'Foi escolhido para o projeto inteiro e não muda mais. Mudá-lo agora mudaria a referência de tudo o que já foi cortado.',
     granConfirm: 'Confirmar — isto não muda depois',
     granConfirming: 'Confirmando…',
     granAskAdmin: 'Peça a quem administra o projeto para escolher o tamanho da conta.',
@@ -91,8 +91,12 @@ export const pt = {
   setup: {
     eyebrow: 'Preparação',
     title: 'Nova sessão',
-    disclosure:
-      'Áudio e respostas ficam no seu projeto. A voz do guia é sintética; as perguntas são escritas por pessoas.',
+    /* O rodapé ERA a divulgação de uso de modelo (ENG-700). As três exceções que ele
+       divulgava — voz sintética, transcrição de máquina, tradução de máquina — saíram
+       com a Conversa (ENG-689/ENG-691) e o produto não usa modelo nenhum. Sobrou a
+       custódia, que continua verdadeira; não entra substituto sobre modelo, porque
+       não há o que divulgar. */
+    disclosure: 'O áudio e o trabalho de vocês ficam guardados no seu projeto.',
     gridWarning: 'Trave o tamanho da conta antes de ancorar. Mudá-lo depois desloca as fronteiras.',
     noAudio: 'Escolha um arquivo de áudio primeiro.',
     bucketError: 'Não foi possível carregar os áudios do projeto. Recarregue a página.',
@@ -165,7 +169,8 @@ export const pt = {
     returnOk: '✓ Retomado: {{cenas}} cena(s), {{frases}} frase(s).',
   },
   /**
-   * Os SEIS rótulos das estações, numa fonte ÚNICA: a faixa de progresso do shell e
+   * Os rótulos das QUATRO estações que sobraram (ENG-689/ENG-691), numa fonte ÚNICA:
+   * a faixa de progresso do shell e
    * o relance do dashboard leem daqui. Duplicar isto fazia o shell dizer "Ouvir"
    * enquanto o dashboard dizia "Listen".
    */
@@ -275,10 +280,11 @@ export const pt = {
     deleteSession: 'Apagar a história',
     renameDialog: {
       title: 'Renomear “{{story}}”',
-      /* O nome de exibição muda; o slug não (§10.6) — e o slug é o que nomeia os
-         três documentos. Dizer isso evita a facilitadora esperar que os arquivos
-         já guardados sigam o nome novo. */
-      body: 'Muda só o nome que aparece aqui. Os documentos continuam com o nome de arquivo de sempre.',
+      /* O nome de exibição muda; o slug não (§10.6) — e o slug é o nome com que a
+         história está guardada no servidor. Dizer isso evita a facilitadora esperar
+         que o que já está guardado siga o nome novo. Os "documentos" que esta linha
+         citava saíram com a exportação (ENG-689/ENG-691, ENG-700). */
+      body: 'Muda só o nome que aparece aqui. O nome com que a história está guardada no projeto não muda.',
       field: 'Nome da história',
       save: 'Salvar o nome',
       cancel: 'Cancelar',
@@ -289,8 +295,10 @@ export const pt = {
     deleteConfirm: {
       title: 'Apagar “{{story}}”?',
       /* A pergunta diz o que vai junto: é um apagamento definitivo no servidor, e
-         quem confirma precisa poder perceber que pegou o cartão errado (§9.4). */
-      body: 'Some tudo desta história: os cortes, as classificações e as gravações de voz das respostas. Não dá para desfazer.',
+         quem confirma precisa poder perceber que pegou o cartão errado (§9.4). As
+         gravações de voz das respostas saíram da lista com a Conversa — não há
+         resposta nem gravação neste produto (ENG-689/ENG-691, ENG-700). */
+      body: 'Some tudo desta história: os cortes e as classificações. Não dá para desfazer.',
       confirm: 'Apagar para sempre',
       cancel: 'Manter a história',
       locked:
@@ -373,7 +381,9 @@ export const pt = {
     confMedia: 'quase',
     confBaixa: 'na dúvida',
     finding: '⌀ Nenhum se encaixa',
-    lockout: '⚠ Nenhuma cena se encaixa em Rute. Segmentação e Mapeamento ficam travadas.',
+    /* O Mapeamento saiu com a Conversa (ENG-689/ENG-691): o aviso travava uma etapa
+       que não existe mais (ENG-700). Sobrou a Segmentação, que a trava de fato pega. */
+    lockout: '⚠ Nenhuma cena se encaixa em Rute. A Segmentação fica travada.',
   },
   triagePicker: {
     swap: 'Trocar tipo',

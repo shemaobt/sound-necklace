@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -66,6 +66,28 @@ describe('Configurações — granularidade', () => {
     expect(screen.getByText(pt.settings.level.medium)).toBeTruthy();
     expect(screen.queryByRole('radiogroup', { name: pt.settings.granEyebrow })).toBeNull();
     expect(screen.queryByRole('button', { name: new RegExp(pt.settings.granConfirm) })).toBeNull();
+  });
+
+  /**
+   * ENG-700: a explicação do "não muda mais" apoiava-se em algo que já foi exportado, e
+   * exportação nenhuma existe desde ENG-689/ENG-691. A razão verdadeira sobrou inteira —
+   * a grade é a referência de tudo o que já foi cortado. Asserção sobre a IDEIA: qualquer
+   * redação que volte a prometer exportação ou documento cai aqui, nos dois idiomas.
+   */
+  it('não promete exportação nem documento nenhum (ENG-700)', async () => {
+    const store = new FixtureProjectSettings({ seed: { 'proj-1': { level: 'medium' } } });
+    renderPage(store);
+    await screen.findByText(pt.settings.granTitleConfirmed);
+
+    // a TELA inteira, não só o parágrafo corrigido: a promessa falsa pode voltar em
+    // qualquer texto desta superfície, e escopar ao parágrafo o localizaria pela própria
+    // string que se quer afirmar
+    const tela = () => document.body.textContent ?? '';
+
+    expect(tela()).not.toMatch(/export|document|artefato|relatório/i);
+
+    await act(() => i18n.changeLanguage('en'));
+    expect(tela()).not.toMatch(/export|document|artifact|report\b/i);
   });
 
   it('quem não administra o projeto não confirma — é mandado falar com quem administra', async () => {

@@ -9,6 +9,8 @@ import {
   FixtureSessionStore,
 } from '../../../adapters/sessions';
 import type { ArtifactTriple, SessionStateDto } from '../../../contracts';
+import i18n from '../../i18n';
+import { pt } from '../../i18n/pt';
 import dashboardCss from './dashboard.css?raw';
 import sessionListCss from '../../organisms/session-list/session-list.css?raw';
 import Dashboard, { formatWhen } from './index';
@@ -340,8 +342,9 @@ describe('Dashboard — apagar uma história (§7.2, ENG-281)', () => {
 
     // a pergunta nomeia a história — quem pegou o cartão errado tem como perceber
     const dialog = await screen.findByRole('dialog', { name: /Apagar “Frágil”/ });
-    // e avisa que as gravações vão junto
-    expect(dialog.textContent).toContain('gravações');
+    // e avisa o que vai junto: o trabalho da sessão, não uma gravação de resposta
+    // que este produto não faz mais (ENG-700)
+    expect(dialog.textContent).toContain('cortes');
     // o menu não fica preso atrás do véu
     expect(screen.queryByText('Apagar a história')).toBeNull();
     // nada foi destruído ainda
@@ -537,8 +540,9 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
 
   /**
    * A decisão que a issue inteira gira em torno: renomear muda o nome de EXIBIÇÃO, e
-   * só. O `story_slug` nomeia os três documentos (§10.5/§10.6) e o pipeline os lê pelo
-   * nome — um rename que arrastasse o slug renomearia, calado, arquivos já guardados.
+   * só. O `story_slug` nomeia o que a história tem guardado no servidor (§10.5/§10.6)
+   * — um rename que arrastasse o slug desarquivaria isso, calado. (Os três documentos
+   * que ele nomeava saíram com a exportação, ENG-689/ENG-691.)
    */
 
   it('desistir não muda o nome nem pede nada à store', async () => {
@@ -691,5 +695,58 @@ describe('Dashboard — fronteira de IO real (ENG-247)', () => {
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('Não consegui carregar as histórias');
     expect(screen.queryByText('Carregando as histórias…')).toBeNull();
+  });
+});
+
+/**
+ * ENG-700: as duas perguntas do cartão descreviam um produto que não existe mais — o
+ * apagamento prometia levar "as gravações de voz das respostas" (não há respostas nem
+ * gravações desde ENG-689/ENG-691) e o renomear tranquilizava sobre "os documentos"
+ * (não há artefato nenhum). A asserção é sobre a IDEIA, não sobre as frases removidas:
+ * qualquer redação que volte a prometer voz, resposta ou documento cai aqui, nos dois
+ * idiomas.
+ */
+describe('Dashboard — os diálogos não prometem o que saiu no corte (ENG-700)', () => {
+  const PROMESSA = {
+    pt: /\bvoz(es)?\b|gravaç|respost|pergunt|entrevist|document|artefato|relatório/i,
+    en: /\bvoices?\b|recording|answer|question|interview|document|artifact|report/i,
+  };
+
+  // o diálogo é RECONSULTADO depois da troca de idioma: um nó guardado antes dela
+  // poderia ficar órfão com o texto PT, e texto PT nunca casa a regex EN — a metade
+  // inglesa viraria verde permanente e silenciosa
+  async function assertaNosDoisIdiomas(): Promise<void> {
+    const dialogo = () => screen.getByRole('dialog');
+
+    expect(dialogo().textContent).not.toMatch(PROMESSA.pt);
+    await act(() => i18n.changeLanguage('en'));
+    expect(dialogo().textContent).not.toMatch(PROMESSA.en);
+  }
+
+  it('apagar não promete gravação de voz nem resposta', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
+    await chooseDelete('Frágil');
+    await screen.findByRole('dialog');
+
+    await assertaNosDoisIdiomas();
+  });
+
+  it('renomear não promete documento nenhum', async () => {
+    const store = new FixtureSessionStore();
+    await seedInProgress(store, { storyName: 'Frágil', storySlug: 'fragil' });
+
+    render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
+    await chooseRename('Frágil');
+    await screen.findByRole('dialog');
+
+    // pinado dos DOIS lados: sem esta linha, apagar o corpo do diálogo passaria na
+    // asserção de ausência — a explicação de que o nome guardado não se move é o que
+    // torna o renomear seguro de usar
+    expect(screen.getByText(pt.dashboard.renameDialog.body)).toBeTruthy();
+
+    await assertaNosDoisIdiomas();
   });
 });

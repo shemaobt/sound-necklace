@@ -55,7 +55,7 @@ export const en: Dict = {
       'The bead is the smallest piece of the audio — the unit of every cut in the project. Pick the size: it applies to every story and does not change afterwards.',
     granTitleConfirmed: 'The beads of this cord already have a size.',
     granLeadConfirmed:
-      'It was chosen for the whole project and no longer changes. Changing it now would change the reference of everything already cut and exported.',
+      'It was chosen for the whole project and no longer changes. Changing it now would change the reference of everything already cut.',
     granConfirm: 'Confirm — this does not change afterwards',
     granConfirming: 'Confirming…',
     granAskAdmin: 'Ask whoever administers the project to choose the bead size.',
@@ -82,8 +82,7 @@ export const en: Dict = {
   setup: {
     eyebrow: 'Preparation',
     title: 'New session',
-    disclosure:
-      "Audio and answers stay in your project. The guide's voice is synthetic; the questions are written by people.",
+    disclosure: 'The audio and your work stay in your project.',
     gridWarning: 'Lock the bead size before anchoring. Changing it later shifts the boundaries.',
     noAudio: 'Choose an audio file first.',
     bucketError: "Could not load the project's audios. Reload the page.",
@@ -226,7 +225,7 @@ export const en: Dict = {
     deleteSession: 'Delete the story',
     renameDialog: {
       title: 'Rename “{{story}}”',
-      body: 'Only the name shown here changes. The documents keep the filenames they always had.',
+      body: 'Only the name shown here changes. The name this story is stored under in the project does not change.',
       field: 'Story name',
       save: 'Save the name',
       cancel: 'Cancel',
@@ -235,7 +234,7 @@ export const en: Dict = {
     },
     deleteConfirm: {
       title: 'Delete “{{story}}”?',
-      body: 'Everything in this story goes: the cuts, the classifications and the voice recordings of the answers. This cannot be undone.',
+      body: 'Everything in this story goes: the cuts and the classifications. This cannot be undone.',
       confirm: 'Delete forever',
       cancel: 'Keep the story',
       locked: '{{holder}} has this story open right now. It cannot be deleted meanwhile.',
@@ -315,7 +314,7 @@ export const en: Dict = {
     confMedia: 'almost',
     confBaixa: 'in doubt',
     finding: '⌀ None fits',
-    lockout: '⚠ No scene fits Ruth. Segmentation and Mapping stay locked.',
+    lockout: '⚠ No scene fits Ruth. Segmentation stays locked.',
   },
   triagePicker: {
     swap: 'Change type',
