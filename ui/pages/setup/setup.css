@@ -130,12 +130,33 @@
   border: 1px solid var(--cds-ui-hairline);
   border-radius: var(--cds-radius-tile);
   background: var(--cds-ui-chip);
-  /* barra fina do pacote de entrega (`.cds-scroll` em
-     docs/design/pacote-melhorias-ui.html), nas convenções --cds- da casa */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(138, 137, 112, 0.5) transparent;
 }
 
+/*
+ * A barra fina do pacote de entrega (`.cds-scroll` em
+ * docs/design/pacote-melhorias-ui.html), nas convenções --cds- da casa.
+ *
+ * SÓ o pseudo-elemento (ENG-674). Esta regra convivia com as propriedades padrão
+ * `scrollbar-width: thin` / `scrollbar-color` copiadas do mesmo `.cds-scroll` — e
+ * no Chromium as duas não convivem: declarar as padrão DESLIGA a barra
+ * customizada, e a largura em px é descartada em silêncio. A folha pedia 9px e a
+ * tela nunca teve 9px, sem aviso nenhum. Mesma armadilha que a janela do colar
+ * evita de propósito (ui/organisms/necklace/necklace.css, ENG-670).
+ *
+ * Ficou o pseudo-elemento, e não as padrão, por duas razões. A primeira é que ele
+ * é o único dos dois cujo efeito se MEDE: a barra tem a largura escrita aqui, a
+ * mesma em qualquer plataforma, enquanto `thin` entrega o que o sistema quiser —
+ * medido em Chromium, uma barra que não ocupa largura alguma. Uma regra que
+ * ninguém consegue observar foi justamente como os 9px mortos sobreviveram, e o
+ * teste que agora os guarda (setup.browser.test.tsx) só existe porque há o que
+ * medir. A segunda é que o polegar do pacote é arredondado e recuado dentro da
+ * calha (`border` transparente + `background-clip`), desenho que `scrollbar-color`,
+ * que só aceita duas cores, não sabe dizer.
+ *
+ * O preço, dito por inteiro: onde o pseudo-elemento não existe (Firefox), a lista
+ * fica com a barra padrão do sistema em vez da fina tingida. É perda de acabamento
+ * numa superfície de facilitadora, não de função — a lista rola igual.
+ */
 .cds-setup-audios-scroll::-webkit-scrollbar {
   width: 9px;
 }
