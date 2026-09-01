@@ -6,7 +6,6 @@ import { toSessionDto } from '../../contracts';
 import {
   buildBeads,
   createSession,
-  ensureMapping,
   type Frase,
   type ScenePart,
   type SessionState,
@@ -98,16 +97,16 @@ function segmenting(active: 'PT1' | 'PT2'): SessionState {
 }
 
 /**
- * Sessão que o domínio já pôs em `mapeamento`: os dois limites ficaram para trás.
- * Desde o corte de escopo (ENG-689) ela reabre nas Frases — não há estação depois.
+ * Sessão que o domínio já encerrou: os dois limites ficaram para trás. Ela reabre
+ * nas Frases — não há estação depois (ENG-689/ENG-691).
  */
 function pastBothBoundaries(): SessionState {
-  return ensureMapping({
+  return {
     ...base(),
-    mode: 'mapeamento',
+    mode: 'concluida',
     parts: [productive('PT1', { s: 0, e: 29 })],
     frases: [phrase('P1', { s: 0, e: 4 }, 'PT1')],
-  });
+  };
 }
 
 async function persist(state: SessionState): Promise<string> {
@@ -124,17 +123,11 @@ async function persist(state: SessionState): Promise<string> {
   });
   store.autosave(
     summary.id,
-    toSessionDto(
-      state,
-      {
-        granularityLevel: 'medium',
-        bucketAudioId: 'a1',
-        voice: [],
-        voiceVersion: {},
-        pipelineConsent: true,
-      },
-      false,
-    ),
+    toSessionDto(state, {
+      granularityLevel: 'medium',
+      bucketAudioId: 'a1',
+      pipelineConsent: true,
+    }),
   );
   await store.flush(summary.id);
   return summary.id;

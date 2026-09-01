@@ -19,9 +19,9 @@ import { StoryProgress } from './story-progress';
  * autosave, para outro sistema consumir.
  *
  * O que se afirma aqui é o FIM: quantas estações o fio tem, que a última é Frases
- * mesmo depois de o domínio ter avançado para `mapeamento`, como a barra do topo
- * reparte a história entre as quatro, e que nenhuma rota do app monta uma das
- * telas que saíram.
+ * mesmo depois de o domínio ter encerrado a sessão, como a barra do topo reparte
+ * a história entre as quatro, e que nenhuma rota do app monta uma das telas que
+ * saíram.
  */
 
 const TOTAL_BEADS = 8;
@@ -83,12 +83,12 @@ const AT = {
 
 /**
  * O que o domínio guarda depois de a última cena produtiva fechar: o modo vira
- * `mapeamento`, que era a Conversa. Não há mais Conversa — o trabalho acabou.
+ * `concluida` (ENG-691) — o trabalho acabou, e não há estação depois.
  */
 function phrasesDone(): SessionState {
   return {
     ...AT.phrases(),
-    mode: 'mapeamento',
+    mode: 'concluida',
     frases: [frase('P1', 'PT1')],
   };
 }
@@ -125,8 +125,8 @@ describe('O fio tem quatro estações e acaba nas Frases (ENG-689)', () => {
   });
 
   /**
-   * A última conta do fio deixou de depender do gate do mapeamento: chegar ao fim
-   * é ter uma cena produtiva à frente, não ter uma frase travada dentro dela.
+   * A última conta do fio deixou de depender de um gate de entrevista: chegar ao
+   * fim é ter uma cena produtiva à frente, não ter uma frase travada dentro dela.
    */
   it('a última estação fica alcançável assim que há uma cena produtiva', () => {
     const stations = stepperStations(AT.phrases());
@@ -156,7 +156,7 @@ describe('Nenhuma rota alcança a conversa, o relatório ou a exportação (ENG-
     }
   });
 
-  it('a faixa da sessão em mapeamento anuncia Frases, e nenhuma etapa depois dela', () => {
+  it('a faixa da sessão encerrada anuncia Frases, e nenhuma etapa depois dela', () => {
     const faixa = band(phrasesDone());
     expect(within(faixa).getByText('Frases')).toBeDefined();
     expect(faixa.textContent?.trim()).toBe('Frases');

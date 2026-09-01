@@ -11,10 +11,9 @@ import { modeLocks, type SessionState } from '../../domain';
  * shell continua perguntando duas coisas a ela: que estação montar e que nome a
  * faixa de progresso anuncia.
  *
- * O fluxo TERMINA nas Frases (ENG-689). O domínio continua avançando para
- * `mapeamento` ao fechar a última cena produtiva — é o modo congelado que marca
- * "não há mais o que segmentar" —, e aqui esse modo não abre estação nenhuma: ele
- * é o fim das Frases.
+ * O fluxo TERMINA nas Frases (ENG-689). Fechada a última cena produtiva o domínio
+ * vai a `concluida` (ENG-691), que NÃO é estação: é o fim das Frases, e por isso
+ * mapeia para o mesmo índice que `segmentacao`.
  */
 
 /**
@@ -45,7 +44,7 @@ function currentIndex(state: SessionState): number {
     case 'triagem':
       return 2;
     case 'segmentacao':
-    case 'mapeamento':
+    case 'concluida':
       return 3;
   }
 }

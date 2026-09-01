@@ -13,7 +13,7 @@ Path: @/adapters/audio
 - `DecodedAudio.pcm` is typed as `PcmLike` from @/domain — the same interface `hashPCM` (manifest_id) and the bead-grid math consume. Decode output feeds the domain directly; the player also calls the domain's `buildBeads`/`beadAtTime`, keeping bead indices as the universal coordinate.
 - Consumed by `ui/` only through props/wiring (pages/templates/`ui/app`); the adapter never knows UI. Decode failures surface as the typed `AudioDecodeError` — the Setup station owns the PT-BR error copy (PRD §8.1).
 - @/adapters/audio/register.ts is the first live instance of the add-a-file registration convention (@/docs/architecture.md §4): it default-exports `{ port: 'audio', fixture, real }`. The `AdapterRegistration<T>` interface currently lives in this file; the ENG-224 composition root will glob `adapters/*/register.ts` and may hoist the type.
-- @/adapters/audio/fixture.ts imports the golden harness's synthetic-PCM generator @/tests/golden/pcm.ts (sanctioned by the issue; @/.dependency-cruiser.cjs bans `tests/` imports only for `domain/` and `contracts/`). This makes fixture-mode audio byte-identical to what the harness hashes.
+- @/adapters/audio/fixture.ts synthesizes PCM with @/adapters/audio/pcm.ts, a deterministic seeded-LCG generator. **It lived at `tests/golden/pcm.ts` until ENG-691 moved it here**, forced by the deletion of `tests/golden/`: it was never really harness code, it is the fixture-mode audio, and @/fixtures/bucket/audios.ts (the `PcmSpec` type) and this file were its only real consumers. The golden harness that used to also hash against it is gone.
 
 ```
 bytes ──decode()──▶ DecodedAudio { duration, pcm: PcmLike } ──▶ domain hashPCM / buildBeads
@@ -36,7 +36,7 @@ bytes ──decode()──▶ DecodedAudio { duration, pcm: PcmLike } ──▶ 
   - **Head progress** — a frame loop maps context time to a bead index via `beadAtTime`, emits to `onHead` listeners only when the bead changes, and emits `null` when playback ends or stops.
   - **Edge window** — `playEdge` plays `max(1, round(1/beadSec))` beads on each side of a boundary, clamped to the grid (the "~1 s around the seam" rule).
 - @/adapters/audio/web-audio.ts (real mode): lazy `AudioContext` (constructing the engine never touches audio); `decodeAudioData(bytes.slice(0))` because the Web Audio spec detaches the input buffer; a fresh `AudioBufferSourceNode` per play since nodes are one-shot; decode failures wrapped in `AudioDecodeError` with `cause`.
-- @/adapters/audio/fixture.ts (default mode): `decode` accepts JSON-encoded `PcmSpec` bytes (helper `pcmSpecBytes`) and synthesizes PCM with the golden LCG; `duration = samples / sampleRate`. `FixtureTransport.advance(dt)` moves time only while not suspended, fires due/stopped `onEnded` callbacks, then runs one frame batch — tests drive playback deterministically.
+- @/adapters/audio/fixture.ts (default mode): `decode` accepts JSON-encoded `PcmSpec` bytes (helper `pcmSpecBytes`) and synthesizes PCM with the seeded LCG in @/adapters/audio/pcm.ts; `duration = samples / sampleRate`. `FixtureTransport.advance(dt)` moves time only while not suspended, fires due/stopped `onEnded` callbacks, then runs one frame batch — tests drive playback deterministically.
 - @/adapters/audio/index.ts is the public barrel for the wiring layer and tests; app code resolves the engine via the `audio` port, not by importing implementations.
 
 ### Things to Know

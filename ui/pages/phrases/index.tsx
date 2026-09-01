@@ -89,7 +89,7 @@ export interface PhrasesProps {
   sound?: UiSound;
   /**
    * Fechar a ÚLTIMA cena produtiva fecha um BLOCO (ENG-651). Quem sabe que essa é a
-   * última é o domínio — `confirmFrasesDone` devolvendo `mapeamento` —, e quem
+   * última é o domínio — `confirmFrasesDone` devolvendo `finished` —, e quem
    * desenha a tela é o shell; a estação só passa o recado.
    */
   onBlockClosed?: (block: ClosedBlock) => void;
@@ -310,7 +310,7 @@ export function Phrases({ player = null, sound, onBlockClosed }: PhrasesProps) {
   };
 
   // Remover a frase + a SEGUINTE da mesma cena absorve o espaço (#3): removeFrase
-  // é puro (fiel ao reference, golden), a absorção é composta aqui — como o reprime.
+  // é puro (fiel ao reference), a absorção é composta aqui — como o reprime.
   const remove = (i: number): void => {
     setError(null);
     setPick(null);
@@ -336,7 +336,7 @@ export function Phrases({ player = null, sound, onBlockClosed }: PhrasesProps) {
         sound?.refuse();
         return;
       case 'next-scene':
-      case 'mapeamento':
+      case 'finished':
         setError(null);
         setWarned(null);
         // sair da cena esvazia o rodapé: chegar noutra cena (ou voltar a esta)
@@ -344,9 +344,9 @@ export function Phrases({ player = null, sound, onBlockClosed }: PhrasesProps) {
         setPick(null);
         sound?.advance();
         sessionStore.getState().apply(() => result.state);
-        // `mapeamento` é a resposta do domínio para "era a última produtiva" — a
+        // `finished` é a resposta do domínio para "era a última produtiva" — a
         // estação não recalcula qual cena era, só repassa (ENG-651).
-        if (result.kind === 'mapeamento') onBlockClosed?.('segmentacao');
+        if (result.kind === 'finished') onBlockClosed?.('segmentacao');
         return;
     }
   };

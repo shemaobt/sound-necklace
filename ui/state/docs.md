@@ -28,7 +28,7 @@ Path: @/ui/state
 
 ### Things to Know
 
-- **The clock measures presence, not keystrokes.** Deliberately no activity tracking (keys, clicks, pointer): the house rule bans telemetry on listener behaviour, and a facilitator listening to a whole trecho without touching anything is working. Having the session open and in front of you IS the signal. It also never leaves the browser and never reaches an artifact — none of the three documents has a time field, and this is not what would open one.
+- **The clock measures presence, not keystrokes.** Deliberately no activity tracking (keys, clicks, pointer): the house rule bans telemetry on listener behaviour, and a facilitator listening to a whole trecho without touching anything is working. Having the session open and in front of you IS the signal. It also never leaves the browser: it never entered an artifact even before ENG-691 removed the three documents that could have carried a time field, and it does not enter the session-state DTO either (@/contracts/docs.md).
 - **Freezing is what makes the number honest.** Completion calls `freezeClock` and the Export renders the frozen total from state; without it the chip would creep upward while the completion screen sat open. "Destravar para editar" calls `resumeClock(now)`, so the pause between the two sittings is not billed.
 - **Pausing is not clearing.** Offline/review/lock make `apply` a no-op but leave `session` intact; the mechanism deliberately preserves state so a dropped connection or a review toggle never loses work.
 - The store never imports adapters by design — if you need persistence, inject it through `SessionStoreDeps.autosave`; do not reach for the SessionStore adapter here.

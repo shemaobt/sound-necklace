@@ -23,7 +23,7 @@ Path: @/adapters/granularity
 ### Things to Know
 
 - The tokenizer grid is **fixed and uniform across all audios** (Pequena 0.20 s / Média 0.50 s / Grande 1.00 s) — the resolver reads `granularity_frames × hop_sec` from the envelope rather than hardcoding those durations.
-- Média = 0.50 s (25 frames × 20 ms) is the value the golden byte-identity cases assume (a 24-bead grid over 12 s), so the resolved grid keeps the harness green.
+- Média = 0.50 s (25 frames × 20 ms) resolves to a 24-bead grid over 12 s — the grid @/fixtures/bucket/audios.ts's fixture entries assume, and that @/tests/e2e drives the real UI against. Until ENG-691 this was also the value the (now-deleted) golden harness's byte-identity cases assumed; that harness is gone, but the fixture grid it constrained is unchanged.
 - Fixture envelopes are authored in @/fixtures/bucket/audios.ts (each carrying `hop_sec` + `granularity_frames`); the resolver only applies them, so changing granularity behavior in fixture mode means editing that data, not this resolver.
 
 Created and maintained by Nori.

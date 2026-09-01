@@ -107,7 +107,7 @@ describe('TutorialPopup', () => {
     expect(tip()).toBeNull();
   });
 
-  it.each(['listen', 'cut', 'triagem', 'segmentacao', 'mapeamento', 'export'])(
+  it.each(['listen', 'cut', 'triagem', 'segmentacao', 'concluida', 'export'])(
     'não expõe dígitos em texto, aria-label ou title (%s)',
     (station) => {
       render(<TutorialPopup station={station} />);

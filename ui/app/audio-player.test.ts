@@ -31,17 +31,11 @@ async function seed(bucketAudioId: string): Promise<string> {
   });
   store.autosave(
     summary.id,
-    toSessionDto(
-      sample(),
-      {
-        granularityLevel: 'medium',
-        bucketAudioId,
-        voice: [],
-        voiceVersion: {},
-        pipelineConsent: true,
-      },
-      false,
-    ),
+    toSessionDto(sample(), {
+      granularityLevel: 'medium',
+      bucketAudioId,
+      pipelineConsent: true,
+    }),
   );
   await store.flush(summary.id);
   return summary.id;

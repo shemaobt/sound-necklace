@@ -98,23 +98,23 @@ export interface FixtureSessionStoreOptions {
 /**
  * Deriva o passo do dashboard (§7.2) do status + modo do estado salvo.
  *
- * ESPELHA o servidor, inclusive na leitura da bandeira da revisão (ENG-514): lá o passo
- * é `save` quando o modo é `mapeamento` e o documento traz `reviewComplete` verdadeiro —
- * a ausência do campo, e qualquer outro valor, continuam significando entrevista em
- * curso. Uma fixture mais generosa ensinaria à UI um comportamento que o modo real não
- * tem.
+ * O enum de passos do servidor (@/contracts/api.ts) ainda tem `conversation` e `save`,
+ * do ciclo de vida que ele conhece; o app não produz mais nenhum dos dois modos que os
+ * geravam. Desde a ENG-691 o modo terminal é `concluida` — a sessão acabou —, e o passo
+ * dela é `save`, o valor que o dashboard já lê como "passou do fim" (@/ui/pages/dashboard).
+ * A bandeira `reviewComplete`, que antes decidia entre `save` e `conversation`, saiu do
+ * documento junto com a entrevista.
  */
 function stepFor(status: SessionStatus, state: SessionStateDto | undefined): SessionStep {
   if (status === 'completed') return 'save';
-  const s = state as
-    { mode?: string; whole?: { confirmed?: boolean }; reviewComplete?: boolean } | undefined;
+  const s = state as { mode?: string; whole?: { confirmed?: boolean } } | undefined;
   switch (s?.mode) {
     case 'triagem':
       return 'triage';
     case 'segmentacao':
       return 'phrases';
-    case 'mapeamento':
-      return s.reviewComplete === true ? 'save' : 'conversation';
+    case 'concluida':
+      return 'save';
     default:
       return s?.whole?.confirmed ? 'cut' : 'listen';
   }

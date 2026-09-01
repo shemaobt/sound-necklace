@@ -286,7 +286,7 @@ export function Cut({ player = null, sound }: CutProps) {
   };
 
   // Remover a cena + a SEGUINTE absorve o espaço liberado (#3): removePart é puro
-  // (fiel ao reference, golden), a absorção é composta aqui — como o reprime.
+  // (fiel ao reference), a absorção é composta aqui — como o reprime.
   const removeScene = (partId: string): void => {
     setError(null);
     setPick(null);
