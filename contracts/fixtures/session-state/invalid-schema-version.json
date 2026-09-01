@@ -16,13 +16,11 @@
   "frases": [],
   "current": { "layer": "whole", "index": -1 },
   "activeSceneId": null,
-  "mapping": null,
   "selection": null,
   "pendingStart": null,
   "mode": "escuta",
   "review": false,
   "granularityLevel": "medium",
   "bucketAudioId": "aud-1",
-  "pipelineConsent": true,
-  "voice": []
+  "pipelineConsent": true
 }

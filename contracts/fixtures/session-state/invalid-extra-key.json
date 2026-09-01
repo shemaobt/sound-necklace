@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "durationSec": 1,
   "beadSec": 0.5,
   "totalBeads": 2,
@@ -16,7 +16,6 @@
   "frases": [],
   "current": { "layer": "whole", "index": -1 },
   "activeSceneId": null,
-  "mapping": null,
   "selection": null,
   "pendingStart": null,
   "mode": "escuta",
@@ -24,6 +23,5 @@
   "granularityLevel": "medium",
   "bucketAudioId": "aud-1",
   "pipelineConsent": true,
-  "voice": [],
   "mapStep": "n1"
 }

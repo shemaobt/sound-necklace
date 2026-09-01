@@ -185,7 +185,7 @@ export type AutosaveResponse = z.infer<typeof AutosaveResponseSchema>;
 /**
  * Payload de artefato: bytes OPACOS (§10.5). Tipado como string crua e NUNCA
  * parseado/reserializado — `parse` devolve a string idêntica ao upload. É o único
- * modo de preservar a byte-identidade com os goldens; validamos só o envelope
+ * modo de preservar a byte-identidade do que subiu; validamos só o envelope
  * (id de sessão, filenames), nunca a forma interna do payload.
  */
 export const OpaqueArtifactSchema = z.string();
