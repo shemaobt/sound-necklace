@@ -11,12 +11,6 @@ export {
   type BreakSuggestionProps,
 } from './break-suggestion/break-suggestion';
 export {
-  ConversationStage,
-  type ConversationProgress,
-  type ConversationStageProps,
-  type RecorderState,
-} from './conversation-stage/conversation-stage';
-export {
   NavFooterOutlet,
   NavFooterProvider,
   StationNav,
@@ -24,15 +18,8 @@ export {
   type NavNext,
   type StationNavProps,
 } from './nav-footer/nav-footer';
-export {
-  ConversationModeGlyph,
-  ConversationModePicker,
-  type ConversationMode,
-  type ConversationModePickerProps,
-} from './conversation-mode-picker/conversation-mode-picker';
 export { GoalReached, type GoalReachedProps } from './goal-reached/goal-reached';
 export { Necklace, type NecklaceProps, type NecklaceSegment } from './necklace/necklace';
 export { SIZE_EXPORT, SIZE_L, SIZE_M, SIZE_SEG, type Size } from './necklace/geometry';
 export { SeamModal, type SeamCordSide, type SeamModalProps } from './seam-modal/seam-modal';
-export { StorytellerGuide, type GuideVariantProps } from './storyteller-guide';
 export { PreparingSession } from './preparing-session/preparing-session';

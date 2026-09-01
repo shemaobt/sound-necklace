@@ -5,16 +5,9 @@ import * as Popover from '@radix-ui/react-popover';
 
 import type { AuthProvider } from '../../../adapters/api';
 import { LockLostError, type SessionStore } from '../../../adapters/sessions';
-import {
-  manifestoFilename,
-  relatorioFilename,
-  retornoFilename,
-  type SessionStep,
-  type SessionSummary,
-} from '../../../contracts';
+import { type SessionStep, type SessionSummary } from '../../../contracts';
 import { Button, Skeleton } from '../../atoms';
 import { ColarIcon } from '../../tokens';
-import { type ArtifactKind } from '../../organisms/artifact-cards/artifact-cards';
 import {
   SessionList,
   type SessionCardData,
@@ -28,43 +21,49 @@ import './dashboard.css';
  * Sessions dashboard (PRD v2 §7.2, protótipo Shemá v2 / ENG-278): a casa pós-login.
  * Lista TODAS as sessões da facilitadora em cartões — nome, slug, projeto, status,
  * última modificação e o relance de progresso pela capa do fio (contas acesas na
- * proporção do passo salvo); retoma direto no passo salvo (§7.3); baixa os três
- * artefatos de uma sessão concluída SEM abri-la (§10.5); troca o NOME de exibição de
- * uma história sem mover o slug que nomeia os documentos (§10.6); apaga uma história
- * em definitivo, depois de perguntar; e abre uma nova. A expiração de auth (§7.1)
+ * proporção do passo salvo); retoma direto no passo salvo (§7.3); troca o NOME de
+ * exibição de uma história sem mover o slug (§10.6); apaga uma história em
+ * definitivo, depois de perguntar; e abre uma nova. A expiração de auth (§7.1)
  * volta ao login sem tocar o estado em memória do app.
+ *
+ * Não há mais download de documento nenhum (ENG-689): o app deixou de gerar
+ * artefatos, e um menu que oferecesse os de ontem prometeria o que o produto não faz.
  *
  * Tem cabeçalho PRÓPRIO (o shell suprime o dele em `/dashboard`, como no `/login`):
  * marca + a usuária autenticada + sair. Reconciliações protótipo↔contrato (dado vence):
  * o protótipo mostra nome completo e e-mail ("Marcia Alencar / marcia@shema.org"), mas
  * `AuthUser` só tem `{id, username, roles}` — mostramos o `username` e a inicial, sem
  * inventar dados. Do kebab do protótipo (renomear/duplicar/excluir) existem hoje o
- * renomear e o excluir (`store.rename`/`store.remove`, ENG-281) ao lado dos downloads
- * (ENG-305); duplicar não existe na porta nem no §7.2 e segue de fora.
+ * renomear e o excluir (`store.rename`/`store.remove`, ENG-281); duplicar não existe
+ * na porta nem no §7.2 e segue de fora.
  *
  * Camada de wiring: as portas `auth`/`store` chegam por prop nos testes; em produção
- * resolvem os singletons fixture (ports.ts). O download real é a fronteira `saveBytes`.
+ * resolvem os singletons fixture (ports.ts).
  */
 export interface DashboardProps {
   auth?: AuthProvider;
   store?: SessionStore;
-  /** Fronteira de download; default grava um Blob no browser. */
-  saveBytes?: (filename: string, bytes: string) => void;
 }
 
 /**
- * As seis estações do fio — a posição do passo salvo vira a proporção da capa. Os
- * rótulos leem do namespace `stations`, a MESMA fonte do fio de contas do shell
- * (ENG-279): duplicar a cópia fazia o stepper dizer "Ouvir" e o dashboard "Listen".
+ * As quatro estações do fio — a posição do passo salvo vira a proporção da capa. Os
+ * rótulos leem do namespace `stations`, a MESMA fonte do nome de etapa do shell
+ * (ENG-279): duplicar a cópia fazia o shell dizer "Ouvir" e o dashboard "Listen".
  */
 const STEPS: readonly { key: SessionStep; labelKey: string }[] = [
   { key: 'listen', labelKey: 'stations.listen' },
   { key: 'cut', labelKey: 'stations.cut' },
   { key: 'triage', labelKey: 'stations.triage' },
   { key: 'phrases', labelKey: 'stations.phrases' },
-  { key: 'conversation', labelKey: 'stations.conversation' },
-  { key: 'save', labelKey: 'stations.save' },
 ];
+
+/**
+ * O servidor (e a fixture que o espelha) continua conhecendo os passos que saíram do
+ * produto (ENG-689): `conversation` e `save` são o que ele reporta de uma sessão que
+ * fechou as Frases. O fluxo acaba ali, então é ali que o cartão a mostra — traduzir
+ * aqui, e não no adapter, mantém a camada congelada intocada.
+ */
+const PAST_THE_END: readonly SessionStep[] = ['conversation', 'save'];
 
 const STATUS: Record<SessionSummary['status'], SessionStatus> = {
   in_progress: 'in-progress',
@@ -88,10 +87,10 @@ export function formatWhen(iso: string, locale = 'pt-BR'): string {
 
 /** Relance do progresso (§7.2): quanto do fio já foi enfiado, e o passo por extenso. */
 export function progressOf(step: SessionStep, t: Translate): { progress: number; label: string } {
-  const i = Math.max(
-    0,
-    STEPS.findIndex((s) => s.key === step),
-  );
+  const at = PAST_THE_END.includes(step)
+    ? STEPS.length - 1
+    : STEPS.findIndex((s) => s.key === step);
+  const i = Math.max(0, at);
   const station = t(STEPS[i]?.labelKey ?? STEPS[0]!.labelKey);
   return {
     progress: (i + 1) / STEPS.length,
@@ -120,30 +119,21 @@ function GearGlyph() {
   );
 }
 
-const KINDS: readonly ArtifactKind[] = ['anchoring', 'manifest', 'report'];
-
 /**
- * O menu de ações do cartão (ENG-305 → ENG-281). Nasceu só com os downloads da
- * concluída — os cards soltos abaixo da grade eram uma segunda superfície
- * competindo com as histórias — e agora carrega também o apagar, que vale a
- * QUALQUER momento: por isso o menu está em todo cartão, e não só nos prontos.
- * Os bytes do download vêm do MESMO onDownload de sempre (§10.5, byte-idênticos
- * aos guardados); os três documentos saem de uma escolha só.
+ * O menu de ações do cartão (ENG-305 → ENG-281 → ENG-689). Nasceu com os downloads
+ * da concluída — os cards soltos abaixo da grade eram uma segunda superfície
+ * competindo com as histórias —, que saíram junto com os artefatos; ficaram o
+ * renomear e o apagar, e ambos valem a QUALQUER momento, por isso o menu está em
+ * todo cartão e não só nos prontos.
  */
 function ActionsMenu({
   t,
   story,
-  canDownload,
-  downloaded,
-  onDownload,
   onRename,
   onDelete,
 }: {
   t: Translate;
   story: string;
-  canDownload: boolean;
-  downloaded: boolean;
-  onDownload: () => void;
   onRename: () => void;
   onDelete: () => void;
 }) {
@@ -172,18 +162,6 @@ function ActionsMenu({
             <span aria-hidden="true">✎</span>
             {t('dashboard.renameSession')}
           </button>
-          {/* os documentos só existem depois de guardar (§8.8) */}
-          {canDownload && (
-            <button
-              type="button"
-              className="cds-dashboard-dl-item"
-              data-downloaded={downloaded || undefined}
-              onClick={onDownload}
-            >
-              <span aria-hidden="true">{downloaded ? '✓' : '⤓'}</span>
-              {t('dashboard.downloads')}
-            </button>
-          )}
           <button
             type="button"
             className="cds-dashboard-dl-item"
@@ -390,33 +368,11 @@ function toCard(s: SessionSummary, t: Translate, locale: string): SessionCardDat
   };
 }
 
-function filenameFor(kind: ArtifactKind, slug: string): string {
-  if (kind === 'anchoring') return retornoFilename(slug);
-  if (kind === 'manifest') return manifestoFilename(slug);
-  return relatorioFilename(slug);
-}
-
-function domSaveBytes(filename: string, bytes: string): void {
-  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-
-export function Dashboard({
-  auth = defaultAuth(),
-  store = defaultSessionStore(),
-  saveBytes = domSaveBytes,
-}: DashboardProps) {
+export function Dashboard({ auth = defaultAuth(), store = defaultSessionStore() }: DashboardProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language.startsWith('en') ? 'en-US' : 'pt-BR';
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [listError, setListError] = useState(false);
-  const [downloaded, setDownloaded] = useState<Set<string>>(new Set());
   /** A história cujo apagamento está sendo perguntado — a pergunta é o próprio estado. */
   const [pendingDelete, setPendingDelete] = useState<SessionSummary | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -462,16 +418,6 @@ export function Dashboard({
         .then(setSessions)
         .catch(() => setListError(true)),
     [store],
-  );
-
-  /** Uma escolha, os três documentos (ENG-281) — os bytes guardados, sem refazer nada. */
-  const onDownload = useCallback(
-    async (s: SessionSummary): Promise<void> => {
-      const artifacts = await store.getArtifacts(s.id);
-      for (const kind of KINDS) saveBytes(filenameFor(kind, s.story_slug), artifacts[kind]);
-      setDownloaded((prev) => new Set(prev).add(s.id));
-    },
-    [store, saveBytes],
   );
 
   /**
@@ -544,21 +490,17 @@ export function Dashboard({
     () =>
       (sessions ?? []).map((s) => ({
         ...toCard(s, t, locale),
-        // o menu vale para TODA história (ENG-281): renomear e apagar não esperam a
-        // conclusão. Baixar espera: os documentos só passam a existir ao guardar (ENG-305).
+        // o menu vale para TODA história (ENG-281): renomear e apagar não esperam nada
         menu: (
           <ActionsMenu
             t={t}
             story={s.story_name}
-            canDownload={s.status === 'completed'}
-            downloaded={downloaded.has(s.id)}
-            onDownload={() => void onDownload(s)}
             onRename={() => setPendingRename(s)}
             onDelete={() => setPendingDelete(s)}
           />
         ),
       })),
-    [sessions, t, locale, downloaded, onDownload],
+    [sessions, t, locale],
   );
   const user = auth.currentUser();
 

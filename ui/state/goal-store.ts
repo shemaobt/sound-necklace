@@ -19,14 +19,16 @@ import { useStore } from 'zustand';
  * rearma o "já comemorei" é a montagem do organismo, que o shell remonta por sessão.
  */
 
-/** As seis metas do protótipo v4 (linha 1640), na ordem em que se oferecem. */
-export type TodayGoal =
-  'twoScenes' | 'fourScenes' | 'twelveTalks' | 'triage' | 'phrases' | 'wholeStory';
+/**
+ * As metas do protótipo v4 (linha 1640), na ordem em que se oferecem. As "12
+ * conversas" saíram com a Conversa (ENG-689); as cinco restantes cabem todas no
+ * fluxo que ficou.
+ */
+export type TodayGoal = 'twoScenes' | 'fourScenes' | 'triage' | 'phrases' | 'wholeStory';
 
 export const TODAY_GOALS: readonly TodayGoal[] = [
   'twoScenes',
   'fourScenes',
-  'twelveTalks',
   'triage',
   'phrases',
   'wholeStory',

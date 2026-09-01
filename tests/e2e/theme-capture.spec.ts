@@ -58,12 +58,7 @@ test('percorre o fluxo nos dois temas', async ({ page }) => {
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
-  await app.chooseConversationMode();
-  await shot('09-conversation');
-
-  await app.walkToReport();
-  await shot('09d-report');
-
-  await app.completeSession();
-  await shot('10-export');
+  await shot('09-fim-de-fluxo');
+  await app.leaveAfterPhrases();
+  await shot('10-dashboard-depois');
 });

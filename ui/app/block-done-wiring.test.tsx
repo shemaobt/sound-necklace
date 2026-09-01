@@ -13,7 +13,7 @@ import {
   type Span,
 } from '../../domain';
 import { BREAK_AFTER_MS } from '../organisms';
-import { appStore, goalStore, sessionStore } from '../state';
+import { goalStore, sessionStore } from '../state';
 import { App } from './App';
 import { navigate } from './router';
 import { appSessionStore } from './session-adapter';
@@ -39,8 +39,6 @@ const META = 'A meta de hoje está no cordão.';
 const FRASES = 'Divida a cena: toque no colar onde esta frase começa e termina.';
 /** Triagem com tudo já classificado abre no seu momento de revisão. */
 const TRIAGEM_STATION = 'Todas as cenas classificadas.';
-const CONVERSA =
-  'Descreva esta história, explicando o que acontece, do começo ao fim. Não é para recontar a história, é para falar sobre ela.';
 
 const DURATION = 7.5; // 30 contas (0…29)
 const BEAD_SEC = 0.25;
@@ -99,7 +97,10 @@ function segmenting(active: 'PT1' | 'PT2'): SessionState {
   };
 }
 
-/** Sessão já em Mapeamento: os dois limites ficaram para trás. */
+/**
+ * Sessão que o domínio já pôs em `mapeamento`: os dois limites ficaram para trás.
+ * Desde o corte de escopo (ENG-689) ela reabre nas Frases — não há estação depois.
+ */
 function pastBothBoundaries(): SessionState {
   return ensureMapping({
     ...base(),
@@ -150,7 +151,6 @@ async function open(state: SessionState, landmark: string): Promise<void> {
 beforeEach(() => {
   window.history.replaceState({}, '', '/');
   sessionStore.setState(sessionStore.getInitialState(), true);
-  appStore.setState({ recording: false });
   goalStore.setState(goalStore.getInitialState(), true);
   localStorage.clear();
 });
@@ -175,19 +175,33 @@ describe('O fim de bloco no shell (ENG-651)', () => {
     expect(screen.getByText(FRASES, { exact: false })).toBeDefined();
   });
 
-  it('confirmar a ÚLTIMA cena produtiva fecha a Segmentação e o primário entrega a Conversa', async () => {
+  /**
+   * ENG-689 — a Segmentação é o fim do fluxo. A tela que fecha o bloco fecha
+   * também a sessão: não há estação atrás dela para o primário entregar, e a
+   * única saída é o painel. O trabalho já está salvo pelo autosave.
+   */
+  it('confirmar a ÚLTIMA cena produtiva encerra a sessão e a saída é o painel', async () => {
     await open(segmenting('PT2'), FRASES);
 
     await userEvent.click(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' }));
 
     expect(await screen.findByRole('heading', { name: SEGMENTACAO_HEADLINE })).toBeDefined();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Começar a conversa' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar às histórias' }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: SEGMENTACAO_HEADLINE })).toBeNull();
+      expect(screen.getByRole('heading', { name: DASHBOARD })).toBeDefined();
     });
-    expect(await screen.findByText(CONVERSA, { exact: false })).toBeDefined();
+    expect(screen.queryByRole('heading', { name: SEGMENTACAO_HEADLINE })).toBeNull();
+  });
+
+  it('o fim da Segmentação não oferece uma segunda saída para o mesmo lugar', async () => {
+    await open(segmenting('PT2'), FRASES);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' }));
+    await screen.findByRole('heading', { name: SEGMENTACAO_HEADLINE });
+
+    expect(screen.queryByRole('button', { name: 'Guardar e descansar' })).toBeNull();
   });
 
   it('confirmar uma cena que NÃO é a última produtiva não fecha bloco nenhum', async () => {
@@ -217,7 +231,7 @@ describe('O fim de bloco no shell (ENG-651)', () => {
   });
 
   it('reabrir uma sessão já passada dos dois limites não repete a tela', async () => {
-    await open(pastBothBoundaries(), CONVERSA);
+    await open(pastBothBoundaries(), FRASES);
 
     expect(screen.queryByRole('heading', { name: TRIAGEM_HEADLINE })).toBeNull();
     expect(screen.queryByRole('heading', { name: SEGMENTACAO_HEADLINE })).toBeNull();
@@ -231,23 +245,6 @@ describe('O fim de bloco no shell (ENG-651)', () => {
   });
 
   /**
-   * ADIAR, NUNCA ENGOLIR. Um bloco fecha UMA vez: se a tela fosse suprimida
-   * enquanto algo está em curso, ela não teria segunda chance de aparecer. O
-   * `block` mora no shell e não se perde — só o RENDER espera.
-   */
-  it('com algo em curso o fim de bloco espera, e aparece assim que a pressa passa', async () => {
-    await open(triageReady(), TRIAGEM_STATION);
-    act(() => appStore.getState().setRecording(true));
-
-    await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
-    expect(screen.queryByRole('heading', { name: TRIAGEM_HEADLINE })).toBeNull();
-
-    act(() => appStore.getState().setRecording(false));
-
-    expect(await screen.findByRole('heading', { name: TRIAGEM_HEADLINE })).toBeDefined();
-  });
-
-  /**
    * Precedência entre as duas telas DERIVADAS. No fluxo normal elas não colidem: a
    * meta cruza a marca quando o trabalho da estação termina, o que é ANTES do
    * clique que fecha o bloco. O que as torna simultâneas é as duas estarem adiadas
@@ -258,19 +255,13 @@ describe('O fim de bloco no shell (ENG-651)', () => {
    * logo atrás — adiada, não perdida. Este teste também é a rede contra oscilação:
    * se as duas derivações se olhassem, este render entraria em laço infinito.
    */
-  it('soltas juntas, o fim de bloco vem primeiro e a meta espera a vez', async () => {
+  it('com o fim de bloco na tela, a meta alcançada espera a vez — e não se perde', async () => {
     await open(triageReady(), TRIAGEM_STATION);
-    // microfone aberto: as duas ficam adiadas, e a meta não engole a marca cruzada
-    act(() => appStore.getState().setRecording(true));
-    act(() => goalStore.getState().chooseGoal('triage'));
     await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
-    expect(screen.queryByRole('heading', { name: TRIAGEM_HEADLINE })).toBeNull();
-    expect(screen.queryByText(META)).toBeNull();
-
-    // a pressa passa e as duas querem a tela no mesmo render
-    act(() => appStore.getState().setRecording(false));
-
     expect(await screen.findByRole('heading', { name: TRIAGEM_HEADLINE })).toBeDefined();
+
+    // a meta se cumpre com o fim de bloco de pé: uma tela cheia de cada vez
+    act(() => goalStore.getState().chooseGoal('triage'));
     expect(screen.queryByText(META)).toBeNull();
 
     await userEvent.click(screen.getByRole('button', { name: 'Seguir para as frases' }));

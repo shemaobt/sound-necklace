@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { ColarApp, SCENARIO } from './support';
 import { scanListenerSurface } from './support/minimalism';
@@ -12,33 +12,9 @@ import { scanListenerSurface } from './support/minimalism';
  *
  * Um único percurso (o mesmo roteiro do acceptance 1) visita os estados em ordem:
  * Escuta 1 → Escuta 2 (ancoragem + cena travada) → Triage (foco/todos-os-tipos/
- * confiança) → Segmentação (ancoragem/aviso-de-cena-vazia/seam-modal) → Conversation
- * (níveis história/cena/frase + gravando).
+ * confiança) → Segmentação (ancoragem/aviso-de-cena-vazia/seam-modal) → o fim do
+ * fluxo (ENG-689).
  */
-
-const LISTEN = {
-  1: '▶ Ouvir a história',
-  2: '▶ Ouvir a cena',
-  3: '▶ Ouvir a frase',
-} as const;
-
-/** Nível da pergunta em foco no Conversation, pelo ▶ do trecho (exatamente um por tela). */
-async function currentLevel(page: Page): Promise<1 | 2 | 3> {
-  await expect(page.locator('button', { hasText: '▶ ouvir a' })).toBeVisible();
-  if (await page.getByRole('button', { name: LISTEN[1] }).count()) return 1;
-  if (await page.getByRole('button', { name: LISTEN[2] }).count()) return 2;
-  if (await page.getByRole('button', { name: LISTEN[3] }).count()) return 3;
-  throw new Error('pergunta do Conversation sem ▶ de nível reconhecível');
-}
-
-/** Avança "Próxima pergunta" até a primeira pergunta do nível pedido. */
-async function advanceToLevel(page: Page, target: 1 | 2 | 3): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    if ((await currentLevel(page)) === target) return;
-    await page.getByRole('button', { name: 'Próxima pergunta' }).click();
-  }
-  throw new Error(`não alcançou o nível ${target} do Conversation`);
-}
 
 test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ page }) => {
   const app = new ColarApp(page);
@@ -153,28 +129,8 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
 
-  // ——— Conversation: o pedido do modo (ENG-649) ———
-  // É a primeira tela do ouvinte na conversa, e a única que não vive dentro do
-  // `main` — o diálogo é portalado, então o scan aponta para ele.
-  await scanListenerSurface(page.getByRole('dialog'), {
-    label: 'Conversation — a escolha do modo',
-  });
-  await app.chooseConversationMode();
-
-  // ——— Conversation: nível história (L1) ———
-  await expect(page.getByRole('button', { name: LISTEN[1] })).toBeVisible();
-  await scan('Conversation — nível história');
-
-  // ——— Conversation: nível cena (L2) ———
-  await advanceToLevel(page, 2);
-  await scan('Conversation — nível cena');
-
-  // ——— Conversation: nível frase (L3) ———
-  await advanceToLevel(page, 3);
-  await scan('Conversation — nível frase');
-
-  // ——— Conversation: gravando ———
-  await page.getByRole('button', { name: 'Gravar a resposta' }).click();
-  await expect(page.getByRole('button', { name: 'Parar' })).toBeVisible();
-  await scan('Conversation — gravando');
+  // ——— o fim do fluxo (ENG-689) ———
+  // A tela que fecha a Segmentação é a última que o ouvinte vê, e é portalada — o
+  // scan aponta para o diálogo, não para o `main`.
+  await scanListenerSurface(page.getByRole('dialog'), { label: 'Fim do fluxo' });
 });

@@ -4,7 +4,7 @@ Path: @/ui/atoms
 
 ### Overview
 
-- The lowest presentational layer of the Shemá design system: pearl/bead, cord line, chip, button, confidence disc, waveform bar and play glyph — the visual vocabulary every molecule and organism composes from (ENG-215, base of the atomic-design chain).
+- The lowest presentational layer of the Shemá design system: pearl/bead, cord line, chip, button, confidence disc, waveform bar and play glyph — the visual vocabulary every molecule and organism composes from (ENG-215, base of the atomic-design chain). The waveform bar was built for the interview mic's level meter; since ENG-689 (scope cut 1/4) deleted that surface it has no consumer left, but stays here for the same reason unmounted molecules stay in @/ui/molecules — it is vocabulary, not flow.
 - Every atom is purely presentational: props in, events out. Visual states are exposed as `data-*` attributes; per-instance tinting/sizing travels through `--cds-*` CSS custom properties.
 - Visual source of truth is the Claude Design prototypes in @/docs/design (the "Ouvir no colar" prototype is normative for pearl, cord and head-glow); token values come from @/ui/tokens.
 

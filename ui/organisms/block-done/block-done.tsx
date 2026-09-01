@@ -19,6 +19,11 @@ import './block-done.css';
  * CONTRÁRIO do da pausa sugerida: o primário continua (não leva ninguém embora), e
  * é nele que o foco abre e para onde o Esc vai. `Guardar e descansar` é a única
  * saída, e ela exige um clique deliberado.
+ *
+ * No limite que FECHA o fluxo não há estação atrás da tela nem para onde continuar
+ * (ENG-689): quem monta omite o `onRest` e a tela fica com uma ação só — o
+ * primário, que ali é a própria saída. Duas ações para o mesmo destino não são uma
+ * escolha, são uma dúvida.
  */
 
 /** Qual bloco fechou — o nome da estação que termina, não a que começa. */
@@ -54,8 +59,11 @@ export interface BlockDoneProps {
   onOpenChange?: (open: boolean) => void;
   /** O primário: seguir para a estação já chegada. Também o destino do Esc. */
   onContinue: () => void;
-  /** Guardar e descansar: o shell leva ao painel; a sessão fica salva. */
-  onRest: () => void;
+  /**
+   * Guardar e descansar: o shell leva ao painel; a sessão fica salva. Omitido, a
+   * tela não mostra a segunda ação — ver o cabeçalho do módulo.
+   */
+  onRest?: () => void;
 }
 
 export function BlockDone({
@@ -128,11 +136,13 @@ export function BlockDone({
                 {t(`blockDone.${block}.primary`)}
               </Button>
             </span>
-            <span className="cds-block-done-action" data-kind="rest">
-              <Button variant="ghost" onClick={onRest}>
-                {t('blockDone.rest')}
-              </Button>
-            </span>
+            {onRest ? (
+              <span className="cds-block-done-action" data-kind="rest">
+                <Button variant="ghost" onClick={onRest}>
+                  {t('blockDone.rest')}
+                </Button>
+              </span>
+            ) : null}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

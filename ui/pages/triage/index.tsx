@@ -30,7 +30,7 @@ import './triage.css';
  * encaixa), o picker por cena, a gaveta de cobertura só-facilitadora e o gate duro
  * "Já classifiquei todas as cenas →" (habilita só com todas não-pendentes E ≥1
  * produtiva). Marcar "nenhum se encaixa" é um ACHADO, não um beco: quando NENHUMA
- * cena se encaixa, Segmentação/Conversation ficam travadas e a tela explica.
+ * cena se encaixa, a Segmentação fica travada e a tela explica.
  *
  * Camada de wiring: classificar (`tagScene`), marcar achado (`markNoneFit`),
  * o gate (`triagemDone` + `setMode`→`enterSegmentacao`) e a cobertura

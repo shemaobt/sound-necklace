@@ -3,9 +3,10 @@ import { expect, type Page } from '@playwright/test';
 /**
  * Camada de suporte E2E do Colar de Sons (ENG-252) — dirige o app REAL em modo
  * fixture pela UI, estação por estação. Importada em modo leitura pelas demais specs
- * do E6 (ENG-253..258): a `ColarApp` é o page object do fluxo inteiro, `SCENARIO`
- * é o roteiro de decisões (espelha os passos de um caso golden) e `readPersistedState`
- * lê o estado que o autosave grava no localStorage (§7.3) para a asserção de zero-perda.
+ * do E6 (ENG-253..258): a `ColarApp` é o page object do fluxo inteiro — Ouvir,
+ * Cortar, Triagem, Frases, e nada depois (ENG-689) —, `SCENARIO` é o roteiro de
+ * decisões e `readPersistedState` lê o estado que o autosave grava no localStorage
+ * (§7.3) para a asserção de zero-perda.
  *
  * Todas as strings visíveis são cópia PT-BR verbatim das estações — se uma mudar, a
  * spec falha aqui, no ponto único, em vez de espalhar seletores frágeis pelas specs.
@@ -13,12 +14,6 @@ import { expect, type Page } from '@playwright/test';
 
 /** Chave do FixtureSessionBackend (adapters/sessions/fixture.ts). */
 export const STORAGE_KEY = 'colar-de-sons:sessions:v1';
-
-/**
- * Marcador único da resposta DIGITADA — distinto o bastante para a spec provar que a
- * resposta foi de fato gravada no estado persistido (não um booleano auto-reportado).
- */
-export const TYPED_ANSWER = 'observação-e2e-a1b2c3';
 
 /**
  * Roteiro determinístico de um ciclo completo sobre o áudio fixture `jornada-do-boto`
@@ -64,53 +59,6 @@ export async function readPersistedState(
   return entry?.[1]?.state ?? null;
 }
 
-/** Status guardado no resumo da sessão (concluida após o Export). */
-export async function readPersistedStatus(page: Page, id: string): Promise<string | null> {
-  const raw = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
-  if (!raw) return null;
-  const parsed = JSON.parse(raw) as {
-    sessions: [string, { summary?: { status?: string } }][];
-  };
-  const entry = parsed.sessions.find(([sid]) => sid === id);
-  return entry?.[1]?.summary?.status ?? null;
-}
-
-/**
- * Um microfone sintético para o runner, que não tem hardware de áudio: lá o
- * `getUserMedia` morre com `NotFoundError: Requested device not found` (medido no
- * CI), e as flags `--use-fake-device-for-media-capture` do Chromium não resolvem —
- * passam num Mac com microfone de verdade atrás e falham no Linux headless.
- *
- * Trocamos SÓ a borda do sistema operacional: um oscilador vira um `MediaStream` de
- * verdade, então o `WebVoiceRecorder`, o `MediaRecorder`, o medidor de nível e o blob
- * gravado seguem todos reais. Sem isto, o e2e só conseguiria exercitar o dublê — e foi
- * um dublê convincente que deixou a entrevista muda por uma semana (ENG-298).
- */
-async function microfoneSintetico(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    osc.frequency.value = 440;
-    osc.start();
-    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
-      configurable: true,
-      value: async () => {
-        // o contexto nasce suspenso pela política de autoplay, e um oscilador parado
-        // grava silêncio (110 bytes de cabeçalho, indistinguível do dublê); a captura
-        // sempre vem depois de cliques reais, então aqui já é permitido retomá-lo
-        await ctx.resume();
-        // um destino NOVO por captura: o recorder encerra a gravação com
-        // `stopTracks(stream)`, então um stream reaproveitado volta com as tracks
-        // mortas e a 2ª resposta morre em `MediaRecorder.start()` (NotSupportedError).
-        // A entrevista grava 21 respostas — reutilizar quebraria da segunda em diante.
-        const destino = ctx.createMediaStreamDestination();
-        osc.connect(destino);
-        return destino.stream;
-      },
-    });
-  });
-}
-
 export class ColarApp {
   constructor(readonly page: Page) {}
 
@@ -118,7 +66,6 @@ export class ColarApp {
 
   /** Login (§7.1): a auth fixture aceita `facilitadora`/`admin` com qualquer senha não vazia. */
   async login(username = 'facilitadora', password = 'senha'): Promise<void> {
-    await microfoneSintetico(this.page);
     await this.page.goto('/login');
     await this.page.locator('input[name="username"]').fill(username);
     await this.page.locator('input[name="password"]').fill(password);
@@ -208,12 +155,12 @@ export class ColarApp {
   }
 
   /**
-   * O fim de bloco (ENG-651) sobe nos DOIS limites do fluxo, por cima da estação
-   * já chegada. O primário continua para ela — é o caminho de quem está a
-   * trabalhar, e o único que não sai da sessão. O `click` do Playwright já espera
-   * o botão aparecer: a barreira é o botão, não um tempo.
+   * O fim de bloco (ENG-651) sobe nos dois limites do fluxo, por cima da estação
+   * já chegada. No limite da Triagem o primário continua para as Frases; o da
+   * Segmentação FECHA a sessão (ENG-689) e tem saída própria — `finishPhrases`.
+   * O `click` do Playwright já espera o botão aparecer: a barreira é o botão.
    */
-  async passBlockDone(primary: 'Seguir para as frases' | 'Começar a conversa'): Promise<void> {
+  async passBlockDone(primary: 'Seguir para as frases'): Promise<void> {
     await this.page.getByRole('button', { name: primary }).click();
   }
 
@@ -239,150 +186,23 @@ export class ColarApp {
     else await this.page.getByRole('button', { name: 'Pronto com esta cena →' }).click();
   }
 
+  /**
+   * Fecha a última cena produtiva. É o FIM do fluxo (ENG-689): a tela de fim de
+   * bloco sobe e a sua única saída leva ao painel — a sessão fica salva pelo
+   * autosave, e nenhum documento é gerado.
+   */
   async finishPhrases(): Promise<void> {
     const continuar = this.page.getByRole('button', { name: 'Continuar →' });
     if (await continuar.count()) await continuar.click();
     else await this.page.getByRole('button', { name: 'Já segmentei todas as cenas →' }).click();
-    await this.passBlockDone('Começar a conversa');
-  }
-
-  // ——— Conversation ———
-
-  /**
-   * A conversa abre pedindo COMO ela vai andar (ENG-649) e nenhuma pergunta é
-   * alcançável antes da escolha. O E2E escolhe "Toque a toque": é o modo em que
-   * nada acontece sem um toque, e portanto o único em que uma spec pode afirmar
-   * que o que aconteceu foi o que ela mandou acontecer.
-   */
-  async chooseConversationMode(mode: 'auto' | 'manual' = 'manual'): Promise<void> {
-    // o cartão fala o idioma da UI, e uma spec percorre o fluxo em inglês
-    const rotulo =
-      mode === 'auto' ? /^(Mãos livres|Hands free)/ : /^(Toque a toque|Touch by touch)/;
-    await this.page.getByRole('button', { name: rotulo }).click();
-  }
-
-  /** Grava uma resposta por voz (gravador fixture): gravar → parar. */
-  async recordVoiceAnswer(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Gravar a resposta' }).click();
-    await this.page.getByRole('button', { name: 'Parar' }).click();
     await expect(
-      this.page.getByRole('button', { name: 'Ouvir a resposta', exact: true }),
+      this.page.getByRole('heading', { name: 'Todas as frases no cordão.' }),
     ).toBeVisible();
   }
 
-  /** A digitação vive no RELATÓRIO (a facilitadora escreve depois — §8.7). */
-  async typeAnswerInReport(index: number, text: string): Promise<void> {
-    await this.page.getByRole('textbox', { name: 'Resposta' }).nth(index).fill(text);
-    // ENG-369: o texto fica em estado local até alguém aceitar
-    await this.page
-      .locator('.cds-report-card')
-      .nth(index)
-      .getByRole('button', { name: 'Aceitar a edição' })
-      .click();
-  }
-
-  /**
-   * Confirma a TRANSCRIÇÃO sugerida no cartão `index` (ENG-327; sujeito trocado na
-   * ENG-370 — o que um humano confere é o que foi dito, na língua em que foi dito).
-   * Espera o rascunho chegar (o job é assíncrono) e devolve o texto que virou a resposta.
-   */
-  async confirmDraftInReport(index: number): Promise<string> {
-    const card = this.page.locator('.cds-report-card').nth(index);
-    const confirm = card.getByRole('button', { name: /Confirmar a transcrição/i });
-    await confirm.waitFor({ state: 'visible', timeout: 15000 });
-    const en = await card.locator('.cds-report-draft-en').inputValue();
-    await confirm.click();
-    return en;
-  }
-
-  /** Anda até a prévia do relatório clicando "Próxima pergunta" até a conversa acabar. */
-  async walkToReport(): Promise<void> {
-    for (let step = 0; step < 60; step++) {
-      if (await this.page.locator('.cds-report').count()) return;
-      // o rótulo fala o idioma da UI, e uma spec percorre o fluxo em inglês
-      await this.page.getByRole('button', { name: /^(Próxima pergunta|Next question)$/ }).click();
-    }
-    throw new Error('relatório não apareceu após 60 passos');
-  }
-
-  private async currentQuestionLevel(): Promise<1 | 2 | 3 | null> {
-    if (await this.page.getByRole('button', { name: '▶ Ouvir a história' }).count()) return 1;
-    if (await this.page.getByRole('button', { name: '▶ Ouvir a cena' }).count()) return 2;
-    if (await this.page.getByRole('button', { name: '▶ Ouvir a frase' }).count()) return 3;
-    return null;
-  }
-
-  /**
-   * Percorre a conversa respondendo ≥1 pergunta por nível por VOZ e ≥1 DIGITADA
-   * (§8.7). Detecta o nível pelo botão ▶ do trecho (história/cena/frase), então grava
-   * a primeira pergunta de cada nível e digita uma vez, sem depender das contagens
-   * exatas da sequência. Devolve o resumo do que respondeu para a asserção.
-   */
-  async answerConversation(): Promise<{ voicedLevels: number[]; typed: boolean }> {
-    const voiced = new Set<number>();
-    // voz durante a conversa (a entrevista é só-voz)…
-    for (let step = 0; step < 60 && voiced.size < 3; step++) {
-      const level = await this.currentQuestionLevel();
-      if (level !== null && !voiced.has(level)) {
-        await this.recordVoiceAnswer();
-        voiced.add(level);
-      }
-      await this.page.getByRole('button', { name: 'Próxima pergunta' }).click();
-    }
-    // …texto DEPOIS, no relatório (§8.7 "a facilitadora pode escrever depois")
-    await this.walkToReport();
-    await this.typeAnswerInReport(0, TYPED_ANSWER);
-    // e o inglês das respostas gravadas é CONFIRMADO (ENG-327): sem isso elas não
-    // viram texto nenhum, e a exportação fica travada — como no app de verdade.
-    await this.confirmAllDrafts();
-    return { voicedLevels: [...voiced].sort(), typed: true };
-  }
-
-  /**
-   * Confirma o inglês sugerido em TODOS os cartões que ainda mostram um rascunho
-   * (ENG-327). Percorre por posição porque confirmar um cartão remove o próprio
-   * botão, e a lista encolhe a cada clique.
-   */
-  async confirmAllDrafts(): Promise<number> {
-    const buttons = this.page.getByRole('button', { name: /Confirmar a transcrição/i });
-    // o job é assíncrono: sem esperar o PRIMEIRO rascunho, a contagem seria 0 e o
-    // laço sairia sem confirmar nada
-    try {
-      await buttons.first().waitFor({ state: 'visible', timeout: 15000 });
-    } catch {
-      return 0; // nenhuma resposta gravada nesta sessão
-    }
-    let confirmed = 0;
-    for (let guard = 0; guard < 60; guard++) {
-      if ((await buttons.count()) === 0) break;
-      await buttons.first().click();
-      confirmed++;
-    }
-    return confirmed;
-  }
-
-  // ——— da conversa à Export ———
-
-  /**
-   * Vai da conversa à Export pela porta da facilitadora: a prévia do relatório e o
-   * seu rodapé, "Guardar os documentos →". O fio de contas — que abria um atalho
-   * para qualquer estação — saiu na ENG-668, e este é o caminho que restou (e o
-   * único que o protótipo v4 sempre teve). Os rótulos vêm nos dois idiomas porque
-   * uma spec percorre o fluxo em inglês, como em `chooseConversationMode`.
-   */
-  async gotoExport(): Promise<void> {
-    if (await this.page.locator('.cds-export').count()) return; // já se está nela
-    await this.walkToReport();
-    await this.page
-      .getByRole('button', { name: /^(Guardar os documentos|Save the documents) →$/ })
-      .click();
-  }
-
-  async completeSession(): Promise<void> {
-    await this.gotoExport();
-    const complete = this.page.getByRole('button', { name: 'Concluir e guardar os documentos' });
-    await expect(complete).toBeEnabled();
-    await complete.click();
-    await expect(this.page.getByRole('button', { name: 'Destravar para editar' })).toBeVisible();
+  /** Da tela de fim de fluxo de volta ao painel — a única saída que ela oferece. */
+  async leaveAfterPhrases(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Voltar às histórias' }).click();
+    await expect(this.page.getByRole('heading', { name: 'Suas histórias' })).toBeVisible();
   }
 }

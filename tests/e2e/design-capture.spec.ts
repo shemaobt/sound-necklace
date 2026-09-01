@@ -59,29 +59,8 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
-  // a entrevista abre pedindo o modo (ENG-649): a escolha é a primeira tela dela
-  await shot('09-conversation-modo');
-  await app.chooseConversationMode();
-  await shot('09-conversation');
-
-  // os três estados da resposta em voz: vazio (acima) → gravando → pronta. É onde
-  // moram o contraste dos ghost sobre o oliva e as barras da forma de onda.
-  await page.getByRole('button', { name: 'Gravar a resposta' }).click();
-  await shot('09b-conversation-gravando');
-  await page.getByRole('button', { name: 'Parar' }).click();
-  await expect(page.getByRole('button', { name: 'Ouvir a resposta', exact: true })).toBeVisible();
-  await shot('09c-conversation-resposta-pronta');
-
-  // a prévia do relatório (a "revisão"): a conversa reunida, antes de guardar
-  await app.walkToReport();
-  await shot('09d-report');
-
-  // Esta captura GRAVA uma resposta em voz lá em cima, e resposta gravada só vira
-  // texto quando alguém confirma a transcrição (ENG-327) — sem isso o "Concluir"
-  // é recusado e a captura morria no penúltimo passo, sem nunca fotografar a
-  // Export. O gate está certo; era a captura que não passava por ele.
-  await app.confirmAllDrafts();
-
-  await app.completeSession();
-  await shot('10-export');
+  // o fim do fluxo (ENG-689): a tela que fecha a Segmentação fecha a sessão
+  await shot('09-fim-de-fluxo');
+  await app.leaveAfterPhrases();
+  await shot('10-dashboard-depois');
 });

@@ -24,8 +24,8 @@ const TRIAGEM = {
 };
 const SEGMENTACAO = {
   headline: 'Todas as frases no cordão.',
-  subtitle: 'Falta só a conversa sobre o sentido — a parte mais gostosa.',
-  primary: 'Começar a conversa',
+  subtitle: 'O trabalho de hoje está inteiro, e já guardado. Podem descansar.',
+  primary: 'Voltar às histórias',
 };
 const REST = 'Guardar e descansar';
 
@@ -56,13 +56,23 @@ describe('BlockDone — o que a tela diz em cada limite (ENG-651)', () => {
     expect(screen.getByRole('button', { name: REST })).toBeDefined();
   });
 
-  it('a Segmentação fechada anuncia a Segmentação e continua para a conversa', () => {
+  it('a Segmentação fechada anuncia a Segmentação e não promete o que não há', () => {
     render(<BlockDone {...props({ block: 'segmentacao', tints: phrasePalette.slice(0, 5) })} />);
 
     expect(screen.getByRole('heading', { name: SEGMENTACAO.headline })).toBeDefined();
     expect(screen.getByText(SEGMENTACAO.subtitle)).toBeDefined();
     expect(screen.getByRole('button', { name: SEGMENTACAO.primary })).toBeDefined();
-    expect(screen.getByRole('button', { name: REST })).toBeDefined();
+  });
+
+  /**
+   * ENG-689 — no limite que FECHA o fluxo não há para onde continuar, e quem monta
+   * a tela omite o `onRest`. Duas ações para o mesmo destino não são uma escolha.
+   */
+  it('sem quem trate o descansar, a tela fica com uma ação só', () => {
+    render(<BlockDone {...props({ onRest: undefined })} />);
+
+    expect(screen.getByRole('button', { name: TRIAGEM.primary })).toBeDefined();
+    expect(screen.queryByRole('button', { name: REST })).toBeNull();
   });
 
   it('o botão que continua avisa quem continua; o de descansar, quem guarda', async () => {

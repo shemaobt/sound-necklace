@@ -4,9 +4,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   buildBeads,
   createSession,
-  ensureMapping,
-  questionSequence,
-  setAnswer,
   type Frase,
   type ScenePart,
   type SessionState,
@@ -51,7 +48,7 @@ function frase(id: string, partId: string): Frase {
 
 const heard = { id: 'S1' as const, span: { s: 0, e: TOTAL_BEADS - 1 }, confirmed: true };
 
-/** Sessão parada em cada uma das seis estações do fluxo. */
+/** Sessão parada em cada uma das quatro estações do fluxo. */
 const AT = {
   listen: (): SessionState => base(),
   cut: (): SessionState => ({ ...base(), whole: heard }),
@@ -69,7 +66,8 @@ const AT = {
     partsConfirmed: true,
     parts: [part('PT1', true)],
   }),
-  conversation: (): SessionState => ({
+  /** Fechada a última cena produtiva o domínio vai a `mapeamento`, que é o fim. */
+  phrasesDone: (): SessionState => ({
     ...base(),
     mode: 'mapeamento',
     whole: heard,
@@ -79,13 +77,13 @@ const AT = {
   }),
 };
 
-function band(session: SessionState, viewingExport = false): HTMLElement {
-  const { container } = render(<StoryProgress session={session} viewingExport={viewingExport} />);
+function band(session: SessionState): HTMLElement {
+  const { container } = render(<StoryProgress session={session} />);
   return container.querySelector<HTMLElement>('.cds-story-progress')!;
 }
 
-function fillWidth(session: SessionState, viewingExport = false): number {
-  const el = band(session, viewingExport).querySelector<HTMLElement>('.cds-story-progress-fill');
+function fillWidth(session: SessionState): number {
+  const el = band(session).querySelector<HTMLElement>('.cds-story-progress-fill');
   return Number.parseFloat(el!.style.width);
 }
 
@@ -96,16 +94,14 @@ beforeEach(() => {
 
 describe('StoryProgress — uma barra no topo, para a história inteira (ENG-648)', () => {
   it('cada estação diz o próprio nome, e nenhuma diz o das outras', () => {
-    const esperado: [SessionState, boolean, string][] = [
-      [AT.listen(), false, 'Ouvir'],
-      [AT.cut(), false, 'Cortar'],
-      [AT.triage(), false, 'Triagem'],
-      [AT.phrases(), false, 'Frases'],
-      [AT.conversation(), false, 'Conversa'],
-      [AT.conversation(), true, 'Guardar'],
+    const esperado: [SessionState, string][] = [
+      [AT.listen(), 'Ouvir'],
+      [AT.cut(), 'Cortar'],
+      [AT.triage(), 'Triagem'],
+      [AT.phrases(), 'Frases'],
     ];
-    for (const [session, viewingExport, nome] of esperado) {
-      const faixa = band(session, viewingExport);
+    for (const [session, nome] of esperado) {
+      const faixa = band(session);
       expect(within(faixa).getByText(nome)).toBeDefined();
       expect(faixa.textContent?.trim()).toBe(nome);
     }
@@ -115,10 +111,6 @@ describe('StoryProgress — uma barra no topo, para a história inteira (ENG-648
     // Cada degrau é um estado da sessão mais adiantado que o anterior — meia
     // história ouvida, história inteira ouvida, cenas cortadas, triadas, e assim
     // por diante. O que se afirma é a ORDEM, nunca uma porcentagem.
-    const conversaRespondida = ((): SessionState => {
-      const s = ensureMapping(AT.conversation());
-      return setAnswer(s, questionSequence(s)[0]!, 'uma resposta');
-    })();
     const degraus: (() => number)[] = [
       () => fillWidth(AT.listen()),
       () => {
@@ -135,13 +127,7 @@ describe('StoryProgress — uma barra no topo, para a história inteira (ENG-648
       () => fillWidth({ ...AT.triage(), parts: [part('PT1', true)] }),
       () => fillWidth(AT.phrases()),
       () => fillWidth({ ...AT.phrases(), frases: [frase('P1', 'PT1')] }),
-      () => fillWidth(AT.conversation()),
-      () => fillWidth(conversaRespondida),
-      () => fillWidth(AT.conversation(), true),
-      () => {
-        progressStore.getState().noteDownloaded(3);
-        return fillWidth(AT.conversation(), true);
-      },
+      () => fillWidth(AT.phrasesDone()),
     ];
 
     const larguras = degraus.map((passo) => passo());
@@ -165,13 +151,13 @@ describe('StoryProgress — uma barra no topo, para a história inteira (ENG-648
    * um só `NaN` no DOM para denunciar. Quem chegou à Triagem já ouviu e já cortou;
    * a barra tem de mostrar isso.
    */
-  function expectDrawsWithGroundCovered(session: SessionState, viewingExport = false): void {
-    const faixa = band(session, viewingExport);
+  function expectDrawsWithGroundCovered(session: SessionState): void {
+    const faixa = band(session);
     expect(faixa.querySelector('.cds-story-progress-fill')).not.toBeNull();
     for (const el of faixa.querySelectorAll('[style]')) {
       expect(el.getAttribute('style')).not.toMatch(/NaN|Infinity/);
     }
-    expect(fillWidth(session, viewingExport)).toBeGreaterThan(0);
+    expect(fillWidth(session)).toBeGreaterThan(0);
   }
 
   it('na Triagem sem nenhuma cena, a barra ainda mostra o caminho já andado', () => {
@@ -196,7 +182,7 @@ describe('StoryProgress — uma barra no topo, para a história inteira (ENG-648
   });
 
   it('não mostra dígito algum ao ouvinte (§9.2)', () => {
-    const faixa = band(AT.conversation());
+    const faixa = band(AT.phrasesDone());
     expect(faixa.textContent ?? '').not.toMatch(/\d/);
     for (const el of faixa.querySelectorAll('[aria-label], [title]')) {
       expect(`${el.getAttribute('aria-label') ?? ''}${el.getAttribute('title') ?? ''}`).not.toMatch(
@@ -240,8 +226,8 @@ describe('a faixa diz a etapa a quem não vê a tela (ENG-668)', () => {
  */
 
 /** Onde a marca está, em porcentagem — lida do `left: calc(N% - 1.5px)`. */
-function goalAt(session: SessionState, viewingExport = false): number | null {
-  const el = band(session, viewingExport).querySelector<HTMLElement>('.cds-story-progress-goal');
+function goalAt(session: SessionState): number | null {
+  const el = band(session).querySelector<HTMLElement>('.cds-story-progress-goal');
   if (!el) return null;
   const found = /calc\((-?[\d.]+)%/.exec(el.style.left);
   return found ? Number.parseFloat(found[1]!) : Number.NaN;
@@ -260,28 +246,34 @@ function triageWith(count: number): SessionState {
 
 describe('A marca da meta de hoje na barra (ENG-653)', () => {
   it('sem meta escolhida, não há marca nenhuma na barra', () => {
-    const faixa = band(AT.conversation());
+    const faixa = band(AT.phrasesDone());
     expect(faixa.querySelector('.cds-story-progress-goal')).toBeNull();
   });
 
   it('escolher "fechar a Triagem" põe a marca; escolher de novo a tira', () => {
     goalStore.getState().chooseGoal('triage');
-    expect(goalAt(AT.conversation())).not.toBeNull();
+    expect(goalAt(AT.phrasesDone())).not.toBeNull();
 
     goalStore.getState().chooseGoal('triage');
-    expect(goalAt(AT.conversation())).toBeNull();
+    expect(goalAt(AT.phrasesDone())).toBeNull();
   });
 
-  it('"a história toda" marca a ponta, e a Triagem fecha antes das Frases', () => {
+  /**
+   * Desde o corte de escopo (ENG-689) as Frases SÃO o fim da história, então
+   * "fechar as Frases" e "a história toda" caem na mesma ponta — de propósito: as
+   * duas descrevem hoje o mesmo dia de trabalho. O que continua tendo de valer é a
+   * Triagem cair antes delas.
+   */
+  it('a Triagem fecha antes do fim, e o fim é a ponta da barra', () => {
     goalStore.getState().chooseGoal('triage');
-    const triagem = goalAt(AT.conversation())!;
+    const triagem = goalAt(AT.phrasesDone())!;
     goalStore.getState().chooseGoal('phrases');
-    const frases = goalAt(AT.conversation())!;
+    const frases = goalAt(AT.phrasesDone())!;
     goalStore.getState().chooseGoal('wholeStory');
-    const historia = goalAt(AT.conversation())!;
+    const historia = goalAt(AT.phrasesDone())!;
 
     expect(triagem).toBeLessThan(frases);
-    expect(frases).toBeLessThan(historia);
+    expect(frases).toBe(100);
     expect(historia).toBe(100);
   });
 

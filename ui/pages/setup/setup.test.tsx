@@ -587,25 +587,18 @@ function escapeRe(s: string): string {
 
 /**
  * A meta de hoje (ENG-653): antes de começar, a facilitadora diz até onde os dois
- * pretendem chegar. Seis escolhas fixas, nenhuma delas obrigatória — e escolher a
+ * pretendem chegar. Cinco escolhas fixas, nenhuma delas obrigatória — e escolher a
  * mesma de novo desfaz a escolha. As contagens nos rótulos são permitidas: este é
  * um cartão de FACILITADORA (§7.2), não uma tela de quem ouve.
  */
 describe('Setup — até onde vamos hoje (ENG-653)', () => {
-  const CHIPS = [
-    '2 cenas',
-    '4 cenas',
-    '12 conversas',
-    'fechar a Triagem',
-    'fechar as Frases',
-    'a história toda',
-  ];
+  const CHIPS = ['2 cenas', '4 cenas', 'fechar a Triagem', 'fechar as Frases', 'a história toda'];
 
   beforeEach(() => {
     goalStore.setState(goalStore.getInitialState(), true);
   });
 
-  it('oferece as seis metas, e nenhuma vem escolhida', async () => {
+  it('oferece as cinco metas, e nenhuma vem escolhida', async () => {
     renderSetup(ports());
     await screen.findByRole('radio', { name: /conto-do-boto/ });
 
