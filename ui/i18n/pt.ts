@@ -631,6 +631,13 @@ export const pt = {
        v4 (docs/design/prototype.html L674-677). O que o toque ESCREVE na célula
        não está aqui: é a frase inglesa congelada de `domain/mapeamento-scripts`,
        porque ela entra no artefato e artefato nunca passa por i18n. */
+    /* O eco da cena anterior (ENG-678). O protótipo chumba «Noemi e Rute» aqui;
+       o texto real vem da célula da cena anterior e entra por interpolação. Sem
+       palavras ainda — a entrevista é só-voz e o texto só chega na revisão —, o
+       chip diz que existe gravação em vez de inventar o que ela diz. Sem duração:
+       §9.2 proíbe dígito nesta tela, e o tamanho não ajuda a decidir se é o mesmo. */
+    samePreviousText: 'na cena anterior: “{{answer}}”',
+    samePreviousVoice: 'na cena anterior: uma resposta gravada',
     samePeople: 'São as mesmas pessoas',
     samePlace: 'É o mesmo lugar de antes',
     sameChanged: 'Mudou',

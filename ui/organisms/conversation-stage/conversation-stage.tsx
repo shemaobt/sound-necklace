@@ -145,10 +145,16 @@ export interface ConversationStageProps {
    * atalho, e a tela é a de sempre. Quem decide quando oferecê-lo é a página (a regra
    * vive em `ui/pages/conversation/same-as-previous`); daqui só sai o toque.
    *
-   * Um objeto só, e não três props soltas: com elas era representável desenhar o
-   * atalho sem a saída — e o atalho TOMA O LUGAR da área de resposta, então uma
-   * saída ausente é uma tela sem nenhum caminho adiante. `kind` é tudo o que o
-   * rótulo do botão precisa saber; a frase que o toque escreve não passa por aqui.
+   * Um objeto só, e não props soltas: com elas era representável desenhar o atalho
+   * sem a saída — e o atalho TOMA O LUGAR da área de resposta, então uma saída
+   * ausente é uma tela sem nenhum caminho adiante. `kind` é tudo o que o rótulo do
+   * botão precisa saber; a frase que o toque escreve não passa por aqui.
+   *
+   * `previous` é o que a cena anterior respondeu (ENG-678), e é o que faz a pergunta
+   * ser respondível: confirmar uma repetição sem ver o que se repete é chutar. Chega
+   * já resolvido em texto ou em "há gravação" — o organismo não pergunta nada a
+   * ninguém, e não existe aqui a terceira possibilidade (nada a ecoar): quando não há
+   * o que ecoar, a página não oferece o atalho, e este objeto inteiro é ausente.
    *
    * Enquanto ele está de pé, a área da resposta NÃO está na tela: o atalho é a
    * pergunta que se faz antes de gravar, e a legenda promete que «Mudou» devolve a
@@ -157,6 +163,7 @@ export interface ConversationStageProps {
    */
   sameAsPrevious?: {
     kind: 'people' | 'place';
+    previous: { kind: 'text'; text: string } | { kind: 'voice' };
     /** Um toque diz que a resposta é a mesma da cena anterior. */
     onAnswer: () => void;
     /** "Mudou": não responde nada — só dispensa o atalho e devolve a gravação. */
@@ -385,12 +392,23 @@ export function ConversationStage({
             <div className="cds-conversation-stage-divider" aria-hidden="true" />
 
             {sameAsPrevious ? (
-              /* O atalho da revisão v4 (ENG-671): um toque responde "é igual à cena
-                 anterior" e a resposta fica escrita; «Mudou» não responde nada e
-                 devolve a gravação de sempre. O eco da resposta anterior (o chip do
-                 protótipo) é outra fatia — ENG-672 — e nada de amostra chumbada entra
-                 aqui no lugar dele. */
+              /* O atalho da revisão v4 (ENG-671 + ENG-678): o chip diz o que a cena
+                 anterior respondeu, um toque responde "é igual" e a resposta fica
+                 escrita; «Mudou» não responde nada e devolve a gravação de sempre.
+                 O «Noemi e Rute» do protótipo é amostra chumbada e NUNCA chega aqui:
+                 sem resposta real, a página não oferece o atalho. */
               <div className="cds-conversation-stage-same">
+                {/* O eco da cena anterior. SEM o ▶ do protótipo: aqui ele não tocaria
+                    nada, e um controle que não faz nada ensina que o app está
+                    quebrado. Texto longo é cortado pelo CSS, nunca por corte no DOM —
+                    o que se lê pode caber numa linha, o que a página GUARDA não muda. */}
+                <p className="cds-conversation-stage-same-previous">
+                  {sameAsPrevious.previous.kind === 'text'
+                    ? t('conversationStage.samePreviousText', {
+                        answer: sameAsPrevious.previous.text,
+                      })
+                    : t('conversationStage.samePreviousVoice')}
+                </p>
                 <div className="cds-conversation-stage-same-actions">
                   <Button variant="ghost" onClick={sameAsPrevious.onAnswer}>
                     {sameAsPrevious.kind === 'people'

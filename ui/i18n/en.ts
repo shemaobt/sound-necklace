@@ -553,6 +553,9 @@ export const en: Dict = {
     skip: 'No answer',
     unskip: 'Ask again',
     /* O atalho "é igual à cena anterior" (ENG-671). Ver o comentário em pt.ts. */
+    /* O eco da cena anterior (ENG-678). Ver o comentário em pt.ts. */
+    samePreviousText: 'in the previous scene: “{{answer}}”',
+    samePreviousVoice: 'in the previous scene: a recorded answer',
     samePeople: 'The same people',
     samePlace: 'The same place as before',
     sameChanged: 'It changed',

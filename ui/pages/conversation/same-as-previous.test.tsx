@@ -82,7 +82,7 @@ function tagged(id: string, span: Span): ScenePart {
 }
 
 /** Sessão em Conversation com DUAS cenas travadas e duas frases na primeira. */
-function mapping(): SessionState {
+function mapping(scenes = 2): SessionState {
   const base = createSession({
     durationSec: DURATION,
     beadSec: BEAD_SEC,
@@ -96,7 +96,9 @@ function mapping(): SessionState {
     whole: { ...base.whole, confirmed: true },
     partsConfirmed: true,
     mode: 'mapeamento',
-    parts: [tagged('PT1', { s: 2, e: 8 }), tagged('PT2', { s: 9, e: 15 })],
+    parts: Array.from({ length: scenes }, (_, i) =>
+      tagged(`PT${i + 1}`, { s: 2 + i * 7, e: 8 + i * 7 }),
+    ),
     frases: [
       frase({ prop_id: 'P1', span: { s: 2, e: 4 }, part_link: 'PT1', locked: true }),
       frase({ prop_id: 'P2', span: { s: 5, e: 8 }, part_link: 'PT1', locked: true }),
@@ -136,10 +138,12 @@ interface OpenOptions {
   recorder?: VoiceRecorder;
   /** Última palavra sobre a sessão, depois da semeadura das respostas anteriores. */
   then?: (state: SessionState) => SessionState;
+  /** Quantas cenas travadas a sessão tem (padrão 2). */
+  scenes?: number;
 }
 
 function openAt(index: number, opts: OpenOptions = {}): void {
-  let state = mapping();
+  let state = mapping(opts.scenes);
   const seq = questionSequence(state);
   for (const slot of seq.slice(0, index)) state = setAnswer(state, slot, 'respondido');
   sessionStore.getState().load(opts.then ? opts.then(state) : state);
@@ -159,6 +163,11 @@ function openAt(index: number, opts: OpenOptions = {}): void {
 
 function shortcut(name: RegExp | string): HTMLElement | null {
   return screen.queryByRole('button', { name });
+}
+
+/** O texto do chip do eco, ou '' quando ele não está na tela. */
+function chipText(): string {
+  return document.querySelector('.cds-conversation-stage-same-previous')?.textContent ?? '';
 }
 
 function cellOf(partId: string, k: string): string {
@@ -273,13 +282,16 @@ describe('Conversation — o atalho "é igual à cena anterior" (ENG-671)', () =
   });
 
   /**
-   * A condição é "uma cena anterior JÁ FEZ a mesma pergunta" — perguntou, não
-   * respondeu (protótipo v4 `_hasPrevSame`). A cena anterior pode ter ficado sem
-   * resposta, e o atalho continua sendo oferecido. Fica pinado aqui porque a
-   * consequência é visível no artefato: o relatório pode trazer `_(no answer)_` na
-   * cena N-1 e "Same people as the previous scene." na cena N.
+   * ENG-678 (decisão do orquestrador, 01/09): onde NÃO HÁ o que ecoar, o atalho não
+   * é oferecido. "É igual ao de antes" não quer dizer nada quando não existe "antes"
+   * registrado, e botões pedindo confirmação de uma repetição invisível são um chute.
+   * De brinde: o relatório não pode mais trazer "Same people as the previous scene."
+   * apontando para uma célula que lê `_(no answer)_`.
+   *
+   * Isto INVERTE o comportamento da primeira leva da ENG-671, que oferecia o atalho
+   * sempre que uma cena anterior tivesse PERGUNTADO o mesmo, respondido ou não.
    */
-  it('é oferecido mesmo quando a cena anterior ficou SEM responder a mesma pergunta', () => {
+  it('a cena anterior SEM resposta nenhuma não oferece atalho nem chip', () => {
     const state = mapping();
     const anterior = questionSequence(state)[indexOfL2(state, 'PT1', 'quem')]!;
     openAt(indexOfL2(state, 'PT2', 'quem'), {
@@ -287,7 +299,11 @@ describe('Conversation — o atalho "é igual à cena anterior" (ENG-671)', () =
     });
 
     expect(cellOf('PT1', 'quem')).toBe('');
-    expect(shortcut('São as mesmas pessoas')).toBeTruthy();
+    expect(shortcut('São as mesmas pessoas')).toBeNull();
+    expect(shortcut('Mudou')).toBeNull();
+    expect(screen.queryByText(/na cena anterior/)).toBeNull();
+    // e a gravação de sempre está lá, como em qualquer pergunta sem atalho
+    expect(shortcut('Gravar a resposta')).toBeTruthy();
   });
 
   /**
@@ -390,8 +406,41 @@ class DeferredStartRecorder extends FixtureVoiceRecorder {
 }
 
 /**
+ * Um gravador cujo `has()` só responde quando o teste mandar. A pergunta "a cena
+ * anterior tem gravação?" é uma ida à rede no modo real, e é DENTRO dessa espera que
+ * a tela decide se oferece o atalho — afirmar "não há nada a ecoar" antes da resposta
+ * chegar é a mesma mentira que o esqueleto da onda existe para não contar.
+ */
+class DeferredHasRecorder extends FixtureVoiceRecorder {
+  #release: (() => void) | null = null;
+  readonly #deferred: string;
+
+  /** Segura APENAS `deferred`: a procura da pergunta atual segue resolvendo, senão a
+   *  tela ficaria em `checking` e o atalho sumiria por outro motivo que não este. */
+  constructor(store: MemoryVoiceStore, deferred: string) {
+    super(store);
+    this.#deferred = deferred;
+  }
+
+  override async has(path: ResourcePath): Promise<boolean> {
+    if (path === this.#deferred) {
+      await new Promise<void>((resolve) => {
+        this.#release = resolve;
+      });
+    }
+    return super.has(path);
+  }
+
+  release(): void {
+    this.#release?.();
+    this.#release = null;
+  }
+}
+
+/**
  * O que só se vê com uma porta de voz de verdade ligada: a pergunta que JÁ TEM
- * gravação, a que está reabrindo o microfone, e o microfone que abre sozinho.
+ * gravação, a que está reabrindo o microfone, o microfone que abre sozinho, e a
+ * resposta anterior que existe em VOZ e ainda não tem palavras (ENG-678).
  */
 describe('Conversation — o atalho diante de uma gravação (ENG-671)', () => {
   beforeEach(() => {
@@ -465,5 +514,134 @@ describe('Conversation — o atalho diante de uma gravação (ENG-671)', () => {
     expect(cellOf('PT2', 'quem')).toBe(SAME_PEOPLE);
     // a sala NÃO passa a ser gravada por cima da resposta que acabou de ser dada
     expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull();
+  });
+
+  /**
+   * O caso COMUM da entrevista de verdade: ela é só-voz, e o texto das respostas só
+   * chega na revisão, depois da conversa. Então a cena anterior quase sempre tem uma
+   * gravação e nenhuma palavra — e o chip tem de dizer isso sem inventar o conteúdo.
+   */
+  it('a cena anterior respondida só por VOZ oferece o atalho, e o chip não inventa palavras', async () => {
+    const state = mapping();
+    const seq = questionSequence(state);
+    const anterior = seq[indexOfL2(state, 'PT1', 'quem')]!;
+    const store = new MemoryVoiceStore();
+    await store.put(voiceAnswerPath(anterior), new Uint8Array([1, 2, 3]));
+
+    openAt(indexOfL2(state, 'PT2', 'quem'), {
+      recorder: new FixtureVoiceRecorder(store),
+      then: (s) => setAnswer(s, anterior, ''),
+    });
+    await settle();
+
+    expect(chipText()).toContain('gravada');
+    expect(chipText()).not.toMatch(/[“"]/); // nada entre aspas: não há palavras
+    expect(shortcut('São as mesmas pessoas')).toBeTruthy();
+  });
+
+  it('enquanto ainda se procura a gravação anterior, nada é oferecido', async () => {
+    const state = mapping();
+    const seq = questionSequence(state);
+    const anterior = seq[indexOfL2(state, 'PT1', 'quem')]!;
+    const store = new MemoryVoiceStore();
+    await store.put(voiceAnswerPath(anterior), new Uint8Array([1, 2, 3]));
+    const recorder = new DeferredHasRecorder(store, voiceAnswerPath(anterior));
+
+    openAt(indexOfL2(state, 'PT2', 'quem'), {
+      recorder,
+      then: (s) => setAnswer(s, anterior, ''),
+    });
+    await settle();
+
+    // a procura DESTA pergunta já respondeu — o microfone está à mão
+    expect(screen.getByRole('button', { name: 'Gravar a resposta' })).toBeTruthy();
+    expect(shortcut('São as mesmas pessoas')).toBeNull();
+    expect(screen.queryByText(/na cena anterior/)).toBeNull();
+
+    recorder.release();
+    await settle();
+    expect(shortcut('São as mesmas pessoas')).toBeTruthy();
+  });
+
+  it('a cena anterior sem texto E sem gravação não oferece nada', async () => {
+    const state = mapping();
+    const anterior = questionSequence(state)[indexOfL2(state, 'PT1', 'quem')]!;
+    openAt(indexOfL2(state, 'PT2', 'quem'), {
+      recorder: new FixtureVoiceRecorder(),
+      then: (s) => setAnswer(s, anterior, ''),
+    });
+    await settle();
+
+    expect(shortcut('São as mesmas pessoas')).toBeNull();
+    expect(screen.queryByText(/na cena anterior/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Gravar a resposta' })).toBeTruthy();
+  });
+});
+
+/**
+ * O chip que mostra O QUE a cena anterior respondeu, antes de perguntar se é o mesmo
+ * (ENG-678). Sem ele, a dupla confirma uma repetição sem ver o que se repete — e quem
+ * ouve não lê. O protótipo chumba «Noemi e Rute» ali e nunca diz de onde viria o dado
+ * real; aqui o dado é a célula da cena anterior, e onde não há dado não há chip.
+ */
+describe('Conversation — o chip da resposta anterior (ENG-678)', () => {
+  /** O placeholder do protótipo. Nunca pode chegar à tela, venha de onde vier. */
+  const AMOSTRA_DO_PROTOTIPO = /Noemi e Rute|no campo de colheita/;
+
+  it('ecoa a resposta de TEXTO que a cena anterior deu à mesma pergunta', () => {
+    const state = mapping();
+    const anterior = questionSequence(state)[indexOfL2(state, 'PT1', 'quem')]!;
+    openAt(indexOfL2(state, 'PT2', 'quem'), {
+      then: (s) => setAnswer(s, anterior, 'as duas mulheres e os ceifeiros'),
+    });
+
+    expect(chipText()).toContain('as duas mulheres e os ceifeiros');
+    expect(shortcut('São as mesmas pessoas')).toBeTruthy();
+  });
+
+  it('ecoa a resposta da MESMA pergunta, não a da pergunta vizinha', () => {
+    const state = mapping();
+    const seq = questionSequence(state);
+    openAt(indexOfL2(state, 'PT2', 'onde'), {
+      then: (s) =>
+        setAnswer(
+          setAnswer(s, seq[indexOfL2(state, 'PT1', 'quem')]!, 'as duas mulheres'),
+          seq[indexOfL2(state, 'PT1', 'onde')]!,
+          'na estrada de Moabe',
+        ),
+    });
+
+    expect(chipText()).toContain('na estrada de Moabe');
+    expect(chipText()).not.toContain('as duas mulheres');
+  });
+
+  /**
+   * "Na cena anterior" é a ÚLTIMA que perguntou, não a primeira. Com três cenas o
+   * protótipo não distingue as duas leituras (ele só quer um booleano), e aqui a
+   * diferença é o conteúdo do chip: ecoar a cena 1 na cena 3 seria mostrar à dupla
+   * uma resposta que não é a de antes, e pedir que confirmem a repetição dela.
+   */
+  it('com três cenas, ecoa a cena IMEDIATAMENTE anterior', () => {
+    const state = mapping(3);
+    const seq = questionSequence(state);
+    openAt(indexOfL2(state, 'PT3', 'quem'), {
+      scenes: 3,
+      then: (s) =>
+        setAnswer(
+          setAnswer(s, seq[indexOfL2(state, 'PT1', 'quem')]!, 'Noemi sozinha'),
+          seq[indexOfL2(state, 'PT2', 'quem')]!,
+          'as duas mulheres e os ceifeiros',
+        ),
+    });
+
+    expect(chipText()).toContain('as duas mulheres e os ceifeiros');
+    expect(chipText()).not.toContain('Noemi sozinha');
+  });
+
+  it('nunca mostra o texto de amostra do protótipo', () => {
+    const state = mapping();
+    openAt(indexOfL2(state, 'PT2', 'quem'));
+
+    expect(screen.queryByText(AMOSTRA_DO_PROTOTIPO)).toBeNull();
   });
 });

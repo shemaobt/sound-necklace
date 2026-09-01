@@ -245,6 +245,24 @@
   padding-top: 18px;
 }
 
+/* o chip do eco (protótipo v4 L672): pill discreta, uma linha só — texto longo
+   é cortado aqui, no CSS, e não no DOM: o que se lê cabe, o que se guarda não muda */
+.cds-conversation-stage-same-previous {
+  margin: 0;
+  width: fit-content;
+  max-width: min(100%, 46ch);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(246, 245, 235, 0.08);
+  border: 1px solid rgba(246, 245, 235, 0.18);
+  color: rgba(246, 245, 235, 0.75);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .cds-conversation-stage-same-actions {
   display: flex;
   align-items: center;

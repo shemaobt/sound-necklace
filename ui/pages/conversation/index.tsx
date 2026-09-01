@@ -29,7 +29,7 @@ import {
 import type { PaletteEntry } from '../../tokens';
 import { cardinal, sceneOrdinal } from '../cut/cutting';
 import { clearSkipped, isSkipped, lastAnsweredIndex, markSkipped } from './answered';
-import { type SameAsPrevious, sameAsPreviousFor } from './same-as-previous';
+import { type SameAsPrevious, sameAsPreviousFor, usePreviousEcho } from './same-as-previous';
 import { type BlockLabels, blockEyebrow, buildTrechos } from './trechos';
 import { type BulkOutcome, PendingDraftsDialog } from './pending-drafts-dialog';
 import {
@@ -344,7 +344,12 @@ function QuestionScreen({
    * A dispensa ("Mudou") NÃO mora aqui: ela é do pai, porque esta tela remonta a cada
    * pergunta e um atalho dispensado voltaria a se oferecer a cada ida e volta.
    */
-  const offeredSame = recorderState === 'idle' ? sameAsPrevious : null;
+  /**
+   * O que a cena anterior deixou para ecoar (ENG-678): texto confirmado, ou o fato de
+   * haver gravação. `null` = nada a ecoar, ou a procura ainda correndo — as duas
+   * levam ao mesmo lugar, e é isso que faz a decisão caber numa condição só.
+   */
+  const previousEcho = usePreviousEcho(sameAsPrevious?.previous ?? null, recorder);
 
   // O "← Histórias" do cabeçalho vive fora desta estação e é o único caminho de
   // saída que o palco não desenha (ENG-393). Espelhar o estado num efeito, em vez
@@ -658,6 +663,32 @@ function QuestionScreen({
   };
 
   /**
+   * O atalho, decidido UMA vez (ENG-671 + ENG-678). Três coisas têm de valer, e
+   * nenhuma delas é redundante:
+   *
+   * - a regra da sequência (nível 2, da segunda cena em diante, sem resposta nesta) —
+   *   `sameAsPrevious`, que é do pai;
+   * - `idle`, que é o que só esta tela sabe: fora de uma gravação em curso, de uma
+   *   resposta já gravada e da procura por ela;
+   * - `previousEcho`, o que a cena anterior deixou. Sem eco não há oferta: confirmar
+   *   uma repetição sem ver o que se repete é chutar, e quem ouve não lê. De brinde,
+   *   o relatório deixa de poder trazer "Same people as the previous scene." apontando
+   *   para uma célula que lê `_(no answer)_`.
+   *
+   * Só DADO aqui — os toques são embrulhados lá embaixo, no JSX. Este valor é lido
+   * durante o render (o microfone automático o consulta), e um objeto carregando
+   * closures que mexem em refs não pode ser lido durante o render.
+   *
+   * REVERTER a decisão da ENG-678 é tirar `&& previousEcho` desta condição e deixar
+   * `previous` opcional no organismo — o atalho volta a bastar-se com "uma cena
+   * anterior perguntou o mesmo", como na primeira leva.
+   */
+  const sameShortcut =
+    recorderState === 'idle' && sameAsPrevious && previousEcho
+      ? { kind: sameAsPrevious.kind, previous: previousEcho, answer: sameAsPrevious.answer }
+      : undefined;
+
+  /**
    * O microfone abrindo sozinho, em mãos livres, quando a pergunta acaba de ser
    * falada. `idle` é a trava inteira — é ela que o mantém fora de uma gravação em
    * curso, de uma resposta que já existe, da procura e do salvamento.
@@ -668,7 +699,7 @@ function QuestionScreen({
     armed: autoMicArmed,
     // com o atalho de pé o microfone NÃO abre sozinho: ele é a pergunta que se faz
     // antes de gravar, e abrir o microfone por baixo dela responderia pela dupla
-    ready: recorderState === 'idle' && offeredSame === null,
+    ready: recorderState === 'idle' && sameShortcut === undefined,
     // o MESMO caminho do toque no microfone, sem o toque: não existe segunda
     // maneira de abrir uma gravação, e por isso a trava contra reentrância vale
     // para os dois
@@ -723,9 +754,10 @@ function QuestionScreen({
         autoAdvancing={autoAdvancing}
         autoAdvanceMs={AUTO_ADVANCE_MS}
         sameAsPrevious={
-          offeredSame
+          sameShortcut
             ? {
-                kind: offeredSame.kind,
+                kind: sameShortcut.kind,
+                previous: sameShortcut.previous,
                 // `deliberate` como todo toque desta tela: sem ele, responder pelo
                 // atalho em mãos livres abria o microfone no mesmo instante (a
                 // pergunta deixa de oferecer atalho, o `ready` do microfone volta a
@@ -733,7 +765,7 @@ function QuestionScreen({
                 // que ACABOU de ser dada
                 onAnswer: deliberate(() => {
                   sound?.lock(); // decisão presa (protótipo v4 `quickSame`)
-                  onAnswerSame(offeredSame.answer);
+                  onAnswerSame(sameShortcut.answer);
                 }),
                 onDismiss: deliberate(onDismissSame),
               }
