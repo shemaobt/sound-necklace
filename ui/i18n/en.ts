@@ -129,7 +129,7 @@ export const en: Dict = {
     goal: {
       heading: 'How far are we going today?',
       eyebrow: 'facilitator only',
-      note: 'You can change it midway. The goal is comfort, not a rule.',
+      note: 'The goal is comfort, not a rule.',
       twoScenes: '2 scenes',
       fourScenes: '4 scenes',
       twelveTalks: '12 conversations',

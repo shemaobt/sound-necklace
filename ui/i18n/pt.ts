@@ -141,7 +141,7 @@ export const pt = {
     goal: {
       heading: 'Até onde vamos hoje?',
       eyebrow: 'só a facilitadora',
-      note: 'Dá para mudar no meio. A meta é conforto, não regra.',
+      note: 'A meta é conforto, não regra.',
       twoScenes: '2 cenas',
       fourScenes: '4 cenas',
       twelveTalks: '12 conversas',
