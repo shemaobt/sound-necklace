@@ -8,6 +8,7 @@ import { AcoustemeGranularityResolver } from '../../../adapters/granularity';
 import { FixtureProjectSettings } from '../../../adapters/project-settings';
 import { FixtureSessionStore } from '../../../adapters/sessions';
 import { goalStore, sessionStore } from '../../state';
+import i18n from '../../i18n';
 import { pt } from '../../i18n/pt';
 import headerCss from '../../app/header.css?raw';
 import lockCss from './granularity-lock.css?raw';
@@ -609,7 +610,7 @@ describe('Setup — até onde vamos hoje (ENG-653)', () => {
     await screen.findByRole('radio', { name: /conto-do-boto/ });
 
     expect(screen.getByText('Até onde vamos hoje?')).toBeTruthy();
-    expect(screen.getByText('Dá para mudar no meio. A meta é conforto, não regra.')).toBeTruthy();
+    expect(screen.getByText('A meta é conforto, não regra.')).toBeTruthy();
     for (const rotulo of CHIPS) {
       expect(screen.getByRole('button', { name: rotulo, pressed: false })).toBeTruthy();
     }
@@ -635,5 +636,31 @@ describe('Setup — até onde vamos hoje (ENG-653)', () => {
 
     expect(screen.getByRole('button', { name: '2 cenas', pressed: false })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'a história toda', pressed: true })).toBeTruthy();
+  });
+
+  /**
+   * ENG-669: o cartão prometia "Dá para mudar no meio", e essa saída não existe — os
+   * chips só moram na Setup e o roteador não tem caminho de volta a ela numa sessão
+   * viva. A asserção é sobre a IDEIA, não sobre a frase que foi removida: qualquer
+   * redação que volte a prometer troca da meta depois cai aqui, nos dois idiomas.
+   */
+  const PROMESSA_DE_TROCA = {
+    pt: /mudar|trocar|alterar|no meio|depois|mais tarde/i,
+    en: /change|switch|swap|later|midway|halfway|along the way/i,
+  };
+
+  it('não diz a ninguém que a meta pode ser mudada depois (ENG-669)', async () => {
+    renderSetup(ports());
+    await screen.findByRole('radio', { name: /conto-do-boto/ });
+
+    const cartao = () =>
+      screen
+        .getByRole('heading', { name: i18n.t('setup.goal.heading') })
+        .closest('.cds-setup-goal') as HTMLElement;
+
+    expect(cartao().textContent).not.toMatch(PROMESSA_DE_TROCA.pt);
+
+    await act(() => i18n.changeLanguage('en'));
+    expect(cartao().textContent).not.toMatch(PROMESSA_DE_TROCA.en);
   });
 });
