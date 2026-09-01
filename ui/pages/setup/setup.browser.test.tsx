@@ -200,3 +200,78 @@ describe('Setup — o botão de criar a sessão está na tela, com a entrega que
     expect(m.listaInvadeAAcao, 'a lista transbordou por cima da coluna da ação').toBe(0);
   });
 });
+
+/**
+ * ENG-674 — a barra da lista de áudios é a que a folha pede, e não uma regra morta.
+ *
+ * `.cds-setup-audios-scroll` declarava as duas gramáticas ao mesmo tempo: as
+ * propriedades padrão (`scrollbar-width`/`scrollbar-color`) E o pseudo-elemento
+ * `::-webkit-scrollbar`. No Chromium elas não convivem — declarar as padrão
+ * DESLIGA a barra customizada e a largura em px é descartada em silêncio. A folha
+ * pedia 9px e a tela nunca teve 9px, sem aviso nenhum.
+ *
+ * Por isso a prova é MEDIDA, não lida. Um teste que procurasse a declaração no
+ * arquivo passaria exatamente enquanto a regra estivesse morta — que é o defeito
+ * inteiro. Nem `getComputedStyle(el, '::-webkit-scrollbar').width` serve: ele
+ * devolve os mesmos `9px` nos dois estados, porque a cascata resolve o pseudo-
+ * elemento mesmo quando o navegador decide não desenhá-lo. O que muda entre barra
+ * viva e barra morta é a largura que ela OCUPA, e essa só existe em Chromium.
+ */
+describe('Setup — a barra da lista de áudios está em vigor (ENG-674)', () => {
+  /** A largura que `.cds-setup-audios-scroll::-webkit-scrollbar` pede. */
+  const LARGURA_PEDIDA = 9;
+
+  /**
+   * A largura que a barra OCUPA, descontadas as bordas da caixa.
+   *
+   * `scrollbar-gutter: stable` entra AQUI, e não na folha de estilo: onde a barra
+   * é de sobreposição (macOS), ela é pintada por cima do conteúdo e não tira
+   * largura nenhuma — a calha mediria 0 tanto com a barra de 9px quanto sem ela, e
+   * o teste passaria a depender da plataforma que o CI calhar de usar. Reservar a
+   * calha não troca a barra: obriga o navegador a dizer quanto a MESMA barra mede,
+   * e iguala a medida nas duas famílias de plataforma.
+   *
+   * As bordas saem por cálculo, não por constante: o que se afirma aqui é a barra,
+   * e mudar a moldura da janela não pode derrubar este teste por tabela.
+   */
+  function larguraDaBarra(el: HTMLElement): number {
+    const anterior = el.style.scrollbarGutter;
+    el.style.scrollbarGutter = 'stable';
+    const cs = getComputedStyle(el);
+    const bordas = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+    const medida = el.offsetWidth - el.clientWidth - bordas;
+    el.style.scrollbarGutter = anterior;
+    return medida;
+  }
+
+  /** A barra que a plataforma daria a um scroller sem estilo nenhum, medida igual. */
+  function barraPadraoDaPlataforma(): number {
+    const controle = document.createElement('div');
+    controle.style.cssText = 'width:300px;height:100px;overflow-y:auto';
+    controle.innerHTML = '<div style="height:400px"></div>';
+    document.body.appendChild(controle);
+    const medida = larguraDaBarra(controle);
+    controle.remove();
+    return medida;
+  }
+
+  it('a barra reservada é a largura que a folha pede, não a da plataforma', async () => {
+    const m = await medir(1280, 768, 40);
+    expect(m.listaRolaPorDentro, 'sem transbordo não há barra para medir').toBe(true);
+
+    const janela = document.querySelector<HTMLElement>('.cds-setup-audios-scroll');
+    expect(janela, 'não achei a janela da lista').not.toBeNull();
+
+    expect(
+      larguraDaBarra(janela!),
+      'a largura pedida pela folha não chegou à tela: a barra customizada está desligada',
+    ).toBe(LARGURA_PEDIDA);
+
+    /* Sem isto a asserção acima poderia estar passando à toa numa plataforma cuja
+       barra padrão já meça o mesmo — e voltaria a não distinguir viva de morta. */
+    expect(
+      barraPadraoDaPlataforma(),
+      'a medida acima não distingue nada: a plataforma já dá esta largura',
+    ).not.toBe(LARGURA_PEDIDA);
+  });
+});
