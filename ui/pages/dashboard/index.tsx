@@ -228,9 +228,11 @@ function CardDialog({
 }
 
 /**
- * A pergunta antes de apagar (ENG-281). Apagar é definitivo e leva as gravações de
- * voz junto. O foco inicial vai para o manter — um Enter distraído nunca deve ser o
- * que destrói (§9.4: orientar, nunca punir).
+ * A pergunta antes de apagar (ENG-281). Apagar é definitivo e leva junto o trabalho
+ * da sessão — os cortes e as classificações (as gravações de voz das respostas saíram
+ * com a Conversa, ENG-689/ENG-691, e a pergunta parou de citá-las na ENG-700). O foco
+ * inicial vai para o manter — um Enter distraído nunca deve ser o que destrói (§9.4:
+ * orientar, nunca punir).
  */
 function DeleteConfirm({
   t,
@@ -285,8 +287,10 @@ function DeleteConfirm({
  * pontas, e um campo vazio nem chega a virar chamada — o servidor também recusaria,
  * mas a facilitadora não precisa de uma ida ao servidor para saber disso.
  *
- * Muda o nome de EXIBIÇÃO, e só: o `story_slug` fica onde está porque é ele que
- * nomeia os três documentos (§10.5/§10.6), e é isso que a linha de explicação diz.
+ * Muda o nome de EXIBIÇÃO, e só: o `story_slug` fica onde está porque é ele que nomeia
+ * o que a história tem guardado no servidor (§10.5/§10.6), e é isso que a linha de
+ * explicação diz. Ela citava "os três documentos" até a ENG-700 — os documentos saíram
+ * com a exportação (ENG-689/ENG-691); a regra do slug não.
  */
 function RenameDialog({
   t,

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { renderStation } from '../../organisms/nav-footer/testing';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +15,7 @@ import {
   type TagState,
 } from '../../../domain';
 import { splitByGuard } from '../../atoms/testing/css';
+import i18n from '../../i18n';
 import { sessionStore } from '../../state';
 import triageCss from './triage.css?raw';
 import Triage from './index';
@@ -308,7 +309,7 @@ describe('Triage — momento de revisão quando todas as cenas estão classifica
 });
 
 describe('Triage — todas "nenhum se encaixa" (PRD v2 §8.5)', () => {
-  it('mostra a explicação de bloqueio e mantém Segmentação/Conversation travados', () => {
+  it('mostra a explicação de bloqueio e mantém a Segmentação travada', () => {
     load(
       triaging([
         lockedPart('PT1', { s: 0, e: 4 }, 'none_fit'),
@@ -317,7 +318,26 @@ describe('Triage — todas "nenhum se encaixa" (PRD v2 §8.5)', () => {
     );
     renderStation(<Triage />);
 
-    expect(screen.getByText(/Segmentação e Mapeamento ficam travadas/)).toBeTruthy();
+    // o aviso nomeia o que fica travado — e o Mapeamento saiu com a Conversa
+    // (ENG-689/ENG-691), então travar uma etapa que não existe é promessa falsa
+    // (ENG-700). Asserção sobre a IDEIA, nos dois idiomas.
+    // os dois avisos do estado: o do domínio (que segue em PT-BR sob a UI em EN) e o
+    // da trava. Reconsultados a cada idioma
+    const avisos = () =>
+      screen
+        .getAllByText(/Nenhuma cena se encaixa|No scene fits/)
+        .map((n) => n.textContent ?? '')
+        .join(' ');
+
+    expect(avisos()).toMatch(/Segmentação/);
+    expect(avisos()).not.toMatch(/mapeament|conversa|entrevist/i);
+
+    act(() => void i18n.changeLanguage('en'));
+    expect(avisos()).toMatch(/Segmentation/);
+    expect(avisos()).not.toMatch(/mapping|conversation|interview/i);
+    // de volta ao PT: o resto do caso procura os controles pelos nomes em português
+    act(() => void i18n.changeLanguage('pt'));
+
     // todas "nenhum se encaixa" NÃO é momento de revisão: o corpo não ganha CTA e o
     // avanço do rodapé continua apagado (o gate do domínio é quem manda).
     expect(screen.queryByRole('button', { name: 'Já classifiquei todas as cenas →' })).toBeNull();
