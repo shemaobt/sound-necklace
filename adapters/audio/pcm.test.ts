@@ -4,8 +4,8 @@ import { lcgSequence, makePcm } from './pcm';
 
 /**
  * Vetores conhecidos do LCG (x = (1103515245*x + 12345) mod 2^31, em BigInt),
- * verificados com aritmética inteira exata fora do harness (ver README §PCM):
- * seed 42 → x1 = 1250496027, x2 = 1116302264
+ * verificados com aritmética inteira exata: seed 42 → x1 = 1250496027,
+ * x2 = 1116302264
  */
 describe('gerador de PCM sintético (LCG determinístico)', () => {
   it('produz a sequência inteira exata dos vetores conhecidos', () => {

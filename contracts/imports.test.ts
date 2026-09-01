@@ -12,8 +12,6 @@ import {
   type SessionState,
 } from '../domain';
 
-import { buildRetorno } from './retorno';
-import { serializeArtifact } from './serialize';
 import {
   applyDelivery,
   applyReturn,
@@ -280,45 +278,6 @@ describe('applyReturn — retorno vira confirmações TRAVADAS', () => {
 
   it('rejeita quando a grade está ausente', () => {
     expect(applyReturn(noGridSession(), ret)).toEqual({ ok: false, reason: 'no-grid' });
-  });
-});
-
-describe('fidelidade import→export: retorno → import → export é byte-idêntico', () => {
-  it('reproduz o anchoring-return.json byte a byte após semear pela via de retorno', () => {
-    // fonte: sessão já travada cujos mappers reais produzem o retorno "de origem"
-    const source = session({
-      whole: { id: 'S1', span: { s: 0, e: 23 }, confirmed: true },
-      parts: [
-        part({
-          part_id: 'PT1',
-          span: { s: 0, e: 9 },
-          locked: true,
-          scene_kind: 'GLEANING_SCENE',
-          scene_kind_confidence: 'high',
-          tag_state: 'tagged',
-        }),
-        part({ part_id: 'PT2', span: { s: 10, e: 23 }, locked: true, tag_state: 'none_fit' }),
-      ],
-      partsConfirmed: true,
-      frases: [
-        frase({
-          prop_id: 'P1',
-          span: { s: 0, e: 4 },
-          part_link: 'PT1',
-          locked: true,
-        }),
-        frase({ prop_id: 'P2', span: { s: 5, e: 9 }, part_link: 'PT1', locked: true }),
-      ],
-    });
-    const seedBytes = serializeArtifact(buildRetorno(source));
-
-    // semeia uma sessão FRESCA (mesma grade/slug/manifest) pela via de retorno
-    const seed = ReturnSchema.parse(JSON.parse(seedBytes));
-    const r = applyReturn(session(), seed);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-
-    expect(serializeArtifact(buildRetorno(r.state))).toBe(seedBytes);
   });
 });
 

@@ -11,7 +11,7 @@ describe('buildBeads', () => {
   });
 
   it('duração não múltipla: conta parcial no fim, endTime clampado à duração', () => {
-    // caso golden partial-bead: 455000 amostras / 44100 Hz = 10.317460317…s
+    // conta parcial: 455000 amostras / 44100 Hz = 10.317460317…s
     const dur = 455000 / 44100;
     const beads = buildBeads(dur, 0.3);
     expect(beads).toHaveLength(35);

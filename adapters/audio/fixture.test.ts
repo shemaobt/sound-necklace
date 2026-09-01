@@ -1,13 +1,13 @@
 /**
  * FixtureAudioEngine — decode determinístico a partir do spec de PCM dourado
- * (bytes = JSON de PcmSpec → LCG de tests/golden/pcm.ts), sem AudioContext.
+ * (bytes = JSON de PcmSpec → LCG de ./pcm.ts), sem AudioContext.
  * Erros de decodificação saem tipados pela porta (AudioDecodeError).
  */
 
 import { describe, expect, it } from 'vitest';
 
 import { hashPCM } from '../../domain';
-import { makePcm, type PcmSpec } from '../../tests/golden/pcm';
+import { makePcm, type PcmSpec } from './pcm';
 import { FixtureAudioEngine, pcmSpecBytes } from './fixture';
 
 const SPEC: PcmSpec = { seed: 42, sampleRate: 8000, samples: 20000, channels: 1 };

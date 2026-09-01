@@ -6,33 +6,40 @@
  * v2-novo. Ele carrega o `SessionState` do domínio round-trippável byte-a-byte
  * (o par `toSessionDto`/`fromSessionDto`) MAIS os campos que não vivem no
  * domínio mas o setup precisa para retomar — nível de granularidade (§8.1),
- * referência do áudio do bucket (§7.4), confirmação de consentimento de uso no
- * pipeline (§12/O6) e as referências de recurso de voz do Mapeamento (§10.4/O5).
+ * referência do áudio do bucket (§7.4) e confirmação de consentimento de uso no
+ * pipeline (§12/O6).
  *
  * Custódia (§10.5): a API guarda este DTO de forma opaca; a SPA VALIDA na
  * leitura — daí o schema estrito (chave extra/tipo errado/version divergente
  * reprovam alto). Essa validação mora em `fromSessionDto`, que recebe `unknown`:
  * é o ÚNICO ponto por onde o documento vira estado do domínio, e o adapter
  * entrega o corpo cru sem parse (`http.ts`: "validado a fundo pela camada de
- * estado, não aqui"). Campos TRANSIENTES da referência NÃO são persistidos: o
- * marcador `warnedEmptyScene` (variável de módulo, L916) e o andaime de tela do
- * Mapeamento (`mapStep`/`mapN*i`) — reconstruídos ao reabrir a estação.
+ * estado, não aqui"). O campo TRANSIENTE da referência NÃO é persistido: o
+ * marcador `warnedEmptyScene` (variável de módulo, L916) é reconstruído ao
+ * reabrir a estação.
  *
- * VERSÕES (ENG-357). v1 = a forma PT-BR (`statement_pt`, confiança
- * `alta`/`média`/`baixa`); v2 = a forma inglesa que a ENG-356 introduziu. A
- * ENG-356 trocou a forma sem carimbar versão nova, então v1 e v2 conviveram
- * indistinguíveis por um commit — daí o bump aqui. v3 = a v2 mais a bandeira
- * `reviewComplete` (ENG-514). A leitura aceita as três e normaliza para v3; a
- * escrita só emite v3, então reabrir e salvar promove a sessão.
- * `SessionStateDtoSchema` (v3) permanece o schema canônico e RECUSA v1 e v2:
- * migrar é um passo explícito, nunca uma tolerância do schema.
+ * VERSÕES. v1 = a forma PT-BR (`statement_pt`, confiança `alta`/`média`/`baixa`,
+ * ENG-357); v2 = a forma inglesa da ENG-356; v3 = a v2 mais `reviewComplete`
+ * (ENG-514). **v4 é a forma sem entrevista** (ENG-691, corte de escopo 2/4):
+ * saíram `mapping`, `voice`, `voiceVersion` e `reviewComplete`, e o modo
+ * `mapeamento` deixou de existir.
+ *
+ * NÃO HÁ MIGRAÇÃO, e isso é decisão do dono (2026-09-01). Os três caminhos
+ * legados foram removidos junto com os campos: toda sessão salva antes do corte
+ * — v1, v2 ou v3 — reprova aqui, alto, com erro de schema. É deliberado. Uma
+ * sessão de antes do corte carrega respostas de entrevista que este produto não
+ * tem mais onde guardar; abri-la pela metade perderia esse dado em silêncio, na
+ * primeira regravação. Reprovar deixa o documento intacto no servidor para quem
+ * quiser lê-lo com outra ferramenta. O salto de UMA versão basta: `strictObject`
+ * já recusaria as chaves extras, e o literal `4` faz a mensagem dizer "versão",
+ * não "chave desconhecida".
  *
  * Importa apenas domain/ + zod (raiz) + o enum de granularidade do bucket.
  */
 
 import { z } from 'zod';
 
-import { SCENE_KINDS, type Mapping, type SessionState, type Whole } from '../domain';
+import { SCENE_KINDS, type SessionState, type Whole } from '../domain';
 
 import { GranularityLevelSchema, type GranularityLevel } from './bucket';
 
@@ -76,14 +83,8 @@ const FraseSchema = z.strictObject({
   locked: z.boolean(),
 });
 
-const MappingSchema = z.strictObject({
-  level1: z.record(z.string(), z.string()),
-  level2: z.record(z.string(), z.record(z.string(), z.string())),
-  level3: z.record(z.string(), z.record(z.string(), z.string())),
-});
-
 export const SessionStateDtoSchema = z.strictObject({
-  schema_version: z.literal(3),
+  schema_version: z.literal(4),
   // grade + identidade
   durationSec: z.number().nonnegative(),
   beadSec: z.number().positive(),
@@ -103,138 +104,28 @@ export const SessionStateDtoSchema = z.strictObject({
     index: z.int().gte(-1),
   }),
   activeSceneId: z.string().nullable(),
-  mapping: MappingSchema.nullable(),
   selection: SpanSchema.nullable(),
   pendingStart: z.int().nonnegative().nullable(),
-  mode: z.enum(['escuta', 'triagem', 'segmentacao', 'mapeamento']),
+  mode: z.enum(['escuta', 'triagem', 'segmentacao', 'concluida']),
   review: z.boolean(),
-  // meta v2-novo (fora do domínio)
+  // meta fora do domínio
   granularityLevel: GranularityLevelSchema,
   bucketAudioId: z.string(),
   pipelineConsent: z.boolean(),
-  voice: z.array(z.string()),
-  // `.default({})`: documentos salvos antes deste campo existirem continuam abrindo.
-  // Sem isso, acrescentá-lo transformaria cada sessão em andamento num erro de
-  // hidratação.
-  voiceVersion: z.record(z.string(), z.int().nonnegative()).default({}),
-  /**
-   * A revisão desta sessão está inteira pronta (ENG-514) — só falta guardar.
-   *
-   * DERIVADO, e por isso ausente do `SessionMeta`: quem salva o recalcula a cada
-   * escrita (`toSessionDto` o exige como argumento) e a leitura o ignora. Um valor
-   * relido do documento anterior seria justamente o defeito que este campo existe
-   * para não ter: uma sessão dizendo "só falta guardar" com resposta por transcrever.
-   *
-   * Opcional porque o documento de toda sessão em andamento foi escrito antes dele —
-   * a API lê a ausência como "não sabemos", que é o comportamento de sempre.
-   */
-  reviewComplete: z.boolean().optional(),
 });
 
 export type SessionStateDto = z.infer<typeof SessionStateDtoSchema>;
-
-/* ---------------- v2 legado (ENG-514) ---------------- */
-
-/** v2 é a v3 sem a bandeira da revisão — e nada mais. */
-const SessionStateDtoV2Schema = SessionStateDtoSchema.omit({ reviewComplete: true }).extend({
-  schema_version: z.literal(2),
-});
-
-/** Traz um documento v2 para a forma v3. A bandeira nasce AUSENTE: ninguém a
- *  inventa na leitura; ela só existe a partir do primeiro salvamento. */
-function upgradeV2(dto: z.infer<typeof SessionStateDtoV2Schema>): SessionStateDto {
-  return { ...dto, schema_version: 3 };
-}
-
-/* ---------------- v1 legado (ENG-357) ---------------- */
-
-/** A confiança como o v1 a gravava; a ordem casa com o enum inglês do v2. */
-const LEGACY_CONFIDENCE = { alta: 'high', média: 'medium', baixa: 'low' } as const;
-
-/** v1 difere do v2 em DOIS campos e mais nada — o resto é reusado, para que uma
- *  mudança futura no formato não precise ser espelhada aqui. */
-const LegacyScenePartSchema = ScenePartSchema.extend({
-  scene_kind_confidence: z.enum(['alta', 'média', 'baixa']).nullable(),
-});
-
-const LegacyFraseSchema = FraseSchema.omit({ statement: true }).extend({
-  statement_pt: z.string(),
-});
-
-const SessionStateDtoV1Schema = SessionStateDtoV2Schema.extend({
-  schema_version: z.literal(1),
-  parts: z.array(LegacyScenePartSchema),
-  frases: z.array(LegacyFraseSchema),
-});
-
-/** Traz um documento v1 para a forma v2. Só toca o que mudou de nome/vocabulário;
- *  o resto do caminho até a versão corrente é do `upgradeV2`. */
-function upgradeV1(
-  dto: z.infer<typeof SessionStateDtoV1Schema>,
-): z.infer<typeof SessionStateDtoV2Schema> {
-  return {
-    ...dto,
-    schema_version: 2,
-    // o v1 é anterior ao contador; nasce vazio, e "sem versão" é lido como
-    // "não regravou" pelo relatório, que assim respeita o rascunho já guardado
-    voiceVersion: {},
-    parts: dto.parts.map((p) => ({
-      ...p,
-      scene_kind_confidence: p.scene_kind_confidence
-        ? LEGACY_CONFIDENCE[p.scene_kind_confidence]
-        : null,
-    })),
-    frases: dto.frases.map(({ statement_pt, ...rest }) => ({ ...rest, statement: statement_pt })),
-  };
-}
-
-/**
- * Valida o documento persistido e o entrega SEMPRE na forma v2. Aceita v1 e o
- * promove; qualquer outra coisa (versão desconhecida, chave extra, tipo errado)
- * reprova alto — corromper em silêncio é pior que falhar ao retomar.
- */
-function parseSessionDto(raw: unknown): SessionStateDto {
-  const v3 = SessionStateDtoSchema.safeParse(raw);
-  if (v3.success) return v3.data;
-  const v2 = SessionStateDtoV2Schema.safeParse(raw);
-  if (v2.success) return upgradeV2(v2.data);
-  const v1 = SessionStateDtoV1Schema.safeParse(raw);
-  if (v1.success) return upgradeV2(upgradeV1(v1.data));
-  // o erro do v3 é o útil: as versões antigas são o caminho de exceção, não o esperado
-  throw new Error(`estado de sessão inválido: ${v3.error.message}`);
-}
 
 /** Campos de sessão que não vivem no `SessionState` do domínio (§7.3). */
 export interface SessionMeta {
   granularityLevel: GranularityLevel;
   bucketAudioId: string;
-  /** referências de recurso de voz já gravadas (§10.4/O5), ex.: respostas/level1/<k>.webm */
-  voice: string[];
-  /**
-   * How many times each answer has been RECORDED. Re-recording reuses the same path,
-   * so this counter is the only thing that tells a new take from an old one — and it
-   * is why the counter has to be persisted. It is compared against a durable value
-   * (the draft's `enver__`), and while it lived in React state it reset to empty on
-   * every load: reopening a session looked exactly like re-recording every answer,
-   * and the whole interview was transcribed again (ENG-327).
-   */
-  voiceVersion: Record<string, number>;
   pipelineConsent: boolean;
 }
 
-/**
- * @param reviewComplete a revisão desta sessão está inteira pronta. OBRIGATÓRIO de
- * propósito (ENG-514): é o compilador que impede um caminho de escrita de esquecê-lo e
- * deixar o documento reportando um passo vencido. A regra mora em quem chama porque ela
- * depende da convenção de recusa, que vive na `ui/` — e `contracts/` não importa `ui/`.
- */
-export function toSessionDto(
-  state: SessionState,
-  meta: SessionMeta,
-  reviewComplete: boolean,
-): SessionStateDto {
+export function toSessionDto(state: SessionState, meta: SessionMeta): SessionStateDto {
   return {
-    schema_version: 3,
+    schema_version: 4,
     durationSec: state.durationSec,
     beadSec: state.beadSec,
     totalBeads: state.totalBeads,
@@ -262,7 +153,6 @@ export function toSessionDto(
     })),
     current: { layer: state.current.layer, index: state.current.index },
     activeSceneId: state.activeSceneId,
-    mapping: cloneMapping(state.mapping),
     selection: state.selection ? { ...state.selection } : null,
     pendingStart: state.pendingStart,
     mode: state.mode,
@@ -270,19 +160,19 @@ export function toSessionDto(
     granularityLevel: meta.granularityLevel,
     bucketAudioId: meta.bucketAudioId,
     pipelineConsent: meta.pipelineConsent,
-    voice: [...meta.voice],
-    voiceVersion: { ...meta.voiceVersion },
-    reviewComplete,
   };
 }
 
 /**
  * O documento persistido vira estado do domínio. Recebe `unknown` de propósito:
  * este é o ponto de validação da borda de leitura (§10.5) — o adapter entrega o
- * corpo cru. Aceita v1 e v2; devolve sempre o estado da forma corrente.
+ * corpo cru. Só a forma corrente passa.
  */
 export function fromSessionDto(raw: unknown): { state: SessionState; meta: SessionMeta } {
-  const dto = parseSessionDto(raw);
+  // Qualquer coisa fora da forma corrente — versão antiga, chave extra, tipo
+  // errado — reprova aqui, alto: corromper em silêncio é pior que falhar ao
+  // retomar, e desde a ENG-691 não existe caminho de migração.
+  const dto = SessionStateDtoSchema.parse(raw);
   const state: SessionState = {
     durationSec: dto.durationSec,
     beadSec: dto.beadSec,
@@ -316,7 +206,6 @@ export function fromSessionDto(raw: unknown): { state: SessionState; meta: Sessi
     })),
     current: { layer: dto.current.layer, index: dto.current.index },
     activeSceneId: dto.activeSceneId,
-    mapping: cloneMapping(dto.mapping),
     selection: dto.selection ? { ...dto.selection } : null,
     pendingStart: dto.pendingStart,
     mode: dto.mode,
@@ -326,17 +215,6 @@ export function fromSessionDto(raw: unknown): { state: SessionState; meta: Sessi
     granularityLevel: dto.granularityLevel,
     bucketAudioId: dto.bucketAudioId,
     pipelineConsent: dto.pipelineConsent,
-    voice: [...dto.voice],
-    voiceVersion: { ...dto.voiceVersion },
   };
   return { state, meta };
-}
-
-function cloneMapping(m: Mapping | null): Mapping | null {
-  if (!m) return null;
-  const cloneL2 = (
-    r: Record<string, Record<string, string>>,
-  ): Record<string, Record<string, string>> =>
-    Object.fromEntries(Object.entries(r).map(([k, v]) => [k, { ...v }]));
-  return { level1: { ...m.level1 }, level2: cloneL2(m.level2), level3: cloneL2(m.level3) };
 }

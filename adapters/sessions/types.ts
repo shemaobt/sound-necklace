@@ -9,7 +9,7 @@
  *
  * Custódia é OPACA: o estado e os artefatos entram e saem por deep-clone; a store
  * nunca re-serializa nem reinterpreta a forma interna do payload (é o que preserva
- * a byte-identidade com os goldens). Implementações: fixture headless (default) e o
+ * a byte-identidade do que foi guardado). Implementações: fixture headless (default) e o
  * esqueleto HTTP real (compila contra os DTOs de contracts/api.ts).
  */
 

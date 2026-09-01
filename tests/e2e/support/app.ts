@@ -19,8 +19,8 @@ export const STORAGE_KEY = 'colar-de-sons:sessions:v1';
  * Roteiro determinístico de um ciclo completo sobre o áudio fixture `jornada-do-boto`
  * (48000 amostras / 8000 Hz = 6 s; granularidade média 0.5 s → grade de 12 contas,
  * índices 0–11). Três cenas, duas classificadas + uma "nenhum se encaixa", e uma
- * frase que cruza a borda (delta 2 ≤ max(3, 25%) → costura desliza), espelhando o
- * caso golden `seam-small-move`.
+ * frase que cruza a borda (delta 2 ≤ max(3, 25%) → costura desliza), herdado do caso
+ * `seam-small-move` do harness dourado (removido na ENG-691).
  */
 export const SCENARIO = {
   audioFilename: 'jornada-do-boto.wav',
@@ -118,7 +118,7 @@ export class ColarApp {
    * Corta as cenas e segue. Desde 2026-08-07 cada cena leva DOIS toques — o começo
    * (a história corre dali) e o fim — porque o slot não vem mais pré-ancorado. Os
    * começos são derivados por contiguidade para o cenário seguir ladrilhando a
-   * história inteira, que é o que a identidade byte-a-byte com o golden exige.
+   * história inteira, sem vão entre cenas.
    * Cobrindo tudo, o app entra no momento de revisão ("Continuar →"); cobertura
    * parcial mantém o "Confirmar as cenas →" do PRD.
    */

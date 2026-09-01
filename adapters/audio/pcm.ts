@@ -1,14 +1,17 @@
 /**
- * PCM sintético determinístico do golden harness.
+ * PCM sintético determinístico — o "áudio" do modo fixture.
  *
- * LCG documentado no contrato do harness (tests/golden/README.md):
+ * Morava em `tests/golden/pcm.ts` e veio para cá quando o harness dourado saiu
+ * (ENG-691): quem o usa é o FixtureAudioEngine (fixture.ts) e a lista de áudios
+ * do bucket em fixtures/bucket, não o harness.
+ *
  *   x_{n+1} = (1103515245 * x_n + 12345) mod 2^31
  *   amostra_n = x_n / 2^30 - 1        (faixa [-1, 1))
  *
  * A aritmética roda em BigInt: 1103515245 * x excede 2^53 e perderia precisão
- * em double — BigInt garante o MESMO inteiro em Node e no Chromium do driver
- * (tests/golden/generate.mjs implementa a fórmula idêntica dentro da página).
- * Proibido Math.random/Math.sin: não são bit-idênticos entre engines.
+ * em double — BigInt garante o MESMO inteiro em Node e no Chromium, que é o que
+ * faz o mesmo PcmSpec render a mesma grade e o mesmo hash nos dois. Proibido
+ * Math.random/Math.sin: não são bit-idênticos entre engines.
  */
 const A = 1103515245n;
 const C = 12345n;

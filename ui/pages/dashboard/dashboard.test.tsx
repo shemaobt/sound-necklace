@@ -144,7 +144,7 @@ describe('Dashboard — o relance de progresso acaba nas Frases (ENG-689)', () =
       storyName: 'Passou das frases',
       storySlug: 'passou-das-frases',
     });
-    store.autosave(emConversa, { ...STATE, mode: 'mapeamento' } as unknown as SessionStateDto);
+    store.autosave(emConversa, { ...STATE, mode: 'concluida' } as unknown as SessionStateDto);
     await store.flush(emConversa);
     const guardada = await store.create(
       createInput({ storyName: 'Fechada', storySlug: 'fechada' }),

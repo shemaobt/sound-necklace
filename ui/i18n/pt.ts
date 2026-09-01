@@ -1,8 +1,9 @@
 /**
  * Dicionário PT-BR — o idioma default da UI (ENG-279). Estes valores reproduzem
- * EXATAMENTE a cópia PT-BR que já vivia hardcoded nas telas: o golden e os testes
- * de UI existentes provam byte-a-byte que nada mudou. Só o CHROME da UI passa por
- * aqui — os artefatos exportados continuam PT-BR congelados, nunca roteados pelo i18n.
+ * EXATAMENTE a cópia PT-BR que já vivia hardcoded nas telas; os testes de UI provam
+ * que nada mudou. Só o CHROME da UI passa por aqui. (Este bloco também prometia que
+ * os artefatos exportados nunca passariam pelo i18n — não há mais artefato nenhum,
+ * ENG-689/ENG-691.)
  *
  * Sem `as const`: os valores ficam tipados como `string` para que `en.ts` possa
  * declarar `const en: Dict` e o typecheck exija PARIDADE de chaves (chave faltante

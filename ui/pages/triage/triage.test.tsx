@@ -326,7 +326,6 @@ describe('Triage — todas "nenhum se encaixa" (PRD v2 §8.5)', () => {
     );
     const s = sessionStore.getState().session!;
     expect(modeLocks(s).segmentacao).toBe(false);
-    expect(modeLocks(s).mapeamento).toBe(false);
   });
 });
 

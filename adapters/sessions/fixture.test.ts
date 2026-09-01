@@ -28,7 +28,7 @@ const dto = (
   over: Partial<{ mode: string; confirmed: boolean; tag: string }> = {},
 ): SessionStateDto =>
   ({
-    schema_version: 1,
+    schema_version: 4,
     mode: over.mode ?? 'triagem',
     whole: { id: 'S1', span: { s: 0, e: 9 }, confirmed: over.confirmed ?? true },
     tag: over.tag ?? 'x',
@@ -71,6 +71,11 @@ describe('FixtureSessionStore — autosave & resume', () => {
     store.autosave(s.id, dto({ mode: 'escuta', confirmed: false }));
     await store.flush(s.id);
     expect((await store.get(s.id)).progress.current_step).toBe('listen');
+
+    // o fim do fluxo (ENG-691): a sessão acabou, e o dashboard a lê como passada do fim
+    store.autosave(s.id, dto({ mode: 'concluida' }));
+    await store.flush(s.id);
+    expect((await store.get(s.id)).progress.current_step).toBe('save');
   });
 });
 
@@ -297,7 +302,7 @@ describe('FixtureSessionStore — persistence across reload', () => {
       monitor,
     });
     const s = await before.create(input());
-    const state = dto({ mode: 'mapeamento', tag: 'saved' });
+    const state = dto({ mode: 'concluida', tag: 'saved' });
     before.autosave(s.id, state);
     await before.flush(s.id);
 

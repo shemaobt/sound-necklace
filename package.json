@@ -19,11 +19,8 @@
     "test:browser": "vitest run --project browser",
     "e2e": "playwright test",
     "e2e:awake": "caffeinate -u playwright test",
-    "golden": "vitest run --project unit tests/golden/golden.test.ts",
     "api:snapshot": "node scripts/api-snapshot.mjs",
-    "generate:api-types": "openapi-typescript contracts/openapi.json -o contracts/generated/tripod.d.ts",
-    "golden:generate": "node tests/golden/generate.mjs",
-    "golden:verify": "node tests/golden/generate.mjs --verify"
+    "generate:api-types": "openapi-typescript contracts/openapi.json -o contracts/generated/tripod.d.ts"
   },
   "dependencies": {
     "@dicebear/collection": "^9.4.2",

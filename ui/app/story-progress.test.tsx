@@ -66,10 +66,10 @@ const AT = {
     partsConfirmed: true,
     parts: [part('PT1', true)],
   }),
-  /** Fechada a última cena produtiva o domínio vai a `mapeamento`, que é o fim. */
+  /** Fechada a última cena produtiva o domínio vai a `concluida`, que é o fim. */
   phrasesDone: (): SessionState => ({
     ...base(),
-    mode: 'mapeamento',
+    mode: 'concluida',
     whole: heard,
     partsConfirmed: true,
     parts: [part('PT1', true)],

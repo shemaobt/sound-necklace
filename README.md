@@ -3,10 +3,10 @@
 An ear-first web app where a facilitator and a listener from an oral culture segment a
 recorded oral story — a necklace of audio beads — into scenes and phrases and classify
 the scenes against the Ruth ontology. The app runs **Ouvir → Cortar → Triagem → Frases
-and ends there** (owner decision, 2026-09-01; ENG-689): the cuts, scenes and phrases are
-kept by the autosave for a different system to consume, and the app itself produces no
-artifact. The meaning interview will return later, in another flow and another product;
-`domain/` and `contracts/` still carry its rules until the later slices of the cut land.
+and ends there** (owner decision, 2026-09-01; ENG-689/ENG-691): the cuts, scenes and
+phrases are kept by the autosave for a different system to consume, and the app itself
+produces no artifact. The meaning interview will return later, in another flow and
+another product; ENG-691 removed the last of its rules from `domain/` and `contracts/`.
 
 This is a complete from-scratch implementation. The v1 prototype
 (`docs/reference/index.html`) survives only as the executable behavior contract — never
@@ -20,16 +20,16 @@ product spec is `docs/PRD-colar-de-sons-v2.md` and the visual spec is
 Clean architecture in the practical sense — dependencies always point inward:
 
 - `domain/` — pure TypeScript, zero framework/IO imports. Bead grid math, `manifest_id`
-  hashing, frontier/seam rules, gates, the interview scripts. **Frozen layer**: a 1:1
-  behavioral port of the reference, guarded by the golden harness.
-- `contracts/` — schema-validated DTOs and artifact builders. **Frozen layer** (same
-  rule).
+  hashing, frontier/seam rules, gates, triagem, phrases. **Frozen layer**: a 1:1
+  behavioral port of the reference. The golden harness that guarded it was removed with
+  the artifacts in ENG-691 — its own unit tests are now the only proof.
+- `contracts/` — schema-validated DTOs: the session autosave document, the pipeline
+  delivery/return imports, bucket and API payloads. **Frozen layer** (same rule).
 - `adapters/` — API client, Web Audio playback, sessions/locks, bucket. Every adapter
   ships a **fixture mode**, so the whole app runs with no real API.
 - `ui/` — the Shemá design system (atomic design) plus the flow stations. UI chrome is
-  PT-BR by default with an EN toggle (`ui/i18n/`); **exported artifacts are English and
-  never routed through i18n** (ENG-326/ENG-356 — PT-BR survives in them only as story
-  data such as names and slugs).
+  PT-BR by default with an EN toggle (`ui/i18n/`). Everything committed — issues, PRs,
+  commits, `docs.md` — is English.
 
 ## Getting started
 
@@ -50,7 +50,6 @@ pnpm lint             # eslint + prettier --check
 pnpm depcruise        # layer boundaries (dependency-cruiser)
 pnpm test             # vitest unit+dom with per-layer coverage
 pnpm test:browser     # interaction-critical organisms in real Chromium
-pnpm golden           # golden harness — THE merge gate
 pnpm e2e              # Playwright acceptance suite (CI)
 pnpm e2e:awake        # e2e on macOS: holds the display awake (a sleeping display
                       #   freezes Chromium input acks in ~15s pulses — see tests/e2e/docs.md)
@@ -58,11 +57,10 @@ pnpm e2e:awake        # e2e on macOS: holds the display awake (a sleeping displa
 
 ## Quality gates
 
-Required checks on every PR: `golden-harness` · `typecheck` · `lint` · `depcruise` ·
-`test`. No PR merges red. The golden harness replays scripted decision sets through
-`domain/` and byte-diffs the produced artifacts against the reference's outputs — it is
-the one gate that can never be relaxed. Details and anti-gaming rules live in
-`CLAUDE.md` (Quality gates).
+Required checks on every PR: `typecheck` · `lint` · `depcruise` · `test`. No PR merges
+red. The `golden-harness` check that headed this list was removed in ENG-691 along with
+the artifacts it byte-diffed against the reference — see `CLAUDE.md` for what that costs.
+Details and anti-gaming rules live in `CLAUDE.md` (Quality gates).
 
 ## Deployment
 

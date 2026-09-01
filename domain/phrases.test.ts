@@ -555,19 +555,19 @@ describe('confirmFrasesDone — aviso de cena vazia e avanço (§8.6)', () => {
     expect(r.state.activeSceneId).toBe('PT2');
   });
 
-  it('última cena produtiva vai ao Mapeamento', () => {
+  it('confirmar a última cena produtiva ENCERRA a sessão', () => {
     const s = sess({ activeSceneId: 'PT2', frases: [comFrase('PT2')] });
     const r = confirmFrasesDone(s, null);
-    expect(r.kind).toBe('mapeamento');
-    if (r.kind !== 'mapeamento') throw new Error('unreachable');
-    expect(r.state.mode).toBe('mapeamento');
+    expect(r.kind).toBe('finished');
+    if (r.kind !== 'finished') throw new Error('unreachable');
+    expect(r.state.mode).toBe('concluida');
   });
 
-  it('sem cena produtiva pede mapeamento e o redirect derruba na triagem', () => {
+  it('sem cena produtiva o encerramento cai no redirect da triagem', () => {
     const s = sess({ parts: [PT3] });
     const r = confirmFrasesDone(s, 'PT1');
-    expect(r.kind).toBe('mapeamento');
-    if (r.kind !== 'mapeamento') throw new Error('unreachable');
+    expect(r.kind).toBe('finished');
+    if (r.kind !== 'finished') throw new Error('unreachable');
     expect(r.state.mode).toBe('triagem');
     // a referência NÃO toca o marcador neste ramo (L917–918) — preserva
     expect(r.warnedEmptyScene).toBe('PT1');

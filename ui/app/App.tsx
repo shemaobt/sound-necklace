@@ -324,13 +324,9 @@ function useSessionHydration(
         // persiste o estado INTEIRO no store app-global, sob o meta desta sessão, de
         // modo que um reload retome no passo exato. O adapter debounce+coalesce; o
         // flush no pagehide fecha a janela.
-        //
-        // `reviewComplete` vai sempre `false` (ENG-689): a revisão que essa bandeira
-        // descrevia era a do relatório, e o relatório saiu do produto — não há
-        // revisão para estar pronta. O campo continua no DTO por ser camada congelada.
         sessionStore.getState().setAutosave((live) => {
           const m = metaRef.current;
-          if (m) appSessionStore().autosave(routeId, toSessionDto(live, m, false));
+          if (m) appSessionStore().autosave(routeId, toSessionDto(live, m));
         });
       } catch {
         // sessão sem estado salvo ou persistência corrompida — mantém o ui/state atual

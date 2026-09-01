@@ -77,17 +77,11 @@ async function persistSegmenting(): Promise<string> {
   });
   store.autosave(
     summary.id,
-    toSessionDto(
-      segmentingSession(),
-      {
-        granularityLevel: 'medium',
-        bucketAudioId: 'a1',
-        voice: [],
-        voiceVersion: {},
-        pipelineConsent: true,
-      },
-      false,
-    ),
+    toSessionDto(segmentingSession(), {
+      granularityLevel: 'medium',
+      bucketAudioId: 'a1',
+      pipelineConsent: true,
+    }),
   );
   await store.flush(summary.id);
   return summary.id;

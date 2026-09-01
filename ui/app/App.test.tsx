@@ -72,17 +72,11 @@ async function persistCuttingSession(): Promise<string> {
   });
   store.autosave(
     summary.id,
-    toSessionDto(
-      cuttingWithLockedScene(),
-      {
-        granularityLevel: 'medium',
-        bucketAudioId: 'a1',
-        voice: [],
-        voiceVersion: {},
-        pipelineConsent: true,
-      },
-      false,
-    ),
+    toSessionDto(cuttingWithLockedScene(), {
+      granularityLevel: 'medium',
+      bucketAudioId: 'a1',
+      pipelineConsent: true,
+    }),
   );
   await store.flush(summary.id);
   return summary.id;
@@ -156,17 +150,11 @@ describe('App shell', () => {
     });
     store.autosave(
       summary.id,
-      toSessionDto(
-        sampleSession(),
-        {
-          granularityLevel: 'medium',
-          bucketAudioId: 'a1',
-          voice: [],
-          voiceVersion: {},
-          pipelineConsent: true,
-        },
-        false,
-      ),
+      toSessionDto(sampleSession(), {
+        granularityLevel: 'medium',
+        bucketAudioId: 'a1',
+        pipelineConsent: true,
+      }),
     );
     await store.flush(summary.id);
 
@@ -246,17 +234,11 @@ describe('App shell', () => {
     });
     store.autosave(
       summary.id,
-      toSessionDto(
-        sampleSession(),
-        {
-          granularityLevel: 'medium',
-          bucketAudioId: 'a1',
-          voice: [],
-          voiceVersion: {},
-          pipelineConsent: true,
-        },
-        false,
-      ),
+      toSessionDto(sampleSession(), {
+        granularityLevel: 'medium',
+        bucketAudioId: 'a1',
+        pipelineConsent: true,
+      }),
     );
     await store.flush(summary.id);
 
@@ -302,17 +284,11 @@ describe('App shell', () => {
       });
       store.autosave(
         summary.id,
-        toSessionDto(
-          cuttingWithLockedScene(),
-          {
-            granularityLevel: 'medium',
-            bucketAudioId: 'aud_conto_do_boto',
-            voice: [],
-            voiceVersion: {},
-            pipelineConsent: true,
-          },
-          false,
-        ),
+        toSessionDto(cuttingWithLockedScene(), {
+          granularityLevel: 'medium',
+          bucketAudioId: 'aud_conto_do_boto',
+          pipelineConsent: true,
+        }),
       );
       await store.flush(summary.id);
 

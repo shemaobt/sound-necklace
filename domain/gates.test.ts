@@ -89,32 +89,23 @@ describe('modeLocks — abas como indicador de progresso', () => {
     expect(modeLocks(stateWith({ parts: [tagged('PT1')] })).segmentacao).toBe(true);
   });
 
-  it('mapeamento exige ≥1 produtiva E ≥1 frase travada com span', () => {
-    const prodSemFrase = stateWith({ parts: [tagged('PT1')] });
-    expect(modeLocks(prodSemFrase).mapeamento).toBe(false);
-
-    const prodComFrase = stateWith({ parts: [tagged('PT1')], frases: [mkFrase('P1')] });
-    expect(modeLocks(prodComFrase).mapeamento).toBe(true);
-
-    const fraseSemSpan = stateWith({
-      parts: [tagged('PT1')],
-      frases: [mkFrase('P1', { span: null })],
-    });
-    expect(modeLocks(fraseSemSpan).mapeamento).toBe(false);
+  it('a segmentação é a última estação — não há chave depois dela (ENG-691)', () => {
+    const s = stateWith({ parts: [tagged('PT1')], frases: [mkFrase('P1')] });
+    expect(Object.keys(modeLocks(s))).toEqual(['escuta', 'triagem', 'segmentacao']);
   });
 });
 
 describe('resolveMode — redirect do fluxo guiado', () => {
-  it('redireciona segmentacao/mapeamento para triagem quando não há produtiva', () => {
+  it('redireciona segmentacao/concluida para triagem quando não há produtiva', () => {
     const s = stateWith({ parts: [mkPart('PT1', { tag_state: 'none_fit' })] });
     expect(resolveMode(s, 'segmentacao')).toBe('triagem');
-    expect(resolveMode(s, 'mapeamento')).toBe('triagem');
+    expect(resolveMode(s, 'concluida')).toBe('triagem');
   });
 
   it('não redireciona quando há produtiva', () => {
     const s = stateWith({ parts: [tagged('PT1')] });
     expect(resolveMode(s, 'segmentacao')).toBe('segmentacao');
-    expect(resolveMode(s, 'mapeamento')).toBe('mapeamento');
+    expect(resolveMode(s, 'concluida')).toBe('concluida');
   });
 
   it('escuta e triagem passam direto', () => {
@@ -143,10 +134,8 @@ describe('setMode — transição de modo (redirect + efeitos)', () => {
     expect(setMode(s, 'segmentacao').mode).toBe('triagem');
   });
 
-  it('mapeamento é alcançável com zero frases pelo fluxo guiado (redirect só checa produtiva)', () => {
-    // aba de mapeamento fica travada sem frase, mas o fluxo guiado usa setMode direto
+  it('encerrar é alcançável com zero frases (o redirect só checa produtiva)', () => {
     const s = stateWith({ parts: [tagged('PT1')], frases: [] });
-    expect(modeLocks(s).mapeamento).toBe(false);
-    expect(setMode(s, 'mapeamento').mode).toBe('mapeamento');
+    expect(setMode(s, 'concluida').mode).toBe('concluida');
   });
 });

@@ -8,13 +8,11 @@ import {
   buildBeads,
   createSession,
   type Frase,
-  type Mapping,
   type ScenePart,
   type SessionState,
   type Whole,
 } from '../domain';
 
-import { serializeArtifact } from './serialize';
 import {
   fromSessionDto,
   SessionStateDtoSchema,
@@ -64,8 +62,6 @@ const meta = (overrides: Partial<SessionMeta> = {}): SessionMeta => ({
   granularityLevel: 'medium',
   bucketAudioId: 'aud-123',
   pipelineConsent: true,
-  voice: [],
-  voiceVersion: {},
   ...overrides,
 });
 
@@ -105,7 +101,7 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
     meta: meta({ granularityLevel: 'small' }),
   },
   {
-    name: 'frases + flag + seleção + pendingStart + mapping + review + voz',
+    name: 'frases + seleção + pendingStart + review',
     state: baseSession({
       whole: { id: 'S1', span: { s: 0, e: 23 }, confirmed: true },
       parts: [
@@ -134,35 +130,24 @@ const variety: Array<{ name: string; state: SessionState; meta: SessionMeta }> =
       activeSceneId: 'PT1',
       selection: { s: 5, e: 8 },
       pendingStart: 5,
-      mapping: {
-        level1: { recontar: 'Uma história.', tempo: '' },
-        level2: { PT1: { quem: 'Duas mulheres.' } },
-        level3: { P1: { oque: 'A chegada — com acento: coração.' } },
-      } satisfies Mapping,
-      mode: 'mapeamento',
+      mode: 'concluida',
       review: true,
     }),
-    meta: meta({
-      granularityLevel: 'large',
-      voice: ['respostas/level1/recontar.webm', 'respostas/level3/P1/oque.webm'],
-      // quantas vezes cada resposta foi gravada: sem sobreviver ao reload, a
-      // transcrição relia toda reentrada como "regravou tudo" (ENG-327)
-      voiceVersion: { 'respostas/level1/recontar.webm': 2, 'respostas/level3/P1/oque.webm': 1 },
-    }),
+    meta: meta({ granularityLevel: 'large' }),
   },
 ];
 
 describe('session-state DTO — round-trip domínio → DTO → domínio', () => {
   for (const { name, state, meta: m } of variety) {
     it(`preserva o estado e o meta: ${name}`, () => {
-      const back = fromSessionDto(toSessionDto(state, m, false));
+      const back = fromSessionDto(toSessionDto(state, m));
       expect(back.state).toEqual(state);
       expect(back.meta).toEqual(m);
     });
 
     it(`sobrevive à serialização + schema: ${name}`, () => {
-      const dto = toSessionDto(state, m, false);
-      const roundBytes = JSON.parse(serializeArtifact(dto)) as unknown;
+      const dto = toSessionDto(state, m);
+      const roundBytes = JSON.parse(JSON.stringify(dto, null, 2)) as unknown;
       const parsed = SessionStateDtoSchema.parse(roundBytes);
       const back = fromSessionDto(parsed);
       expect(back.state).toEqual(state);
@@ -170,92 +155,15 @@ describe('session-state DTO — round-trip domínio → DTO → domínio', () =>
     });
   }
 
-  it('carimba schema_version = 3 (a ENG-514 acrescentou a bandeira da revisão)', () => {
-    expect(toSessionDto(baseSession(), meta(), false).schema_version).toBe(3);
-  });
-
-  /**
-   * Toda sessão gravada antes do `voiceVersion` existir precisa continuar abrindo. Se
-   * a leitura recusasse o documento sem o campo, o campo novo transformaria cada
-   * sessão em andamento num erro de hidratação.
-   */
-  it('um documento salvo antes do voiceVersion ainda abre, com o mapa vazio', () => {
-    const antigo = toSessionDto(baseSession(), meta(), false) as Record<string, unknown>;
-    delete antigo['voiceVersion'];
-
-    expect(fromSessionDto(antigo).meta.voiceVersion).toEqual({});
-  });
-});
-
-describe('session-state DTO — migração v1 → v2 na leitura (ENG-357)', () => {
-  it('lê uma sessão v1 e normaliza statement_pt → statement', () => {
-    const { state } = fromSessionDto(fixture('legacy-v1.json'));
-    expect(state.frases[0]!.statement).toBe('A chegada.');
-    expect('statement_pt' in state.frases[0]!).toBe(false);
-  });
-
-  it('lê uma sessão v1 e traduz a confiança PT-BR para o enum inglês', () => {
-    const { state } = fromSessionDto(fixture('legacy-v1.json'));
-    expect(state.parts.map((p) => p.scene_kind_confidence)).toEqual(['high', 'medium', 'low']);
-  });
-
-  it('o resto do estado v1 atravessa intacto (a migração só toca o que mudou)', () => {
-    const { state, meta: m } = fromSessionDto(fixture('legacy-v1.json'));
-    expect(state.manifestId).toBe('fnv1a32:d31a8419');
-    expect(state.totalBeads).toBe(2);
-    expect(state.parts[0]!.scene_kind).toBe('GLEANING_SCENE');
-    expect(state.mapping?.level3['P1']?.['oque']).toBe('A chegada.');
-    expect(m.voice).toEqual(['respostas/level1/recontar.webm']);
-  });
-
-  it('reidratar e regravar promove a sessão à versão corrente (a migração é de mão única)', () => {
-    const { state, meta: m } = fromSessionDto(fixture('legacy-v1.json'));
-    const promoted = toSessionDto(state, m, false);
-    expect(promoted.schema_version).toBe(3);
-    expect(promoted.frases[0]!.statement).toBe('A chegada.');
-    expect(promoted.parts[0]!.scene_kind_confidence).toBe('high');
-  });
-
-  it('a forma v1 NÃO passa pelo schema v2 — a migração é um passo explícito', () => {
-    expect(() => SessionStateDtoSchema.parse(fixture('legacy-v1.json'))).toThrow();
-  });
-
-  it('v1 continua estrito: chave desconhecida reprova mesmo no schema legado', () => {
-    const legacy = fixture('legacy-v1.json') as Record<string, unknown>;
-    expect(() => fromSessionDto({ ...legacy, intruso: 1 })).toThrow();
+  it('fromSessionDto VALIDA — um payload lixo não vira estado meio construído', () => {
+    // a regressão que motivou a ENG-357: o adapter faz cast cru, então sem
+    // validação aqui um DTO da forma antiga viraria `statement: undefined`
+    expect(() => fromSessionDto({ schema_version: 4 })).toThrow();
+    expect(() => fromSessionDto(null)).toThrow();
   });
 
   it('versão desconhecida reprova alto, em vez de corromper em silêncio', () => {
     expect(() => fromSessionDto(fixture('invalid-schema-version.json'))).toThrow();
-  });
-
-  it('fromSessionDto VALIDA — um payload lixo não vira estado meio construído', () => {
-    // a regressão que motivou a ENG-357: o adapter faz cast cru, então sem
-    // validação aqui um DTO da forma antiga viraria `statement: undefined`
-    expect(() => fromSessionDto({ schema_version: 2 })).toThrow();
-    expect(() => fromSessionDto(null)).toThrow();
-  });
-});
-
-describe('session-state DTO — migração v2 → v3 na leitura (ENG-514)', () => {
-  /**
-   * Toda sessão em andamento foi salva antes de a bandeira da revisão existir. Se a
-   * leitura recusasse o documento sem o campo, o campo novo transformaria cada uma
-   * delas num erro de hidratação.
-   */
-  it('uma sessão v2, anterior ao campo, continua abrindo inteira', () => {
-    const { state, meta: m } = fromSessionDto(fixture('legacy-v2.json'));
-
-    expect(state.frases[0]!.statement).toBe('A chegada.');
-    expect(state.parts[0]!.scene_kind_confidence).toBe('high');
-    expect(state.mapping?.level3['P1']?.['oque']).toBe('A chegada.');
-    expect(m.voice).toEqual(['respostas/level1/recontar.webm']);
-  });
-
-  it('reidratar e regravar promove a sessão v2 à versão corrente', () => {
-    const { state, meta: m } = fromSessionDto(fixture('legacy-v2.json'));
-
-    expect(toSessionDto(state, m, false).schema_version).toBe(3);
   });
 });
 
@@ -274,4 +182,69 @@ describe('session-state DTO — fixtures válidas/inválidas', () => {
       expect(() => SessionStateDtoSchema.parse(fixture(bad))).toThrow();
     });
   }
+});
+
+/**
+ * ENG-691 (corte de escopo 2/4): a entrevista saiu do núcleo, e com ela os campos
+ * que só existiam para ela. Não há migração — decisão do dono: um documento salvo
+ * antes do corte tem de falhar ALTO, não abrir pela metade.
+ */
+describe('session-state DTO — o corte da entrevista (ENG-691)', () => {
+  it('carimba schema_version = 4', () => {
+    expect(toSessionDto(baseSession(), meta()).schema_version).toBe(4);
+  });
+
+  it('o documento não carrega mais nenhum campo da entrevista', () => {
+    const dto = toSessionDto(baseSession(), meta()) as Record<string, unknown>;
+
+    for (const gone of ['mapping', 'voice', 'voiceVersion', 'reviewComplete']) {
+      expect(Object.keys(dto)).not.toContain(gone);
+    }
+  });
+
+  it('um documento anterior ao corte, com dados de entrevista, falha alto', () => {
+    const antigo = {
+      ...(toSessionDto(baseSession(), meta()) as Record<string, unknown>),
+      schema_version: 3,
+      mapping: { level1: { recontar: 'Uma história.' }, level2: {}, level3: {} },
+      voice: ['respostas/level1/recontar.webm'],
+      voiceVersion: { 'respostas/level1/recontar.webm': 1 },
+      reviewComplete: true,
+    };
+
+    expect(() => fromSessionDto(antigo)).toThrow();
+  });
+
+  /**
+   * O salto de versão NÃO muda o veredito: o `strictObject` já derrubaria o documento
+   * de antes do corte pelas chaves extras, e derrubaria mesmo se o literal ainda
+   * aceitasse a 3. O que o salto muda é a MENSAGEM — e é a única coisa que ele
+   * acrescenta, então é o que este teste tranca. Sem ele, reverter o literal por achá-lo
+   * redundante não derrubaria nada, e a recusa voltaria a acusar `mapping` (o sintoma)
+   * em vez da versão (a razão).
+   *
+   * O erro cita as DUAS coisas — o zod reporta todas as questões —; o que se afirma
+   * aqui é que a versão está entre elas.
+   */
+  it('a recusa cita a VERSÃO do documento, que é para isso que o literal subiu', () => {
+    const antigo = {
+      ...(toSessionDto(baseSession(), meta()) as Record<string, unknown>),
+      schema_version: 3,
+      mapping: { level1: { recontar: 'Uma história.' }, level2: {}, level3: {} },
+      voice: ['respostas/level1/recontar.webm'],
+      voiceVersion: { 'respostas/level1/recontar.webm': 1 },
+      reviewComplete: true,
+    };
+
+    expect(() => fromSessionDto(antigo)).toThrow(/schema_version/);
+  });
+
+  it('o modo da entrevista deixou de ser um modo — o documento que o traz reprova', () => {
+    const comModoMorto = {
+      ...(toSessionDto(baseSession(), meta()) as Record<string, unknown>),
+      mode: 'mapeamento',
+    };
+
+    expect(() => fromSessionDto(comModoMorto)).toThrow();
+  });
 });

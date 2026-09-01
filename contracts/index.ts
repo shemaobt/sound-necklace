@@ -1,26 +1,13 @@
 /**
- * contracts/ — DTOs validados por schema + mappers (camada CONGELADA, CLAUDE.md).
- * Módulos chegam pelas issues E1: ENG-227 (manifesto/retorno/serializer),
- * ENG-233 (relatório .md), ENG-234 (session-state + imports), ENG-235 (API/bucket).
+ * contracts/ — DTOs validados por schema + mappers (camada de revisão humana
+ * obrigatória, CLAUDE.md).
+ * Módulos chegam pelas issues E1: ENG-234 (session-state + imports),
+ * ENG-235 (API/bucket). Os construtores de artefato — manifesto, retorno,
+ * relatório e o serializador — saíram na ENG-691: o app não gera artefato.
  * Importa apenas domain/ (+ zod, raiz "zod" somente).
  */
 export const CONTRACTS_LAYER = 'contracts' as const;
 
-export { manifestoFilename, retornoFilename, serializeArtifact } from './serialize';
-export { buildManifesto, canExportManifesto, ManifestoSchema, type Manifesto } from './manifesto';
-export {
-  buildRetorno,
-  retornoExportStatus,
-  RetornoSchema,
-  type Retorno,
-  type RetornoExportStatus,
-} from './retorno';
-export {
-  buildMapReport,
-  relatorioFilename,
-  reportExportStatus,
-  type ReportExportStatus,
-} from './relatorio';
 export {
   fromSessionDto,
   SessionStateDtoSchema,

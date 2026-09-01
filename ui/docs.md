@@ -18,7 +18,7 @@ Path: @/ui
 | `atoms`, `molecules`        | nothing from domain/contracts/adapters — props in, events out; no i18n either |
 | `organisms`                 | @/domain types (props/hooks contract) and @/ui/i18n; never adapters           |
 | `state`                     | @/domain; never adapters (autosave arrives as an injected port)               |
-| `i18n`                      | @/domain (display helpers + question scripts) and npm; never adapters         |
+| `i18n`                      | @/domain (display helpers) and npm; never adapters                            |
 | `pages`, `templates`, `app` | everything — the only adapter-wiring layer                                    |
 
 - @/ui/app is the composition root and owner of the three **add-a-file registries** (@/docs/architecture.md §4): stations via `import.meta.glob('/ui/pages/*/index.tsx')` (a missing station renders a quiet "estação em construção" fallback), adapter registrations from @/adapters, and app addons via `/ui/app/addons/*.tsx` (overlay chrome such as the tutorial popup). Created once, never edited again — later issues only add files. It also owns the router, the whole-story progress band, the single itinerant player, and the review/lock + connection chrome (see @/ui/app/docs.md).
@@ -35,7 +35,7 @@ Path: @/ui
 
 ### Things to Know
 
-- **PT-BR is the default UI language and the artifact language; the UI chrome is PT/EN** (ENG-279, @/ui/i18n/docs.md). Quoted strings in the PRDs stay contract-level copy — reuse them verbatim, but as values in @/ui/i18n/pt.ts, not hardcoded in a component. Exported artifacts are never routed through i18n. Copy that is DEFINED in @/domain or @/contracts (gate/error messages, import preconditions) still renders PT-BR under an EN UI: translating it would touch a frozen layer.
+- **PT-BR is the default UI language; the UI chrome is PT/EN** (ENG-279, @/ui/i18n/docs.md). **There is no artifact language any more (ENG-691):** the "artifacts are English" rule governed three documents this app no longer builds — see @/contracts/docs.md. Quoted strings in the PRDs stay contract-level copy — reuse them verbatim, but as values in @/ui/i18n/pt.ts, not hardcoded in a component. Copy that is DEFINED in @/domain or @/contracts (gate/error messages, import preconditions) still renders PT-BR under an EN UI: translating it would touch a frozen layer.
 - Listener-facing screens: max ONE short instruction line, one dominant action, **no counters/numbers/IDs/tables**; audio responds before text (bead click plays the bead; edge nudge plays ~1 s around the boundary). Facilitator surfaces (dashboard, coverage drawer, setup) may be denser.
 - Never punish: errors guide, warnings allow a second-click proceed, border-crossing offers choices. Respect `prefers-reduced-motion`, visible focus outlines, header sound toggle.
 - No numeric coverage threshold for `ui/` — instead, interaction tests are **mandatory** for the interaction-critical organisms; snapshot-only tests are not acceptable for atoms/molecules either (state-coverage tests required).

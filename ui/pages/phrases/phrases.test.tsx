@@ -384,7 +384,7 @@ describe('Segmentação — a seleção do fio não sobrevive ao que ela aponta 
     expect(container.querySelector('.cds-bead-strip-capsule')).not.toBeNull();
 
     await act(async () => {
-      sessionStore.getState().apply((s) => ({ ...s, mode: 'mapeamento' }));
+      sessionStore.getState().apply((s) => ({ ...s, mode: 'concluida' }));
     });
 
     expect(container.querySelector('.cds-bead-strip-capsule')).toBeNull();
@@ -427,7 +427,7 @@ describe('Segmentação — cena vazia e navegação (PRD v2 §8.6)', () => {
     expect(sessionStore.getState().session!.mode).toBe('segmentacao');
 
     await userEvent.click(done());
-    expect(sessionStore.getState().session!.mode).toBe('mapeamento');
+    expect(sessionStore.getState().session!.mode).toBe('concluida');
   });
 
   it('concluir a última cena (com frase) leva ao Conversation', async () => {
@@ -444,7 +444,7 @@ describe('Segmentação — cena vazia e navegação (PRD v2 §8.6)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' }));
 
-    expect(sessionStore.getState().session!.mode).toBe('mapeamento');
+    expect(sessionStore.getState().session!.mode).toBe('concluida');
   });
 
   it('“← Voltar” na primeira cena volta à Triage', async () => {
@@ -516,7 +516,7 @@ describe('Segmentação — momento de revisão quando as frases cobrem a cena (
     expect(screen.getByText('Cena dois · Nascimento')).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Continuar →' }));
-    expect(sessionStore.getState().session!.mode).toBe('mapeamento');
+    expect(sessionStore.getState().session!.mode).toBe('concluida');
   });
 
   it('frases esparsas mantêm o botão do PRD', () => {
