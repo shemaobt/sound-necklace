@@ -119,6 +119,26 @@ function clean(): SessionState {
   );
 }
 
+const NONE_FIT: Partial<ScenePart> = {
+  scene_kind: null,
+  scene_kind_confidence: null,
+  tag_state: 'none_fit',
+};
+
+/** DUAS cenas fora dos tipos e DUAS sem frase: a linha de contexto vai ao plural. */
+function manyDoubts(): SessionState {
+  return concluded(
+    [
+      scene('PT1', { s: 0, e: 5 }),
+      scene('PT2', { s: 6, e: 11 }, { scene_kind: 'GLEANING_SCENE' }),
+      scene('PT3', { s: 12, e: 17 }, NONE_FIT),
+      scene('PT4', { s: 18, e: 23 }, { scene_kind: 'ARRIVAL_SCENE' }),
+      scene('PT5', { s: 24, e: 29 }, NONE_FIT),
+    ],
+    [phrase('P1', { s: 0, e: 5 }, 'PT1')],
+  );
+}
+
 /** Cobertura ESPARSA: só a primeira cena existe; as contas de 10 em diante não são de ninguém. */
 function sparse(): SessionState {
   return concluded([scene('PT1', { s: 0, e: 9 })], [phrase('P1', { s: 0, e: 3 }, 'PT1')]);
@@ -209,6 +229,18 @@ describe('Rever — o panorama mostra a história inteira', () => {
     expect(at(5)?.getAttribute('data-scene-end')).toBeNull();
   });
 
+  it('a cena fora dos tipos fica creme tracejada até a última conta, que ainda é fim de cena', () => {
+    load(doubtful());
+    renderStation(<Review />);
+    const at = (i: number) =>
+      document.querySelector<HTMLElement>(`.cds-necklace-bead[data-idx="${i}"] .cds-pearl`);
+    expect(at(25)?.getAttribute('data-none-fit')).toBe('true');
+    expect(at(25)?.style.getPropertyValue('--cds-pearl-base')).toBe('');
+    expect(at(29)?.getAttribute('data-none-fit')).toBe('true');
+    expect(at(29)?.getAttribute('data-scene-end')).toBe('true');
+    expect(at(12)?.getAttribute('data-none-fit')).toBeNull();
+  });
+
   it('as cenas aparecem como uma fila de pérolas com o tipo e a confiança embutida', () => {
     load(doubtful());
     renderStation(<Review />);
@@ -240,6 +272,34 @@ describe('Rever — o panorama mostra a história inteira', () => {
     expect(within(footer).getByText('fim de frase')).toBeDefined();
     expect(within(footer).getByText('fim de cena')).toBeDefined();
     expect(within(footer).getByText('Certeza')).toBeDefined();
+  });
+
+  it('a linha de contexto concorda em número com as cenas que descreve', () => {
+    load(manyDoubts());
+    const first = renderStation(<Review />);
+    expect(
+      screen.getByText(
+        'Algumas cenas ficaram fora dos tipos e outras ficaram sem frases — todas são respostas válidas, e ficam guardadas assim.',
+      ),
+    ).toBeDefined();
+    first.unmount();
+
+    load(
+      concluded(
+        [
+          scene('PT1', { s: 0, e: 9 }),
+          scene('PT2', { s: 10, e: 19 }, NONE_FIT),
+          scene('PT3', { s: 20, e: 29 }, NONE_FIT),
+        ],
+        [phrase('P1', { s: 0, e: 9 }, 'PT1')],
+      ),
+    );
+    renderStation(<Review />);
+    expect(
+      screen.getByText(
+        'Algumas cenas ficaram fora dos tipos — são respostas válidas, e ficam guardadas assim.',
+      ),
+    ).toBeDefined();
   });
 
   it('a linha de contexto só aparece quando há cena fora dos tipos ou sem frase', () => {

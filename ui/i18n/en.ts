@@ -201,10 +201,19 @@ export const en: Dict = {
     title: 'Look at the whole story',
     instruction: 'Tap a scene to hear it. Tap a bead to hear just that phrase.',
     noneFit: 'no name among the kinds',
-    hintBoth:
-      'One scene stayed outside the kinds and another stayed without phrases — both are valid answers, and they are kept that way.',
-    hintNone: 'One scene stayed outside the kinds — it is a valid answer, and it is kept that way.',
-    hintNoPhrase: 'One scene stayed without phrases — it is kept that way all the same.',
+    hintNone_one:
+      'One scene stayed outside the kinds — it is a valid answer, and it is kept that way.',
+    hintNone_other:
+      'Some scenes stayed outside the kinds — they are valid answers, and they are kept that way.',
+    hintNoPhrase_one: 'One scene stayed without phrases — it is kept that way all the same.',
+    hintNoPhrase_other: 'Some scenes stayed without phrases — they are kept that way all the same.',
+    hintBoth: '{{none}} and {{phrase}} — {{tail}}',
+    hintBothNone_one: 'One scene stayed outside the kinds',
+    hintBothNone_other: 'Some scenes stayed outside the kinds',
+    hintBothPhrase_one: 'another stayed without phrases',
+    hintBothPhrase_other: 'others stayed without phrases',
+    hintBothTwo: 'both are valid answers, and they are kept that way.',
+    hintBothAll: 'all of them are valid answers, and they are kept that way.',
     warn: 'Some scenes stayed in doubt or without a name — you can go on anyway. Tap again to finish.',
     conclude: 'Finish the story',
     legend: {

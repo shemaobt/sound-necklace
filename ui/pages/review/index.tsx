@@ -86,10 +86,13 @@ export function Review({ player = null, sound, onBlockClosed }: ReviewProps) {
             f.locked && f.span !== null && f.part_link === part.part_id,
         ),
       }));
-    // cena fora dos tipos fica creme, como no desenho: a cor é do tipo, não do corte
-    const segments: NecklaceSegment[] = scenes
-      .filter((sc) => sc.part.tag_state === 'tagged')
-      .map((sc) => ({ span: sc.span, tint: sceneColor(sc.index) }));
+    // cena fora dos tipos fica creme tracejada até o fim, como no desenho: a cor
+    // é do tipo, não do corte
+    const segments: NecklaceSegment[] = scenes.map((sc) =>
+      sc.part.tag_state === 'tagged'
+        ? { span: sc.span, tint: sceneColor(sc.index) }
+        : { span: sc.span, noneFit: true },
+    );
     const lockedEndBeads = scenes.map((sc) => sc.span.e);
     const phraseEndBeads = scenes.flatMap((sc) => sc.phrases.map((f) => f.span.e));
     return { scenes, segments, lockedEndBeads, phraseEndBeads };
@@ -160,17 +163,23 @@ export function Review({ player = null, sound, onBlockClosed }: ReviewProps) {
     onBlockClosed?.('historia');
   };
 
-  const hasNone = scenes.some((sc) => sc.part.tag_state === 'none_fit');
-  const hasNoPhrase = scenes.some(
+  // A linha de contexto concorda em número com as cenas que descreve; a contagem
+  // só escolhe a forma da frase e nunca aparece na tela (§9.2).
+  const noneCount = scenes.filter((sc) => sc.part.tag_state === 'none_fit').length;
+  const noPhraseCount = scenes.filter(
     (sc) => sc.part.tag_state === 'tagged' && sc.phrases.length === 0,
-  );
+  ).length;
   const hint =
-    hasNone && hasNoPhrase
-      ? t('rever.hintBoth')
-      : hasNone
-        ? t('rever.hintNone')
-        : hasNoPhrase
-          ? t('rever.hintNoPhrase')
+    noneCount > 0 && noPhraseCount > 0
+      ? t('rever.hintBoth', {
+          none: t('rever.hintBothNone', { count: noneCount }),
+          phrase: t('rever.hintBothPhrase', { count: noPhraseCount }),
+          tail: t(noneCount + noPhraseCount === 2 ? 'rever.hintBothTwo' : 'rever.hintBothAll'),
+        })
+      : noneCount > 0
+        ? t('rever.hintNone', { count: noneCount })
+        : noPhraseCount > 0
+          ? t('rever.hintNoPhrase', { count: noPhraseCount })
           : null;
 
   return (

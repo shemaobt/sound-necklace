@@ -249,10 +249,20 @@ export const pt = {
     title: 'Olhem a história inteira',
     instruction: 'Toque numa cena para ouvir. Toque numa conta para ouvir só aquela frase.',
     noneFit: 'sem nome nos tipos',
-    hintBoth:
-      'Uma cena ficou fora dos tipos e outra ficou sem frases — as duas são respostas válidas, e ficam guardadas assim.',
-    hintNone: 'Uma cena ficou fora dos tipos — é uma resposta válida, e fica guardada assim.',
-    hintNoPhrase: 'Uma cena ficou sem frases — fica guardada assim mesmo.',
+    /* A linha de contexto concorda em número (a contagem escolhe a forma e nunca
+       é mostrada). A frase é a do desenho; o plural é a mesma frase no plural. */
+    hintNone_one: 'Uma cena ficou fora dos tipos — é uma resposta válida, e fica guardada assim.',
+    hintNone_other:
+      'Algumas cenas ficaram fora dos tipos — são respostas válidas, e ficam guardadas assim.',
+    hintNoPhrase_one: 'Uma cena ficou sem frases — fica guardada assim mesmo.',
+    hintNoPhrase_other: 'Algumas cenas ficaram sem frases — ficam guardadas assim mesmo.',
+    hintBoth: '{{none}} e {{phrase}} — {{tail}}',
+    hintBothNone_one: 'Uma cena ficou fora dos tipos',
+    hintBothNone_other: 'Algumas cenas ficaram fora dos tipos',
+    hintBothPhrase_one: 'outra ficou sem frases',
+    hintBothPhrase_other: 'outras ficaram sem frases',
+    hintBothTwo: 'as duas são respostas válidas, e ficam guardadas assim.',
+    hintBothAll: 'todas são respostas válidas, e ficam guardadas assim.',
     warn: 'Algumas cenas ficaram na dúvida ou sem nome — dá para seguir assim mesmo. Toque de novo para concluir.',
     conclude: 'Concluir a história',
     legend: {
