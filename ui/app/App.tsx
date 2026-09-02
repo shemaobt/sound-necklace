@@ -4,14 +4,14 @@ import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
 import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
-import type { SessionState } from '../../domain';
-import type { SaveStatus } from '../molecules';
+import { lockedParts, type ScenePart, type SessionState, type Span } from '../../domain';
+import type { SaveStatus, ScenePearlFill } from '../molecules';
 import { BlockDone, type ClosedBlock } from '../organisms/block-done/block-done';
 import { BreakSuggestion } from '../organisms/break-suggestion/break-suggestion';
 import { GoalReached } from '../organisms/goal-reached/goal-reached';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
-import { phrasePalette, scenePalette } from '../tokens';
+import { sceneColor, scenePalette, type PaletteEntry } from '../tokens';
 import {
   appStore,
   progressStore,
@@ -61,6 +61,22 @@ import { stepperStations } from './stepper-model';
 import { navigate, useRoute } from './router';
 import './app.css';
 
+/**
+ * A história inteira, uma pérola por cena na ordem do colar, com a confiança como
+ * preenchimento (ENG-725): o que a tela de conclusão mostra. A cor é a mesma que
+ * a Rever dá à cena (posição no colar); a cena fora dos tipos fica creme.
+ */
+function scenePearlsOf(session: SessionState): { fill: ScenePearlFill; tint?: PaletteEntry }[] {
+  return lockedParts(session)
+    .filter((p): p is ScenePart & { span: Span } => p.span !== null)
+    .sort((a, b) => a.span.s - b.span.s)
+    .map((part, index) =>
+      part.tag_state === 'tagged' && part.scene_kind_confidence
+        ? { fill: part.scene_kind_confidence, tint: sceneColor(index) }
+        : { fill: 'none' },
+    );
+}
+
 /** Player itinerante em repouso (sem áudio fiado): só o `stop()` que o slot chama. */
 const NO_PLAYBACK: Player = { stop() {} };
 
@@ -69,7 +85,7 @@ const SILENT_SOUND: UiSound = new SilentUiSound();
 
 /**
  * Corpo de uma sessão aberta: a faixa de progresso + chrome de revisão + player +
- * estação. O fluxo acaba nas Frases (ENG-689): não há cauda depois delas.
+ * estação. O fluxo acaba na Rever (ENG-725), que fecha a história.
  */
 function SessionStations({
   session,
@@ -123,6 +139,8 @@ function SessionStations({
   const stationProps = {
     player,
     sound,
+    // Dois blocos sobem tela: a Triagem fechando e a história concluída na Rever
+    // (ENG-725). Fechar as Frases não é bloco — a Rever é só a estação seguinte.
     onBlockClosed: (block: ClosedBlock) => setClosedBlock(block),
   };
 
@@ -156,15 +174,19 @@ function SessionStations({
           troca pela porta silenciosa. */}
       <GoalReached
         reached={goalReached}
-        busy={breakOpen || blockOpen}
+        // Na Rever a meta fica cumprida EM SILÊNCIO (ENG-725, decisão do dono): a
+        // barra enche ao chegar, mas nenhuma celebração sobe por cima do panorama —
+        // a estação existe para a dupla ver a história inteira, e o fecho
+        // celebratório já é a tela oliva. Adiada, não engolida: o `busy` só a segura.
+        busy={breakOpen || blockOpen || currentKey === 'review'}
         chime={() => sound.advance()}
         onOpenChange={setGoalOpen}
         onStopForToday={() => navigate('/dashboard')}
       />
       {/* Um bloco fechou (ENG-651): a estação seguinte já está montada atrás desta
           tela, e o primário só a descobre. As contas tomam a cor dos dados (§4.2):
-          a paleta de frases quando a Segmentação fecha, as cores das próprias
-          cenas quando a Triagem fecha.
+          as cores das próprias cenas, tanto quando a Triagem fecha quanto quando a
+          história se conclui na Rever (ENG-725).
 
           Precedência: esta tela NÃO espera pela meta, embora a meta espere por ela.
           É o que o protótipo faz — `pausaShow` e `metaShow` guardam ambos em
@@ -178,26 +200,20 @@ function SessionStations({
         block={closedBlock}
         busy={breakOpen}
         onOpenChange={setBlockOpen}
-        tints={
-          closedBlock === 'segmentacao'
-            ? phrasePalette.slice(0, 5)
-            : scenePalette.slice(0, Math.min(5, Math.max(1, session.parts.length)))
-        }
-        // A Segmentação é o FIM do fluxo (ENG-689): não há estação atrás desta tela
-        // para o primário entregar, então ele é a saída — e a saída de descansar,
-        // que levaria ao mesmo lugar, não é oferecida duas vezes.
+        tints={scenePalette.slice(0, Math.min(5, Math.max(1, session.parts.length)))}
+        pearls={closedBlock === 'historia' ? scenePearlsOf(session) : undefined}
+        // A história concluída (ENG-725) é o FIM do fluxo: não há estação atrás da
+        // tela para o primário entregar, então ele é a saída (o painel). A segunda
+        // ação ali é "Olhar de novo": fecha a tela e a Rever, ainda montada atrás,
+        // reaparece com o panorama intacto. Na Triagem a segunda ação descansa.
         onContinue={() => {
           setClosedBlock(null);
-          if (closedBlock === 'segmentacao') navigate('/dashboard');
+          if (closedBlock === 'historia') navigate('/dashboard');
         }}
-        onRest={
-          closedBlock === 'segmentacao'
-            ? undefined
-            : () => {
-                setClosedBlock(null);
-                navigate('/dashboard');
-              }
-        }
+        onRest={() => {
+          setClosedBlock(null);
+          if (closedBlock === 'triagem') navigate('/dashboard');
+        }}
       />
     </>
   );

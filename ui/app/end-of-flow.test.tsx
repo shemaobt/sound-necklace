@@ -14,14 +14,15 @@ import { stepperStations } from './stepper-model';
 import { StoryProgress } from './story-progress';
 
 /**
- * O fluxo termina nas Frases (ENG-689). A conversa, o relatório e a exportação
- * saíram do produto — os cortes, as cenas e as frases continuam salvos pelo
- * autosave, para outro sistema consumir.
+ * O fluxo termina na Rever (ENG-725), a quinta estação, que entra entre o fim das
+ * Frases e a tela de conclusão. A conversa, o relatório e a exportação
+ * continuam fora do produto (ENG-689) — os cortes, as cenas e as frases seguem
+ * salvos pelo autosave, para outro sistema consumir.
  *
- * O que se afirma aqui é o FIM: quantas estações o fio tem, que a última é Frases
- * mesmo depois de o domínio ter encerrado a sessão, como a barra do topo reparte
- * a história entre as quatro, e que nenhuma rota do app monta uma das telas que
- * saíram.
+ * O que se afirma aqui é o FIM: quantas estações o fio tem, que a última é a
+ * Rever e que ela é a atual depois de o domínio encerrar a sessão, como a barra
+ * do topo reparte a história entre as cinco, e que nenhuma rota do app monta uma
+ * das telas que saíram.
  */
 
 const TOTAL_BEADS = 8;
@@ -61,7 +62,7 @@ function frase(id: string, partId: string): Frase {
   };
 }
 
-/** Sessão parada no começo de cada uma das quatro estações do fluxo. */
+/** Sessão parada no começo de cada uma das cinco estações do fluxo. */
 const AT = {
   listen: (): SessionState => base(),
   cut: (): SessionState => ({ ...base(), whole: heard }),
@@ -79,19 +80,19 @@ const AT = {
     partsConfirmed: true,
     parts: [part('PT1', true)],
   }),
-};
-
-/**
- * O que o domínio guarda depois de a última cena produtiva fechar: o modo vira
- * `concluida` (ENG-691) — o trabalho acabou, e não há estação depois.
- */
-function phrasesDone(): SessionState {
-  return {
-    ...AT.phrases(),
+  /**
+   * O que o domínio guarda depois de a última cena produtiva fechar: o modo vira
+   * `concluida` (ENG-691) — e é aí que a Rever entra (ENG-725).
+   */
+  review: (): SessionState => ({
+    ...base(),
     mode: 'concluida',
+    whole: heard,
+    partsConfirmed: true,
+    parts: [part('PT1', true)],
     frases: [frase('P1', 'PT1')],
-  };
-}
+  }),
+};
 
 function band(session: SessionState): HTMLElement {
   const { container } = render(<StoryProgress session={session} />);
@@ -103,47 +104,70 @@ function fillWidth(session: SessionState): number {
   return Number.parseFloat(el!.style.width);
 }
 
+function dividers(session: SessionState): number[] {
+  return [...band(session).querySelectorAll<HTMLElement>('.cds-story-progress-tick')].map((el) =>
+    Number.parseFloat(el.style.left),
+  );
+}
+
 beforeEach(() => {
   progressStore.getState().reset();
   goalStore.setState(goalStore.getInitialState(), true);
 });
 
-describe('O fio tem quatro estações e acaba nas Frases (ENG-689)', () => {
-  it('as estações são Ouvir, Cortar, Triagem e Frases, nesta ordem', () => {
+describe('O fio tem cinco estações e acaba na Rever (ENG-725)', () => {
+  it('as estações são Ouvir, Cortar, Triagem, Frases e Rever, nesta ordem', () => {
     expect(stepperStations(base()).map((s) => s.key)).toEqual([
       'listen',
       'cut',
       'triage',
       'phrases',
+      'review',
     ]);
   });
 
-  it('fechada a última cena produtiva, Frases continua sendo a estação atual', () => {
-    const stations = stepperStations(phrasesDone());
-    expect(stations.find((s) => s.state === 'current')?.key).toBe('phrases');
-    expect(stations.filter((s) => s.state === 'future')).toEqual([]);
+  it('fechada a última cena produtiva, a Rever passa a ser a estação atual', () => {
+    const stations = stepperStations(AT.review());
+    expect(stations.find((s) => s.state === 'current')?.key).toBe('review');
+  });
+
+  it('não sobra nenhuma estação futura quando a sessão está na Rever', () => {
+    expect(stepperStations(AT.review()).map((s) => s.state)).toEqual([
+      'done',
+      'done',
+      'done',
+      'done',
+      'current',
+    ]);
   });
 
   /**
-   * A última conta do fio deixou de depender de um gate de entrevista: chegar ao
-   * fim é ter uma cena produtiva à frente, não ter uma frase travada dentro dela.
+   * As Frases ficam alcançáveis assim que há uma cena produtiva; a Rever só
+   * quando o domínio encerrou a sessão — antes disso ela é futura e travada.
    */
-  it('a última estação fica alcançável assim que há uma cena produtiva', () => {
-    const stations = stepperStations(AT.phrases());
-    expect(stations.at(-1)?.reachable).toBe(true);
+  it('a Rever só fica alcançável com a sessão encerrada pelo domínio', () => {
+    const before = stepperStations(AT.phrases());
+    expect(before.find((s) => s.key === 'phrases')?.reachable).toBe(true);
+    expect(before.at(-1)?.reachable).toBe(false);
+    expect(stepperStations(AT.review()).at(-1)?.reachable).toBe(true);
   });
 });
 
-describe('A barra do topo reparte a história entre as quatro estações (ENG-689)', () => {
-  it('cada estação começa na sua fronteira, e as quatro somam a história inteira', () => {
-    expect(fillWidth(AT.listen())).toBe(0);
-    expect(fillWidth(AT.cut())).toBe(13);
-    expect(fillWidth(AT.triage())).toBe(36);
-    expect(fillWidth(AT.phrases())).toBe(56);
+describe('A barra do topo reparte a história entre as cinco estações (ENG-725)', () => {
+  it('as divisórias caem em dez, trinta e dois, cinquenta e dois e oitenta e oito por cento', () => {
+    expect(dividers(AT.listen())).toEqual([10, 32, 52, 88]);
   });
 
-  it('a última cena produtiva com frase enche a barra: a história está inteira', () => {
-    expect(fillWidth(phrasesDone())).toBe(100);
+  it('cada estação começa na sua divisória', () => {
+    expect(fillWidth(AT.listen())).toBe(0);
+    expect(fillWidth(AT.cut())).toBe(10);
+    expect(fillWidth(AT.triage())).toBe(32);
+    expect(fillWidth(AT.phrases())).toBe(52);
+  });
+
+  it('estar na Rever enche a barra: ela não tem sub-passo', () => {
+    // mesmo sem frase nenhuma: entrar na Rever é a fatia inteira, não uma fração
+    expect(fillWidth({ ...AT.review(), frases: [] })).toBe(100);
   });
 });
 
@@ -156,9 +180,9 @@ describe('Nenhuma rota alcança a conversa, o relatório ou a exportação (ENG-
     }
   });
 
-  it('a faixa da sessão encerrada anuncia Frases, e nenhuma etapa depois dela', () => {
-    const faixa = band(phrasesDone());
-    expect(within(faixa).getByText('Frases')).toBeDefined();
-    expect(faixa.textContent?.trim()).toBe('Frases');
+  it('a faixa da sessão encerrada anuncia a Rever, e nenhuma etapa depois dela', () => {
+    const faixa = band(AT.review());
+    expect(within(faixa).getByText('Rever')).toBeDefined();
+    expect(faixa.textContent?.trim()).toBe('Rever');
   });
 });

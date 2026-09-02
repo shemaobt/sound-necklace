@@ -32,7 +32,13 @@
   --cds-chrome-accent: var(--cds-telha);
   --cds-chrome-hairline: var(--cds-hairline);
   --cds-chrome-progress-track: rgba(63, 62, 32, 0.12);
-  --cds-chrome-progress-line: rgba(63, 62, 32, 0.22);
+  /* As divisórias da barra ficam ora sobre o TRILHO claro, ora sobre o PREENCHIMENTO
+     telha — e na Rever (ENG-725) as quatro ficam sob o telha, sempre. Oliva a 22%
+     sumia sobre o telha (bug de contraste pré-existente que a Rever tornou
+     permanente); a 50% a divisória lê nos dois fundos: entalhe escuro no telha,
+     traço cinza no trilho. O desenho pede creme sobre o telha, mas creme some no
+     trilho claro — o meio-tom é o único valor que serve às duas metades da barra. */
+  --cds-chrome-progress-line: rgba(63, 62, 32, 0.5);
   --cds-chrome-save-bg: rgba(119, 125, 69, 0.14);
   --cds-chrome-save-fg: #585d31;
   --cds-chrome-save-dot: #c58a1e;

@@ -29,7 +29,6 @@ import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { Button } from '../../atoms';
 import { BeadStrip, type BeadStripItem } from '../../molecules';
 import {
-  type ClosedBlock,
   Necklace,
   type NecklaceSegment,
   SeamModal,
@@ -87,15 +86,9 @@ export interface PhrasesProps {
   player?: Player | null;
   /** A voz da UI (§9): travar a frase, mover a costura, recusar e avançar têm som. */
   sound?: UiSound;
-  /**
-   * Fechar a ÚLTIMA cena produtiva fecha um BLOCO (ENG-651). Quem sabe que essa é a
-   * última é o domínio — `confirmFrasesDone` devolvendo `finished` —, e quem
-   * desenha a tela é o shell; a estação só passa o recado.
-   */
-  onBlockClosed?: (block: ClosedBlock) => void;
 }
 
-export function Phrases({ player = null, sound, onBlockClosed }: PhrasesProps) {
+export function Phrases({ player = null, sound }: PhrasesProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
@@ -343,10 +336,10 @@ export function Phrases({ player = null, sound, onBlockClosed }: PhrasesProps) {
         // com uma cápsula já aberta é herdar a escolha de outro momento
         setPick(null);
         sound?.advance();
+        // `finished` é a resposta do domínio para "era a última produtiva": o modo
+        // vira `concluida` e a Rever, a estação seguinte, monta sozinha (ENG-725).
+        // Nenhuma tela sobe aqui — fechar as Frases deixou de fechar um bloco.
         sessionStore.getState().apply(() => result.state);
-        // `finished` é a resposta do domínio para "era a última produtiva" — a
-        // estação não recalcula qual cena era, só repassa (ENG-651).
-        if (result.kind === 'finished') onBlockClosed?.('segmentacao');
         return;
     }
   };

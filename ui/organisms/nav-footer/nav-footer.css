@@ -19,6 +19,14 @@
   flex: none;
 }
 
+/* o conteúdo próprio da estação à esquerda (ENG-725): encolhe antes do avançar */
+.cds-nav-footer-aside {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .cds-nav-footer-back {
   display: flex;
   align-items: center;

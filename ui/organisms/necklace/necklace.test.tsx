@@ -69,3 +69,44 @@ describe('Necklace — movimento respeita prefers-reduced-motion (§4.5)', () =>
     expect(outside).not.toMatch(/animation|@keyframes/);
   });
 });
+
+/**
+ * A marca de fim de FRASE no colar (ENG-725): a Rever pinta a história inteira e
+ * precisa que a última conta de cada frase seja distinta da última conta de cada
+ * cena. As outras quatro estações não passam `phraseEndBeads` e rendem como hoje.
+ */
+describe('Necklace — fim de frase, distinto do fim de cena (ENG-725)', () => {
+  it('a última conta de uma frase leva a marca de fim de frase; a de uma cena, a de fim de cena — mesmo sendo também o fim da última frase', () => {
+    const { container } = render(
+      <Necklace totalBeads={20} beadSec={0.25} lockedEndBeads={[9]} phraseEndBeads={[3, 9]} />,
+    );
+    const at = (i: number) =>
+      container.querySelector(`.cds-necklace-bead[data-idx="${i}"] .cds-pearl`);
+    expect(at(3)?.getAttribute('data-phrase-end')).toBe('true');
+    expect(at(3)?.getAttribute('data-scene-end')).toBeNull();
+    expect(at(4)?.getAttribute('data-phrase-end')).toBeNull();
+    expect(at(4)?.getAttribute('data-scene-end')).toBeNull();
+    expect(at(9)?.getAttribute('data-scene-end')).toBe('true');
+    expect(at(9)?.getAttribute('data-phrase-end')).toBeNull();
+  });
+});
+
+describe('Necklace — cena fora dos tipos (ENG-725)', () => {
+  it('um segmento fora dos tipos rende contas creme tracejadas até o fim de cena, sem tinta', () => {
+    const { container } = render(
+      <Necklace
+        totalBeads={20}
+        beadSec={0.25}
+        segments={[{ span: { s: 4, e: 9 }, noneFit: true }]}
+        lockedEndBeads={[9]}
+      />,
+    );
+    const at = (i: number) =>
+      container.querySelector<HTMLElement>(`.cds-necklace-bead[data-idx="${i}"] .cds-pearl`);
+    expect(at(6)?.getAttribute('data-none-fit')).toBe('true');
+    expect(at(6)?.style.getPropertyValue('--cds-pearl-base')).toBe('');
+    expect(at(9)?.getAttribute('data-none-fit')).toBe('true');
+    expect(at(9)?.getAttribute('data-scene-end')).toBe('true');
+    expect(at(3)?.getAttribute('data-none-fit')).toBeNull();
+  });
+});

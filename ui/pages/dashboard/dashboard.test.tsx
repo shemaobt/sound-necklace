@@ -126,21 +126,22 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
     ).toBeGreaterThan(0);
     // relance de progresso (§7.2): a capa nomeia ONDE a sessão parou — a recém-criada
     // fica no 1º passo e a concluída no último (a fixture põe 'listen' e 'save').
-    expect(screen.getByRole('img', { name: 'progresso: Ouvir — passo 1 de 4' })).toBeTruthy();
-    expect(screen.getByRole('img', { name: 'progresso: Frases — passo 4 de 4' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'progresso: Ouvir — passo 1 de 5' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'progresso: Rever — passo 5 de 5' })).toBeTruthy();
     // a contagem da casa concorda com a grade
     expect(screen.getByText('2 histórias')).toBeTruthy();
   });
 });
 
 /**
- * ENG-689 — o fluxo acaba nas Frases, mas o servidor (e a fixture que o espelha)
- * continua sabendo dos passos que saíram do produto. Uma história que ele reporta
- * como "conversa" ou "guardar" é, para quem olha a casa, uma história que fechou as
- * Frases: o cartão diz a última estação que existe, e não some com o progresso.
+ * ENG-689/ENG-725 — o fluxo acaba na Rever, mas o servidor (e a fixture que o
+ * espelha) continua sabendo dos passos que saíram do produto. Uma história que ele
+ * reporta como "conversa" ou "guardar" é, para quem olha a casa, uma história que
+ * fechou as Frases e está na Rever: o cartão diz a última estação que existe, e não
+ * some com o progresso.
  */
-describe('Dashboard — o relance de progresso acaba nas Frases (ENG-689)', () => {
-  it('a história que o servidor reporta além das Frases mostra as Frases, no último passo', async () => {
+describe('Dashboard — o relance de progresso acaba na Rever (ENG-725)', () => {
+  it('a história que o servidor reporta além das Frases mostra a Rever, no último passo', async () => {
     const store = new FixtureSessionStore();
     const emConversa = await seedInProgress(store, {
       storyName: 'Passou das frases',
@@ -156,9 +157,7 @@ describe('Dashboard — o relance de progresso acaba nas Frases (ENG-689)', () =
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
     await screen.findAllByText('Passou das frases');
-    expect(screen.getAllByRole('img', { name: 'progresso: Frases — passo 4 de 4' })).toHaveLength(
-      2,
-    );
+    expect(screen.getAllByRole('img', { name: 'progresso: Rever — passo 5 de 5' })).toHaveLength(2);
   });
 });
 

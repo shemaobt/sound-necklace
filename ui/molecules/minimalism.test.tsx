@@ -7,6 +7,7 @@ import { ConfidenceTrio } from './confidence-trio/confidence-trio';
 import { DocumentCard } from './document-card/document-card';
 import { KindCard } from './kind-card/kind-card';
 import { QuestionCard } from './question-card/question-card';
+import { ScenePearl } from './scene-pearl/scene-pearl';
 import { SelectionBand } from './selection-band/selection-band';
 import { StoryProgressBar } from './story-progress-bar/story-progress-bar';
 import { TrustChip } from './trust-chip/trust-chip';
@@ -59,6 +60,8 @@ describe('moléculas não mostram dígitos ao ouvinte (PRD v2 §9.2)', () => {
           title="As decisões de vocês"
           description="Onde cada cena e cada frase começa e termina."
         />
+        <ScenePearl label="Nascimento" fill="high" tint={telha} selected />
+        <ScenePearl label="sem nome nos tipos" fill="none" />
         <StoryProgressBar percent={37} dividers={[8, 22, 34, 60, 92]} />
         <TrustChip>Nada sai do seu navegador.</TrustChip>
       </>,

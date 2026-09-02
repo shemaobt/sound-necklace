@@ -13,6 +13,8 @@ export function Pearl({
   tint,
   size = 26,
   sceneEnd = false,
+  phraseEnd = false,
+  noneFit = false,
   ping = false,
 }: {
   state?: PearlState;
@@ -22,6 +24,18 @@ export function Pearl({
   size?: number;
   /** conta final da cena rende quadrada no fio (§4.3) */
   sceneEnd?: boolean;
+  /**
+   * conta final de uma FRASE (ENG-725): quadrada no tom profundo como o fim de
+   * cena, mas encolhida e sem anel. Na mesma conta o fim de cena ganha — a
+   * marca de frase só sai quando a conta não fecha também a cena.
+   */
+  phraseEnd?: boolean;
+  /**
+   * conta de uma cena FORA DOS TIPOS (ENG-725): creme com aro tracejado, e no fim
+   * de cena fica quadrada mas continua creme, sem tom profundo e sem anel — a
+   * leitura "esta cena não recebeu tipo" vai até a última conta.
+   */
+  noneFit?: boolean;
   /**
    * Pulso curto de escala (referência .pearl.ping). One-shot: quem chama deve
    * voltar a `false` após o pulso — animações css só reiniciam no off→on, e
@@ -35,6 +49,8 @@ export function Pearl({
       aria-hidden="true"
       data-state={state}
       data-scene-end={sceneEnd || undefined}
+      data-phrase-end={(phraseEnd && !sceneEnd) || undefined}
+      data-none-fit={noneFit || undefined}
       data-ping={ping || undefined}
       style={{
         '--cds-pearl-size': `${size}px`,

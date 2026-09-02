@@ -155,10 +155,10 @@ export class ColarApp {
   }
 
   /**
-   * O fim de bloco (ENG-651) sobe nos dois limites do fluxo, por cima da estação
-   * já chegada. No limite da Triagem o primário continua para as Frases; o da
-   * Segmentação FECHA a sessão (ENG-689) e tem saída própria — `finishPhrases`.
-   * O `click` do Playwright já espera o botão aparecer: a barreira é o botão.
+   * O fim de bloco (ENG-651) sobe no limite da Triagem, por cima da estação já
+   * chegada, e o primário continua para as Frases. Fechar a Segmentação não sobe
+   * nada (ENG-725): a Rever é a estação seguinte — ver `finishPhrases` e
+   * `concludeStory`. O `click` do Playwright já espera o botão aparecer.
    */
   async passBlockDone(primary: 'Seguir para as frases'): Promise<void> {
     await this.page.getByRole('button', { name: primary }).click();
@@ -187,20 +187,60 @@ export class ColarApp {
   }
 
   /**
-   * Fecha a última cena produtiva. É o FIM do fluxo (ENG-689): a tela de fim de
-   * bloco sobe e a sua única saída leva ao painel — a sessão fica salva pelo
-   * autosave, e nenhum documento é gerado.
+   * Fecha a última cena produtiva e chega à Rever (ENG-725), a quinta estação: o
+   * panorama da história inteira — uma conta por conta de áudio, uma pérola por
+   * cena. Nada sobe por cima dela; quem fecha a história é `concludeStory`.
    */
   async finishPhrases(): Promise<void> {
     const continuar = this.page.getByRole('button', { name: 'Continuar →' });
     if (await continuar.count()) await continuar.click();
     else await this.page.getByRole('button', { name: 'Já segmentei todas as cenas →' }).click();
     await expect(
-      this.page.getByRole('heading', { name: 'Todas as frases no cordão.' }),
+      this.page.getByRole('heading', { name: 'Olhem a história inteira' }),
+    ).toBeVisible();
+    await expect(this.page.locator('.cds-necklace-bead')).toHaveCount(SCENARIO.totalBeads);
+    await expect(this.page.locator('.cds-scene-pearl')).toHaveCount(SCENARIO.sceneEndBeads.length);
+  }
+
+  /**
+   * Conclui a história na Rever. O cenário tem uma cena fora dos tipos, então o
+   * primeiro toque só avisa e o segundo conclui (com a história limpa um toque
+   * bastaria). Termina com a tela oliva de conclusão à vista.
+   */
+  async concludeStory(): Promise<void> {
+    const conclude = this.page.getByRole('button', { name: 'Concluir a história' });
+    await conclude.click();
+    await expect(this.page.getByText('Toque de novo para concluir.')).toBeVisible();
+    await conclude.click();
+    await expect(
+      this.page.getByRole('heading', { name: 'A história está completa.' }),
     ).toBeVisible();
   }
 
-  /** Da tela de fim de fluxo de volta ao painel — a única saída que ela oferece. */
+  /**
+   * A barra do topo DESLIZA até o valor novo (350 ms, story-progress-bar.css) e a
+   * tela de conclusão aparece num fade (250 ms, block-done.css): o navegador do e2e
+   * NÃO honra a emulação de `prefers-reduced-motion` (`matchMedia` devolve falso),
+   * então uma captura tirada no instante seguinte pega os dois a meio caminho. As
+   * capturas de referência esperam os dois assentarem.
+   */
+  async waitForFullBar(): Promise<void> {
+    await expect
+      .poll(() =>
+        this.page.evaluate(() => {
+          const fill = document.querySelector<HTMLElement>('.cds-story-progress-fill');
+          if (!fill) return false;
+          return getComputedStyle(fill).width === getComputedStyle(fill.parentElement!).width;
+        }),
+      )
+      .toBe(true);
+  }
+
+  async waitForConcludedScreenToSettle(): Promise<void> {
+    await expect(this.page.locator('.cds-block-done')).toHaveCSS('opacity', '1');
+  }
+
+  /** Da tela de conclusão de volta ao painel — a saída primária. */
   async leaveAfterPhrases(): Promise<void> {
     await this.page.getByRole('button', { name: 'Voltar às histórias' }).click();
     await expect(this.page.getByRole('heading', { name: 'Suas histórias' })).toBeVisible();

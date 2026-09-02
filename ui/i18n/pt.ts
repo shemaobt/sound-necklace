@@ -169,16 +169,16 @@ export const pt = {
     returnOk: '✓ Retomado: {{cenas}} cena(s), {{frases}} frase(s).',
   },
   /**
-   * Os rótulos das QUATRO estações que sobraram (ENG-689/ENG-691), numa fonte ÚNICA:
-   * a faixa de progresso do shell e
-   * o relance do dashboard leem daqui. Duplicar isto fazia o shell dizer "Ouvir"
-   * enquanto o dashboard dizia "Listen".
+   * Os rótulos das CINCO estações (ENG-689/ENG-691, e a Rever da ENG-725), numa
+   * fonte ÚNICA: a faixa de progresso do shell e o relance do dashboard leem daqui.
+   * Duplicar isto fazia o shell dizer "Ouvir" enquanto o dashboard dizia "Listen".
    */
   stations: {
     listen: 'Ouvir',
     cut: 'Cortar',
     triage: 'Triagem',
     phrases: 'Frases',
+    review: 'Rever',
   },
   shell: {
     /** Nome acessível da faixa do topo — a etapa atual + a barra (ENG-668). */
@@ -214,29 +214,67 @@ export const pt = {
     stopForToday: 'Guardar por hoje',
   },
   /**
-   * O fim de bloco (ENG-651; protótipo v4 "FIM DE BLOCO"). Nos dois limites
-   * estruturais do fluxo, uma tela marca que um bloco fechou. A manchete nomeia o
-   * bloco que TERMINOU; o primário nomeia o que começa. Tela de quem ouve: nenhum
-   * dígito, nenhuma contagem, nenhum id (§9.2).
+   * O fim de bloco (ENG-651; protótipo v4 "FIM DE BLOCO"). No limite da Triagem
+   * uma tela marca que um bloco fechou; no fim da Rever (ENG-725) ela marca a
+   * história concluída. A manchete nomeia o que TERMINOU; o primário nomeia o que
+   * vem. Cada bloco tem o seu eyebrow e a sua segunda ação. Tela de quem ouve:
+   * nenhum dígito, nenhuma contagem, nenhum id (§9.2).
    */
   blockDone: {
-    eyebrow: 'Um bloco fechado',
-    rest: 'Guardar e descansar',
     triagem: {
+      eyebrow: 'Um bloco fechado',
       headline: 'As cenas todas têm nome.',
       subtitle: 'Agora vem a parte de dentro: as frases de cada cena.',
       primary: 'Seguir para as frases',
+      secondary: 'Guardar e descansar',
     },
-    /* O fim do fluxo (ENG-689): não há mais o que prometer depois das frases, e o
-       apoio não pode continuar apontando para uma conversa que saiu. O que ficou
-       verdadeiro é o que a pessoa acabou de fazer — e que está guardado. */
-    segmentacao: {
-      headline: 'Todas as frases no cordão.',
-      subtitle: 'O trabalho de hoje está inteiro, e já guardado. Podem descansar.',
+    /* A história concluída (ENG-725; desenho docs/design/revisao-tela-nova.html, "Concluída"): a
+       segunda ação não guarda nada — devolve à Rever, com o panorama intacto. */
+    historia: {
+      eyebrow: 'A história inteira',
+      headline: 'A história está completa.',
+      subtitle:
+        'Os cortes ficam guardados aqui, prontos para o próximo passo. Ninguém precisa fazer mais nada hoje.',
       primary: 'Voltar às histórias',
+      secondary: 'Olhar de novo',
     },
   },
-  /** Momento de revisão inferido: uma manchete + um único "Continuar →". */
+  /**
+   * A Rever (ENG-725; desenho docs/design/revisao-tela-nova.html): a quinta e última estação. A
+   * dupla olha a história inteira e ouve tocando; nada se edita. Tela de quem ouve
+   * (§9.2): nenhum dígito, nenhuma contagem, nenhum id. "Nenhum se encaixa" é
+   * resposta, não erro — o rótulo vai por extenso, sem marca de alerta.
+   */
+  rever: {
+    title: 'Olhem a história inteira',
+    instruction: 'Toque numa cena para ouvir. Toque numa conta para ouvir só aquela frase.',
+    noneFit: 'sem nome nos tipos',
+    /* A linha de contexto concorda em número (a contagem escolhe a forma e nunca
+       é mostrada). A frase é a do desenho; o plural é a mesma frase no plural. */
+    hintNone_one: 'Uma cena ficou fora dos tipos — é uma resposta válida, e fica guardada assim.',
+    hintNone_other:
+      'Algumas cenas ficaram fora dos tipos — são respostas válidas, e ficam guardadas assim.',
+    hintNoPhrase_one: 'Uma cena ficou sem frases — fica guardada assim mesmo.',
+    hintNoPhrase_other: 'Algumas cenas ficaram sem frases — ficam guardadas assim mesmo.',
+    hintBoth: '{{none}} e {{phrase}} — {{tail}}',
+    hintBothNone_one: 'Uma cena ficou fora dos tipos',
+    hintBothNone_other: 'Algumas cenas ficaram fora dos tipos',
+    hintBothPhrase_one: 'outra ficou sem frases',
+    hintBothPhrase_other: 'outras ficaram sem frases',
+    hintBothTwo: 'as duas são respostas válidas, e ficam guardadas assim.',
+    hintBothAll: 'todas são respostas válidas, e ficam guardadas assim.',
+    warn: 'Algumas cenas ficaram na dúvida ou sem nome — dá para seguir assim mesmo. Toque de novo para concluir.',
+    conclude: 'Concluir a história',
+    legend: {
+      outside: 'Fora dos tipos',
+      phraseEnd: 'fim de frase',
+      sceneEnd: 'fim de cena',
+    },
+  },
+  /**
+   * Momento de revisão inferido (Cortar/Triagem/Frases já completas): uma manchete
+   * + um único "Continuar →". NÃO é a estação Rever — essa mora em `rever`.
+   */
   review: {
     continue: 'Continuar →',
   },

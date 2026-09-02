@@ -1,0 +1,191 @@
+/* Rever — a história inteira (desenho docs/design/revisao-tela-nova.html): título + instrução
+   serifada, o colar inteiro num prato lavado, a fila de pérolas de cena, a linha
+   de contexto em itálico, a legenda das marcas e o aviso antes de concluir. O
+   botão "Concluir a história" é o Avançar do rodapé do shell. Todo o movimento
+   (só o aparecer do aviso) fica dentro da guarda de prefers-reduced-motion (§4.5). */
+
+.cds-review {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(12px, 2vh, 18px);
+  min-height: calc(100vh - var(--cds-shell-inset, 138px));
+  padding: 16px 1.5rem 3rem;
+  background: var(--cds-ui-bg);
+  color: var(--cds-ui-body-ink);
+  text-align: center;
+}
+
+.cds-review-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.cds-review-title {
+  margin: 0;
+  font-family: var(--cds-font-load-bearing);
+  font-size: clamp(22px, 3vh, 27px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cds-ui-ink);
+}
+
+.cds-review-instruction {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--cds-ui-ink-soft);
+  text-wrap: pretty;
+}
+
+/* o colar inteiro num prato lavado (raio 24, como no desenho); 28 contas por
+   fileira no slot de 29px + o respiro lateral */
+.cds-review-stage {
+  position: relative;
+  width: 100%;
+  max-width: 876px;
+  padding: 22px 32px;
+  border-radius: 24px;
+  background: var(--cds-ui-wash);
+}
+
+/* a fila de pérolas de cena: quebra em linhas quando a história tem muitas cenas */
+.cds-review-scenes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+  max-width: 1040px;
+}
+
+.cds-review-hint {
+  margin: 0;
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--cds-ui-ink-faint);
+  text-wrap: pretty;
+}
+
+/* a legenda das marcas, no rodapé de navegação (desenho): swatches de 14px e
+   palavras curtas, alinhada à esquerda na linha do Concluir; quebra em duas
+   linhas quando o rodapé aperta */
+.cds-review-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cds-chrome-fg, var(--cds-ui-ink-soft));
+  text-align: left;
+}
+
+.cds-review-legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cds-review-legend-gap {
+  width: 1px;
+  height: 18px;
+  background: var(--cds-chrome-hairline, var(--cds-ui-hairline));
+}
+
+.cds-review-swatch {
+  flex: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.cds-review-swatch[data-mark='high'] {
+  background: var(--cds-confidence-filled);
+}
+
+.cds-review-swatch[data-mark='medium'] {
+  background: linear-gradient(
+    90deg,
+    var(--cds-confidence-half) 50%,
+    color-mix(in srgb, var(--cds-confidence-half) 20%, transparent) 50%
+  );
+  border: 1px solid var(--cds-confidence-half);
+}
+
+.cds-review-swatch[data-mark='low'] {
+  border: 2.5px dashed var(--cds-sand);
+}
+
+.cds-review-swatch[data-mark='none'] {
+  border: 1.5px dashed var(--cds-ui-hairline-strong);
+  background: var(--cds-ui-chip);
+}
+
+.cds-review-swatch[data-mark='phrase-end'] {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--cds-ui-ink-soft);
+}
+
+.cds-review-swatch[data-mark='scene-end'] {
+  border-radius: 4px;
+  background: var(--cds-ui-ink-soft);
+  box-shadow:
+    0 0 0 2px var(--cds-ui-bg),
+    0 0 0 3.5px var(--cds-ui-ink-soft);
+}
+
+/* o aviso antes de concluir: uma pílula fixa logo acima do rodapé de navegação
+   (74px, nav-footer.css) mais um respiro, que não rouba o toque de nada (o
+   segundo toque vai no mesmo botão) */
+.cds-review-warn-wrap {
+  position: fixed;
+  right: 0;
+  bottom: calc(74px + 14px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.cds-review-warn {
+  max-width: 760px;
+  margin: 0;
+  padding: 11px 22px;
+  border-radius: 999px;
+  background: var(--cds-warning-bg, #f5e9d2);
+  color: var(--cds-warning-ink, #755c20);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-wrap: pretty;
+  box-shadow: 0 4px 14px rgba(10, 7, 3, 0.12);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cds-review-warn-wrap {
+    animation: cds-review-fade 200ms ease-out both;
+  }
+
+  @keyframes cds-review-fade {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

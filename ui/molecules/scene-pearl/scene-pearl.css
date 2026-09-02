@@ -1,0 +1,105 @@
+/*
+ * Pérola de cena (desenho docs/design/revisao-tela-nova.html: `pearls` + `_confFill`). A cor da
+ * cena entra por custom property, como na pérola do colar; o preenchimento vem
+ * de `data-fill`, e o anel da escolhida de `data-selected`. Nada inline.
+ */
+.cds-scene-pearl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  width: 108px;
+  padding: 8px 4px 6px;
+  border: none;
+  border-radius: 16px;
+  background: none;
+  color: inherit;
+  font-family: var(--cds-font-load-bearing);
+  cursor: pointer;
+  transition: background 160ms;
+}
+
+.cds-scene-pearl:hover {
+  background: var(--cds-ui-chip);
+}
+
+.cds-scene-pearl:focus-visible {
+  outline: 3px solid var(--cds-ui-accent);
+  outline-offset: 3px;
+}
+
+.cds-scene-pearl-disc {
+  flex: none;
+  box-sizing: border-box;
+  width: var(--cds-scene-pearl-size, 42px);
+  height: var(--cds-scene-pearl-size, 42px);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(10, 7, 3, 0.18);
+  transition:
+    transform 150ms,
+    box-shadow 150ms;
+}
+
+/* certeza: a pérola cheia, no gradiente do colar */
+.cds-scene-pearl-disc[data-fill='high'] {
+  background: radial-gradient(
+    circle at 34% 30%,
+    var(--cds-pearl-lit, var(--cds-ui-pearl-lit)) 0%,
+    var(--cds-pearl-base, var(--cds-ui-pearl)) 70%
+  );
+}
+
+/* quase: meia pérola, corte duro a 50% */
+.cds-scene-pearl-disc[data-fill='medium'] {
+  background: linear-gradient(
+    90deg,
+    var(--cds-pearl-base, var(--cds-ui-pearl)) 50%,
+    var(--cds-ui-inset) 50%
+  );
+  border: 2px solid var(--cds-pearl-base, var(--cds-ui-pearl));
+}
+
+/* na dúvida: só o aro, tracejado, na cor da cena */
+.cds-scene-pearl-disc[data-fill='low'] {
+  background: transparent;
+  border: 3px dashed var(--cds-pearl-base, var(--cds-ui-pearl));
+}
+
+/* fora dos tipos: pérola-aveia com aro tracejado — resposta, não erro */
+.cds-scene-pearl-disc[data-fill='none'] {
+  background: radial-gradient(
+    circle at 34% 30%,
+    var(--cds-ui-pearl-lit) 0%,
+    var(--cds-ui-pearl) 70%
+  );
+  border: 1.5px dashed var(--cds-ui-hairline-strong);
+}
+
+.cds-scene-pearl-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--cds-ui-ink-soft);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.cds-scene-pearl[data-fill='none'] .cds-scene-pearl-name {
+  font-family: var(--cds-font-quiet-voice);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--cds-ui-ink-faint);
+}
+
+/* a escolhida: um pouco maior, com anel no acento */
+.cds-scene-pearl[data-selected='true'] .cds-scene-pearl-disc {
+  transform: scale(1.12);
+  box-shadow:
+    0 0 0 3px var(--cds-ui-bg),
+    0 0 0 6px var(--cds-ui-accent);
+}
+
+.cds-scene-pearl[data-selected='true'] .cds-scene-pearl-name {
+  font-weight: 700;
+  color: var(--cds-ui-ink);
+}

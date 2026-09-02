@@ -1,4 +1,3 @@
-import { phrasePalette, type PaletteEntry } from '../../tokens';
 import { sceneLabel } from '../cut/cutting';
 
 /**
@@ -15,8 +14,6 @@ export function phraseLabel(index: number): string {
   return sceneLabel(index).replace('Cena', 'Frase');
 }
 
-/** Cor da frase por posição na cena, cíclica na paleta de frases (§4.2). */
-export function phraseColor(index: number): PaletteEntry {
-  const n = phrasePalette.length;
-  return phrasePalette[((index % n) + n) % n]!;
-}
+/** A cor da frase mora nos tokens desde a ENG-725 (a Rever também a usa); fica
+ *  reexportada daqui para quem já a pedia à Segmentação. */
+export { phraseColor } from '../../tokens';

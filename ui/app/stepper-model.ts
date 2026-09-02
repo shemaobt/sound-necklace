@@ -1,8 +1,8 @@
 import { modeLocks, type SessionState } from '../../domain';
 
 /**
- * Deriva os quatro estados das estações (redesign §5.1) a partir do modo e dos gates
- * puros do domínio (`modeLocks`). Três modos viram quatro estações porque Escuta tem
+ * Deriva os cinco estados das estações (redesign §5.1) a partir do modo e dos gates
+ * puros do domínio (`modeLocks`). Quatro modos viram cinco estações porque Escuta tem
  * dois passos (Ouvir/Cortar). É indicador de progresso: `reachable` espelha os gates
  * (estação travada = inalcançável); `state` é concluída/atual/futura pela posição no
  * fluxo. `key` = diretório em ui/pages (a station-registry resolve por ele).
@@ -11,9 +11,10 @@ import { modeLocks, type SessionState } from '../../domain';
  * shell continua perguntando duas coisas a ela: que estação montar e que nome a
  * faixa de progresso anuncia.
  *
- * O fluxo TERMINA nas Frases (ENG-689). Fechada a última cena produtiva o domínio
- * vai a `concluida` (ENG-691), que NÃO é estação: é o fim das Frases, e por isso
- * mapeia para o mesmo índice que `segmentacao`.
+ * O fluxo TERMINA na Rever (ENG-725). Fechada a última cena produtiva o domínio
+ * vai a `concluida` (ENG-691) — para o domínio isso é o fim, não uma estação; para
+ * a vista é exatamente onde a Rever entra: a dupla olha a história inteira, ouve, e
+ * só então conclui. `modeLocks` não tem chave para ela: alcançável é o próprio modo.
  */
 
 /**
@@ -35,6 +36,7 @@ const STATIONS: readonly { key: string; labelKey: string }[] = [
   { key: 'cut', labelKey: 'stations.cut' },
   { key: 'triage', labelKey: 'stations.triage' },
   { key: 'phrases', labelKey: 'stations.phrases' },
+  { key: 'review', labelKey: 'stations.review' },
 ];
 
 function currentIndex(state: SessionState): number {
@@ -44,14 +46,21 @@ function currentIndex(state: SessionState): number {
     case 'triagem':
       return 2;
     case 'segmentacao':
-    case 'concluida':
       return 3;
+    case 'concluida':
+      return 4;
   }
 }
 
 export function stepperStations(state: SessionState): StepperStationView[] {
   const locks = modeLocks(state);
-  const reachable = [true, state.whole.confirmed, locks.triagem, locks.segmentacao];
+  const reachable = [
+    true,
+    state.whole.confirmed,
+    locks.triagem,
+    locks.segmentacao,
+    state.mode === 'concluida',
+  ];
   const ci = currentIndex(state);
   return STATIONS.map((def, i) => ({
     key: def.key,

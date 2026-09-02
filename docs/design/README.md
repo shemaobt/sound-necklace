@@ -24,6 +24,7 @@ contracts still come from PRD v2 + `docs/reference/index.html`.
 | `trava-granularidade.html` | The granularity-lock dialog (ENG-363) |
 | `pacote-melhorias-ui.html` | **August 2026 delivery** — copy-ready CSS/JS plus a marked-up template per item, from the first walkthrough of the built app (ENG-386…ENG-393) |
 | `pacote-melhorias-ui.md` | The integration guide for the above: exact PT-BR copy, accessibility notes, QA checklist |
+| `revisao-tela-nova.html` | **September 2026** — the **Rever** station (ENG-725): the whole-story panorama (necklace with phrase-end and scene-end marks, scene pearls with the confidence as the fill, the context line), the two-tap "Concluir a história", and the concluded olive screen with its two actions. Read `renderVals()` for the exact colours and shapes; the chosen-scene panel it still computes (`strandRows`, `selName`…) is NOT drawn and was not built |
 
 ## Viewing
 

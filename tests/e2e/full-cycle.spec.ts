@@ -51,7 +51,11 @@ test('ciclo completo em dois assentos, sem perda de trabalho', async ({ page }) 
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
 
-  // o fim do fluxo tem UMA saída, e ela leva ao painel — nenhuma outra estação
+  // ——— a Rever (ENG-725): o panorama, e concluir é um ato consciente ———
+  // o cenário tem uma cena fora dos tipos: o primeiro toque avisa, o segundo conclui
+  await app.concludeStory();
+
+  // da tela de conclusão ao painel — nenhuma outra estação
   await app.leaveAfterPhrases();
 
   // Zero-perda de ponta a ponta: o estado FINAL (após o reload + todo o trabalho do
