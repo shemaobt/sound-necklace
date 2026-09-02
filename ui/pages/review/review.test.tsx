@@ -504,3 +504,92 @@ describe('Rever — o que ela não faz', () => {
     noDigits(within(document.body).getByText(CONCLUDE).closest('footer')!);
   });
 });
+
+/**
+ * ENG-726 — a gaveta de cobertura cresce na Rever. É a ÚNICA parte da tela onde
+ * dígito é permitido (§9.2 é regra do ouvinte; a gaveta é só da facilitadora,
+ * nasce fechada e o próprio cabeçalho dela estampa isso). O teste mais
+ * importante do arquivo inteiro é o primeiro: fechada, a gaveta não pode vazar
+ * NENHUM dígito para a tela do ouvinte — se vazar, a fatia está errada mesmo
+ * com tudo verde.
+ */
+describe('Rever — a gaveta de cobertura (ENG-726, só facilitadora)', () => {
+  const DRAWER_TRIGGER = 'Cobertura (facilitadora)';
+
+  function openDrawer(): HTMLElement {
+    fireEvent.click(screen.getByRole('button', { name: DRAWER_TRIGGER }));
+    return screen.getByRole('dialog');
+  }
+
+  function drawerRow(dialog: HTMLElement, name: string): HTMLElement {
+    const row = Array.from(
+      dialog.querySelectorAll<HTMLElement>('.cds-coverage-drawer-scene-row'),
+    ).find((r) => r.textContent?.includes(name));
+    if (!row) throw new Error(`linha "${name}" não está na gaveta`);
+    return row;
+  }
+
+  it('a gaveta nasce fechada, e fechada a Rever continua sem nenhum dígito', () => {
+    load(doubtful());
+    renderStation(<Review />);
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    // document.body, não o `container` do render: o painel da gaveta é um
+    // portal do Radix Dialog e monta FORA do container quando aberto — checar
+    // só o container não provaria nada sobre um vazamento ali. Fechado (o
+    // caso deste teste), o Radix não monta o portal nenhum, e é isso que a
+    // asserção prova de verdade: procurar no documento inteiro e achar nada.
+    expect(document.body.textContent ?? '').not.toMatch(/\d/);
+    for (const el of document.body.querySelectorAll('[aria-label]')) {
+      expect(el.getAttribute('aria-label')).not.toMatch(/\d/);
+    }
+  });
+
+  it('o cabeçalho da gaveta aberta diz que ela é só da facilitadora', () => {
+    load(doubtful());
+    renderStation(<Review />);
+
+    const dialog = openDrawer();
+
+    expect(dialog.textContent).toContain('Cobertura · só facilitadora');
+  });
+
+  it('tocar numa linha da lista cena a cena seleciona e toca aquela cena no panorama', async () => {
+    const { engine, player } = await makePlayer();
+    const heads: (number | null)[] = [];
+    player.onHead((h) => heads.push(h));
+    load(doubtful());
+    renderStation(<Review player={player} />);
+
+    const dialog = openDrawer();
+    fireEvent.click(drawerRow(dialog, 'Respiga'));
+    const played = runOut(engine, heads);
+
+    // PT2 (Respiga) cobre 10…19 inteiro — clicar a linha toca a cena toda,
+    // como o clique na pérola, e não só a primeira frase
+    expect(new Set(played)).toEqual(new Set([10, 11, 12, 13, 14, 15, 16, 17, 18, 19]));
+  });
+
+  it('a linha da cena selecionada se distingue das outras', () => {
+    load(doubtful());
+    renderStation(<Review />);
+    const dialog = openDrawer();
+
+    fireEvent.click(drawerRow(dialog, 'Respiga'));
+
+    expect(drawerRow(dialog, 'Respiga').getAttribute('data-selected')).toBe('true');
+    expect(drawerRow(dialog, 'Nascimento').getAttribute('data-selected')).toBeNull();
+  });
+
+  it('nada na gaveta altera o estado da sessão: abrir, tocar uma linha e fechar', () => {
+    load(doubtful());
+    const before = sessionStore.getState().session;
+    renderStation(<Review />);
+
+    const dialog = openDrawer();
+    fireEvent.click(drawerRow(dialog, 'Respiga'));
+    fireEvent.click(dialog.querySelector('[aria-label="Fechar"]')!);
+
+    expect(sessionStore.getState().session).toBe(before);
+  });
+});
