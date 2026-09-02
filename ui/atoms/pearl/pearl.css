@@ -52,9 +52,20 @@
     0 1px 4px rgba(10, 7, 3, 0.28);
 }
 
-/* cabeça sobre a conta final: mantém a forma quadrada e o tom profundo,
-   mas recupera a escala e o anel de destaque da cabeça */
-.cds-pearl[data-state='head'][data-scene-end='true'] {
+/* fim de frase (ENG-725): quadrada no tom profundo como o fim de cena, mas
+   ENCOLHIDA e SEM anel — é o anel e o tamanho que separam "acabou uma frase" de
+   "acabou uma cena". O átomo garante que as duas marcas nunca coexistem. */
+.cds-pearl[data-phrase-end='true'] {
+  border-radius: 26%;
+  background: var(--cds-pearl-deep, var(--cds-olive));
+  transform: scale(0.86);
+  box-shadow: 0 1px 3px rgba(10, 7, 3, 0.22);
+}
+
+/* cabeça sobre a conta final (de cena ou de frase): mantém a forma quadrada e o
+   tom profundo, mas recupera a escala e o anel de destaque da cabeça */
+.cds-pearl[data-state='head'][data-scene-end='true'],
+.cds-pearl[data-state='head'][data-phrase-end='true'] {
   transform: scale(1.18);
   box-shadow:
     0 0 0 2.5px rgba(246, 245, 235, 0.95),

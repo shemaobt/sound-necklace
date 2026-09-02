@@ -96,3 +96,37 @@ describe('Pearl — a cabeça sobre a conta final mantém o destaque (cascade)',
     expect(rule?.body).toContain('box-shadow');
   });
 });
+
+/**
+ * O fim de FRASE (ENG-725): o desenho da Rever distingue "acabou uma frase" de
+ * "acabou uma cena" — as duas são quadradas no tom profundo, mas a de frase é
+ * encolhida e sem anel. Na mesma conta, o fim de cena ganha.
+ */
+describe('Pearl — fim de frase, distinto do fim de cena (ENG-725)', () => {
+  it('marca fim de frase como variante própria; na mesma conta, o fim de cena ganha', () => {
+    const { container, rerender } = render(<Pearl state="lit" tint={telha} phraseEnd />);
+    const pearl = getPearl(container);
+    expect(pearl.getAttribute('data-phrase-end')).toBe('true');
+    expect(pearl.hasAttribute('data-scene-end')).toBe(false);
+    expect(pearl.getAttribute('data-state')).toBe('lit');
+
+    rerender(<Pearl state="lit" tint={telha} sceneEnd phraseEnd />);
+    expect(pearl.getAttribute('data-scene-end')).toBe('true');
+    expect(pearl.hasAttribute('data-phrase-end')).toBe(false);
+  });
+
+  it('o css encolhe o fim de frase e não lhe dá anel; o fim de cena tem anel', () => {
+    const rules = parseRules(pearlCss);
+    const last = (r: { selector: string }) => r.selector.split('\n').pop()?.trim() ?? '';
+    const phrase = rules.find((r) => last(r) === ".cds-pearl[data-phrase-end='true']");
+    const scene = rules.find((r) => last(r) === ".cds-pearl[data-scene-end='true']");
+    expect(phrase, 'regra do fim de frase').toBeDefined();
+    expect(scene, 'regra do fim de cena').toBeDefined();
+    expect(phrase?.body).toContain('border-radius');
+    expect(phrase?.body).toMatch(/scale\(0\.\d+\)/);
+    // anel = uma sombra de espalhamento sem desfoque (`0 0 0 Npx cor`)
+    const ring = /0 0 0 [\d.]+px/;
+    expect(phrase?.body ?? '').not.toMatch(ring);
+    expect(scene?.body ?? '').toMatch(ring);
+  });
+});

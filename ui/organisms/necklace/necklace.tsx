@@ -27,7 +27,8 @@ export interface NecklaceSegment {
 /**
  * Contrato de props do colar. Para a iluminação de playback rodar a 60fps SEM
  * re-render (o campo de contas é memoizado sem `playbackHead`), as props
- * ESTRUTURAIS — `segments`, `lockedEndBeads`, `selection`, `window`, `size` —
+ * ESTRUTURAIS — `segments`, `lockedEndBeads`, `phraseEndBeads`, `selection`,
+ * `window`, `size` —
  * devem ser referencialmente estáveis entre frames: a página que dirige o
  * `playbackHead` não deve recriar esses valores inline a cada frame, ou o campo
  * recomputa e o ganho se perde.
@@ -39,6 +40,10 @@ export interface NecklaceProps {
   segments?: NecklaceSegment[];
   /** índices de conta que terminam cenas travadas → rendem quadradas (§4.3) */
   lockedEndBeads?: number[];
+  /** índices de conta que terminam FRASES travadas → quadradas encolhidas, sem
+   *  anel (ENG-725). Na mesma conta o fim de cena ganha. As estações que não o
+   *  passam rendem exatamente como antes. */
+  phraseEndBeads?: number[];
   selection?: Span | null;
   pendingStart?: number | null;
   /** span da cena ativa (Segmentação): abre a janela cena ± margem, dim fora, banda tracejada */
@@ -82,6 +87,7 @@ interface BeadDescriptor {
   state: PearlState;
   tint?: PaletteEntry;
   sceneEnd: boolean;
+  phraseEnd: boolean;
   selEdge: boolean;
 }
 
@@ -100,6 +106,7 @@ function computeField(
   size: Size,
   segments: NecklaceSegment[],
   lockedEndBeads: number[],
+  phraseEndBeads: number[],
   selection: Span | null,
   window: Span | null,
   windowMargin: number | undefined,
@@ -114,6 +121,7 @@ function computeField(
     for (let i = seg.span.s; i <= seg.span.e; i++) colorMap.set(i, seg.tint);
   }
   const endSet = new Set(lockedEndBeads);
+  const phraseEndSet = new Set(phraseEndBeads);
 
   const beads: BeadDescriptor[] = [];
   for (let i = winS; i <= winE; i++) {
@@ -126,6 +134,7 @@ function computeField(
       state: dim ? 'dim' : 'unplayed',
       tint: colorMap.get(i),
       sceneEnd: endSet.has(i),
+      phraseEnd: phraseEndSet.has(i),
       selEdge: selection !== null && (i === selection.s || i === selection.e),
     });
   }
@@ -220,7 +229,13 @@ const BeadField = memo(function BeadField({ field, size }: { field: Field; size:
           data-sel-edge={b.selEdge || undefined}
           style={{ left: `${b.left}px`, top: `${b.top}px` }}
         >
-          <Pearl state={b.state} tint={b.tint} size={size.bead} sceneEnd={b.sceneEnd} />
+          <Pearl
+            state={b.state}
+            tint={b.tint}
+            size={size.bead}
+            sceneEnd={b.sceneEnd}
+            phraseEnd={b.phraseEnd}
+          />
         </span>
       ))}
     </>
@@ -240,6 +255,7 @@ export function Necklace(props: NecklaceProps) {
     beadSec,
     segments,
     lockedEndBeads,
+    phraseEndBeads,
     selection = null,
     window = null,
     windowMargin,
@@ -269,6 +285,7 @@ export function Necklace(props: NecklaceProps) {
         size,
         segments ?? [],
         lockedEndBeads ?? [],
+        phraseEndBeads ?? [],
         effectiveSelection,
         window,
         windowMargin,
@@ -281,6 +298,7 @@ export function Necklace(props: NecklaceProps) {
       size,
       segments,
       lockedEndBeads,
+      phraseEndBeads,
       effectiveSelection,
       window,
       windowMargin,

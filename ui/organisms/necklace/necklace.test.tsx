@@ -69,3 +69,24 @@ describe('Necklace — movimento respeita prefers-reduced-motion (§4.5)', () =>
     expect(outside).not.toMatch(/animation|@keyframes/);
   });
 });
+
+/**
+ * A marca de fim de FRASE no colar (ENG-725): a Rever pinta a história inteira e
+ * precisa que a última conta de cada frase seja distinta da última conta de cada
+ * cena. As outras quatro estações não passam `phraseEndBeads` e rendem como hoje.
+ */
+describe('Necklace — fim de frase, distinto do fim de cena (ENG-725)', () => {
+  it('a última conta de uma frase leva a marca de fim de frase; a de uma cena, a de fim de cena — mesmo sendo também o fim da última frase', () => {
+    const { container } = render(
+      <Necklace totalBeads={20} beadSec={0.25} lockedEndBeads={[9]} phraseEndBeads={[3, 9]} />,
+    );
+    const at = (i: number) =>
+      container.querySelector(`.cds-necklace-bead[data-idx="${i}"] .cds-pearl`);
+    expect(at(3)?.getAttribute('data-phrase-end')).toBe('true');
+    expect(at(3)?.getAttribute('data-scene-end')).toBeNull();
+    expect(at(4)?.getAttribute('data-phrase-end')).toBeNull();
+    expect(at(4)?.getAttribute('data-scene-end')).toBeNull();
+    expect(at(9)?.getAttribute('data-scene-end')).toBe('true');
+    expect(at(9)?.getAttribute('data-phrase-end')).toBeNull();
+  });
+});
