@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/shema-design-system-019e212c-f4fe-79fa-a411-538fe69dfa47/colors_and_type.css">
+<script src="_ds/shema-design-system-019e212c-f4fe-79fa-a411-538fe69dfa47/_ds_bundle.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+@font-face{font-family:'Montserrat';src:url('assets/fonts/Montserrat-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:'Montserrat';src:url('assets/fonts/Montserrat-Medium.ttf') format('truetype');font-weight:500;font-display:swap}
+@font-face{font-family:'Montserrat';src:url('assets/fonts/Montserrat-SemiBold.ttf') format('truetype');font-weight:600;font-display:swap}
+@font-face{font-family:'Montserrat';src:url('assets/fonts/Montserrat-700.ttf') format('truetype');font-weight:700;font-display:swap}
+@font-face{font-family:'Merriweather';src:url('assets/fonts/Merriweather-Light.ttf') format('truetype');font-weight:300;font-display:swap}
+@font-face{font-family:'Merriweather';src:url('assets/fonts/Merriweather-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:'Merriweather';src:url('assets/fonts/Merriweather-Italic.ttf') format('truetype');font-weight:400;font-style:italic;font-display:swap}
+html,body{margin:0;padding:0;background:#EDEBE0;font-family:'Montserrat',system-ui,sans-serif}
+*{box-sizing:border-box}
+button{font-family:inherit;cursor:pointer;border:none;background:none;margin:0;color:inherit}
+button:focus-visible{outline:3px solid #BE4A01;outline-offset:3px;border-radius:6px}
+a{color:#BE4A01}a:hover{color:#8F3701;text-decoration:underline}
+@keyframes csFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes csPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.25);opacity:.75}}
+@media (prefers-reduced-motion: reduce){[data-cs-anim]{animation:none !important}}
+[data-cs-root],[data-cs-theme="claro"]{--bg:#F6F5EB;--card:#FFFFFF;--chip:#ECEADF;--ink:#0A0703;--soft:#5A5A3E;--faint:#8A8970;--hair:rgba(63,62,32,.14);--hair2:rgba(63,62,32,.32);--ak:#BE4A01;--akh:#8F3701;--ok:#585D31;--okbg:rgba(119,125,69,.14);--wash:rgba(255,255,255,.5);--hdr:rgba(255,255,255,.5);--band:rgba(255,255,255,.28);--trk:rgba(63,62,32,.12);--ebg:rgba(143,55,1,.1);--efg:#8F3701;--warnbg:#F5E9D2;--warnfg:#755C20}
+[data-cs-theme="escuro"]{--bg:#1C1B0E;--card:#2B2A17;--chip:rgba(246,245,235,.09);--ink:#F1EBDB;--soft:rgba(241,235,219,.78);--faint:rgba(241,235,219,.55);--hair:rgba(246,245,235,.14);--hair2:rgba(246,245,235,.34);--ak:#E8813E;--akh:#F0B489;--ok:#CFD6A6;--okbg:rgba(119,125,69,.24);--wash:rgba(246,245,235,.04);--hdr:rgba(10,7,3,.25);--band:rgba(10,7,3,.15);--trk:rgba(246,245,235,.14);--ebg:rgba(232,129,62,.15);--efg:#F0B489;--warnbg:rgba(196,169,106,.22);--warnfg:#E0CA97}
+[data-cs-scroll]{scrollbar-width:thin;scrollbar-color:rgba(138,137,112,.5) transparent}
+</style>
+</helmet>
+
+<div data-cs-root data-cs-theme="{{ theme }}" data-screen-label="Rever" style="width:100vw;height:100vh;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;display:flex;flex-direction:column;position:relative">
+
+  <!-- header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 40px;height:64px;flex:none;background:var(--hdr)">
+    <div style="display:flex;align-items:center;gap:14px">
+      <sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}"><img src="assets/icon-telha.svg" alt="Shemá" style="height:26px;opacity:.92"></sc-if>
+      <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}"><img src="assets/icon-branco.svg" alt="Shemá" style="height:26px;opacity:.92"></sc-if>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)">Colar de Sons</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div title="Suas decisões são guardadas sozinhas neste computador — pode fechar e voltar quando quiser." style="display:flex;align-items:center;gap:8px;height:34px;padding:0 15px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--ok);background:var(--okbg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Tudo salvo — pode sair e voltar</div>
+      <button onClick="{{ toggleSound }}" aria-label="Som" style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink);background:var(--chip)">
+        <sc-if value="{{ sound }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor" stroke="none"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path></svg></sc-if>
+        <sc-if value="{{ soundOff }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor" stroke="none"></path><line x1="17" y1="9" x2="22" y2="15"></line><line x1="22" y1="9" x2="17" y2="15"></line></svg></sc-if>
+      </button>
+      <button onClick="{{ toggleTheme }}" aria-label="Tema claro ou escuro" style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink);background:var(--chip)">
+        <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M4.9 4.9l1.4 1.4"></path><path d="M17.7 17.7l1.4 1.4"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="M4.9 19.1l1.4-1.4"></path><path d="M17.7 6.3l1.4-1.4"></path></svg></sc-if>
+        <sc-if value="{{ isLight }}" hint-placeholder-val="{{ true }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></sc-if>
+      </button>
+    </div>
+  </div>
+
+  <!-- barra única · Ouvir · Cortar · Triagem · Frases · Rever -->
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:46px;flex:none;border-bottom:1px solid var(--hair);background:var(--band)">
+    <div style="font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)">Rever</div>
+    <div style="width:480px;max-width:56vw">
+      <div style="position:relative;height:8px;border-radius:999px;background:var(--trk)">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:100%;border-radius:999px;background:var(--ak)"></div>
+        <div style="position:absolute;left:10%;top:2px;bottom:2px;width:2px;border-radius:2px;background:rgba(246,245,235,.45)"></div>
+        <div style="position:absolute;left:32%;top:2px;bottom:2px;width:2px;border-radius:2px;background:rgba(246,245,235,.45)"></div>
+        <div style="position:absolute;left:52%;top:2px;bottom:2px;width:2px;border-radius:2px;background:rgba(246,245,235,.45)"></div>
+        <div style="position:absolute;left:88%;top:2px;bottom:2px;width:2px;border-radius:2px;background:rgba(246,245,235,.45)"></div>
+        <div style="position:absolute;right:-3px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:#FFFFFF;box-shadow:0 0 0 3px var(--ak)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- stage -->
+  <div style="flex:1;min-height:0;position:relative;display:flex;flex-direction:column">
+    <div data-cs-scroll style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:16px;padding:16px 56px 20px">
+
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;text-align:center">
+        <div style="font-size:clamp(22px,3vh,27px);font-weight:700;letter-spacing:-.01em;color:var(--ink)">Olhem a história inteira</div>
+        <div style="font-family:Merriweather,Georgia,serif;font-style:italic;font-size:15px;color:var(--soft);text-wrap:pretty">Toque numa cena para ouvir. Toque numa conta para ouvir só aquela frase.</div>
+      </div>
+
+      <!-- o colar -->
+      <div style="flex:none;border-radius:24px;background:var(--wash);padding:22px 32px;position:relative">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+          <sc-for list="{{ rows }}" as="row" hint-placeholder-count="9">
+            <div style="{{ row.rowStyle }}"><sc-for list="{{ row.beads }}" as="b" hint-placeholder-count="28"><button aria-label="conta" onClick="{{ b.onClick }}" style="{{ b.s }}"></button></sc-for></div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- as cenas -->
+      <div style="flex:none;display:flex;align-items:flex-start;justify-content:center;gap:10px;flex-wrap:wrap;max-width:1040px">
+        <sc-for list="{{ pearls }}" as="p" hint-placeholder-count="8">
+          <button onClick="{{ p.onClick }}" title="{{ p.name }}" style="width:108px;display:flex;flex-direction:column;align-items:center;gap:9px;padding:8px 4px 6px;border-radius:16px;transition:background .16s" style-hover="background:var(--chip)">
+            <div style="{{ p.s }}"></div>
+            <div style="{{ p.nameStyle }}">{{ p.name }}</div>
+          </button>
+        </sc-for>
+      </div>
+      <div style="font-family:Merriweather,Georgia,serif;font-style:italic;font-size:13px;color:var(--faint);text-align:center;text-wrap:pretty">{{ strandHint }}</div>
+    </div>
+
+    <!-- aviso antes de concluir -->
+    <sc-if value="{{ warn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;pointer-events:none;animation:csFade .2s ease-out">
+      <div style="background:var(--warnbg);color:var(--warnfg);font-size:13.5px;font-weight:600;padding:11px 22px;border-radius:999px;box-shadow:0 4px 14px rgba(10,7,3,.12);text-align:center;max-width:760px;text-wrap:pretty">Algumas cenas ficaram na dúvida ou sem nome — dá para seguir assim mesmo. Toque de novo para concluir.</div>
+    </div>
+    </sc-if>
+
+    <!-- gaveta · só facilitadora -->
+    <button onClick="{{ toggleDrawer }}" aria-label="Cobertura (facilitadora)" style="position:absolute;right:0;top:40%;background:#3F3E20;color:#F6F5EB;border-radius:12px 0 0 12px;padding:14px 9px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:15">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F6F5EB" stroke-width="2" stroke-linecap="round"><path d="M3 20h18"></path><path d="M6 20V9"></path><path d="M12 20V4"></path><path d="M18 20v-8"></path></svg>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;writing-mode:vertical-rl">cobertura</div>
+    </button>
+    <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div data-cs-scroll style="position:absolute;right:0;top:0;bottom:0;width:360px;background:#3F3E20;color:#F6F5EB;box-shadow:-16px 0 40px -8px rgba(10,7,3,.3);padding:24px 26px;display:flex;flex-direction:column;gap:14px;z-index:20;overflow-y:auto;animation:csFade .22s ease-out">
+      <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(246,245,235,.6)">Cobertura · só facilitadora</div><button onClick="{{ toggleDrawer }}" aria-label="fechar" style="color:#F6F5EB;font-size:20px;width:30px;height:30px;border-radius:50%" style-hover="background:rgba(246,245,235,.1)">×</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:rgba(246,245,235,.08);border-radius:10px;padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(246,245,235,.5)">Cenas</div><div style="font-size:20px;font-weight:700;font-variant-numeric:tabular-nums">{{ dScenes }}</div><div style="font-size:11.5px;color:rgba(246,245,235,.6)">{{ dScenesSub }}</div></div>
+        <div style="background:rgba(246,245,235,.08);border-radius:10px;padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(246,245,235,.5)">Frases</div><div style="font-size:20px;font-weight:700;font-variant-numeric:tabular-nums">{{ dPhrases }}</div><div style="font-size:11.5px;color:rgba(246,245,235,.6)">{{ dPhrasesSub }}</div></div>
+        <div style="background:rgba(246,245,235,.08);border-radius:10px;padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(246,245,235,.5)">Duração</div><div style="font-size:20px;font-weight:700;font-variant-numeric:tabular-nums">{{ dDur }}</div><div style="font-size:11.5px;color:rgba(246,245,235,.6)">contas de 5 s</div></div>
+        <div style="background:rgba(246,245,235,.08);border-radius:10px;padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(246,245,235,.5)">Confiança</div><div style="font-size:12.5px;line-height:1.5;margin-top:4px;font-variant-numeric:tabular-nums">{{ dConf }}</div></div>
+      </div>
+      <div style="font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(246,245,235,.6);margin-top:4px">Cena a cena</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <sc-for list="{{ dRows }}" as="r" hint-placeholder-count="8"><button onClick="{{ r.onClick }}" style="{{ r.s }}"><div style="{{ r.dot }}"></div><div style="flex:1;text-align:left;font-size:12px;line-height:1.35">{{ r.label }}</div><div style="font-size:11.5px;font-family:ui-monospace,Menlo,monospace;color:rgba(246,245,235,.7);white-space:nowrap">{{ r.meta }}</div></button></sc-for>
+      </div>
+      <div style="font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(246,245,235,.6);margin-top:4px">Contagem por tipo</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <sc-for list="{{ covRows }}" as="c" hint-placeholder-count="6"><div style="display:flex;justify-content:space-between;font-size:12px;font-family:ui-monospace,Menlo,monospace;background:rgba(246,245,235,.08);border-radius:8px;padding:7px 12px"><span>{{ c.en }}</span><span>{{ c.count }}</span></div></sc-for>
+      </div>
+      <div style="font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#C2A55A;margin-top:4px">Candidatos a ausência (raras em aberto)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ rareOpen }}" as="r" hint-placeholder-count="4"><div style="font-size:11px;background:rgba(140,90,116,.3);border:1px solid rgba(180,132,157,.4);border-radius:999px;padding:4px 10px">{{ r }}</div></sc-for></div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- footer -->
+  <div style="display:flex;align-items:center;gap:20px;padding:0 40px;height:74px;flex:none;border-top:1px solid var(--hair);background:var(--hdr)">
+    <div style="display:flex;align-items:center;gap:16px;font-size:12px;font-weight:600;color:var(--soft);flex:none">
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:50%;background:#777D45"></div>Certeza</div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:50%;background:linear-gradient(90deg,#9A7B2E 50%,rgba(154,123,46,.2) 50%);border:1px solid #9A7B2E"></div>Quase</div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:50%;border:2.5px dashed #A9A585"></div>Na dúvida</div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:50%;border:1.5px dashed var(--hair2);background:var(--chip)"></div>Fora dos tipos</div>
+      <div style="width:1px;height:18px;background:var(--hair)"></div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:12px;height:12px;border-radius:3px;background:var(--soft)"></div>fim de frase</div>
+      <div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:4px;background:var(--soft);box-shadow:0 0 0 2px var(--bg), 0 0 0 3.5px var(--soft)"></div>fim de cena</div>
+    </div>
+    <div style="flex:1;min-width:0;text-align:center;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Rever · a história inteira</div>
+    <button onClick="{{ conclude }}" style="display:flex;align-items:center;gap:11px;background:#BE4A01;color:#F6F5EB;font-weight:700;font-size:15px;letter-spacing:.03em;padding:13px 28px;border-radius:999px;box-shadow:0 4px 14px rgba(190,74,1,.28);transition:background .16s;flex:none" style-hover="background:#8F3701">Concluir a história<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F6F5EB" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></button>
+  </div>
+
+  <!-- concluída (tela cheia oliva) -->
+  <sc-if value="{{ concluded }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Concluída" style="position:absolute;inset:0;z-index:56;background:#3F3E20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 80px;overflow:hidden;animation:csFade .25s ease-out">
+    <img src="assets/icon-branco.svg" alt="" style="position:absolute;right:-90px;bottom:-100px;height:340px;opacity:.05;pointer-events:none">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:rgba(246,245,235,.5)">A história inteira</div>
+    <div style="display:flex;align-items:center;gap:16px"><sc-for list="{{ concBeads }}" as="b" hint-placeholder-count="8"><div style="{{ b.s }}"></div></sc-for></div>
+    <div style="font-family:Merriweather,Georgia,serif;font-style:italic;font-size:32px;color:#F6F5EB;text-align:center">A história está completa.</div>
+    <div style="font-size:14px;color:rgba(246,245,235,.6);text-align:center;max-width:52ch;text-wrap:pretty">Os cortes ficam guardados aqui, prontos para o próximo passo. Ninguém precisa fazer mais nada hoje.</div>
+    <div style="display:flex;gap:14px;margin-top:8px">
+      <button onClick="{{ goHome }}" style="background:#F6F5EB;color:#3F3E20;padding:14px 28px;border-radius:999px;font-weight:700;font-size:15px;transition:opacity .22s" style-hover="opacity:.88">Voltar às histórias</button>
+      <button onClick="{{ backToReview }}" style="border:1.5px solid rgba(246,245,235,.4);color:#F6F5EB;padding:14px 28px;border-radius:999px;font-weight:700;font-size:15px;transition:all .22s" style-hover="border-color:#F6F5EB">Olhar de novo</button>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- espera -->
+  <sc-if value="{{ ended }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Espera" style="position:absolute;inset:0;z-index:70;background:#3F3E20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;overflow:hidden;animation:csFade .25s ease-out">
+    <img src="assets/icon-branco.svg" alt="" style="height:64px;opacity:.9">
+    <div style="font-family:Merriweather,Georgia,serif;font-style:italic;font-size:26px;color:#F1EBDB;text-align:center">Até a próxima história.</div>
+    <div style="font-size:13.5px;color:rgba(246,245,235,.6)">Tudo ficou salvo neste computador.</div>
+    <button onClick="{{ restart }}" style="margin-top:14px;font-family:Merriweather,Georgia,serif;font-style:italic;font-size:13px;color:rgba(246,245,235,.55);text-decoration:underline" style-hover="color:#F6F5EB">recomeçar a demonstração</button>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900},&quot;cenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;com dúvidas&quot;,&quot;história limpa&quot;],&quot;default&quot;:&quot;com dúvidas&quot;,&quot;tsType&quot;:&quot;'com dúvidas' | 'história limpa'&quot;,&quot;section&quot;:&quot;Dados de exemplo&quot;},&quot;tema&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;claro&quot;,&quot;escuro&quot;],&quot;default&quot;:&quot;claro&quot;,&quot;tsType&quot;:&quot;'claro' | 'escuro'&quot;,&quot;section&quot;:&quot;Aparência&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.N=252; this.BEAD_SEC=5; this.MPB=70;
+    this.PAL=[
+      {b:'#BE4A01',l:'#E8813E',d:'#8F3701'},{b:'#9A7B2E',l:'#C2A55A',d:'#6E5A22'},
+      {b:'#4E7A6A',l:'#7BA595',d:'#3A5C4F'},{b:'#5E6B8C',l:'#8B97B5',d:'#46506A'},
+      {b:'#8C5A74',l:'#B4849D',d:'#694257'},{b:'#777D45',l:'#9EA46B',d:'#585D31'},
+      {b:'#89AAA3',l:'#B2CCC6',d:'#5F827B'},{b:'#A85D3E',l:'#CE8767',d:'#7E442C'}
+    ];
+    this.PALF=[
+      {b:'#D98A54',l:'#F0B489',d:'#B06A3A'},{b:'#C4A96A',l:'#E0CA97',d:'#9C844D'},
+      {b:'#86AC9C',l:'#AECFC2',d:'#688B7D'},{b:'#93A0BE',l:'#BBC5DC',d:'#71809F'},
+      {b:'#B98FA8',l:'#D8B5C9',d:'#966F87'},{b:'#A3A878',l:'#C4C8A0',d:'#7F845B'}
+    ];
+    this.CREAM={b:'#E7E3D3',l:'#FBFAF3',d:'#C9C4AE'};
+    this.FAMILIES=[
+      {id:'vinda', name:'Gente indo e vindo', hint:'chegada · partida · retorno · espera', dots:['#BE4A01','#A85D3E']},
+      {id:'conversa', name:'Gente conversando', hint:'encontro · pedido · notícia · instrução', dots:['#9A7B2E','#777D45']},
+      {id:'trabalho', name:'Trabalho e comida', hint:'campo · respiga · refeição · provisão', dots:['#4E7A6A','#89AAA3']},
+      {id:'sentimento', name:'Sentimentos fortes', hint:'luto · festa · decisão · recusa', dots:['#5E6B8C','#8C5A74']},
+      {id:'sagrado', name:'Momentos sagrados', hint:'bênção · juramento · casamento · nascimento', dots:['#8C5A74','#BE4A01']}
+    ];
+    this.KINDS={
+      vinda:[['Chegada a um lugar','ARRIVAL_SCENE',0],['Partida em viagem','DEPARTURE_SCENE',0],['Retorno para casa','HOMECOMING_SCENE',0],['Espera','WAITING_SCENE',0]],
+      conversa:[['Encontro entre duas pessoas','ENCOUNTER_SCENE',0],['Pedido e resposta','REQUEST_RESPONSE_SCENE',0],['Notícia que chega','NEWS_ARRIVAL_SCENE',0],['Instrução de um mais velho','ELDER_INSTRUCTION_SCENE',0]],
+      trabalho:[['Trabalho no campo','FIELD_WORK_SCENE',0],['Respiga na lavoura','GLEANING_SCENE',1],['Refeição compartilhada','SHARED_MEAL_SCENE',0],['Provisão inesperada','UNEXPECTED_PROVISION_SCENE',0]],
+      sentimento:[['Luto e choro','MOURNING_SCENE',0],['Alegria e festa','CELEBRATION_SCENE',0],['Decisão difícil','HARD_DECISION_SCENE',0],['Recusa educada','POLITE_REFUSAL_SCENE',0]],
+      sagrado:[['Bênção dos anciãos','ELDERS_BLESSING_SCENE',1],['Juramento de lealdade','LOYALTY_OATH_SCENE',1],['Casamento','MARRIAGE_SCENE',1],['Nascimento','BIRTH_SCENE',1],['Acordo no portão','GATE_AGREEMENT_SCENE',1],['Noite na eira','THRESHING_FLOOR_SCENE',1]]
+    };
+    this.state={theme:null,scenes:null,sel:0,selBead:null,playing:false,playhead:-1,playTo:-1,playKey:null,rename:null,warn:false,concluded:false,ended:false,drawer:false,sound:true};
+  }
+  componentDidUpdate(pp){ if(pp.cenario!==this.props.cenario){ this._stop(); this.setState({scenes:null,sel:0,selBead:null,rename:null,warn:false,concluded:false,ended:false,playing:false,playhead:-1}); } if(pp.tema!==this.props.tema) this.setState({theme:null}); }
+  componentWillUnmount(){ this._stop(); if(this._wt) clearTimeout(this._wt); }
+
+  // ---------- dados de exemplo ----------
+  _kind(pt){ for(const f in this.KINDS){ const k=this.KINDS[f].find(x=>x[0]===pt); if(k) return {pt:k[0],en:k[1],fam:f,rare:!!k[2]}; } return null; }
+  _autoPhrases(start,end){ const out=[]; let a=start; const lens=[5,7,4,6,8,5,6,4,7]; let i=(start*7)%lens.length; while(a<=end){ let b=Math.min(end,a+lens[i%lens.length]-1); i++; if(end-b<3) b=end; out.push({start:a,end:b}); a=b+1; } return out; }
+  _build(key){
+    const mk=(start,end,pt,conf,ph)=>{ const sc={start,end,kind:pt?this._kind(pt):null,conf:pt?conf:null,phrases:[]}; if(pt&&ph!==false) sc.phrases=this._autoPhrases(start,end); return sc; };
+    if(key==='história limpa') return [mk(0,31,'Partida em viagem','alta'),mk(32,70,'Chegada a um lugar','alta'),mk(71,105,'Respiga na lavoura','média'),mk(106,139,'Refeição compartilhada','alta'),mk(140,178,'Instrução de um mais velho','alta'),mk(179,214,'Bênção dos anciãos','média'),mk(215,251,'Retorno para casa','alta')];
+    return [mk(0,31,'Partida em viagem','alta'),mk(32,70,'Chegada a um lugar','alta'),mk(71,105,null),mk(106,139,'Refeição compartilhada','média'),mk(140,178,'Instrução de um mais velho','baixa'),mk(179,214,'Bênção dos anciãos','baixa',false),mk(215,233,'Notícia que chega','alta'),mk(234,251,'Retorno para casa','média')];
+  }
+  _scenes(){ return this.state.scenes||this._build(this.props.cenario||'com dúvidas'); }
+  _edit(fn){ const sc=this._scenes().map(x=>Object.assign({},x,{phrases:x.phrases.slice()})); fn(sc); this.setState({scenes:sc}); }
+
+  // ---------- áudio de demonstração ----------
+  _stop(){ if(this._t){ clearInterval(this._t); this._t=null; } }
+  _tick(){ if(!this.state.sound) return; try{ const A=this._ac||(this._ac=new (window.AudioContext||window.webkitAudioContext)()); const o=A.createOscillator(), g=A.createGain(); o.frequency.value=740; g.gain.setValueAtTime(.035,A.currentTime); g.gain.exponentialRampToValueAtTime(.0001,A.currentTime+.09); o.connect(g).connect(A.destination); o.start(); o.stop(A.currentTime+.1); }catch(e){} }
+  playSpan(from,to,key){
+    this._stop();
+    if(this.state.playing&&this.state.playKey===key){ this.setState({playing:false,playKey:null,playhead:-1}); return; }
+    this.setState({playing:true,playhead:from,playTo:to,playKey:key}); this._tick();
+    this._t=setInterval(()=>{ const ph=this.state.playhead+1; if(ph>this.state.playTo){ this._stop(); this.setState({playing:false,playKey:null,playhead:-1}); return; } if(ph%4===0) this._tick(); this.setState({playhead:ph}); }, this.MPB);
+  }
+
+  // ---------- ações ----------
+  selectScene=(i,play)=>{ const sc=this._scenes()[i]; if(!sc) return; this.setState({sel:i,selBead:null,warn:false}); if(play) this.playSpan(sc.start,sc.end,'sc'+i); }
+  clickBead=(i)=>{ const scs=this._scenes(); const so=scs.findIndex(s=>i>=s.start&&i<=s.end); if(so<0) return; const sc=scs[so]; this.setState({sel:so,selBead:null,warn:false}); const pj=sc.phrases.findIndex(p=>i>=p.start&&i<=p.end); if(pj>=0) this.playSpan(sc.phrases[pj].start,sc.phrases[pj].end,'ph'+so+'_'+pj); else this.playSpan(i,sc.end,'bead'+i); }
+  clickStrand=(i)=>{ const sc=this._scenes()[this.state.sel]; if(!sc) return; const pj=sc.phrases.findIndex(p=>i>=p.start&&i<=p.end); if(pj>=0) this.playSpan(sc.phrases[pj].start,sc.phrases[pj].end,'ph'+pj); else this.playSpan(i,sc.end,'ph'+i); }
+  conclude=()=>{ const scs=this._scenes(); const doubtful=scs.some(s=>!s.kind||s.conf==='baixa'); if(doubtful&&!this.state.warn){ this.setState({warn:true}); if(this._wt) clearTimeout(this._wt); this._wt=setTimeout(()=>this.setState({warn:false}),9000); return; } this._stop(); this.setState({warn:false,concluded:true,playing:false,playhead:-1,rename:null}); }
+  backToReview=()=>this.setState({concluded:false});
+  goHome=()=>this.setState({ended:true});
+  restart=()=>{ this._stop(); this.setState({scenes:null,sel:0,selBead:null,rename:null,warn:false,concluded:false,ended:false,playing:false,playhead:-1,drawer:false}); }
+  toggleDrawer=()=>this.setState(s=>({drawer:!s.drawer}));
+  toggleSound=()=>this.setState(s=>({sound:!s.sound}));
+  toggleTheme=()=>{ const cur=(this.state.theme||this.props.tema||'claro'); this.setState({theme:cur==='escuro'?'claro':'escuro'}); }
+
+  // ---------- helpers visuais ----------
+  _pearl(c){ return 'radial-gradient(circle at 34% 30%, '+c.l+' 0%, '+c.b+' 70%)'; }
+  _bead(sz,kind,color){
+    const dk=this._dk;
+    const s={width:sz+'px',height:sz+'px',borderRadius:'50%',flex:'none',boxSizing:'border-box',padding:0,border:'none',display:'block',transition:'transform .12s cubic-bezier(.2,.8,.25,1), box-shadow .12s, opacity .2s'};
+    if(kind==='none'||kind==='noneEnd'){ s.background=dk?'radial-gradient(circle at 34% 30%, rgba(246,245,235,.25), rgba(246,245,235,.1) 70%)':this._pearl(this.CREAM); s.border='1.5px dashed '+(dk?'rgba(246,245,235,.4)':'rgba(63,62,32,.35)'); if(kind==='noneEnd'){ s.borderRadius=Math.round(sz*.28)+'px'; } }
+    else if(kind==='lit'){ s.background=this._pearl(color); s.boxShadow='0 1px 3px rgba(10,7,3,.2)'; }
+    else if(kind==='head'){ s.background=this._pearl(color); s.transform='scale(1.22)'; s.boxShadow='0 0 0 2.5px '+(dk?'rgba(246,245,235,.95)':'rgba(63,62,32,.6)')+', 0 2px 6px rgba(10,7,3,.28)'; s.zIndex=3; s.position='relative'; }
+    else if(kind==='pend'){ s.background=color.d; s.borderRadius=Math.round(sz*.26)+'px'; s.transform='scale(.86)'; s.boxShadow='0 1px 3px rgba(10,7,3,.22)'; }
+    else if(kind==='end'){ s.background=color.d; s.borderRadius=Math.round(sz*.28)+'px'; s.transform='scale(1.06)'; s.position='relative'; s.zIndex=2; s.boxShadow='0 0 0 2px '+(dk?'#1C1B0E':'#F6F5EB')+', 0 0 0 3.5px '+color.d+', 0 1px 4px rgba(10,7,3,.28)'; }
+    return s;
+  }
+  _rowStyle(gap,line){ const dk=this._dk; const t=dk?'rgba(246,245,235,0)':'rgba(63,62,32,0)', l=dk?'rgba(246,245,235,.16)':'rgba(63,62,32,.12)'; return {display:'flex',alignItems:'center',gap:gap+'px',height:(line+16)+'px',width:'fit-content',background:'linear-gradient('+t+' '+line+'px, '+l+' '+line+'px, '+l+' '+(line+2)+'px, '+t+' '+(line+2)+'px)'}; }
+  _chunk(a,n){ const r=[]; for(let i=0;i<a.length;i+=n) r.push(a.slice(i,i+n)); return r; }
+  _confFill(st,s,c){ const dk=this._dk; if(!s.kind){ st.background=dk?'radial-gradient(circle at 34% 30%, rgba(246,245,235,.25), rgba(246,245,235,.1) 70%)':this._pearl(this.CREAM); st.border='1.5px dashed '+(dk?'rgba(246,245,235,.45)':'rgba(63,62,32,.38)'); } else if(s.conf==='alta'){ st.background=this._pearl(c); } else if(s.conf==='média'){ st.background='linear-gradient(90deg,'+c.b+' 50%,'+(dk?'rgba(246,245,235,.14)':'#EDEBE0')+' 50%)'; st.border='2px solid '+c.b; } else { st.background='transparent'; st.border='3px dashed '+c.b; } return st; }
+  _disc(sz,conf){ const s={width:sz+'px',height:sz+'px',borderRadius:'50%',flex:'none',boxSizing:'border-box'}; if(conf==='alta') s.background='#777D45'; else if(conf==='média'){ s.background='linear-gradient(90deg,#9A7B2E 50%,rgba(154,123,46,.2) 50%)'; s.border='1px solid #9A7B2E'; } else if(conf==='baixa') s.border=Math.max(2,Math.round(sz*.18))+'px dashed #A9A585'; else { s.border='1.5px dashed var(--hair2)'; s.background='var(--chip)'; } return s; }
+  _confWord(s){ return !s.kind?'sem nome nos tipos':(s.conf==='alta'?'Certeza':s.conf==='média'?'Quase':'Na dúvida'); }
+  _words(n){ const u=['zero','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','catorze','quinze','dezesseis','dezessete','dezoito','dezenove']; const t=['','','vinte','trinta','quarenta','cinquenta']; if(n<20) return u[n]; const d=Math.floor(n/10), r=n%10; return t[d]+(r?' e '+u[r]:''); }
+  _dur(beads){ const s=beads*this.BEAD_SEC; if(s<60) return this._words(s)+' segundos'; let m=Math.floor(s/60); const r=s%60; let half=false; if(r>=45) m+=1; else if(r>=15) half=true; let out=(m===1?'um minuto':this._words(m)+' minutos')+(half?' e meio':''); return 'cerca de '+out; }
+  _mmss(beads){ const s=beads*this.BEAD_SEC; return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+  renderVals(){
+    const S=this.state, P=this.props;
+    const dk=(S.theme||P.tema||'claro')==='escuro'; this._dk=dk;
+    const scenes=this._scenes(); const N=this.N;
+    const col=(i)=>this.PAL[i%this.PAL.length];
+    const sceneOf=(i)=>scenes.findIndex(s=>i>=s.start&&i<=s.end);
+    const phraseOf=(s,i)=>s.phrases.findIndex(p=>i>=p.start&&i<=p.end);
+    const sel=(S.sel!=null&&scenes[S.sel])?S.sel:null; const sc=sel!=null?scenes[sel]:null;
+
+    // o colar inteiro
+    const beads=[];
+    for(let i=0;i<N;i++){
+      const so=sceneOf(i); const s=scenes[so]; let c=so>=0?col(so):this.CREAM; let kind='lit';
+      if(!s||!s.kind) kind='none';
+      else if(s.phrases.length){ const pj=phraseOf(s,i); if(pj>=0&&i===s.phrases[pj].end&&i!==s.end) kind='pend'; }
+      if(s&&i===s.end) kind=s.kind?'end':'noneEnd';
+      if(S.playing&&i===S.playhead) kind='head';
+      const st=this._bead(20,kind,c); st.cursor='pointer';
+      if(S.playing&&sel!=null&&so!==sel&&kind!=='head') st.opacity='.45';
+      beads.push({s:st,onClick:()=>this.clickBead(i)});
+    }
+    const rows=this._chunk(beads,28).map(r=>({rowStyle:this._rowStyle(6,20),beads:r}));
+
+    // as cenas (pérolas com a confiança embutida)
+    const pearls=scenes.map((s,i)=>{
+      const c=col(i); const isSel=i===sel;
+      const st={width:'42px',height:'42px',borderRadius:'50%',flex:'none',boxSizing:'border-box',transition:'transform .15s, box-shadow .15s',transform:isSel?'scale(1.12)':'none',boxShadow:isSel?'0 0 0 3px var(--bg), 0 0 0 6px '+(dk?'#E8813E':'#BE4A01'):'0 1px 4px rgba(10,7,3,.18)'};
+      this._confFill(st,s,c);
+      const nameStyle=s.kind?{fontSize:'11.5px',fontWeight:isSel?'700':'600',lineHeight:'1.25',color:isSel?'var(--ink)':'var(--soft)',textAlign:'center',textWrap:'balance'}:{fontSize:'11.5px',fontFamily:'Merriweather,Georgia,serif',fontStyle:'italic',lineHeight:'1.25',color:'var(--faint)',textAlign:'center'};
+      return {s:st,name:s.kind?s.kind.pt:'sem nome nos tipos',nameStyle,onClick:()=>this.selectScene(i,true)};
+    });
+
+    // a cena escolhida
+    let strandRows=[], selName='', selDur='', selConfWord='', selDot={}, selConfDisc={}, strandHint='';
+    if(sc){
+      const c=col(sel); selName=sc.kind?sc.kind.pt:'Sem nome nos tipos'; selDur=this._dur(sc.end-sc.start+1); selConfWord=this._confWord(sc);
+      selDot={width:'14px',height:'14px',borderRadius:'50%',flex:'none',background:sc.kind?this._pearl(c):this._pearl(this.CREAM),border:sc.kind?'none':'1.5px dashed var(--hair2)'};
+      selConfDisc=this._disc(14,sc.kind?sc.conf:null);
+      const sb=[];
+      for(let i=sc.start;i<=sc.end;i++){
+        let kind='lit', cc=c;
+        if(!sc.kind) kind='none';
+        else if(sc.phrases.length){ const pj=phraseOf(sc,i); if(pj>=0){ cc=this.PALF[pj%this.PALF.length]; if(i===sc.phrases[pj].end) kind='end'; } }
+        if(i===sc.end&&!sc.kind) kind='noneEnd';
+        if(S.playing&&i===S.playhead) kind='head';
+        const st=this._bead(22,kind,cc); st.cursor='pointer';
+        sb.push({s:st,onClick:()=>this.clickStrand(i)});
+      }
+      strandRows=this._chunk(sb,18).map(r=>({rowStyle:this._rowStyle(6,22),beads:r}));
+    }
+    const hasNone=scenes.some(s=>!s.kind), hasNoPh=scenes.some(s=>s.kind&&!s.phrases.length);
+    strandHint=hasNone&&hasNoPh?'Uma cena ficou fora dos tipos e outra ficou sem frases — as duas são respostas válidas, e ficam guardadas assim.':hasNone?'Uma cena ficou fora dos tipos — é uma resposta válida, e fica guardada assim.':hasNoPh?'Uma cena ficou sem frases — fica guardada assim mesmo.':'';
+
+    // conclusão
+    const concBeads=scenes.map((s,i)=>{ const st={width:'26px',height:'26px',borderRadius:'50%',flex:'none',boxSizing:'border-box',boxShadow:'0 2px 6px rgba(0,0,0,.25)'}; this._confFill(st,s,col(i)); if(!s.kind){ st.background='radial-gradient(circle at 34% 30%, rgba(246,245,235,.25), rgba(246,245,235,.1) 70%)'; st.border='1.5px dashed rgba(246,245,235,.45)'; } if(s.conf==='média') st.background='linear-gradient(90deg,'+col(i).b+' 50%,rgba(246,245,235,.14) 50%)'; return {s:st}; });
+
+    // gaveta (facilitadora · números permitidos)
+    const named=scenes.filter(s=>s.kind); const totalPhrases=scenes.reduce((a,s)=>a+s.phrases.length,0); const noPh=named.filter(s=>!s.phrases.length).length;
+    const nConf={alta:0,'média':0,baixa:0}; named.forEach(s=>nConf[s.conf]++);
+    const counts={}; named.forEach(s=>{ counts[s.kind.en]=(counts[s.kind.en]||0)+1; });
+    const covRows=Object.keys(counts).sort().map(en=>({en,count:String(counts[en])}));
+    const rareOpen=[]; Object.values(this.KINDS).forEach(arr=>arr.forEach(k=>{ if(k[2]&&!counts[k[1]]) rareOpen.push(k[1]); }));
+    const dRows=scenes.map((s,i)=>({label:'Cena '+(i+1)+' · '+(s.kind?s.kind.pt:'nenhum se encaixa'),meta:this._mmss(s.end-s.start+1)+' · '+s.phrases.length+' fr · '+(s.kind?(s.conf==='alta'?'C':s.conf==='média'?'Q':'D'):'—'),onClick:()=>{ this.selectScene(i,true); },
+      dot:Object.assign({width:'12px',height:'12px',borderRadius:'50%',flex:'none'},s.kind?{background:col(i).b}:{border:'1.5px dashed rgba(246,245,235,.5)'}),
+      s:{display:'flex',alignItems:'center',gap:'10px',width:'100%',padding:'7px 10px',borderRadius:'8px',color:'#F6F5EB',background:i===sel?'rgba(246,245,235,.16)':'rgba(246,245,235,.06)',textAlign:'left'}}));
+
+    return {
+      theme:dk?'escuro':'claro', isDark:dk, isLight:!dk, markSrc:dk?'assets/icon-branco.svg':'assets/icon-telha.svg',
+      sound:S.sound, soundOff:!S.sound, toggleSound:this.toggleSound, toggleTheme:this.toggleTheme,
+      rows, pearls,
+      hasSel:!!sc, selName, selDur, selConfWord, selDot, selConfDisc, strandRows, strandHint,
+      selIsNamed:!!(sc&&sc.kind), selIsNone:!!(sc&&!sc.kind),
+      selPlaying:!!(sc&&S.playing&&S.playKey==='sc'+sel), selNotPlaying:!(sc&&S.playing&&S.playKey==='sc'+sel),
+      playSel:()=>{ if(sc) this.playSpan(sc.start,sc.end,'sc'+sel); },
+      warn:S.warn, conclude:this.conclude, concluded:S.concluded, concBeads, backToReview:this.backToReview, goHome:this.goHome, ended:S.ended, restart:this.restart,
+      drawerOpen:S.drawer, toggleDrawer:this.toggleDrawer,
+      dScenes:String(scenes.length), dScenesSub:named.length+' com nome · '+(scenes.length-named.length)+' fora dos tipos',
+      dPhrases:String(totalPhrases), dPhrasesSub:noPh?(noPh+(noPh===1?' cena sem frases':' cenas sem frases')):'todas as cenas com frases',
+      dDur:this._mmss(N), dConf:'Certeza '+nConf.alta+' · Quase '+nConf['média']+' · Na dúvida '+nConf.baixa,
+      dRows, covRows, rareOpen
+    };
+  }
+}
+</script>
+</body>
+</html>
