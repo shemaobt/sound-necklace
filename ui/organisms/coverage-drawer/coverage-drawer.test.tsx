@@ -340,3 +340,24 @@ describe('CoverageDrawer — o painel fica acima do cabeçalho fixo (ENG-726)', 
     expect(zIndexOf(blockOf('.cds-coverage-drawer-overlay'))).toBeGreaterThan(HEADER_Z_INDEX);
   });
 });
+
+/**
+ * Achado gerando as capturas de paridade — pré-existente na Triagem também,
+ * não causado pela ENG-726 (confirmado com uma captura da gaveta da Triagem
+ * aberta antes do conserto). Um `scene_kind` longo (até 28 chars) mais a
+ * contagem não cabem numa linha só nos 340px do painel; sem quebra nem
+ * rolagem, o texto — inclusive o alvo, o número que a seção existe para
+ * mostrar — só transbordava, cortado pela borda do painel. jsdom não mede
+ * layout de verdade, então o teste lê o CSS bruto: a garantia real são as
+ * capturas de paridade regeneradas (.parity-shots/07c-cobertura-triagem,
+ * .theme-shots/{light,dark}/09c-cobertura).
+ */
+describe('CoverageDrawer — a contagem por tipo quebra linha em vez de transbordar (ENG-726)', () => {
+  it('a linha de contagem aceita quebrar, e o nome do tipo aceita partir se precisar', () => {
+    const blockOf = (selector: string) =>
+      new RegExp(`\\${selector}\\s*\\{[^}]*\\}`).exec(drawerCss)?.[0] ?? '';
+
+    expect(blockOf('.cds-coverage-drawer-row')).toMatch(/flex-wrap:\s*wrap/);
+    expect(blockOf('.cds-coverage-drawer-kind')).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+});

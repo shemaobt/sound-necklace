@@ -97,16 +97,29 @@
   gap: 7px;
 }
 
+/* `flex-wrap` é o conserto: um `scene_kind` longo (até 28 chars, ex.
+   NARRATOR_FRAMING_CLOSE_SCENE) mais as contagens não cabem numa linha só
+   nos 288px úteis do painel (340 - 2×26 de padding) — sem isto o texto só
+   transbordava, cortado pela borda do painel, sem quebra nem rolagem
+   (achado gerando as capturas de paridade da ENG-726; pré-existente na
+   Triagem, não causado por ela). Nome à esquerda, contagem à direita
+   continua IDÊNTICO quando cabe numa linha (o caso comum); só o caso antes
+   cortado passa a ocupar duas. */
 .cds-coverage-drawer-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: 4px 10px;
   font-size: 12.5px;
   font-family: ui-monospace, Menlo, monospace;
   background: rgba(246, 245, 235, 0.08);
   border-radius: 8px;
   padding: 8px 12px;
+}
+
+.cds-coverage-drawer-kind {
+  overflow-wrap: anywhere;
 }
 
 .cds-coverage-drawer-counts {
