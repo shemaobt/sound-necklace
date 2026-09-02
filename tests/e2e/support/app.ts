@@ -137,8 +137,14 @@ export class ColarApp {
 
   // ——— Triage ———
 
+  /**
+   * `onAllClassified` corre depois da última cena e ANTES de "Continuar →" —
+   * o único ponto em que a Triagem ainda está montada com a cobertura já
+   * cheia (usado pelas capturas de paridade para abrir a gaveta ali).
+   */
   async triage(
     steps: readonly (typeof SCENARIO.triage)[number][] = SCENARIO.triage,
+    onAllClassified?: () => Promise<void>,
   ): Promise<void> {
     for (const step of steps) {
       if ('noneFit' in step && step.noneFit) {
@@ -149,6 +155,7 @@ export class ColarApp {
         await this.page.getByRole('button', { name: 'Confirmar', exact: true }).click();
       }
     }
+    await onAllClassified?.();
     // todas classificadas → momento de revisão
     await this.page.getByRole('button', { name: 'Continuar →' }).click();
     await this.passBlockDone('Seguir para as frases');

@@ -50,7 +50,13 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await shot('06b-cut-revisao');
   await page.getByRole('button', { name: 'Continuar →' }).click();
   await shot('07-triage');
-  await app.triage();
+  await app.triage(SCENARIO.triage, async () => {
+    // a gaveta de cobertura, cheia — mesma prova usada para confirmar que o
+    // transbordo da contagem por tipo (ENG-726) era pré-existente aqui também
+    await app.openCoverageDrawer();
+    await shot('07c-cobertura-triagem');
+    await app.closeCoverageDrawer();
+  });
   await shot('08-phrases');
 
   await app.cutPhrase(SCENARIO.crossingPhrase.s, SCENARIO.crossingPhrase.e);
