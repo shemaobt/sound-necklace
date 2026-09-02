@@ -137,8 +137,14 @@ export class ColarApp {
 
   // ——— Triage ———
 
+  /**
+   * `onAllClassified` corre depois da última cena e ANTES de "Continuar →" —
+   * o único ponto em que a Triagem ainda está montada com a cobertura já
+   * cheia (usado pelas capturas de paridade para abrir a gaveta ali).
+   */
   async triage(
     steps: readonly (typeof SCENARIO.triage)[number][] = SCENARIO.triage,
+    onAllClassified?: () => Promise<void>,
   ): Promise<void> {
     for (const step of steps) {
       if ('noneFit' in step && step.noneFit) {
@@ -149,6 +155,7 @@ export class ColarApp {
         await this.page.getByRole('button', { name: 'Confirmar', exact: true }).click();
       }
     }
+    await onAllClassified?.();
     // todas classificadas → momento de revisão
     await this.page.getByRole('button', { name: 'Continuar →' }).click();
     await this.passBlockDone('Seguir para as frases');
@@ -215,6 +222,31 @@ export class ColarApp {
     await expect(
       this.page.getByRole('heading', { name: 'A história está completa.' }),
     ).toBeVisible();
+  }
+
+  /**
+   * Abre a gaveta de cobertura (ENG-726) — painel só-facilitadora, fechado por
+   * padrão, que a Rever também monta desde esta fatia (a Triage já a montava).
+   * Usada pelas capturas de paridade: sem isto nada do conteúdo novo da gaveta
+   * jamais aparece numa captura, porque ela nasce fechada por decisão do dono.
+   *
+   * Espera o slide-in (0.22 s, coverage-drawer.css) assentar antes de devolver
+   * — a mesma razão de `waitForFullBar`/`waitForConcludedScreenToSettle`: o
+   * navegador do e2e NÃO honra a emulação de `prefers-reduced-motion`
+   * (`matchMedia` devolve falso mesmo com `reducedMotion: 'reduce'` na config),
+   * então uma captura tirada logo após o clique pega o painel a meio caminho —
+   * com `right: 0` mas ainda `translateX`, a maior parte fora da viewport.
+   */
+  async openCoverageDrawer(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Cobertura (facilitadora)' }).click();
+    await expect(this.page.getByRole('dialog')).toBeVisible();
+    await expect(this.page.locator('.cds-coverage-drawer-panel')).toHaveCSS('transform', 'none');
+  }
+
+  /** Fecha a gaveta — a chamar antes de qualquer ação na tela por baixo dela. */
+  async closeCoverageDrawer(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Fechar' }).click();
+    await expect(this.page.getByRole('dialog')).toBeHidden();
   }
 
   /**

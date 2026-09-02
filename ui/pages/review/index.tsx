@@ -3,7 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../adapters/audio';
 import type { UiSound } from '../../../adapters/ui-sound';
-import { lockedParts, type Frase, type ScenePart, type Span } from '../../../domain';
+import {
+  computeCoverage,
+  lockedParts,
+  type Frase,
+  type ScenePart,
+  type Span,
+} from '../../../domain';
 import { sceneKindLabel } from '../../i18n/scene-kind-label';
 import { ScenePearl, type ScenePearlFill } from '../../molecules';
 import {
@@ -13,6 +19,10 @@ import {
   SIZE_EXPORT,
   StationNav,
 } from '../../organisms';
+import {
+  CoverageDrawer,
+  type CoverageStoryOverview,
+} from '../../organisms/coverage-drawer/coverage-drawer';
 import { useSessionStore } from '../../state';
 import { sceneColor } from '../../tokens';
 import './review.css';
@@ -35,10 +45,28 @@ import './review.css';
  * Concluir avisa o shell (`onBlockClosed('historia')`); é o shell (App.tsx) quem
  * chama `store.complete()` e só sobe a tela oliva se o servidor confirmar (ENG-702)
  * — uma recusa vira `completeError` aqui, e o mesmo botão tenta de novo (§9.4).
+ *
+ * ENG-726 — a gaveta de cobertura (`CoverageDrawer`, organismo compartilhado com
+ * a Triagem) monta aqui também: é a ÚNICA exceção deliberada à regra de "nenhum
+ * dígito" — nasce fechada, é só da facilitadora, e o próprio cabeçalho dela
+ * estampa isso (desenho `docs/design/revisao-tela-nova.html`, bloco `drawerOpen`).
+ * O resumo (cenas/frases/duração/confiança) e a lista cena a cena que ela ganha
+ * aqui se montam a partir de `scenes` — o mesmo array que já monta as pérolas —,
+ * NUNCA de `domain/`, que é camada congelada e esta fatia não toca. Tocar numa
+ * linha da lista reaproveita `onPearl`: seleciona e toca a mesma cena no
+ * panorama atrás da gaveta.
  */
 
 /** O aviso some sozinho depois de um tempo (protótipo `_wt`, 9 s). */
 const WARN_MS = 9000;
+
+/** Conversão de unidade, não dado de domínio: contas × segundos/conta → "m:ss". */
+function mmss(beadCount: number, beadSec: number): string {
+  const totalSeconds = Math.round(beadCount * beadSec);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
 
 interface ReviewScene {
   part: ScenePart;
@@ -102,8 +130,45 @@ export function Review({ player = null, sound, onBlockClosed, completeError = nu
     );
     const lockedEndBeads = scenes.map((sc) => sc.span.e);
     const phraseEndBeads = scenes.flatMap((sc) => sc.phrases.map((f) => f.span.e));
-    return { scenes, segments, lockedEndBeads, phraseEndBeads };
-  }, [session]);
+
+    // ENG-726 — a parte CARA da gaveta de cobertura (rótulos traduzidos,
+    // duração formatada): memoizada aqui, com `head` de fora das deps de
+    // propósito, para não refazer a cada tique do playhead durante a
+    // reprodução — a mesma garantia que o parágrafo acima já dá ao colar.
+    // `selected`/`onSelect` (baratos, mudam só com clique) entram depois,
+    // fora deste memo.
+    const coverage = computeCoverage(session);
+    const namedScenes = scenes.filter((sc) => sc.part.tag_state === 'tagged');
+    const confidenceTally = { high: 0, medium: 0, low: 0 };
+    for (const sc of namedScenes) {
+      const c = sc.part.scene_kind_confidence;
+      if (c) confidenceTally[c]++;
+    }
+    const overviewBase = {
+      totalScenes: scenes.length,
+      namedScenes: namedScenes.length,
+      noneFitScenes: scenes.length - namedScenes.length,
+      totalPhrases: scenes.reduce((total, sc) => total + sc.phrases.length, 0),
+      scenesWithoutPhrases: namedScenes.filter((sc) => sc.phrases.length === 0).length,
+      duration: mmss(session.totalBeads, session.beadSec),
+      beadSec: session.beadSec,
+      confidenceHigh: confidenceTally.high,
+      confidenceMedium: confidenceTally.medium,
+      confidenceLow: confidenceTally.low,
+      sceneRows: scenes.map((sc) => ({
+        key: sc.part.part_id,
+        label:
+          sc.part.tag_state === 'tagged' && sc.part.scene_kind
+            ? sceneKindLabel(sc.part.scene_kind, i18n.language)
+            : t('coverageDrawer.sceneNoneFit'),
+        fill: fillOf(sc.part),
+        tint: sc.part.tag_state === 'tagged' ? sceneColor(sc.index) : undefined,
+        duration: mmss(sc.span.e - sc.span.s + 1, session.beadSec),
+        phraseCount: sc.phrases.length,
+      })),
+    };
+    return { scenes, segments, lockedEndBeads, phraseEndBeads, coverage, overviewBase };
+  }, [session, i18n, t]);
 
   useEffect(() => {
     if (!player) return;
@@ -120,7 +185,7 @@ export function Review({ player = null, sound, onBlockClosed, completeError = nu
   }, [warn]);
 
   if (!session || !derived) return null;
-  const { scenes, segments, lockedEndBeads, phraseEndBeads } = derived;
+  const { scenes, segments, lockedEndBeads, phraseEndBeads, coverage, overviewBase } = derived;
 
   /**
    * Tocar de novo no mesmo alvo PARA (protótipo `playSpan`); alvo novo toca do
@@ -153,6 +218,20 @@ export function Review({ player = null, sound, onBlockClosed, completeError = nu
   // a conta que brilha é o alvo que está tocando: tocá-la para
   const onHeadTap = (): void => {
     player?.stop();
+  };
+
+  // ENG-726 — a parte BARATA da gaveta: só a seleção e o clique, refeitos a
+  // cada render (mudam com o clique, nunca com o playhead). Os rótulos e a
+  // duração já vieram prontos de `overviewBase`, memoizado acima por sessão —
+  // um tique do playhead não refaz a lista inteira nem chama `sceneKindLabel`.
+  const { sceneRows, ...overviewCounts } = overviewBase;
+  const storyOverview: CoverageStoryOverview = {
+    ...overviewCounts,
+    scenes: sceneRows.map((row, i) => ({
+      ...row,
+      selected: selected === row.key,
+      onSelect: () => onPearl(scenes[i]!),
+    })),
   };
 
   const doubtful = scenes.some(
@@ -283,6 +362,8 @@ export function Review({ player = null, sound, onBlockClosed, completeError = nu
         }
         next={{ label: t('rever.conclude'), onClick: conclude, enabled: true }}
       />
+
+      <CoverageDrawer coverage={coverage} storyOverview={storyOverview} />
     </section>
   );
 }

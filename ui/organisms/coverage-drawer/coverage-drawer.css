@@ -25,9 +25,16 @@
   writing-mode: vertical-rl;
 }
 
+/* Sem um z-index próprio, o painel/véu (`position: fixed`, `z-index: auto`)
+   pintam ATRÁS do cabeçalho `sticky z-index:30` (@/ui/app/header.css) — um
+   diálogo cujo topo cai sob a faixa do cabeçalho tem o próprio título coberto
+   por ela. 45 vence o cabeçalho e o popover de som/volume dele (z-index:40),
+   e fica abaixo das duas telas cheias da escala (block-done 56, goal-reached
+   57): um diálogo modal não precisa vencer uma tela cheia que o substitui. */
 .cds-coverage-drawer-overlay {
   position: fixed;
   inset: 0;
+  z-index: 45;
   background: rgba(10, 7, 3, 0.2);
 }
 
@@ -36,6 +43,7 @@
   right: 0;
   top: 0;
   bottom: 0;
+  z-index: 45;
   width: 340px;
   background: var(--cds-olive, #3f3e20);
   color: var(--cds-cream, #f6f5eb);
@@ -89,16 +97,29 @@
   gap: 7px;
 }
 
+/* `flex-wrap` é o conserto: um `scene_kind` longo (até 28 chars, ex.
+   NARRATOR_FRAMING_CLOSE_SCENE) mais as contagens não cabem numa linha só
+   nos 288px úteis do painel (340 - 2×26 de padding) — sem isto o texto só
+   transbordava, cortado pela borda do painel, sem quebra nem rolagem
+   (achado gerando as capturas de paridade da ENG-726; pré-existente na
+   Triagem, não causado por ela). Nome à esquerda, contagem à direita
+   continua IDÊNTICO quando cabe numa linha (o caso comum); só o caso antes
+   cortado passa a ocupar duas. */
 .cds-coverage-drawer-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: 4px 10px;
   font-size: 12.5px;
   font-family: ui-monospace, Menlo, monospace;
   background: rgba(246, 245, 235, 0.08);
   border-radius: 8px;
   padding: 8px 12px;
+}
+
+.cds-coverage-drawer-kind {
+  overflow-wrap: anywhere;
 }
 
 .cds-coverage-drawer-counts {
@@ -127,6 +148,92 @@
   border: 1px solid rgba(180, 132, 157, 0.4);
   border-radius: 999px;
   padding: 4px 10px;
+}
+
+/* ENG-726 — o resumo da história (Rever, só quando `storyOverview` existe). */
+
+.cds-coverage-drawer-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cds-coverage-drawer-card {
+  display: flex;
+  flex-direction: column;
+  background: rgba(246, 245, 235, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.cds-coverage-drawer-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(246, 245, 235, 0.5);
+}
+
+.cds-coverage-drawer-card-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cds-coverage-drawer-card-sub {
+  font-size: 11.5px;
+  color: rgba(246, 245, 235, 0.6);
+}
+
+.cds-coverage-drawer-card-conf {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.cds-coverage-drawer-section-title {
+  margin-top: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(246, 245, 235, 0.6);
+}
+
+.cds-coverage-drawer-scenes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cds-coverage-drawer-scene-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: var(--cds-cream, #f6f5eb);
+  background: rgba(246, 245, 235, 0.06);
+  text-align: left;
+}
+
+.cds-coverage-drawer-scene-row[data-selected] {
+  background: rgba(246, 245, 235, 0.16);
+}
+
+.cds-coverage-drawer-scene-label {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cds-coverage-drawer-scene-meta {
+  font-size: 11.5px;
+  font-family: ui-monospace, Menlo, monospace;
+  color: rgba(246, 245, 235, 0.7);
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: no-preference) {

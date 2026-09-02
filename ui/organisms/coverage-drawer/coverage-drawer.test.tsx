@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildBeads,
@@ -13,7 +13,7 @@ import {
   type SessionState,
 } from '../../../domain';
 import { splitByGuard } from '../../atoms/testing/css';
-import { CoverageDrawer } from './coverage-drawer';
+import { CoverageDrawer, type CoverageStoryOverview } from './coverage-drawer';
 import drawerCss from './coverage-drawer.css?raw';
 
 function lockedPart(part_id: string): ScenePart {
@@ -154,5 +154,210 @@ describe('CoverageDrawer — movimento decorativo só sob reduced-motion (§9.3)
     const guard = /@media\s*\(prefers-reduced-motion:\s*no-preference\)/;
     const { outside } = splitByGuard(drawerCss, guard);
     expect(outside).not.toMatch(/animation|@keyframes/);
+  });
+});
+
+/**
+ * ENG-726 — a gaveta cresce na Rever: resumo da história inteira + lista cena a
+ * cena, tudo atrás da mesma prop opcional `storyOverview`. A Triagem nunca a
+ * passa, então o teste mais importante da fatia é o primeiro: sem ela, nada do
+ * conteúdo novo aparece — a Triagem não pode regredir.
+ */
+function storyOverviewFixture(over: Partial<CoverageStoryOverview> = {}): CoverageStoryOverview {
+  return {
+    totalScenes: 3,
+    namedScenes: 2,
+    noneFitScenes: 1,
+    totalPhrases: 4,
+    scenesWithoutPhrases: 1,
+    duration: '12:36',
+    beadSec: 5,
+    confidenceHigh: 1,
+    confidenceMedium: 1,
+    confidenceLow: 0,
+    scenes: [
+      {
+        key: 'PT1',
+        label: 'Respiga na lavoura',
+        fill: 'high',
+        duration: '2:05',
+        phraseCount: 2,
+        selected: false,
+        onSelect: () => {},
+      },
+      {
+        key: 'PT2',
+        label: 'Refeição compartilhada',
+        fill: 'medium',
+        duration: '3:10',
+        phraseCount: 0,
+        selected: true,
+        onSelect: () => {},
+      },
+      {
+        key: 'PT3',
+        label: 'nenhum se encaixa',
+        fill: 'none',
+        duration: '1:00',
+        phraseCount: 2,
+        selected: false,
+        onSelect: () => {},
+      },
+    ],
+    ...over,
+  };
+}
+
+describe('CoverageDrawer — sem storyOverview, nada do resumo aparece (a Triagem não regride, ENG-726)', () => {
+  it('a Triagem — sem a prop nova — não ganha nem o resumo nem a lista cena a cena', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} />);
+    const dialog = openDrawer();
+    expect(screen.queryByText('Cena a cena')).toBeNull();
+    expect(dialog.textContent).not.toMatch(/12:36|Certeza \d/);
+  });
+});
+
+describe('CoverageDrawer — o resumo da história inteira (ENG-726, facilitadora)', () => {
+  it('resume as cenas: quantas há, quantas têm tipo e quantas ficaram fora dos tipos', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={storyOverviewFixture()} />);
+    const dialog = openDrawer();
+    expect(dialog.textContent).toContain('3');
+    expect(dialog.textContent).toContain('2 com tipo · 1 fora dos tipos');
+  });
+
+  it('resume as frases: quantas há no total, e quantas cenas ficaram sem nenhuma', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={storyOverviewFixture()} />);
+    const dialog = openDrawer();
+    expect(dialog.textContent).toContain('4');
+    expect(dialog.textContent).toContain('1 cena sem frases');
+  });
+
+  it('quando toda cena com tipo tem frase, diz isso em vez de contar zero', () => {
+    render(
+      <CoverageDrawer
+        coverage={coverageFixture()}
+        storyOverview={storyOverviewFixture({ scenesWithoutPhrases: 0 })}
+      />,
+    );
+    const dialog = openDrawer();
+    expect(dialog.textContent).toContain('todas as cenas com frases');
+  });
+
+  it('mostra a duração da história inteira', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={storyOverviewFixture()} />);
+    const dialog = openDrawer();
+    expect(dialog.textContent).toContain('12:36');
+  });
+
+  it('mostra como as confianças se repartem entre certeza, quase e na dúvida', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={storyOverviewFixture()} />);
+    const dialog = openDrawer();
+    expect(dialog.textContent).toContain('Certeza 1');
+    expect(dialog.textContent).toContain('Quase 1');
+    expect(dialog.textContent).toContain('Na dúvida 0');
+  });
+});
+
+describe('CoverageDrawer — cena a cena (ENG-726)', () => {
+  function sceneRows(dialog: HTMLElement): HTMLElement[] {
+    return Array.from(dialog.querySelectorAll('.cds-coverage-drawer-scene-row'));
+  }
+
+  it('lista uma linha por cena, na ordem da história, com o tipo, o tamanho e as frases', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={storyOverviewFixture()} />);
+    const dialog = openDrawer();
+    const rows = sceneRows(dialog);
+    expect(rows).toHaveLength(3);
+    expect(rows[0]?.textContent).toContain('Respiga na lavoura');
+    expect(rows[0]?.textContent).toContain('2:05');
+    expect(rows[0]?.textContent).toContain('2');
+    expect(rows[2]?.textContent).toContain('nenhum se encaixa');
+  });
+
+  it('a marca de confiança da linha é o mesmo preenchimento da pérola', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={storyOverviewFixture()} />);
+    const dialog = openDrawer();
+    const rows = sceneRows(dialog);
+    expect(rows[0]?.querySelector('[data-fill="high"]')).toBeTruthy();
+    expect(rows[1]?.querySelector('[data-fill="medium"]')).toBeTruthy();
+  });
+
+  it('uma cena sem tipo aparece na lista sem marca de erro, como na fila de pérolas', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={storyOverviewFixture()} />);
+    const dialog = openDrawer();
+    const rows = sceneRows(dialog);
+    const noneRow = rows[2]!;
+    expect(noneRow.querySelector('[data-fill="none"]')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(noneRow.textContent).not.toMatch(/[⚠⌀]/);
+  });
+
+  it('tocar numa linha chama o onSelect daquela cena', () => {
+    const onSelect = vi.fn();
+    const overview = storyOverviewFixture();
+    overview.scenes[0]!.onSelect = onSelect;
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={overview} />);
+    const dialog = openDrawer();
+    fireEvent.click(sceneRows(dialog)[0]!);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it('a linha da cena selecionada se distingue das outras', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={storyOverviewFixture()} />);
+    const dialog = openDrawer();
+    const rows = sceneRows(dialog);
+    expect(rows[1]?.getAttribute('data-selected')).toBe('true');
+    expect(rows[0]?.getAttribute('data-selected')).toBeNull();
+    expect(rows[2]?.getAttribute('data-selected')).toBeNull();
+  });
+});
+
+describe('CoverageDrawer — com storyOverview, a contagem por tipo e os candidatos a ausência continuam lá (ENG-726)', () => {
+  it('a contagem por tipo e os candidatos a ausência aparecem do mesmo jeito que na Triagem', () => {
+    render(<CoverageDrawer coverage={coverageFixture()} storyOverview={storyOverviewFixture()} />);
+    const dialog = openDrawer();
+    expect(dialog.textContent).toContain('Cenas produtivas: 3.');
+    expect(dialog.textContent).toContain('Candidatos a ausência (raras em aberto)');
+  });
+});
+
+/**
+ * ENG-726 — achado ao gerar as capturas de paridade da gaveta ABERTA (nunca
+ * fotografada antes: as capturas de fluxo sempre a pegam fechada, seu estado
+ * padrão). Sem z-index próprio, `position: fixed` + `z-index: auto` pinta
+ * ATRÁS do cabeçalho `sticky z-index:30` (@/ui/app/header.css) — o título
+ * "Cobertura · só facilitadora" ficava coberto pela faixa do cabeçalho.
+ * jsdom não pinta de verdade, então o teste lê o CSS bruto, não o computado.
+ */
+describe('CoverageDrawer — o painel fica acima do cabeçalho fixo (ENG-726)', () => {
+  it('painel e véu vencem o z-index do cabeçalho — senão o título fica coberto', () => {
+    const HEADER_Z_INDEX = 30;
+    const blockOf = (selector: string) =>
+      new RegExp(`\\${selector}\\s*\\{[^}]*\\}`).exec(drawerCss)?.[0] ?? '';
+    const zIndexOf = (block: string) => Number(/z-index:\s*(\d+)/.exec(block)?.[1] ?? NaN);
+
+    expect(zIndexOf(blockOf('.cds-coverage-drawer-panel'))).toBeGreaterThan(HEADER_Z_INDEX);
+    expect(zIndexOf(blockOf('.cds-coverage-drawer-overlay'))).toBeGreaterThan(HEADER_Z_INDEX);
+  });
+});
+
+/**
+ * Achado gerando as capturas de paridade — pré-existente na Triagem também,
+ * não causado pela ENG-726 (confirmado com uma captura da gaveta da Triagem
+ * aberta antes do conserto). Um `scene_kind` longo (até 28 chars) mais a
+ * contagem não cabem numa linha só nos 340px do painel; sem quebra nem
+ * rolagem, o texto — inclusive o alvo, o número que a seção existe para
+ * mostrar — só transbordava, cortado pela borda do painel. jsdom não mede
+ * layout de verdade, então o teste lê o CSS bruto: a garantia real são as
+ * capturas de paridade regeneradas (.parity-shots/07c-cobertura-triagem,
+ * .theme-shots/{light,dark}/09c-cobertura).
+ */
+describe('CoverageDrawer — a contagem por tipo quebra linha em vez de transbordar (ENG-726)', () => {
+  it('a linha de contagem aceita quebrar, e o nome do tipo aceita partir se precisar', () => {
+    const blockOf = (selector: string) =>
+      new RegExp(`\\${selector}\\s*\\{[^}]*\\}`).exec(drawerCss)?.[0] ?? '';
+
+    expect(blockOf('.cds-coverage-drawer-row')).toMatch(/flex-wrap:\s*wrap/);
+    expect(blockOf('.cds-coverage-drawer-kind')).toMatch(/overflow-wrap:\s*anywhere/);
   });
 });
