@@ -4,6 +4,7 @@
  * Side effects: importar './fonts' e os css uma vez no shell.
  */
 export { ColarIcon, ShemaIcon } from './icon';
+export { phraseColor, sceneColor } from './tints';
 export {
   colors,
   iconColorways,

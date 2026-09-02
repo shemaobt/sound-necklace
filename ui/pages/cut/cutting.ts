@@ -1,6 +1,5 @@
 import type { Player } from '../../../adapters/audio';
 import type { PlayAction, Span } from '../../../domain';
-import { type PaletteEntry, scenePalette } from '../../tokens';
 
 /**
  * Núcleo puro da estação de corte de cenas (Escuta 2, PRD v2 §8.2/§8.4). Mantém
@@ -246,8 +245,6 @@ export function rankLockedScenes<T extends { locked: boolean; span: Span | null 
     .map((e, rank) => ({ ...e, rank }));
 }
 
-/** Cor da cena por índice, cíclica na paleta de cenas (§4.2). */
-export function sceneColor(index: number): PaletteEntry {
-  const n = scenePalette.length;
-  return scenePalette[((index % n) + n) % n]!;
-}
+/** A cor da cena mora nos tokens desde a ENG-725 (a Rever também a usa); fica
+ *  reexportada daqui para quem já a pedia à Escuta 2. */
+export { sceneColor } from '../../tokens';

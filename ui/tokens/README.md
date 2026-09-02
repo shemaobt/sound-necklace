@@ -126,3 +126,10 @@ que ela mude, e congela o valor claro dos papéis que carregam literal próprio.
 Fontes: `fonts.ts` importa `@fontsource` (woff2 por peso, self-hosted no
 bundle — offline/LGPD). `base.css`: reset mínimo + foco 3px telha +
 `prefers-reduced-motion`.
+
+## Tints (ENG-725)
+
+`tints.ts` é onde vivem `sceneColor(index)` e `phraseColor(index)`, as cores cíclicas de
+cena e de frase por posição no colar (§4.2). Moravam dentro das páginas Cortar e Frases;
+a Rever precisava da cor da cena e uma página não importa de outra página, então as duas
+vieram para cá. Cortar e Frases continuam a reexportá-las.
