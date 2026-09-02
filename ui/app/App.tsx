@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
@@ -96,6 +97,7 @@ function SessionStations({
   registry,
   player,
   sound,
+  metaRef,
 }: {
   session: SessionState;
   sessionId: string;
@@ -105,13 +107,28 @@ function SessionStations({
   registry: Record<string, StationComponent>;
   player: AudioPlayer | null;
   sound: UiSound;
+  /**
+   * O meta da sessão aberta (granularidade/áudio/consentimento) — precisa dele
+   * para montar o DTO que `store.complete()` manda ao concluir a Rever (ENG-702).
+   * Chega como REF, e só é lido dentro do handler (nunca durante o render): é o
+   * mesmo objeto que o autosave já lê em `useSessionHydration`, e um ref lido no
+   * corpo do render é erro de lint (react-hooks/refs) — a leitura tem de esperar
+   * o clique.
+   */
+  metaRef: MutableRefObject<SessionMeta | null>;
 }) {
+  const { t } = useTranslation();
   // O bloco que ACABOU de fechar (ENG-651). Mora aqui, e não na estação, por dois
   // motivos: a estação que confirma é justamente a que sai de cena, e só o shell
   // pode garantir que uma tela cheia por vez suba. Nasce e morre com a vista da
   // sessão — o `key={route.id}` do App remonta este `null` a cada sessão, então
   // reabrir uma já passada do limite não repete nada; um re-render não o perde.
   const [closedBlock, setClosedBlock] = useState<ClosedBlock | null>(null);
+  // A recusa do servidor ao concluir a Rever (ENG-702, §9.4: nunca punir). Mora
+  // aqui, e não na estação: é o shell quem chama `store.complete()`, e a estação
+  // só mostra o que ele decide. Limpa a cada NOVA tentativa — nunca sobra da
+  // anterior — e nunca sobrevive à troca de sessão (o `key={route.id}` remonta).
+  const [completeError, setCompleteError] = useState<string | null>(null);
   // O relógio líquido da sessão pulsa aqui, no único lugar que sabe QUAL sessão
   // está aberta. Nada disto sai do browser. Desde a ENG-689 ele ACUMULA sem ter
   // leitor: quem mostrava o total era a tela de conclusão, que saiu — o registro
@@ -141,7 +158,25 @@ function SessionStations({
     sound,
     // Dois blocos sobem tela: a Triagem fechando e a história concluída na Rever
     // (ENG-725). Fechar as Frases não é bloco — a Rever é só a estação seguinte.
-    onBlockClosed: (block: ClosedBlock) => setClosedBlock(block),
+    //
+    // A Rever passa pelo servidor primeiro (ENG-702): `onBlockClosed('historia')`
+    // só chega até aqui depois do clique consciente (§9.2, a estação já resolveu o
+    // aviso de dúvida); daqui, a tela oliva só sobe se `store.complete()`
+    // confirmar — subi-la antes mentiria numa falha de rede (§9.4: nunca punir). A
+    // Triagem fecha na hora, como sempre: ela nunca marca a sessão concluída.
+    onBlockClosed: (block: ClosedBlock) => {
+      const meta = metaRef.current;
+      if (block !== 'historia' || !meta) {
+        setClosedBlock(block);
+        return;
+      }
+      setCompleteError(null);
+      void appSessionStore()
+        .complete(sessionId, toSessionDto(session, meta))
+        .then(() => setClosedBlock(block))
+        .catch(() => setCompleteError(t('rever.completeFailed')));
+    },
+    completeError,
   };
 
   return (
@@ -521,6 +556,7 @@ export function App() {
           registry={registry}
           player={player}
           sound={sound}
+          metaRef={metaRef}
         />
       );
     }

@@ -265,6 +265,9 @@ export const pt = {
     hintBothAll: 'todas são respostas válidas, e ficam guardadas assim.',
     warn: 'Algumas cenas ficaram na dúvida ou sem nome — dá para seguir assim mesmo. Toque de novo para concluir.',
     conclude: 'Concluir a história',
+    /** ENG-702, §9.4: nunca punir — orienta e o mesmo toque em Concluir tenta de novo. */
+    completeFailed:
+      'Não consegui concluir a história. Verifique a conexão e toque em Concluir de novo.',
     legend: {
       outside: 'Fora dos tipos',
       phraseEnd: 'fim de frase',

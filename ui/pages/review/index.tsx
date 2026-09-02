@@ -32,8 +32,9 @@ import './review.css';
  *
  * Camada de wiring: lê a sessão do `sessionStore`; o áudio chega por prop
  * (`Player`), como na Escuta e nas Frases — o colar só avisa em que conta se tocou.
- * Concluir avisa o shell (`onBlockClosed('historia')`), que sobe a tela oliva.
- * Nesta fatia a sessão NÃO é marcada como concluída no servidor (fatia 2).
+ * Concluir avisa o shell (`onBlockClosed('historia')`); é o shell (App.tsx) quem
+ * chama `store.complete()` e só sobe a tela oliva se o servidor confirmar (ENG-702)
+ * — uma recusa vira `completeError` aqui, e o mesmo botão tenta de novo (§9.4).
  */
 
 /** O aviso some sozinho depois de um tempo (protótipo `_wt`, 9 s). */
@@ -54,6 +55,12 @@ export interface ReviewProps {
   sound?: UiSound;
   /** Concluir fecha a história — quem desenha a tela é o shell. */
   onBlockClosed?: (block: ClosedBlock) => void;
+  /**
+   * Concluir falhou no servidor (ENG-702, §9.4: nunca punir) — o shell tentou
+   * `store.complete()` e recusou a tela de parabéns porque ela mentiria. Mostra o
+   * aviso e deixa o mesmo botão tentar de novo; o shell decide quando limpar.
+   */
+  completeError?: string | null;
 }
 
 function fillOf(part: ScenePart): ScenePearlFill {
@@ -62,7 +69,7 @@ function fillOf(part: ScenePart): ScenePearlFill {
     : 'none';
 }
 
-export function Review({ player = null, sound, onBlockClosed }: ReviewProps) {
+export function Review({ player = null, sound, onBlockClosed, completeError = null }: ReviewProps) {
   const { t, i18n } = useTranslation();
   const session = useSessionStore((s) => s.session);
   const [head, setHead] = useState<number | null>(null);
@@ -229,6 +236,14 @@ export function Review({ player = null, sound, onBlockClosed }: ReviewProps) {
         <div className="cds-review-warn-wrap">
           <p className="cds-review-warn" role="status">
             {t('rever.warn')}
+          </p>
+        </div>
+      ) : null}
+
+      {completeError ? (
+        <div className="cds-review-warn-wrap">
+          <p className="cds-review-warn" role="alert">
+            {completeError}
           </p>
         </div>
       ) : null}
