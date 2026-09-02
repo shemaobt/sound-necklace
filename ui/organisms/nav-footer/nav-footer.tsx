@@ -41,13 +41,6 @@ export interface NavNext {
 export interface StationNavProps {
   back?: NavBack;
   next?: NavNext;
-  /**
-   * Conteúdo PRÓPRIO da estação no lugar do voltar, à esquerda (ENG-725: a legenda
-   * das marcas da Rever, que não tem voltar). Não é o rótulo de contexto do centro
-   * que o dono mandou tirar — é conteúdo funcional da página que mora no rodapé.
-   * Opcional: sem ele, o rodapé rende exatamente como antes.
-   */
-  aside?: ReactNode;
 }
 
 const SlotContext = createContext<{
@@ -69,9 +62,9 @@ export function NavFooterOutlet() {
 }
 
 /** Rende a navegação da estação ativa dentro do slot do shell. */
-export function StationNav({ back, next, aside }: StationNavProps) {
+export function StationNav({ back, next }: StationNavProps) {
   const { node } = useContext(SlotContext);
-  if (!node || (!back && !next && !aside)) return null;
+  if (!node || (!back && !next)) return null;
 
   return createPortal(
     <footer className="cds-nav-footer">
@@ -79,8 +72,6 @@ export function StationNav({ back, next, aside }: StationNavProps) {
         <button type="button" className="cds-nav-footer-back" onClick={back.onClick}>
           {back.label}
         </button>
-      ) : aside ? (
-        <div className="cds-nav-footer-aside">{aside}</div>
       ) : (
         <span className="cds-nav-footer-spacer" />
       )}

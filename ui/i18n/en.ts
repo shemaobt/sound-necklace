@@ -217,11 +217,6 @@ export const en: Dict = {
     warn: 'Some scenes stayed in doubt or without a name — you can go on anyway. Tap again to finish.',
     conclude: 'Finish the story',
     completeFailed: 'Could not finish the story. Check the connection and tap Finish again.',
-    legend: {
-      outside: 'Outside the kinds',
-      phraseEnd: 'end of phrase',
-      sceneEnd: 'end of scene',
-    },
   },
   review: {
     continue: 'Continue →',

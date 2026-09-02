@@ -16,6 +16,9 @@ import {
   type SessionState,
   type Span,
 } from '../../../domain';
+import { en } from '../../i18n/en';
+import { pt } from '../../i18n/pt';
+import { SIZE_EXPORT } from '../../organisms';
 import { renderStation } from '../../organisms/nav-footer/testing';
 import { sessionStore } from '../../state';
 import Review from './index';
@@ -56,11 +59,15 @@ function phrase(id: string, span: Span, part: string): Frase {
   return { prop_id: id, statement: '', qa: [], span, part_link: part, locked: true };
 }
 
-function concluded(parts: ScenePart[], frases: Frase[]): SessionState {
+function concluded(
+  parts: ScenePart[],
+  frases: Frase[],
+  durationSec: number = DURATION,
+): SessionState {
   const base = createSession({
-    durationSec: DURATION,
+    durationSec,
     beadSec: BEAD_SEC,
-    beads: buildBeads(DURATION, BEAD_SEC),
+    beads: buildBeads(durationSec, BEAD_SEC),
     manifestId: 'fnv1a32:00000000',
     audioFilename: 'historia.wav',
     slug: 'historia',
@@ -142,6 +149,17 @@ function manyDoubts(): SessionState {
 /** Cobertura ESPARSA: só a primeira cena existe; as contas de 10 em diante não são de ninguém. */
 function sparse(): SessionState {
   return concluded([scene('PT1', { s: 0, e: 9 })], [phrase('P1', { s: 0, e: 3 }, 'PT1')]);
+}
+
+/** História LONGA (ENG-730): 400 contas — mais do que cabe em qualquer teto de fileiras,
+ * para provar que é o colar que ganha barra de rolagem própria, não a página que cresce. */
+const LONG_DURATION = 100; // 400 contas a 0.25s/conta
+function longStory(): SessionState {
+  return concluded(
+    [scene('PT1', { s: 0, e: 399 })],
+    [phrase('P1', { s: 0, e: 399 }, 'PT1')],
+    LONG_DURATION,
+  );
 }
 
 async function makePlayer(): Promise<{ engine: FixtureAudioEngine; player: Player }> {
@@ -265,13 +283,22 @@ describe('Rever — o panorama mostra a história inteira', () => {
     expect(pearlBase(15)).not.toBe('');
   });
 
-  it('a legenda das marcas mora no rodapé, na linha do botão de concluir', () => {
+  it('a legenda das marcas não aparece em lugar nenhum da tela (decisão do dono, ENG-730)', () => {
+    load(doubtful());
+    const { container } = renderStation(<Review />);
+    expect(container.querySelector('.cds-review-legend')).toBeNull();
+    expect(screen.queryByText('fim de frase')).toBeNull();
+    expect(screen.queryByText('fim de cena')).toBeNull();
+    expect(screen.queryByText('Fora dos tipos')).toBeNull();
+  });
+
+  it('o rodapé continua só com o Concluir; nenhum slot próprio da estação sobra ali (ENG-730)', () => {
     load(doubtful());
     renderStation(<Review />);
     const footer = screen.getByRole('button', { name: CONCLUDE }).closest('footer')!;
-    expect(within(footer).getByText('fim de frase')).toBeDefined();
-    expect(within(footer).getByText('fim de cena')).toBeDefined();
-    expect(within(footer).getByText('Certeza')).toBeDefined();
+    expect(footer.querySelector('.cds-nav-footer-aside')).toBeNull();
+    expect(footer.querySelector('.cds-nav-footer-back')).toBeNull();
+    expect(within(footer).getByRole('button', { name: CONCLUDE })).toBeDefined();
   });
 
   it('a linha de contexto concorda em número com as cenas que descreve', () => {
@@ -591,5 +618,40 @@ describe('Rever — a gaveta de cobertura (ENG-726, só facilitadora)', () => {
     fireEvent.click(dialog.querySelector('[aria-label="Fechar"]')!);
 
     expect(sessionStore.getState().session).toBe(before);
+  });
+});
+
+/**
+ * ENG-730 — a Rever ganha viewport fixo: retorno do dono depois de andar na tela
+ * já mergeada. O colar passa a rolar dentro da própria janela como o de Escuta e
+ * Frases, em vez de esticar a página inteira numa história longa.
+ */
+describe('Rever — o colar rola dentro da própria janela (ENG-730)', () => {
+  it('uma história longa não cresce sem teto: a janela do colar ganha um max-height', () => {
+    load(longStory());
+    renderStation(<Review />);
+
+    const win = document.querySelector<HTMLElement>('.cds-necklace-window');
+    expect(win).not.toBeNull();
+    expect(win!.style.maxHeight).not.toBe('');
+  });
+
+  it('o teto vem da mesma medida de conta (SIZE.row) que Escuta e Frases usam para a delas', () => {
+    load(longStory());
+    renderStation(<Review />);
+
+    const win = document.querySelector<HTMLElement>('.cds-necklace-window')!;
+    const px = Number.parseFloat(win.style.maxHeight);
+    // mesma convenção das outras estações: N fileiras de SIZE.row + o respiro de 12px —
+    // não afirma QUAL N, só que a peça vem da mesma fonte de medida
+    expect(Number.isFinite(px)).toBe(true);
+    expect((px - 12) % SIZE_EXPORT.row).toBe(0);
+  });
+});
+
+describe('Rever — nenhuma chave i18n órfã da legenda removida (ENG-730)', () => {
+  it('rever.legend não sobrevive nem em pt nem em en', () => {
+    expect('legend' in pt.rever).toBe(false);
+    expect('legend' in en.rever).toBe(false);
   });
 });
