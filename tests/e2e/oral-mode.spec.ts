@@ -244,8 +244,12 @@ test('modo oral: som antes de texto, sem chrome, da Escuta 1 ao fim do fluxo', a
   await app.moveSeam();
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
-  // ——— o fim do fluxo (ENG-689): fechar a última cena produtiva fecha a sessão ———
+  // ——— a Rever (ENG-725): fechar a última cena produtiva leva ao panorama ———
   await app.finishPhrases();
+  // ouvir na Rever também é som antes de texto: uma pérola de cena toca a cena
+  await assertPlaysWithoutText(page, () => page.locator('.cds-scene-pearl').first().click());
+  // concluir é o Avançar do rodapé — não é chrome
+  await app.concludeStory();
 
   // ——— o caminho inteiro do ouvinte nunca tocou em chrome ———
   // primeiro: o chrome que a sonda vigia EXISTE na página. Sem isto, a asserção

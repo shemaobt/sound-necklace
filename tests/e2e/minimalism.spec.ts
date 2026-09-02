@@ -129,8 +129,18 @@ test('§9.2 — cada tela do ouvinte passa no scan de minimalismo', async ({ pag
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
 
-  // ——— o fim do fluxo (ENG-689) ———
-  // A tela que fecha a Segmentação é a última que o ouvinte vê, e é portalada — o
+  // ——— a Rever (ENG-725): a história inteira, os dois a veem ———
+  // O panorama todo — colar, pérolas de cena, legenda — e o aviso antes de
+  // concluir: nenhum dígito em nenhum deles, com CSS e layout de verdade.
+  await scan('Rever — panorama');
+  await page.getByRole('button', { name: 'Concluir a história' }).click();
+  await expect(page.getByText('Toque de novo para concluir.')).toBeVisible();
+  await scan('Rever — aviso antes de concluir');
+  await page.getByRole('button', { name: 'Concluir a história' }).click();
+
+  // ——— a história concluída ———
+  // A tela que fecha a história é a última que o ouvinte vê, e é portalada — o
   // scan aponta para o diálogo, não para o `main`.
-  await scanListenerSurface(page.getByRole('dialog'), { label: 'Fim do fluxo' });
+  await expect(page.getByRole('heading', { name: 'A história está completa.' })).toBeVisible();
+  await scanListenerSurface(page.getByRole('dialog'), { label: 'História concluída' });
 });

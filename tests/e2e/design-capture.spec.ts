@@ -59,8 +59,12 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
-  // o fim do fluxo (ENG-689): a tela que fecha a Segmentação fecha a sessão
-  await shot('09-fim-de-fluxo');
+  await app.waitForFullBar();
+  // a Rever (ENG-725): o panorama da história inteira
+  await shot('09-rever');
+  await app.concludeStory();
+  await app.waitForConcludedScreenToSettle();
+  await shot('09b-concluida');
   await app.leaveAfterPhrases();
   await shot('10-dashboard-depois');
 });

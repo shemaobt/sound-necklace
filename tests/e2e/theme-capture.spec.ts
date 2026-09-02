@@ -42,9 +42,13 @@ test('percorre o fluxo nos dois temas', async ({ page }) => {
 
   await app.confirmWholeStory();
   await shot('06-cut');
+  // cada cena leva DOIS toques, começo e fim, desde 2026-08-07 (como design-capture)
+  let start = 0;
   for (const end of SCENARIO.sceneEndBeads) {
-    await app.clickBead(end);
+    await app.clickBead(start);
+    if (end !== start) await app.clickBead(end);
     await page.getByRole('button', { name: '✓ Confirmar esta cena' }).click();
+    start = end + 1;
   }
   await shot('06b-cut-revisao');
   await page.getByRole('button', { name: 'Continuar →' }).click();
@@ -58,7 +62,11 @@ test('percorre o fluxo nos dois temas', async ({ page }) => {
   await app.nextScene();
   await app.cutPhrase(SCENARIO.containedPhrase.s, SCENARIO.containedPhrase.e);
   await app.finishPhrases();
-  await shot('09-fim-de-fluxo');
+  await app.waitForFullBar();
+  await shot('09-rever');
+  await app.concludeStory();
+  await app.waitForConcludedScreenToSettle();
+  await shot('09b-concluida');
   await app.leaveAfterPhrases();
   await shot('10-dashboard-depois');
 });
