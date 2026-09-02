@@ -25,9 +25,16 @@
   writing-mode: vertical-rl;
 }
 
+/* Sem um z-index próprio, o painel/véu (`position: fixed`, `z-index: auto`)
+   pintam ATRÁS do cabeçalho `sticky z-index:30` (@/ui/app/header.css) — um
+   diálogo cujo topo cai sob a faixa do cabeçalho tem o próprio título coberto
+   por ela. 45 vence o cabeçalho e o popover de som/volume dele (z-index:40),
+   e fica abaixo das duas telas cheias da escala (block-done 56, goal-reached
+   57): um diálogo modal não precisa vencer uma tela cheia que o substitui. */
 .cds-coverage-drawer-overlay {
   position: fixed;
   inset: 0;
+  z-index: 45;
   background: rgba(10, 7, 3, 0.2);
 }
 
@@ -36,6 +43,7 @@
   right: 0;
   top: 0;
   bottom: 0;
+  z-index: 45;
   width: 340px;
   background: var(--cds-olive, #3f3e20);
   color: var(--cds-cream, #f6f5eb);

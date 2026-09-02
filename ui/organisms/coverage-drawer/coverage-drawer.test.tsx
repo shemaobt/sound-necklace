@@ -320,3 +320,23 @@ describe('CoverageDrawer — com storyOverview, a contagem por tipo e os candida
     expect(dialog.textContent).toContain('Candidatos a ausência (raras em aberto)');
   });
 });
+
+/**
+ * ENG-726 — achado ao gerar as capturas de paridade da gaveta ABERTA (nunca
+ * fotografada antes: as capturas de fluxo sempre a pegam fechada, seu estado
+ * padrão). Sem z-index próprio, `position: fixed` + `z-index: auto` pinta
+ * ATRÁS do cabeçalho `sticky z-index:30` (@/ui/app/header.css) — o título
+ * "Cobertura · só facilitadora" ficava coberto pela faixa do cabeçalho.
+ * jsdom não pinta de verdade, então o teste lê o CSS bruto, não o computado.
+ */
+describe('CoverageDrawer — o painel fica acima do cabeçalho fixo (ENG-726)', () => {
+  it('painel e véu vencem o z-index do cabeçalho — senão o título fica coberto', () => {
+    const HEADER_Z_INDEX = 30;
+    const blockOf = (selector: string) =>
+      new RegExp(`\\${selector}\\s*\\{[^}]*\\}`).exec(drawerCss)?.[0] ?? '';
+    const zIndexOf = (block: string) => Number(/z-index:\s*(\d+)/.exec(block)?.[1] ?? NaN);
+
+    expect(zIndexOf(blockOf('.cds-coverage-drawer-panel'))).toBeGreaterThan(HEADER_Z_INDEX);
+    expect(zIndexOf(blockOf('.cds-coverage-drawer-overlay'))).toBeGreaterThan(HEADER_Z_INDEX);
+  });
+});
