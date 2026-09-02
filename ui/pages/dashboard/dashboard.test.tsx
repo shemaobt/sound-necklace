@@ -8,7 +8,7 @@ import {
   FixtureSessionBackend,
   FixtureSessionStore,
 } from '../../../adapters/sessions';
-import type { ArtifactTriple, SessionStateDto } from '../../../contracts';
+import type { SessionStateDto } from '../../../contracts';
 import i18n from '../../i18n';
 import { pt } from '../../i18n/pt';
 import dashboardCss from './dashboard.css?raw';
@@ -51,15 +51,12 @@ async function seedInProgress(
 
 async function seedCompleted(
   store: FixtureSessionStore,
-  triple: ArtifactTriple,
   over: Partial<CreateSessionInput> = {},
 ): Promise<string> {
   const id = await seedInProgress(store, over);
-  await store.complete(id, STATE, triple);
+  await store.complete(id, STATE);
   return id;
 }
-
-const TRIPLE: ArtifactTriple = { anchoring: '{}', manifest: '{}', report: '#' };
 
 function goto(path: string): void {
   window.history.replaceState({}, '', path);
@@ -112,7 +109,7 @@ describe('Dashboard — lista de sessões (§7.2)', () => {
     const done = await store.create(
       createInput({ storyName: 'Terminada', storySlug: 'terminada' }),
     );
-    await store.complete(done.id, STATE, { anchoring: 'r', manifest: 'm', report: 'l' });
+    await store.complete(done.id, STATE);
     const doneSummary = await store.get(done.id);
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
@@ -152,7 +149,7 @@ describe('Dashboard — o relance de progresso acaba na Rever (ENG-725)', () => 
     const guardada = await store.create(
       createInput({ storyName: 'Fechada', storySlug: 'fechada' }),
     );
-    await store.complete(guardada.id, STATE, TRIPLE);
+    await store.complete(guardada.id, STATE);
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
@@ -292,7 +289,7 @@ describe('Dashboard — o menu de ações do cartão (§7.2, ENG-305/ENG-281)', 
   it('toda história oferece o menu de ações, terminada ou não', async () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Em curso', storySlug: 'em-curso' });
-    await seedCompleted(store, TRIPLE, { storyName: 'Terminada', storySlug: 'terminada' });
+    await seedCompleted(store, { storyName: 'Terminada', storySlug: 'terminada' });
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
 
@@ -303,7 +300,7 @@ describe('Dashboard — o menu de ações do cartão (§7.2, ENG-305/ENG-281)', 
   /** ENG-689: o app não gera mais documento nenhum, e o menu não os oferece. */
   it('o menu não oferece documento para baixar, nem na história terminada', async () => {
     const store = new FixtureSessionStore();
-    await seedCompleted(store, TRIPLE, { storyName: 'Terminada', storySlug: 'terminada' });
+    await seedCompleted(store, { storyName: 'Terminada', storySlug: 'terminada' });
 
     render(<Dashboard store={store} auth={new FixtureAuthProvider()} />);
     await userEvent.click(await screen.findByRole('button', { name: 'Ações em Terminada' }));
@@ -495,7 +492,7 @@ describe('Dashboard — renomear uma história (§7.2, ENG-281)', () => {
   it('toda história pode ser renomeada, terminada ou não', async () => {
     const store = new FixtureSessionStore();
     await seedInProgress(store, { storyName: 'Em curso', storySlug: 'em-curso' });
-    await seedCompleted(store, TRIPLE, { storyName: 'Terminada', storySlug: 'terminada' });
+    await seedCompleted(store, { storyName: 'Terminada', storySlug: 'terminada' });
     const dashboard = <Dashboard store={store} auth={new FixtureAuthProvider()} />;
 
     render(dashboard);

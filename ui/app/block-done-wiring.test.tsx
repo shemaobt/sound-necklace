@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -160,12 +160,13 @@ async function persist(state: SessionState): Promise<string> {
   return summary.id;
 }
 
-/** Abre a sessão no app e espera a estação em que ela salvou aparecer. */
-async function open(state: SessionState, landmark: string): Promise<void> {
+/** Abre a sessão no app, espera a estação em que ela salvou aparecer, e devolve o id. */
+async function open(state: SessionState, landmark: string): Promise<string> {
   const id = await persist(state);
   act(() => navigate(`/session/${id}`));
   render(<App />);
   await screen.findByText(landmark, { exact: false });
+  return id;
 }
 
 beforeEach(() => {
@@ -288,6 +289,76 @@ describe('O fim de bloco no shell (ENG-651)', () => {
       expect(screen.getByRole('heading', { name: DASHBOARD })).toBeDefined();
     });
     expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
+  });
+
+  /**
+   * ENG-702 — o bug relatado: a sessão concluída na Rever nunca chegava a marcar
+   * `completed` no armazenamento, e o painel a mostrava "Em andamento" para sempre.
+   * Prova o efeito no ARMAZENAMENTO, não só na tela (o painel ler esse status
+   * corretamente é o que `ui/pages/dashboard/dashboard.test.tsx` já prova, isolado).
+   */
+  it('concluir na Rever marca a sessão como concluída no armazenamento, não só na tela', async () => {
+    const id = await open(concludedClean(), REVER);
+
+    expect((await appSessionStore().get(id)).status).toBe('in_progress');
+
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+    await screen.findByRole('heading', { name: HISTORIA_HEADLINE });
+
+    expect((await appSessionStore().get(id)).status).toBe('completed');
+  });
+
+  it('dois toques seguidos em Concluir (história limpa) não quebram nada — o servidor é idempotente', async () => {
+    const id = await open(concludedClean(), REVER);
+
+    const button = screen.getByRole('button', { name: CONCLUDE });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await screen.findByRole('heading', { name: HISTORIA_HEADLINE });
+    expect(screen.queryByRole('alert')).toBeNull();
+    await waitFor(async () => {
+      expect((await appSessionStore().get(id)).status).toBe('completed');
+    });
+  });
+
+  /**
+   * §9.4 — nunca punir: uma falha de rede não deixa a pessoa presa nem mostra a
+   * tela de parabéns mentindo. O erro orienta e o mesmo toque tenta de novo.
+   */
+  it('se concluir falhar (rede fora), a Rever não mostra a tela de parabéns mentindo — orienta e deixa tentar de novo', async () => {
+    const id = await open(concludedClean(), REVER);
+    const completeSpy = vi
+      .spyOn(appSessionStore(), 'complete')
+      .mockRejectedValueOnce(new Error('rede fora'));
+
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Não consegui concluir');
+    expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
+    // ainda na Rever — o mesmo botão segue de pé para tentar de novo
+    expect(screen.getByRole('heading', { name: REVER })).toBeDefined();
+
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+
+    expect(await screen.findByRole('heading', { name: HISTORIA_HEADLINE })).toBeDefined();
+    expect((await appSessionStore().get(id)).status).toBe('completed');
+    completeSpy.mockRestore();
+  });
+
+  it('"Olhar de novo" devolve à Rever sem desconcluir a sessão no armazenamento', async () => {
+    const id = await open(concludedClean(), REVER);
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+    await screen.findByRole('heading', { name: HISTORIA_HEADLINE });
+    expect((await appSessionStore().get(id)).status).toBe('completed');
+
+    await userEvent.click(screen.getByRole('button', { name: OLHAR_DE_NOVO }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
+    });
+    expect((await appSessionStore().get(id)).status).toBe('completed');
   });
 
   it('confirmar uma cena que NÃO é a última produtiva não fecha bloco nenhum', async () => {
