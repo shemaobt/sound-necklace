@@ -51,9 +51,9 @@ describe('ScenePearl — a confiança mora no preenchimento (desenho `_confFill`
     expect(screen.getByRole('button').getAttribute('data-fill')).toBe('low');
 
     // cheia: o gradiente da pérola; meia: corte duro a 50%; dúvida: aro tracejado
-    expect(rule("[data-fill='high'] .cds-scene-pearl-disc")).toMatch(/radial-gradient/);
-    expect(rule("[data-fill='medium'] .cds-scene-pearl-disc")).toMatch(/50%/);
-    expect(rule("[data-fill='low'] .cds-scene-pearl-disc")).toMatch(/dashed/);
+    expect(rule(".cds-scene-pearl-disc[data-fill='high']")).toMatch(/radial-gradient/);
+    expect(rule(".cds-scene-pearl-disc[data-fill='medium']")).toMatch(/50%/);
+    expect(rule(".cds-scene-pearl-disc[data-fill='low']")).toMatch(/dashed/);
   });
 
   it('fora dos tipos: rótulo por extenso em itálico, pérola creme tracejada, nenhuma marca de alerta', () => {
@@ -64,7 +64,7 @@ describe('ScenePearl — a confiança mora no preenchimento (desenho `_confFill`
     expect(screen.queryByRole('alert')).toBeNull();
     expect(button.textContent).not.toMatch(/[⚠⌀!]/);
     expect(rule("[data-fill='none'] .cds-scene-pearl-name")).toMatch(/font-style:\s*italic/);
-    expect(rule("[data-fill='none'] .cds-scene-pearl-disc")).toMatch(/dashed/);
+    expect(rule(".cds-scene-pearl-disc[data-fill='none']")).toMatch(/dashed/);
   });
 
   it('a escolhida ganha um anel; as outras não', () => {

@@ -16,7 +16,12 @@ export { KindCard } from './kind-card/kind-card';
 export { ProgressDots } from './progress-dots/progress-dots';
 export { QuestionCard } from './question-card/question-card';
 export { SaveChip, type SaveStatus } from './save-chip/save-chip';
-export { ScenePearl, type ScenePearlFill, type ScenePearlProps } from './scene-pearl/scene-pearl';
+export {
+  ScenePearl,
+  ScenePearlDisc,
+  type ScenePearlFill,
+  type ScenePearlProps,
+} from './scene-pearl/scene-pearl';
 export { SelectionBand, type SelectionBandRow } from './selection-band/selection-band';
 export { StoryProgressBar } from './story-progress-bar/story-progress-bar';
 export { TrechoIndicator } from './trecho-indicator/trecho-indicator';

@@ -21,6 +21,34 @@ export interface ScenePearlProps {
   onClick?: () => void;
 }
 
+/**
+ * Só a pérola, sem nome nem toque: a mesma peça que a fila do panorama usa,
+ * reaproveitada pela tela de conclusão (uma por cena, ENG-725). Decorativa.
+ */
+export function ScenePearlDisc({
+  fill,
+  tint,
+  size = 42,
+}: {
+  fill: ScenePearlFill;
+  tint?: PaletteEntry;
+  /** diâmetro em px — 42 na fila, 26 na tela de conclusão */
+  size?: number;
+}) {
+  return (
+    <span
+      className="cds-scene-pearl-disc"
+      aria-hidden="true"
+      data-fill={fill}
+      style={{
+        '--cds-pearl-base': tint?.base,
+        '--cds-pearl-lit': tint?.lit,
+        '--cds-scene-pearl-size': `${size}px`,
+      }}
+    />
+  );
+}
+
 export function ScenePearl({ label, fill, tint, selected = false, onClick }: ScenePearlProps) {
   return (
     <button
@@ -30,11 +58,7 @@ export function ScenePearl({ label, fill, tint, selected = false, onClick }: Sce
       data-selected={selected || undefined}
       onClick={onClick}
     >
-      <span
-        className="cds-scene-pearl-disc"
-        aria-hidden="true"
-        style={{ '--cds-pearl-base': tint?.base, '--cds-pearl-lit': tint?.lit }}
-      />
+      <ScenePearlDisc fill={fill} tint={tint} />
       <span className="cds-scene-pearl-name">{label}</span>
     </button>
   );

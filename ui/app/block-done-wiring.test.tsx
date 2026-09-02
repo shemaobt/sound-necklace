@@ -267,6 +267,16 @@ describe('O fim de bloco no shell (ENG-651)', () => {
     expect(screen.queryByText(META)).toBeNull();
   });
 
+  it('concluída, a tela oliva mostra uma pérola por cena, com a confiança de cada uma', async () => {
+    await open(concludedDoubtful(), REVER);
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+    await screen.findByRole('heading', { name: HISTORIA_HEADLINE });
+
+    const discs = screen.getByRole('dialog').querySelectorAll('.cds-scene-pearl-disc');
+    expect([...discs].map((d) => d.getAttribute('data-fill'))).toEqual(['high', 'none']);
+  });
+
   it('concluída, "Voltar às histórias" leva ao painel', async () => {
     await open(concludedClean(), REVER);
     await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));

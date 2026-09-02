@@ -55,6 +55,30 @@
   gap: 16px;
 }
 
+/* uma pérola por cena sobre o oliva (desenho `concBeads`): a metade vazia do
+   "quase" e a pérola fora dos tipos são creme TRANSLÚCIDO, não o creme do tema
+   claro — sobre o oliva, o sólido gritaria */
+.cds-block-done-beads .cds-scene-pearl-disc {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.cds-block-done-beads .cds-scene-pearl-disc[data-fill='medium'] {
+  background: linear-gradient(
+    90deg,
+    var(--cds-pearl-base, var(--cds-ui-pearl)) 50%,
+    rgba(246, 245, 235, 0.14) 50%
+  );
+}
+
+.cds-block-done-beads .cds-scene-pearl-disc[data-fill='none'] {
+  background: radial-gradient(
+    circle at 34% 30%,
+    rgba(246, 245, 235, 0.25),
+    rgba(246, 245, 235, 0.1) 70%
+  );
+  border: 1.5px dashed rgba(246, 245, 235, 0.45);
+}
+
 .cds-block-done-headline {
   margin: 0;
   font-family: var(--cds-font-quiet-voice, 'Merriweather', Georgia, serif);

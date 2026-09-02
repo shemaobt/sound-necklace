@@ -167,6 +167,36 @@ describe('BlockDone — o que a tela diz em cada limite (ENG-651)', () => {
     expect(beads[0]!.getAttribute('data-scene-end')).toBeNull();
   });
 
+  /**
+   * "A história inteira" mostra a história inteira (ENG-725, desenho `concBeads`):
+   * uma pérola POR CENA, com a confiança no próprio preenchimento — três cenas,
+   * três pérolas; a fora dos tipos, creme tracejada. A Triagem não passa `pearls`
+   * e segue com as cinco contas decorativas.
+   */
+  it('na história concluída, uma pérola por cena, com a confiança no preenchimento', () => {
+    const { container } = render(
+      <BlockDone
+        {...props({
+          block: 'historia',
+          pearls: [
+            { fill: 'high', tint: scenePalette[0] },
+            { fill: 'low', tint: scenePalette[1] },
+            { fill: 'none' },
+          ],
+        })}
+      />,
+    );
+    const discs = container.ownerDocument.querySelectorAll<HTMLElement>(
+      '.cds-block-done-beads .cds-scene-pearl-disc',
+    );
+    expect(discs).toHaveLength(3);
+    expect([...discs].map((d) => d.getAttribute('data-fill'))).toEqual(['high', 'low', 'none']);
+    expect(discs[0]!.style.getPropertyValue('--cds-pearl-base')).toBe(scenePalette[0]!.base);
+    expect(
+      container.ownerDocument.querySelectorAll('.cds-block-done-beads .cds-pearl'),
+    ).toHaveLength(0);
+  });
+
   it('as cores das contas vêm dos dados, não de literais na tela', () => {
     const { container } = render(
       <BlockDone {...props({ block: 'historia', tints: scenePalette.slice(0, 5) })} />,

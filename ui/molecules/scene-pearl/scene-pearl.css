@@ -31,8 +31,8 @@
 .cds-scene-pearl-disc {
   flex: none;
   box-sizing: border-box;
-  width: 42px;
-  height: 42px;
+  width: var(--cds-scene-pearl-size, 42px);
+  height: var(--cds-scene-pearl-size, 42px);
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(10, 7, 3, 0.18);
   transition:
@@ -41,7 +41,7 @@
 }
 
 /* certeza: a pérola cheia, no gradiente do colar */
-.cds-scene-pearl[data-fill='high'] .cds-scene-pearl-disc {
+.cds-scene-pearl-disc[data-fill='high'] {
   background: radial-gradient(
     circle at 34% 30%,
     var(--cds-pearl-lit, var(--cds-ui-pearl-lit)) 0%,
@@ -50,7 +50,7 @@
 }
 
 /* quase: meia pérola, corte duro a 50% */
-.cds-scene-pearl[data-fill='medium'] .cds-scene-pearl-disc {
+.cds-scene-pearl-disc[data-fill='medium'] {
   background: linear-gradient(
     90deg,
     var(--cds-pearl-base, var(--cds-ui-pearl)) 50%,
@@ -60,13 +60,13 @@
 }
 
 /* na dúvida: só o aro, tracejado, na cor da cena */
-.cds-scene-pearl[data-fill='low'] .cds-scene-pearl-disc {
+.cds-scene-pearl-disc[data-fill='low'] {
   background: transparent;
   border: 3px dashed var(--cds-pearl-base, var(--cds-ui-pearl));
 }
 
 /* fora dos tipos: pérola-aveia com aro tracejado — resposta, não erro */
-.cds-scene-pearl[data-fill='none'] .cds-scene-pearl-disc {
+.cds-scene-pearl-disc[data-fill='none'] {
   background: radial-gradient(
     circle at 34% 30%,
     var(--cds-ui-pearl-lit) 0%,

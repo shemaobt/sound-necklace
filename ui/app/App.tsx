@@ -4,14 +4,14 @@ import type { Player as AudioPlayer } from '../../adapters/audio';
 import type { ConnectivityMonitor } from '../../adapters/connectivity/types';
 import { SilentUiSound, type UiSound } from '../../adapters/ui-sound';
 import { fromSessionDto, toSessionDto, type SessionMeta } from '../../contracts';
-import type { SessionState } from '../../domain';
-import type { SaveStatus } from '../molecules';
+import { lockedParts, type ScenePart, type SessionState, type Span } from '../../domain';
+import type { SaveStatus, ScenePearlFill } from '../molecules';
 import { BlockDone, type ClosedBlock } from '../organisms/block-done/block-done';
 import { BreakSuggestion } from '../organisms/break-suggestion/break-suggestion';
 import { GoalReached } from '../organisms/goal-reached/goal-reached';
 import { ConnectionGate } from '../organisms/connection-gate/connection-gate';
 import type { EditorLock } from '../state';
-import { scenePalette } from '../tokens';
+import { sceneColor, scenePalette, type PaletteEntry } from '../tokens';
 import {
   appStore,
   progressStore,
@@ -60,6 +60,22 @@ function useAutosaveStatus(): SaveStatus {
 import { stepperStations } from './stepper-model';
 import { navigate, useRoute } from './router';
 import './app.css';
+
+/**
+ * A história inteira, uma pérola por cena na ordem do colar, com a confiança como
+ * preenchimento (ENG-725): o que a tela de conclusão mostra. A cor é a mesma que
+ * a Rever dá à cena (posição no colar); a cena fora dos tipos fica creme.
+ */
+function scenePearlsOf(session: SessionState): { fill: ScenePearlFill; tint?: PaletteEntry }[] {
+  return lockedParts(session)
+    .filter((p): p is ScenePart & { span: Span } => p.span !== null)
+    .sort((a, b) => a.span.s - b.span.s)
+    .map((part, index) =>
+      part.tag_state === 'tagged' && part.scene_kind_confidence
+        ? { fill: part.scene_kind_confidence, tint: sceneColor(index) }
+        : { fill: 'none' },
+    );
+}
 
 /** Player itinerante em repouso (sem áudio fiado): só o `stop()` que o slot chama. */
 const NO_PLAYBACK: Player = { stop() {} };
@@ -185,6 +201,7 @@ function SessionStations({
         busy={breakOpen}
         onOpenChange={setBlockOpen}
         tints={scenePalette.slice(0, Math.min(5, Math.max(1, session.parts.length)))}
+        pearls={closedBlock === 'historia' ? scenePearlsOf(session) : undefined}
         // A história concluída (ENG-725) é o FIM do fluxo: não há estação atrás da
         // tela para o primário entregar, então ele é a saída (o painel). A segunda
         // ação ali é "Olhar de novo": fecha a tela e a Rever, ainda montada atrás,

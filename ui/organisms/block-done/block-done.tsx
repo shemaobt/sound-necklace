@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Pearl } from '../../atoms';
+import { ScenePearlDisc, type ScenePearlFill } from '../../molecules';
 import { ShemaIcon, type PaletteEntry } from '../../tokens';
 import './block-done.css';
 
@@ -49,6 +50,13 @@ export interface BlockDoneProps {
    */
   tints: readonly PaletteEntry[];
   /**
+   * A história inteira, uma pérola POR CENA com a confiança no próprio
+   * preenchimento (ENG-725, desenho `concBeads`) — é o que a história concluída
+   * mostra. Dado, as cinco contas de `tints` não são desenhadas; a Triagem não o
+   * passa e fica com as cinco.
+   */
+  pearls?: readonly { fill: ScenePearlFill; tint?: PaletteEntry }[];
+  /**
    * Há algo em curso que não pode ser interrompido: o microfone aberto ou outra
    * tela cheia no ar. Uma superfície cheia de cada vez.
    *
@@ -76,6 +84,7 @@ export interface BlockDoneProps {
 export function BlockDone({
   block,
   tints,
+  pearls,
   busy = false,
   onOpenChange,
   onContinue,
@@ -124,14 +133,18 @@ export function BlockDone({
           </span>
           <p className="cds-block-done-eyebrow">{t(`blockDone.${block}.eyebrow`)}</p>
           <span className="cds-block-done-beads" aria-hidden="true">
-            {Array.from({ length: BEADS }, (_, i) => (
-              <Pearl
-                key={i}
-                state="lit"
-                tint={tints.length > 0 ? tints[i % tints.length] : undefined}
-                sceneEnd={i === BEADS - 1}
-              />
-            ))}
+            {pearls
+              ? pearls.map((pearl, i) => (
+                  <ScenePearlDisc key={i} fill={pearl.fill} tint={pearl.tint} size={26} />
+                ))
+              : Array.from({ length: BEADS }, (_, i) => (
+                  <Pearl
+                    key={i}
+                    state="lit"
+                    tint={tints.length > 0 ? tints[i % tints.length] : undefined}
+                    sceneEnd={i === BEADS - 1}
+                  />
+                ))}
           </span>
           <Dialog.Title className="cds-block-done-headline">
             {t(`blockDone.${block}.headline`)}
