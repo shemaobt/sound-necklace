@@ -60,6 +60,14 @@ import './review.css';
 /** O aviso some sozinho depois de um tempo (protótipo `_wt`, 9 s). */
 const WARN_MS = 9000;
 
+/**
+ * Teto da janela de contas (ENG-730, mesma convenção de Escuta/Frases —
+ * `ui/pages/listen/index.tsx`, `ui/pages/phrases/index.tsx`): o colar rola dentro
+ * da própria janela em vez de esticar a página numa história longa. 8 fileiras
+ * sobram para a fila de pérolas e a linha de contexto abaixo do colar.
+ */
+const NECKLACE_MAX_H = 8 * SIZE_EXPORT.row + 12;
+
 /** Conversão de unidade, não dado de domínio: contas × segundos/conta → "m:ss". */
 function mmss(beadCount: number, beadSec: number): string {
   const totalSeconds = Math.round(beadCount * beadSec);
@@ -285,6 +293,7 @@ export function Review({ player = null, sound, onBlockClosed, completeError = nu
           lockedEndBeads={lockedEndBeads}
           phraseEndBeads={phraseEndBeads}
           size={SIZE_EXPORT}
+          maxHeight={NECKLACE_MAX_H}
           transportOnly
           playbackHead={head}
           onBeadPointerDown={onBead}
@@ -327,41 +336,7 @@ export function Review({ player = null, sound, onBlockClosed, completeError = nu
         </div>
       ) : null}
 
-      {/* a legenda das marcas mora no rodapé (desenho), à esquerda do Concluir: é o
-          que cada preenchimento e cada forma quer dizer — conteúdo funcional, não
-          o rótulo de contexto do centro, que fica vazio por decisão do dono */}
-      <StationNav
-        aside={
-          <ul className="cds-review-legend">
-            <li>
-              <span className="cds-review-swatch" data-mark="high" aria-hidden="true" />
-              {t('confidence.certeza')}
-            </li>
-            <li>
-              <span className="cds-review-swatch" data-mark="medium" aria-hidden="true" />
-              {t('confidence.quase')}
-            </li>
-            <li>
-              <span className="cds-review-swatch" data-mark="low" aria-hidden="true" />
-              {t('confidence.duvida')}
-            </li>
-            <li>
-              <span className="cds-review-swatch" data-mark="none" aria-hidden="true" />
-              {t('rever.legend.outside')}
-            </li>
-            <li className="cds-review-legend-gap" aria-hidden="true" />
-            <li>
-              <span className="cds-review-swatch" data-mark="phrase-end" aria-hidden="true" />
-              {t('rever.legend.phraseEnd')}
-            </li>
-            <li>
-              <span className="cds-review-swatch" data-mark="scene-end" aria-hidden="true" />
-              {t('rever.legend.sceneEnd')}
-            </li>
-          </ul>
-        }
-        next={{ label: t('rever.conclude'), onClick: conclude, enabled: true }}
-      />
+      <StationNav next={{ label: t('rever.conclude'), onClick: conclude, enabled: true }} />
 
       <CoverageDrawer coverage={coverage} storyOverview={storyOverview} />
     </section>
