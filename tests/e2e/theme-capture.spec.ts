@@ -64,6 +64,10 @@ test('percorre o fluxo nos dois temas', async ({ page }) => {
   await app.finishPhrases();
   await app.waitForFullBar();
   await shot('09-rever');
+  // a gaveta de cobertura (ENG-726): só-facilitadora, aberta pela aba
+  await app.openCoverageDrawer();
+  await shot('09c-cobertura');
+  await app.closeCoverageDrawer();
   await app.concludeStory();
   await app.waitForConcludedScreenToSettle();
   await shot('09b-concluida');

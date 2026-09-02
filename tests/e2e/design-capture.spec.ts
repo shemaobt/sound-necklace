@@ -62,6 +62,11 @@ test('percorre o fluxo e fotografa cada estação', async ({ page }) => {
   await app.waitForFullBar();
   // a Rever (ENG-725): o panorama da história inteira
   await shot('09-rever');
+  // a gaveta de cobertura (ENG-726): só-facilitadora, aberta pela aba — o
+  // cenário tem uma cena "nenhum se encaixa" na lista cena a cena
+  await app.openCoverageDrawer();
+  await shot('09c-cobertura');
+  await app.closeCoverageDrawer();
   await app.concludeStory();
   await app.waitForConcludedScreenToSettle();
   await shot('09b-concluida');
