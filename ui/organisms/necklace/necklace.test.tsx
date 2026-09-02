@@ -90,3 +90,23 @@ describe('Necklace — fim de frase, distinto do fim de cena (ENG-725)', () => {
     expect(at(9)?.getAttribute('data-phrase-end')).toBeNull();
   });
 });
+
+describe('Necklace — cena fora dos tipos (ENG-725)', () => {
+  it('um segmento fora dos tipos rende contas creme tracejadas até o fim de cena, sem tinta', () => {
+    const { container } = render(
+      <Necklace
+        totalBeads={20}
+        beadSec={0.25}
+        segments={[{ span: { s: 4, e: 9 }, noneFit: true }]}
+        lockedEndBeads={[9]}
+      />,
+    );
+    const at = (i: number) =>
+      container.querySelector<HTMLElement>(`.cds-necklace-bead[data-idx="${i}"] .cds-pearl`);
+    expect(at(6)?.getAttribute('data-none-fit')).toBe('true');
+    expect(at(6)?.style.getPropertyValue('--cds-pearl-base')).toBe('');
+    expect(at(9)?.getAttribute('data-none-fit')).toBe('true');
+    expect(at(9)?.getAttribute('data-scene-end')).toBe('true');
+    expect(at(3)?.getAttribute('data-none-fit')).toBeNull();
+  });
+});

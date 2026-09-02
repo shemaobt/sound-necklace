@@ -18,10 +18,14 @@ import {
 } from './geometry';
 import './necklace.css';
 
-/** Um segmento colorido (cena ou frase) que tinge um trecho de contas. */
+/**
+ * Um segmento (cena ou frase) que tinge um trecho de contas — ou, sem tinta e com
+ * `noneFit`, o marca como cena fora dos tipos (ENG-725): creme tracejada até o fim.
+ */
 export interface NecklaceSegment {
   span: Span;
-  tint: PaletteEntry;
+  tint?: PaletteEntry;
+  noneFit?: boolean;
 }
 
 /**
@@ -88,6 +92,7 @@ interface BeadDescriptor {
   tint?: PaletteEntry;
   sceneEnd: boolean;
   phraseEnd: boolean;
+  noneFit: boolean;
   selEdge: boolean;
 }
 
@@ -117,8 +122,12 @@ function computeField(
   const xOff = centerOffset(winE - winS + 1, bpr, width, size);
 
   const colorMap = new Map<number, PaletteEntry>();
+  const noneFitSet = new Set<number>();
   for (const seg of segments) {
-    for (let i = seg.span.s; i <= seg.span.e; i++) colorMap.set(i, seg.tint);
+    for (let i = seg.span.s; i <= seg.span.e; i++) {
+      if (seg.tint) colorMap.set(i, seg.tint);
+      if (seg.noneFit) noneFitSet.add(i);
+    }
   }
   const endSet = new Set(lockedEndBeads);
   const phraseEndSet = new Set(phraseEndBeads);
@@ -135,6 +144,7 @@ function computeField(
       tint: colorMap.get(i),
       sceneEnd: endSet.has(i),
       phraseEnd: phraseEndSet.has(i),
+      noneFit: noneFitSet.has(i),
       selEdge: selection !== null && (i === selection.s || i === selection.e),
     });
   }
@@ -235,6 +245,7 @@ const BeadField = memo(function BeadField({ field, size }: { field: Field; size:
             size={size.bead}
             sceneEnd={b.sceneEnd}
             phraseEnd={b.phraseEnd}
+            noneFit={b.noneFit}
           />
         </span>
       ))}

@@ -14,6 +14,7 @@ export function Pearl({
   size = 26,
   sceneEnd = false,
   phraseEnd = false,
+  noneFit = false,
   ping = false,
 }: {
   state?: PearlState;
@@ -30,6 +31,12 @@ export function Pearl({
    */
   phraseEnd?: boolean;
   /**
+   * conta de uma cena FORA DOS TIPOS (ENG-725): creme com aro tracejado, e no fim
+   * de cena fica quadrada mas continua creme, sem tom profundo e sem anel — a
+   * leitura "esta cena não recebeu tipo" vai até a última conta.
+   */
+  noneFit?: boolean;
+  /**
    * Pulso curto de escala (referência .pearl.ping). One-shot: quem chama deve
    * voltar a `false` após o pulso — animações css só reiniciam no off→on, e
    * enquanto `true` numa cabeça o pulso substitui o glow (mesma shorthand).
@@ -43,6 +50,7 @@ export function Pearl({
       data-state={state}
       data-scene-end={sceneEnd || undefined}
       data-phrase-end={(phraseEnd && !sceneEnd) || undefined}
+      data-none-fit={noneFit || undefined}
       data-ping={ping || undefined}
       style={{
         '--cds-pearl-size': `${size}px`,

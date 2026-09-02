@@ -62,6 +62,23 @@
   box-shadow: 0 1px 3px rgba(10, 7, 3, 0.22);
 }
 
+/* conta de uma cena fora dos tipos (ENG-725, desenho `none`): creme, aro tracejado */
+.cds-pearl[data-none-fit='true'] {
+  border: 1.5px dashed var(--cds-ui-hairline-strong);
+}
+
+/* …e o seu fim de cena (desenho `noneEnd`): quadrada como todo fim de cena, mas
+   ainda creme e tracejada — sem o tom profundo e sem anel */
+.cds-pearl[data-none-fit='true'][data-scene-end='true'] {
+  background: radial-gradient(
+    circle at 34% 30%,
+    var(--cds-ui-pearl-lit) 0%,
+    var(--cds-ui-pearl) 70%
+  );
+  transform: none;
+  box-shadow: 0 1px 3px rgba(10, 7, 3, 0.12);
+}
+
 /* cabeça sobre a conta final (de cena ou de frase): mantém a forma quadrada e o
    tom profundo, mas recupera a escala e o anel de destaque da cabeça */
 .cds-pearl[data-state='head'][data-scene-end='true'],
