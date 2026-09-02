@@ -2,12 +2,12 @@
  * SessionStore HTTP real (PRD §5, cliente do tripod-api — fio verificado na ENG-267,
  * `http/sound-necklace.http`). Mapeia a porta para `/sound-necklace/*`, com `fetch`
  * INJETADO (sem rede no CI) e conectividade via ConnectivityMonitor. Custódia opaca
- * (§10.5): o estado viaja sem re-serialização; os artefatos sobem como bytes crus
- * (multipart) e descem por URL assinada — a API nunca os re-serializa.
+ * (§10.5): o estado viaja sem re-serialização. Desde a ENG-702, `complete` não sobe
+ * artefato nenhum — o produto parou de gerar o trio no corte de escopo (ENG-689/
+ * ENG-691); `getArtifacts` segue no código (intocado), mas hoje não tem o que baixar.
  */
 
 import {
-  ArtifactUploadResponseSchema,
   LockStatusSchema,
   RenameSessionRequestSchema,
   ResourceListResponseSchema,
@@ -63,17 +63,6 @@ function sessionWriteError(id: string, err: unknown): unknown {
   }
   return err;
 }
-
-/**
- * Filenames do PRD §10 — inglês desde a ENG-359. O `kind` é o identificador do
- * contrato (a API roteia por ele); estes nomes são o rótulo do multipart.
- * ⚠️ `tripod-api` e Compilador ainda esperam os nomes PT-BR — ENG-358/ENG-359.
- */
-const ARTIFACT_FILES: Record<ArtifactKind, { name: string; type: string }> = {
-  manifest: { name: 'bead-manifest.json', type: 'application/json' },
-  anchoring: { name: 'anchoring-return.json', type: 'application/json' },
-  report: { name: 'mapping-report.md', type: 'text/markdown' },
-};
 
 export interface HttpSessionStoreOptions {
   /** Base compartilhada terminada em `/api`; as rotas daqui somam `/sound-necklace`. */
@@ -212,27 +201,14 @@ export class HttpSessionStore implements SessionStore {
     await this.#autosaver.flush(id);
   }
 
-  async complete(id: string, state: SessionStateDto, artifacts: ArtifactTriple): Promise<void> {
+  async complete(id: string, state: SessionStateDto): Promise<void> {
     // nenhum PUT /state velho pode chegar após o complete: descarta o pendente E
     // espera o já despachado aterrissar (o servidor aceitaria a regressão).
     this.#autosaver.cancel(id);
     await this.#autosaver.settle(id);
     await this.#req('PUT', `/sessions/${id}/state`, state);
-    // §10.5: o trio sobe como bytes crus em form-data — a API guarda sem re-serializar
-    // e o download volta byte-idêntico (provado na ENG-267 contra o bucket real).
-    const form = new FormData();
-    for (const kind of ['manifest', 'anchoring', 'report'] as const) {
-      const { name, type } = ARTIFACT_FILES[kind];
-      form.append(kind, new Blob([artifacts[kind]], { type }), name);
-    }
-    // sem content-type nosso: o runtime assina o boundary do multipart
-    const res = await this.#send('POST', `/sessions/${id}/artifacts`, { body: form });
-    const receipt = ArtifactUploadResponseSchema.parse(await res.json());
-    // o recibo tem de cobrir os TRÊS kinds antes de declarar a sessão concluída —
-    // um upload parcial aceito em silêncio deixaria o pipeline sem um dos documentos
-    const kinds = new Set(receipt.map((r) => r.kind));
-    for (const kind of ['manifest', 'anchoring', 'report'] as const)
-      if (!kinds.has(kind)) throw new Error(`recibo de artefatos sem o kind ${kind}`);
+    // ENG-702: sem artefato nenhum — o produto parou de gerar o trio no corte de
+    // escopo (ENG-689/ENG-691), e o servidor não exige nenhum para este POST.
     await this.#req('POST', `/sessions/${id}/complete`);
   }
 

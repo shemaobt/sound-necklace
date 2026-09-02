@@ -214,14 +214,18 @@ export class FixtureSessionStore implements SessionStore {
     await this.#autosaver.flush(id);
   }
 
-  async complete(id: string, state: SessionStateDto, artifacts: ArtifactTriple): Promise<void> {
+  /**
+   * Conclui (§8.8, ENG-702): sem artefato nenhum — o produto parou de gerar o
+   * trio no corte de escopo (ENG-689/ENG-691). Idempotente: concluir uma sessão
+   * já concluída só regrava os mesmos campos, sem lançar.
+   */
+  async complete(id: string, state: SessionStateDto): Promise<void> {
     // um autosave armado (ou já em voo) não pode aterrissar após concluir
     this.#autosaver.cancel(id);
     await this.#autosaver.settle(id);
     await this.#settle();
     const rec = this.#requireRec(id);
     rec.state = clone(state);
-    rec.artifacts = { ...artifacts }; // strings opacas — byte-idênticas
     rec.summary = {
       ...rec.summary,
       status: 'completed',

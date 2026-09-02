@@ -120,8 +120,13 @@ export interface SessionStore {
    */
   onAutosaveStatus(cb: (status: AutosaveStatus) => void): Unsubscribe;
 
-  /** Conclui (§8.8): status concluída + guarda o trio de artefatos opaco. */
-  complete(id: string, state: SessionStateDto, artifacts: ArtifactTriple): Promise<void>;
+  /**
+   * Conclui (§8.8, ENG-702): status concluída. Sem artefato nenhum — o produto
+   * parou de gerar o trio no corte de escopo (ENG-689/ENG-691), e o servidor não
+   * exige nenhum para aceitar o `/complete` (verificado em
+   * `app/services/sound_necklace/complete_session.py`, tripod-api). Idempotente.
+   */
+  complete(id: string, state: SessionStateDto): Promise<void>;
   /** Reabre uma sessão concluída → volta a em_progresso (§7.3). */
   reopen(id: string): Promise<void>;
   /** Os três artefatos guardados na conclusão, byte-idênticos (§10.5). */

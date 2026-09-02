@@ -39,14 +39,6 @@ const FREE_LOCK: LockStatus = { held: false, holder: null, expires_at: null };
 
 const PATH = 'respostas/level1/recontar.webm' as ResourcePath;
 
-/** Recibo íntegro do upload multipart — um por kind (§10.5). */
-const FULL_RECEIPT = (['manifest', 'anchoring', 'report'] as const).map((kind) => ({
-  kind,
-  size: 1,
-  crc32c: 'c',
-  sha256: 's',
-}));
-
 /** Estado opaco — a store não olha a forma interna (§10.5). */
 const dto = (tag: string): SessionStateDto =>
   ({ schema_version: 1, tag }) as unknown as SessionStateDto;
@@ -158,39 +150,23 @@ describe('HttpSessionStore', () => {
     expect(storeWith(async () => json(FREE_LOCK), { user: () => ME }).me).toEqual(ME);
   });
 
-  describe('complete — a ordem do fio real (§8.8/§10.5)', () => {
-    it('recibo PARCIAL do upload (kind faltando) recusa a conclusão — nada de /complete', async () => {
+  describe('complete — a ordem do fio real, sem artefato nenhum (ENG-702)', () => {
+    it('PUT /state → POST /complete sem corpo — nenhum upload, nenhum multipart, nenhum recibo', async () => {
       const calls: Call[] = [];
       const store = storeWith(
-        recordingFetch(calls, (call) =>
-          call.url.endsWith('/artifacts')
-            ? json(FULL_RECEIPT.slice(0, 2), 201) // sem o report
-            : json({ saved_at: 't', schema_version: 1 }),
-        ),
+        recordingFetch(calls, () => json({ saved_at: '2026-07-17T00:00:00Z', schema_version: 1 })),
       );
 
-      await expect(
-        store.complete('sess-9', dto('final'), { manifest: 'm', anchoring: 'a', report: 'r' }),
-      ).rejects.toThrow(/recibo de artefatos sem o kind report/);
-      expect(calls.some((c) => c.url.endsWith('/complete'))).toBe(false);
-    });
+      await store.complete('sess-9', dto('final'));
 
-    it('se o POST /artifacts falha, o POST /complete não sai — a ordem é invariante', async () => {
-      const calls: Call[] = [];
-      const store = storeWith(
-        recordingFetch(calls, (call) =>
-          call.url.endsWith('/artifacts')
-            ? json({ detail: 'boom' }, 500)
-            : json({ saved_at: '2026-07-17T00:00:00Z', schema_version: 1 }),
-        ),
-      );
-
-      await expect(
-        store.complete('sess-9', dto('final'), { manifest: 'm', anchoring: 'a', report: 'r' }),
-      ).rejects.toThrow();
-
-      // concluir sem os artefatos guardados deixaria a sessão "completed" vazia
-      expect(calls.some((c) => c.url.endsWith('/complete'))).toBe(false);
+      expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+        'PUT https://api.test/sound-necklace/sessions/sess-9/state',
+        'POST https://api.test/sound-necklace/sessions/sess-9/complete',
+      ]);
+      // o corte não volta pela porta dos fundos: nenhuma chamada bate em /artifacts
+      expect(calls.some((c) => c.url.endsWith('/artifacts'))).toBe(false);
+      // o complete em si não tem corpo
+      expect(calls[1]?.init?.body).toBeUndefined();
     });
 
     it('espera o autosave EM VOO aterrissar antes do PUT final — nada regride o estado', async () => {
@@ -212,7 +188,6 @@ describe('HttpSessionStore', () => {
               return json({ saved_at: 't', schema_version: 1 });
             }
             calls.push(`${method} ${u.split('/sessions/sess-9')[1] ?? u}`);
-            if (u.endsWith('/artifacts')) return json(FULL_RECEIPT, 201);
             return json({ saved_at: 't', schema_version: 1 });
           },
           { debounceMs: 10 },
@@ -221,11 +196,7 @@ describe('HttpSessionStore', () => {
         store.autosave('sess-9', dto('velho'));
         await vi.advanceTimersByTimeAsync(20); // o PUT do autosave despacha e fica em voo
 
-        const done = store.complete('sess-9', dto('final'), {
-          manifest: 'm',
-          anchoring: 'a',
-          report: 'r',
-        });
+        const done = store.complete('sess-9', dto('final'));
         await vi.advanceTimersByTimeAsync(0);
         // o PUT final ainda NÃO saiu: um estado velho aterrissando depois dele
         // regrediria o documento salvo (o servidor aceita — só o lock o guarda)
@@ -233,51 +204,22 @@ describe('HttpSessionStore', () => {
 
         releaseAutosave();
         await done;
-        expect(calls).toEqual(['autosave', 'PUT /state', 'POST /artifacts', 'POST /complete']);
+        expect(calls).toEqual(['autosave', 'PUT /state', 'POST /complete']);
       } finally {
         vi.useRealTimers();
       }
     });
 
-    it('PUT state → POST /artifacts multipart (bytes crus) → POST /complete sem corpo', async () => {
+    it('concluir duas vezes não quebra nada — o servidor é idempotente', async () => {
       const calls: Call[] = [];
       const store = storeWith(
-        recordingFetch(calls, (call) => {
-          if (call.url.endsWith('/artifacts')) return json(FULL_RECEIPT, 201);
-          return json({ saved_at: '2026-07-17T00:00:00Z', schema_version: 1 });
-        }),
+        recordingFetch(calls, () => json({ saved_at: 't', schema_version: 1 })),
       );
 
-      await store.complete('sess-9', dto('final'), {
-        manifest: '{"m":1}',
-        anchoring: '{"a":1}',
-        report: '# r',
-      });
+      await store.complete('sess-9', dto('final'));
+      await expect(store.complete('sess-9', dto('final'))).resolves.toBeUndefined();
 
-      expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
-        'PUT https://api.test/sound-necklace/sessions/sess-9/state',
-        'POST https://api.test/sound-necklace/sessions/sess-9/artifacts',
-        'POST https://api.test/sound-necklace/sessions/sess-9/complete',
-      ]);
-
-      const upload = calls[1]?.init;
-      const form = upload?.body as FormData;
-      expect(form).toBeInstanceOf(FormData);
-      // custódia §10.5: os três campos com os FILENAMES congelados do PRD §10
-      const manifest = form.get('manifest') as File;
-      const anchoring = form.get('anchoring') as File;
-      const report = form.get('report') as File;
-      expect(manifest.name).toBe('bead-manifest.json');
-      expect(anchoring.name).toBe('anchoring-return.json');
-      expect(report.name).toBe('mapping-report.md');
-      expect(await manifest.text()).toBe('{"m":1}');
-      expect(await report.text()).toBe('# r');
-      // multipart: o content-type (com boundary) é do runtime, nunca nosso
-      const headers = (upload?.headers ?? {}) as Record<string, string>;
-      expect(headers['content-type']).toBeUndefined();
-
-      // o complete em si não tem corpo — os artefatos já subiram na rota própria
-      expect(calls[2]?.init?.body).toBeUndefined();
+      expect(calls.filter((c) => c.url.endsWith('/complete'))).toHaveLength(2);
     });
   });
 

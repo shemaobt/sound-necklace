@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ArtifactTriple, ResourcePath, SessionStateDto } from '../../contracts';
+import type { ResourcePath, SessionStateDto } from '../../contracts';
 import { FixtureConnectivityMonitor } from '../connectivity/fixture';
 import {
   FixtureSessionBackend,
@@ -79,31 +79,33 @@ describe('FixtureSessionStore — autosave & resume', () => {
   });
 });
 
-describe('FixtureSessionStore — lifecycle & artifact custody', () => {
-  const artifacts: ArtifactTriple = {
-    manifest: '{"channels":1,"rate":48000}',
-    anchoring: '{"parts":[]}',
-    report: '# Relatório\n\nlinha\n',
-  };
-
-  it('completes → concluída and returns the artifacts byte-identical', async () => {
+describe('FixtureSessionStore — lifecycle, sem artefato nenhum (ENG-702)', () => {
+  it('completes → concluída, sem exigir nem guardar artefato', async () => {
     const store = new FixtureSessionStore();
     const s = await store.create(input());
 
-    await store.complete(s.id, dto(), artifacts);
+    await store.complete(s.id, dto());
 
     expect((await store.get(s.id)).status).toBe('completed');
-    const got = await store.getArtifacts(s.id);
-    expect(got).toEqual(artifacts);
-    expect(got.manifest).toBe(artifacts.manifest);
-    expect(got.anchoring).toBe(artifacts.anchoring);
-    expect(got.report).toBe(artifacts.report);
+    // getArtifacts fica órfão nesta fatia (nada em ui/ o chama, e complete() não
+    // guarda mais artefato nenhum): sem o trio, ele não tem o que devolver
+    await expect(store.getArtifacts(s.id)).rejects.toBeInstanceOf(SessionNotFoundError);
+  });
+
+  it('concluir duas vezes não quebra nada — o dono pode tocar duas vezes', async () => {
+    const store = new FixtureSessionStore();
+    const s = await store.create(input());
+
+    await store.complete(s.id, dto());
+    await expect(store.complete(s.id, dto())).resolves.toBeUndefined();
+
+    expect((await store.get(s.id)).status).toBe('completed');
   });
 
   it('reopen returns a completed session to em_progresso', async () => {
     const store = new FixtureSessionStore();
     const s = await store.create(input());
-    await store.complete(s.id, dto(), artifacts);
+    await store.complete(s.id, dto());
 
     await store.reopen(s.id);
 
@@ -166,8 +168,6 @@ describe('FixtureSessionStore — rename & remove (ENG-281)', () => {
     };
   };
 
-  const artifacts: ArtifactTriple = { manifest: '{}', anchoring: '{}', report: '# r' };
-
   it('rename swaps the display name and keeps the story_slug byte-identical', async () => {
     const store = new FixtureSessionStore();
     const s = await store.create(input());
@@ -225,8 +225,8 @@ describe('FixtureSessionStore — rename & remove (ENG-281)', () => {
     const store = new FixtureSessionStore();
     const kept = await store.create(input());
     const doomed = await store.create(input({ storyName: 'Outra', storySlug: 'outra' }));
-    await store.complete(kept.id, dto(), artifacts);
-    await store.complete(doomed.id, dto(), artifacts);
+    await store.complete(kept.id, dto());
+    await store.complete(doomed.id, dto());
 
     expect((await store.rename(kept.id, 'Renomeada depois de concluir')).story_name).toBe(
       'Renomeada depois de concluir',
