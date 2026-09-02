@@ -25,14 +25,15 @@ import type { TodayGoal } from '../state';
  */
 
 /**
- * Peso de cada etapa no todo, somando 100 (ENG-689). São os quatro pesos do
- * protótipo — 8, 14, 12 e 26 — reescalados por `peso / 60 × 100` quando a Conversa
- * e a Guardar saíram do fluxo, e arredondados para somar exatamente 100: as quatro
- * estações que ficaram guardam entre si a mesma proporção de antes.
+ * Peso de cada etapa no todo, somando 100 (ENG-725). Não são mais os pesos do
+ * protótipo v4 reescalados (ENG-689: 13, 23, 20, 44): são as DIVISÓRIAS do desenho
+ * da Rever — `docs/design/revisao-tela-nova.html`, a barra do topo, em 10%, 32%, 52% e
+ * 88% —, lidas como pesos. O desenho vence (CLAUDE.md, regra 2), e é ele que dá à
+ * Rever a fatia final.
  */
-export const STATION_WEIGHTS: readonly number[] = [13, 23, 20, 44];
+export const STATION_WEIGHTS: readonly number[] = [10, 22, 20, 36, 12];
 
-/** As três fronteiras entre as quatro etapas, em porcentagem: 13, 36, 56. */
+/** As quatro fronteiras entre as cinco etapas, em porcentagem: 10, 32, 52, 88. */
 export const STAGE_BOUNDARIES: readonly number[] = STATION_WEIGHTS.slice(0, -1).reduce<number[]>(
   (acc, weight) => [...acc, (acc.at(-1) ?? 0) + weight],
   [],
@@ -43,7 +44,7 @@ const SCENES_FOR_A_WHOLE_STORY = 5;
 
 export interface StoryProgressInput {
   session: SessionState;
-  /** Posição da estação atual no fluxo (0–3); negativo = fora do fluxo. */
+  /** Posição da estação atual no fluxo (0–4); negativo = fora do fluxo. */
   stationIndex: number;
   /** Contas da história já ouvidas na Escuta 1. */
   heardBeads: number;
@@ -67,13 +68,16 @@ function stationFraction(index: number, input: StoryProgressInput): number {
         session.parts.filter((p) => p.tag_state !== 'pending').length,
         session.parts.length,
       );
-    default: {
+    case 3: {
       const productive = productiveScenes(session);
       const withPhrase = productive.filter((scene) =>
         session.frases.some((f) => f.part_link === scene.part_id),
       ).length;
       return ratio(withPhrase, productive.length);
     }
+    // a Rever não tem sub-passo (ENG-725): entrar nela é a fatia inteira
+    default:
+      return 1;
   }
 }
 
@@ -87,8 +91,8 @@ function storyProgressPercent(input: StoryProgressInput): number {
 
 /**
  * Onde a meta de hoje cai NA MESMA barra (protótipo v4, `_goalPct`, linhas
- * 1375-1379). Os âncoras não são arbitrários: 36 e 56 são os fins da Triagem e da
- * Escuta 2 sob os pesos acima, e 44 é a largura da faixa das Frases — por isso
+ * 1375-1379). Os âncoras não são arbitrários: 32 e 52 são os fins da Escuta 2 e da
+ * Triagem sob os pesos acima, e 36 é a largura da faixa das Frases — por isso
  * "2 cenas" quer dizer *duas cenas com frase*, caindo dentro dessa faixa. Derivar
  * daqui, e não copiar os números, é o que mantém marca e preenchimento no mesmo
  * sistema de coordenadas caso os pesos mudem.
@@ -109,7 +113,8 @@ function goalPercent(goal: TodayGoal, session: SessionState): number {
 
 /**
  * Fim da Triagem: o âncora das metas por contagem de cena. Fechar as Frases e "a
- * história toda" passaram a ser a MESMA marca (ENG-689) — as Frases são o fim.
+ * história toda" continuam a MESMA marca, a ponta da barra: a Rever enche a barra
+ * ao ser alcançada (ENG-725), então as duas metas se cumprem no mesmo instante.
  */
 const TRIAGE_END = STAGE_BOUNDARIES[2]!;
 const PHRASES_WEIGHT = STATION_WEIGHTS[3]!;

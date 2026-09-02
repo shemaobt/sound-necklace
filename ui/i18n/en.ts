@@ -154,6 +154,7 @@ export const en: Dict = {
     cut: 'Cut',
     triage: 'Triage',
     phrases: 'Phrases',
+    review: 'Review',
   },
   shell: {
     progressAria: 'Session progress',
@@ -180,17 +181,36 @@ export const en: Dict = {
     stopForToday: 'Put it away for today',
   },
   blockDone: {
-    eyebrow: 'One block closed',
-    rest: 'Save and rest',
     triagem: {
+      eyebrow: 'One block closed',
       headline: 'Every scene has a name now.',
       subtitle: 'Now for what is inside: the phrases of each scene.',
       primary: 'On to the phrases',
+      secondary: 'Save and rest',
     },
-    segmentacao: {
-      headline: 'Every phrase on the cord.',
-      subtitle: "Today's work is whole, and already saved. You can rest.",
+    historia: {
+      eyebrow: 'The whole story',
+      headline: 'The story is complete.',
+      subtitle:
+        'The cuts stay saved here, ready for the next step. Nobody needs to do anything else today.',
       primary: 'Back to the stories',
+      secondary: 'Look again',
+    },
+  },
+  rever: {
+    title: 'Look at the whole story',
+    instruction: 'Tap a scene to hear it. Tap a bead to hear just that phrase.',
+    noneFit: 'no name among the kinds',
+    hintBoth:
+      'One scene stayed outside the kinds and another stayed without phrases — both are valid answers, and they are kept that way.',
+    hintNone: 'One scene stayed outside the kinds — it is a valid answer, and it is kept that way.',
+    hintNoPhrase: 'One scene stayed without phrases — it is kept that way all the same.',
+    warn: 'Some scenes stayed in doubt or without a name — you can go on anyway. Tap again to finish.',
+    conclude: 'Finish the story',
+    legend: {
+      outside: 'Outside the kinds',
+      phraseEnd: 'end of phrase',
+      sceneEnd: 'end of scene',
     },
   },
   review: {

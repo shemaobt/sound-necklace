@@ -19,15 +19,22 @@ import { appSessionStore } from './session-adapter';
 
 /**
  * A tela de fim de bloco dentro do app de verdade (ENG-651). O organismo prova a
- * cópia, o teclado e o foco; aqui prova-se O GATILHO — que ela sobe exatamente nos
- * dois limites estruturais, que o botão primário entrega a estação já chegada, que
- * "Guardar e descansar" volta ao painel, e que reabrir uma sessão passada do limite
- * não repete a tela.
+ * cópia, o teclado e o foco; aqui prova-se O GATILHO — que ela sobe no limite da
+ * Triagem e no fim da Rever (ENG-725), que a última frase leva à Rever e NÃO a uma
+ * tela cheia, que concluir é um ato consciente (dois toques com cena na dúvida ou
+ * sem tipo), que "Olhar de novo" devolve à Rever com o panorama intacto, e que
+ * reabrir uma sessão passada dos limites não repete a tela.
  */
 
 const TRIAGEM_HEADLINE = 'As cenas todas têm nome.';
-const SEGMENTACAO_HEADLINE = 'Todas as frases no cordão.';
+const HISTORIA_HEADLINE = 'A história está completa.';
 const DASHBOARD = 'Suas histórias';
+/** A quinta estação (ENG-725): o título da Rever é a prova de que se chegou nela. */
+const REVER = 'Olhem a história inteira';
+const CONCLUDE = 'Concluir a história';
+const OLHAR_DE_NOVO = 'Olhar de novo';
+const WARN =
+  'Algumas cenas ficaram na dúvida ou sem nome — dá para seguir assim mesmo. Toque de novo para concluir.';
 /** A outra tela cheia que pode querer o ecrã ao mesmo tempo (ENG-650). */
 const PAUSA = 'Já foi bastante coisa boa por agora.';
 /** A terceira tela cheia da família (ENG-653). */
@@ -98,13 +105,33 @@ function segmenting(active: 'PT1' | 'PT2'): SessionState {
 
 /**
  * Sessão que o domínio já encerrou: os dois limites ficaram para trás. Ela reabre
- * nas Frases — não há estação depois (ENG-689/ENG-691).
+ * na Rever (ENG-725). A história é LIMPA — toda cena com tipo, nenhuma na dúvida.
  */
-function pastBothBoundaries(): SessionState {
+function concludedClean(): SessionState {
   return {
     ...base(),
     mode: 'concluida',
     parts: [productive('PT1', { s: 0, e: 29 })],
+    frases: [phrase('P1', { s: 0, e: 4 }, 'PT1')],
+  };
+}
+
+/** Sessão encerrada com uma cena FORA DOS TIPOS: concluir pede dois toques. */
+function concludedDoubtful(): SessionState {
+  return {
+    ...base(),
+    mode: 'concluida',
+    parts: [
+      productive('PT1', { s: 0, e: 14 }),
+      {
+        part_id: 'PT2',
+        span: { s: 15, e: 29 },
+        locked: true,
+        scene_kind: null,
+        scene_kind_confidence: null,
+        tag_state: 'none_fit',
+      },
+    ],
     frases: [phrase('P1', { s: 0, e: 4 }, 'PT1')],
   };
 }
@@ -169,32 +196,88 @@ describe('O fim de bloco no shell (ENG-651)', () => {
   });
 
   /**
-   * ENG-689 — a Segmentação é o fim do fluxo. A tela que fecha o bloco fecha
-   * também a sessão: não há estação atrás dela para o primário entregar, e a
-   * única saída é o painel. O trabalho já está salvo pelo autosave.
+   * ENG-725 — fechar a última cena produtiva não sobe tela nenhuma: a Rever é a
+   * estação seguinte, e ela é que fecha a história.
    */
-  it('confirmar a ÚLTIMA cena produtiva encerra a sessão e a saída é o painel', async () => {
+  it('confirmar a ÚLTIMA cena produtiva leva à Rever, sem tela cheia', async () => {
     await open(segmenting('PT2'), FRASES);
 
     await userEvent.click(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' }));
 
-    expect(await screen.findByRole('heading', { name: SEGMENTACAO_HEADLINE })).toBeDefined();
+    expect(await screen.findByRole('heading', { name: REVER })).toBeDefined();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
+  });
+
+  it('na Rever, com cena na dúvida ou sem tipo, o primeiro toque em Concluir avisa e não conclui; o segundo conclui', async () => {
+    await open(concludedDoubtful(), REVER);
+
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+
+    expect(screen.getByText(WARN)).toBeDefined();
+    expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+
+    expect(await screen.findByRole('heading', { name: HISTORIA_HEADLINE })).toBeDefined();
+  });
+
+  it('na Rever, com a história limpa, o primeiro toque em Concluir conclui direto', async () => {
+    await open(concludedClean(), REVER);
+
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+
+    expect(await screen.findByRole('heading', { name: HISTORIA_HEADLINE })).toBeDefined();
+    expect(screen.queryByText(WARN)).toBeNull();
+  });
+
+  it('concluída, a tela oliva tem duas ações, e "Olhar de novo" devolve à Rever com o panorama intacto', async () => {
+    await open(concludedClean(), REVER);
+    const beadsBefore = document.querySelectorAll('.cds-necklace-bead').length;
+    expect(beadsBefore).toBe(30);
+
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+    await screen.findByRole('heading', { name: HISTORIA_HEADLINE });
+    expect(screen.getByRole('button', { name: 'Voltar às histórias' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Guardar e descansar' })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: OLHAR_DE_NOVO }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
+    });
+    expect(screen.getByRole('heading', { name: REVER })).toBeDefined();
+    expect(document.querySelectorAll('.cds-necklace-bead')).toHaveLength(beadsBefore);
+  });
+
+  /**
+   * A meta de hoje se cumpre ao chegar à Rever — a barra enche —, mas a celebração
+   * NÃO sobe por cima do panorama (ENG-725): a Rever existe para a dupla ver a
+   * história inteira, e o fecho celebratório já é a tela oliva. A meta fica
+   * cumprida em silêncio.
+   */
+  it('na Rever, a meta cumprida fica em silêncio: nenhuma celebração cobre o panorama', async () => {
+    goalStore.getState().chooseGoal('wholeStory');
+    await open(concludedClean(), REVER);
+
+    expect(screen.queryByText(META)).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+    await screen.findByRole('heading', { name: HISTORIA_HEADLINE });
+    expect(screen.queryByText(META)).toBeNull();
+  });
+
+  it('concluída, "Voltar às histórias" leva ao painel', async () => {
+    await open(concludedClean(), REVER);
+    await userEvent.click(screen.getByRole('button', { name: CONCLUDE }));
+    await screen.findByRole('heading', { name: HISTORIA_HEADLINE });
 
     await userEvent.click(screen.getByRole('button', { name: 'Voltar às histórias' }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: DASHBOARD })).toBeDefined();
     });
-    expect(screen.queryByRole('heading', { name: SEGMENTACAO_HEADLINE })).toBeNull();
-  });
-
-  it('o fim da Segmentação não oferece uma segunda saída para o mesmo lugar', async () => {
-    await open(segmenting('PT2'), FRASES);
-
-    await userEvent.click(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' }));
-    await screen.findByRole('heading', { name: SEGMENTACAO_HEADLINE });
-
-    expect(screen.queryByRole('button', { name: 'Guardar e descansar' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
   });
 
   it('confirmar uma cena que NÃO é a última produtiva não fecha bloco nenhum', async () => {
@@ -206,7 +289,7 @@ describe('O fim de bloco no shell (ENG-651)', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Já segmentei todas as cenas →' })).toBeDefined();
     });
-    expect(screen.queryByRole('heading', { name: SEGMENTACAO_HEADLINE })).toBeNull();
+    expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
     expect(screen.queryByRole('heading', { name: TRIAGEM_HEADLINE })).toBeNull();
   });
 
@@ -223,18 +306,18 @@ describe('O fim de bloco no shell (ENG-651)', () => {
     expect(screen.queryByRole('heading', { name: TRIAGEM_HEADLINE })).toBeNull();
   });
 
-  it('reabrir uma sessão já passada dos dois limites não repete a tela', async () => {
-    await open(pastBothBoundaries(), FRASES);
+  it('reabrir uma sessão já concluída abre na Rever e não repete tela nenhuma', async () => {
+    await open(concludedClean(), REVER);
 
     expect(screen.queryByRole('heading', { name: TRIAGEM_HEADLINE })).toBeNull();
-    expect(screen.queryByRole('heading', { name: SEGMENTACAO_HEADLINE })).toBeNull();
+    expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
   });
 
   it('reabrir uma sessão parada ENTRE os dois limites também não repete a tela', async () => {
     await open(segmenting('PT1'), FRASES);
 
     expect(screen.queryByRole('heading', { name: TRIAGEM_HEADLINE })).toBeNull();
-    expect(screen.queryByRole('heading', { name: SEGMENTACAO_HEADLINE })).toBeNull();
+    expect(screen.queryByRole('heading', { name: HISTORIA_HEADLINE })).toBeNull();
   });
 
   /**

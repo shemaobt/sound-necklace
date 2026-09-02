@@ -46,22 +46,25 @@ export interface DashboardProps {
 }
 
 /**
- * As quatro estações do fio — a posição do passo salvo vira a proporção da capa. Os
+ * As cinco estações do fio — a posição do passo salvo vira a proporção da capa. Os
  * rótulos leem do namespace `stations`, a MESMA fonte do nome de etapa do shell
  * (ENG-279): duplicar a cópia fazia o shell dizer "Ouvir" e o dashboard "Listen".
+ * A chave da Rever não é um `SessionStep`: o servidor nunca a reporta (ver abaixo).
  */
-const STEPS: readonly { key: SessionStep; labelKey: string }[] = [
+const STEPS: readonly { key: SessionStep | 'review'; labelKey: string }[] = [
   { key: 'listen', labelKey: 'stations.listen' },
   { key: 'cut', labelKey: 'stations.cut' },
   { key: 'triage', labelKey: 'stations.triage' },
   { key: 'phrases', labelKey: 'stations.phrases' },
+  { key: 'review', labelKey: 'stations.review' },
 ];
 
 /**
  * O servidor (e a fixture que o espelha) continua conhecendo os passos que saíram do
  * produto (ENG-689): `conversation` e `save` são o que ele reporta de uma sessão que
- * fechou as Frases. O fluxo acaba ali, então é ali que o cartão a mostra — traduzir
- * aqui, e não no adapter, mantém a camada congelada intocada.
+ * fechou as Frases — e uma sessão que fechou as Frases está na Rever (ENG-725), a
+ * última estação. Traduzir aqui, e não no adapter, mantém a camada congelada
+ * intocada: `SessionStep` não ganha `review`.
  */
 const PAST_THE_END: readonly SessionStep[] = ['conversation', 'save'];
 

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { parseRules, splitByGuard } from '../../atoms/testing/css';
-import { phrasePalette, scenePalette } from '../../tokens';
+import { scenePalette } from '../../tokens';
 import { BlockDone, type BlockDoneProps } from './block-done';
 import blockDoneCss from './block-done.css?raw';
 import addonsCss from '../../app/addons-layer.css?raw';
@@ -12,7 +12,7 @@ import headerCss from '../../app/header.css?raw';
 /**
  * A tela de fim de bloco (ENG-651; protótipo v4 "FIM DE BLOCO", linhas 842-855).
  * Nos dois limites estruturais do fluxo ela marca que um bloco fechou, antes do
- * próximo começar. Tela de quem ouve (§9.2): nenhum dígito, nenhum id, uma ação
+ * próximo começar — e no fim da Rever (ENG-725) marca a história concluída. Tela de quem ouve (§9.2): nenhum dígito, nenhum id, uma ação
  * dominante. Os testes afirmam a cópia congelada da issue e o comportamento dos
  * dois botões — nunca chamadas internas.
  */
@@ -22,10 +22,14 @@ const TRIAGEM = {
   subtitle: 'Agora vem a parte de dentro: as frases de cada cena.',
   primary: 'Seguir para as frases',
 };
-const SEGMENTACAO = {
-  headline: 'Todas as frases no cordão.',
-  subtitle: 'O trabalho de hoje está inteiro, e já guardado. Podem descansar.',
+/** O fim do fluxo (ENG-725): a história concluída, vista da Rever. */
+const HISTORIA = {
+  eyebrow: 'A história inteira',
+  headline: 'A história está completa.',
+  subtitle:
+    'Os cortes ficam guardados aqui, prontos para o próximo passo. Ninguém precisa fazer mais nada hoje.',
   primary: 'Voltar às histórias',
+  secondary: 'Olhar de novo',
 };
 const REST = 'Guardar e descansar';
 
@@ -56,12 +60,62 @@ describe('BlockDone — o que a tela diz em cada limite (ENG-651)', () => {
     expect(screen.getByRole('button', { name: REST })).toBeDefined();
   });
 
-  it('a Segmentação fechada anuncia a Segmentação e não promete o que não há', () => {
-    render(<BlockDone {...props({ block: 'segmentacao', tints: phrasePalette.slice(0, 5) })} />);
+  /**
+   * ENG-725 — o limite que FECHA o fluxo tem cópia e secundária PRÓPRIAS: o
+   * eyebrow nomeia a história inteira, e a segunda ação não guarda nada — devolve
+   * à Rever. A Triagem mantém palavra por palavra o que tinha.
+   */
+  it('a história concluída anuncia a história inteira e oferece olhar de novo', () => {
+    render(<BlockDone {...props({ block: 'historia', tints: scenePalette.slice(0, 5) })} />);
 
-    expect(screen.getByRole('heading', { name: SEGMENTACAO.headline })).toBeDefined();
-    expect(screen.getByText(SEGMENTACAO.subtitle)).toBeDefined();
-    expect(screen.getByRole('button', { name: SEGMENTACAO.primary })).toBeDefined();
+    expect(screen.getByText(HISTORIA.eyebrow)).toBeDefined();
+    expect(screen.queryByText('Um bloco fechado')).toBeNull();
+    expect(screen.getByRole('heading', { name: HISTORIA.headline })).toBeDefined();
+    expect(screen.getByText(HISTORIA.subtitle)).toBeDefined();
+    expect(screen.getByRole('button', { name: HISTORIA.primary })).toBeDefined();
+    expect(screen.getByRole('button', { name: HISTORIA.secondary })).toBeDefined();
+    expect(screen.queryByRole('button', { name: REST })).toBeNull();
+  });
+
+  it('olhar de novo avisa quem descansa — é a segunda ação do bloco terminal', async () => {
+    const onContinue = vi.fn();
+    const onRest = vi.fn();
+    render(<BlockDone {...props({ block: 'historia', onContinue, onRest })} />);
+
+    await userEvent.click(screen.getByRole('button', { name: HISTORIA.secondary }));
+
+    expect(onRest).toHaveBeenCalledTimes(1);
+    expect(onContinue).not.toHaveBeenCalled();
+  });
+
+  /**
+   * O lado seguro é o que não leva ninguém embora. Na Triagem é o primário (a
+   * estação seguinte já está atrás); na história concluída o primário É a saída,
+   * então o Esc e o foco inicial vão para "Olhar de novo".
+   */
+  it('o Esc e o foco inicial ficam no lado seguro de cada bloco: "Olhar de novo" na história, o primário na Triagem', async () => {
+    const onContinue = vi.fn();
+    const onRest = vi.fn();
+    const { unmount } = render(<BlockDone {...props({ block: 'historia', onContinue, onRest })} />);
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: HISTORIA.secondary }));
+    await userEvent.keyboard('{Escape}');
+    expect(onRest).toHaveBeenCalledTimes(1);
+    expect(onContinue).not.toHaveBeenCalled();
+    unmount();
+
+    const onContinueTriagem = vi.fn();
+    const onRestTriagem = vi.fn();
+    render(
+      <BlockDone
+        {...props({ block: 'triagem', onContinue: onContinueTriagem, onRest: onRestTriagem })}
+      />,
+    );
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: TRIAGEM.primary }));
+    await userEvent.keyboard('{Escape}');
+    expect(onContinueTriagem).toHaveBeenCalledTimes(1);
+    expect(onRestTriagem).not.toHaveBeenCalled();
   });
 
   /**
@@ -101,7 +155,7 @@ describe('BlockDone — o que a tela diz em cada limite (ENG-651)', () => {
     const { rerender } = render(<BlockDone {...props({ block: 'triagem' })} />);
     expect(screen.getByRole('dialog').textContent ?? '').not.toMatch(/\d/);
 
-    rerender(<BlockDone {...props({ block: 'segmentacao' })} />);
+    rerender(<BlockDone {...props({ block: 'historia' })} />);
     expect(screen.getByRole('dialog').textContent ?? '').not.toMatch(/\d/);
   });
 
@@ -115,13 +169,13 @@ describe('BlockDone — o que a tela diz em cada limite (ENG-651)', () => {
 
   it('as cores das contas vêm dos dados, não de literais na tela', () => {
     const { container } = render(
-      <BlockDone {...props({ block: 'segmentacao', tints: phrasePalette.slice(0, 5) })} />,
+      <BlockDone {...props({ block: 'historia', tints: scenePalette.slice(0, 5) })} />,
     );
     const beads = container.ownerDocument.querySelectorAll<HTMLElement>(
       '.cds-block-done-beads .cds-pearl',
     );
-    expect(beads[0]!.style.getPropertyValue('--cds-pearl-base')).toBe(phrasePalette[0]!.base);
-    expect(beads[3]!.style.getPropertyValue('--cds-pearl-base')).toBe(phrasePalette[3]!.base);
+    expect(beads[0]!.style.getPropertyValue('--cds-pearl-base')).toBe(scenePalette[0]!.base);
+    expect(beads[3]!.style.getPropertyValue('--cds-pearl-base')).toBe(scenePalette[3]!.base);
   });
 });
 

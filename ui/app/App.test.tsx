@@ -412,9 +412,9 @@ describe('App shell — resiliência (§7.3/§13, ENG-277)', () => {
 });
 
 describe('App shell — a barra da história inteira (ENG-648)', () => {
-  const NOMES = ['Ouvir', 'Cortar', 'Triagem', 'Frases'];
+  const NOMES = ['Ouvir', 'Cortar', 'Triagem', 'Frases', 'Rever'];
 
-  it('numa estação da sessão, a barra fica sob o cabeçalho, com as três marcas de etapa', async () => {
+  it('numa estação da sessão, a barra fica sob o cabeçalho, com as quatro marcas de etapa', async () => {
     act(() => {
       navigate('/session/s1');
       sessionStore.getState().load(sampleSession());
@@ -423,7 +423,8 @@ describe('App shell — a barra da história inteira (ENG-648)', () => {
     await screen.findAllByText('Ouvir');
     const faixa = container.querySelector<HTMLElement>('.cds-story-progress');
     expect(faixa).not.toBeNull();
-    expect(faixa!.querySelectorAll('.cds-story-progress-tick')).toHaveLength(3);
+    // cinco estações, quatro divisórias entre elas (ENG-725)
+    expect(faixa!.querySelectorAll('.cds-story-progress-tick')).toHaveLength(4);
     expect(within(faixa!).getByText('Ouvir')).toBeDefined();
   });
 
